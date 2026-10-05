@@ -837,7 +837,7 @@
   // countdown, a grey flash, neon frames and an end altar. 'back' layers go
   // behind the level, 'front' ones over the ground. Each is clipped to its
   // section, so scenery changes exactly where the section does.
-  const BACK = new Set(['dark', 'ruins', 'crushers', 'mountains', 'orbChain', 'chevrons', 'countdown', 'neon']);
+  const BACK = new Set(['dark', 'ruins', 'embers', 'crushers', 'mountains', 'orbChain', 'chevrons', 'countdown', 'neon']);
   function drawThemes(L, layer, pulse) {
     if (!detail() && layer === 'back') return;
     for (const th of L.themes) {
@@ -891,6 +891,38 @@
   }
   const THEME = {
     lava() { liquid('#ffd23b', '#ff5a00', 'rgba(255,90,0,0.35)'); },
+    // Glowing embers drifting up off the lava, and a heat shimmer.
+    embers() {
+      const base = floorY();
+      ctx.globalCompositeOperation = 'lighter';
+      for (let k = 0; k < 40; k++) {
+        const sd = ((k * 9301 + 49297) % 233280) / 233280;
+        const life = (G.t * (0.25 + sd * 0.3) + sd) % 1;
+        const x = ((sd * 997 + k * 0.37) * S * 7 - G.camX * S * 0.9) % (W + S * 2);
+        const px = x < 0 ? x + W + S * 2 : x, py = base - life * H * 0.8;
+        ctx.globalAlpha = (1 - life) * 0.9;
+        ctx.fillStyle = k % 3 ? '#ffb030' : '#fff0a0';
+        const r = S * (0.04 + sd * 0.06);
+        ctx.beginPath(); ctx.arc(px + Math.sin(G.t * 2 + k) * S * 0.3, py, r, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.globalAlpha = 0.12;
+      const g = ctx.createLinearGradient(0, base - S * 3, 0, base);
+      g.addColorStop(0, 'rgba(255,120,40,0)'); g.addColorStop(1, 'rgba(255,120,40,1)');
+      ctx.fillStyle = g; ctx.fillRect(0, base - S * 3, W, S * 3);
+    },
+    // Jagged dark rock along the ceiling, lit from below.
+    rockCeil() {
+      const y = sy(G.s && G.s.bounds ? G.s.bounds.ceil : 8);
+      if (y < -S) return;
+      ctx.fillStyle = '#120404';
+      ctx.beginPath(); ctx.moveTo(-10, -10); ctx.lineTo(-10, y);
+      for (let px = -10; px <= W + 10; px += S * 0.5) {
+        const wx = Math.floor((G.camX + px / S) * 2);
+        ctx.lineTo(px, y + S * (0.15 + ((wx * 7919) % 7) / 20));
+      }
+      ctx.lineTo(W + 10, -10); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,90,30,0.55)'; ctx.lineWidth = 2; ctx.stroke();
+    },
     // The opening's darkness, lifting where the red ring fires you up.
     dark(x0) {
       const edge = sx(x0 + 12);
@@ -2589,6 +2621,7 @@
   // the source doesn't give them away. Each unlocks a set (or pays out).
   const VAULT = {
     '1v4lpa8': { set: 'demon', say: 'ELLOIT... The demons answer to you now.' },
+    '1hi2m62': { orbs: 100000, diamonds: 1000, say: 'Coins!!! Fine. Take them. Spend wisely.' },
   };
   const VAULT_NO = [
     'Nope.', 'Try again.', 'That is not a code.', 'Are you even trying?', 'Wrong. Obviously.',
@@ -2628,6 +2661,11 @@
     AUDIO.unlock(); lock.classList.add('open');
     $('vaultSay').textContent = r.say;
     if (r.set) showUnlocks($('vaultBox'), P.MODES.map((m) => [m, ICONS.special(r.set)]));
+    else if (r.orbs || r.diamonds) {
+      const box = $('vaultBox');
+      box.style.display = '';
+      box.innerHTML = `<span><span class="orb-i"></span>+${(r.orbs || 0).toLocaleString()} <span class="dia-i"></span>+${(r.diamonds || 0).toLocaleString()}</span>`;
+    }
     $('vaultCode').value = '';
   }
   $('vaultGo').addEventListener('click', tryCode);
