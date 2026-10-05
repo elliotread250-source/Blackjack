@@ -26,7 +26,14 @@ from units-per-tick (30 units per block, 60 ticks per second):
 | 1x speed | 311.58 u/s | 10.386 blocks/s |
 
 That gives a cube jump 2.13 blocks high and 4 blocks long at 1x, which
-matches the real game. Spike hitboxes are the same forgiving slim boxes GD
+matches the real game.
+
+The ship uses GD's ship model: gravity times 0.4, scaled by 0.8 while
+falling, 1.2 while still rising after you let go (so climbs bleed off fast),
+and reversed while holding, with a 0.5 boost when holding against a fall.
+Speed caps are GD's 8 u/tick up and 6.4 u/tick down. The swing runs on the
+same curve, flipping gravity on each click with momentum carried over. Mini
+wave climbs at 1.5x instead of GD's 2x, a deliberate nerf. Spike hitboxes are the same forgiving slim boxes GD
 uses, and block deaths use a small inner hitbox, so clipping a corner on a
 landing doesn't kill you.
 
@@ -58,8 +65,16 @@ all. Each starts already in its mode:
 | 4 Hard | 2x-3x, triples, gaps down to 3 blocks |
 | 5 Impossible | 4x, spike-tipped gates, mini wave, timing windows under 50ms |
 
-The tiers are generated from a seeded RNG and a table of knobs in
-`js/levels.js` (speed, gap height, spacing, path swing, cluster length).
+## No repeated parts
+
+Every level, main and practice, is a list of sections, and every section is
+generated from its own seed: cube runs draw from eight obstacle families
+(spike runs, steps, block-and-spike, stairs, pad launches, pink hops, orb
+pits, pillars) with randomised sizes, and flying sections random-walk their
+gates with jittered spacing and widths. The verifier checks that no 30-block
+stretch of any level appears anywhere else, in the same level or another.
+Single spikes, doubles and triples obviously recur; they're the alphabet,
+not the parts.
 
 Every level is proven beatable by `tools/verify.js`, which searches for a
 full run using inputs held for at least 50ms at a time. Impossible tiers are
@@ -68,8 +83,8 @@ inputs and proven unbeatable with 50ms ones, so they're possible on paper
 but not by human timing.
 
 ```bash
-node tools/verify.js                # check every level
-node tools/verify.js --seeds wave   # find passing seeds for a mode's tiers
+node tools/verify.js         # check every level, plus the no-repeats rule
+node tools/verify.js --fix   # reseed failing sections, print the BUMPS table
 ```
 
 Run it after touching `js/levels.js` or `js/physics.js`.

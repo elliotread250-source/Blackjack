@@ -26,17 +26,31 @@
   // orb: how hard orbs/pads push this mode.
   const MODE_CFG = {
     cube:   { grav: 1.0,  term: 30,   bound: 0,  slide: false, orb: 1.0 },
-    ship:   { grav: 0.4,  term: 12.8, bound: 10, slide: true,  orb: 0.6 },
+    ship:   { grav: 0.4,  term: 12.8, bound: 10, slide: true,  orb: 0.6 }, // grav unused: see shipAccel
     ball:   { grav: 0.6,  term: 30,   bound: 8,  slide: true,  orb: 0.7 },
     ufo:    { grav: 0.5,  term: 16,   bound: 10, slide: true,  orb: 0.7 },
     wave:   { grav: 0,    term: 0,    bound: 10, slide: true,  orb: 0 },
     robot:  { grav: 1.0,  term: 30,   bound: 0,  slide: false, orb: 1.0 },
     spider: { grav: 1.0,  term: 30,   bound: 8,  slide: true,  orb: 1.0 },
-    swing:  { grav: 0.55, term: 11,   bound: 10, slide: true,  orb: 0.7 },
+    swing:  { grav: 0.4,  term: 12.8, bound: 10, slide: true,  orb: 0.7 }, // grav unused: see shipAccel
   };
 
-  const SHIP_UP = G * 0.45;
-  const SHIP_MAX_UP = 16;
+  // Ship and swing follow GD's ship model: a base multiplier of 0.4 on
+  // gravity, times 0.8 while falling, 1.2 while still rising with the button
+  // released (so climbs bleed off fast), and -1 while holding, boosted to
+  // 0.5 when holding against a fall (quick recovery). Speed caps are GD's
+  // 8 u/tick up and 6.4 u/tick down.
+  const SHIP_MAX_UP = 8 * TICK / UNIT;    // 16 blocks/s
+  const SHIP_MAX_DOWN = 6.4 * TICK / UNIT; // 12.8 blocks/s
+  const MINI_FLY = 1.2;                    // mini ship/swing: snappier caps
+
+  // Acceleration in the gravity frame (+ = away from the floor).
+  function shipAccel(vf, holding) {
+    const falling = vf < 0;
+    if (holding) return G * (falling ? 0.5 : 0.4);
+    return -G * 0.4 * (falling ? 0.8 : 1.2);
+  }
+  const MINI_WAVE = 1.5; // GD's mini wave climbs at 2x; softened here
   const UFO_JUMP = 14;
   const BALL_KICK = 0.3 * JUMP;
   const ROBOT_V = 12;
@@ -246,10 +260,12 @@
         if (s.grounded && held) { vf = JUMP * jm; s.grounded = false; s.buffer = false; }
         vf -= G * cfg.grav * DT;
         break;
-      case 'ship':
-        vf += (held ? SHIP_UP : -G * cfg.grav) * DT;
-        vf = Math.min(vf, SHIP_MAX_UP * (s.mini ? 1.2 : 1));
+      case 'ship': {
+        const k = s.mini ? MINI_FLY : 1;
+        vf += shipAccel(vf, held) * k * DT;
+        vf = Math.min(Math.max(vf, -SHIP_MAX_DOWN * k), SHIP_MAX_UP * k);
         break;
+      }
       case 'ball':
         if (s.grounded && held) {
           s.grav = -s.grav;
@@ -264,7 +280,7 @@
         vf -= G * cfg.grav * DT;
         break;
       case 'wave': {
-        const k = s.mini ? 2 : 1;
+        const k = s.mini ? MINI_WAVE : 1;
         vf = (held ? 1 : -1) * SPEEDS[s.speed] * k;
         break;
       }
@@ -283,12 +299,18 @@
         }
         vf -= G * cfg.grav * DT;
         break;
-      case 'swing':
+      case 'swing': {
+        // Each click flips gravity; momentum carries over, then the ship
+        // model's "released" curve pulls it round: hard while still moving
+        // away from the new floor, softer once falling toward it.
         if (s.buffer) { s.grav = -s.grav; vf = -vf; s.buffer = false; s.grounded = false; }
-        vf -= G * cfg.grav * DT;
+        const k = s.mini ? MINI_FLY : 1;
+        vf += shipAccel(vf, false) * k * DT;
+        vf = Math.min(Math.max(vf, -SHIP_MAX_DOWN * k), SHIP_MAX_DOWN * k);
         break;
+      }
     }
-    if (cfg.term) vf = Math.max(vf, -cfg.term);
+    if (cfg.term && s.mode !== 'ship' && s.mode !== 'swing') vf = Math.max(vf, -cfg.term);
     s.vy = vf * s.grav;
 
     s.x += SPEEDS[s.speed] * DT;
