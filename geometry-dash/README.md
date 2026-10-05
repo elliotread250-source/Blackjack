@@ -78,15 +78,18 @@ The last three are modelled on GD's own finales: Fingerflash on Fingerdash
 Lockdown on Deadlocked (a dark, saw-filled 15-star demon). Original layouts
 and names.
 
-Dash, the final level, is a rebuild of GD's newest final level (Dash, 2.2)
-from its published walkthrough: the same modes, speeds and sizes in the
-same order at the same percentages (within about 3%), no UFO, like the
-original, and coins at 14% (cube), 37% (swing) and 68% (start of the 3x
-ship). It has every orb type (yellow, pink, red, blue, green, black, dash
-and pink dash) and every pad type (yellow, pink, red, blue). The block by
-block layout inside each section is generated: RobTop's level data isn't
-public, and GD's camera and teleport cutscenes don't exist in this engine.
-Like GD, it's Insane, 12 stars, after the demon finales.
+Dash, the final level, is rebuilt from gameplay footage of GD's newest
+final level, section by section, with its mechanics: a dark run to a red
+jump ring onto golden pillars over lava, the spider among skull lava
+blocks, an upside-down orb section, the coin-1 puzzle (bump the hanging
+blocks to light them and raise the coin from the lava), a swing between
+chains of glowing orbs (real hazards), tilted stairs, a swaying cave, the
+fire-orb swing with coin 2 above a gap in the chain, the 3-2-1 room you
+go round three times, the "1" flying off as an orb, the ship (coin 3) into
+a curving spike tunnel, the tilted acid robot, neon over lava, a zigzag
+wave and the altar. Every orb and pad type is in. Block positions are
+original; the order, mechanics, scenery and camera moves follow the real
+level. Insane, 12 stars, after the demon finales like GD.
 
 Every level has secret coins (three per main level, one per practice level),
 and they're hidden. In flying sections a coin sits in a tunnel through one
