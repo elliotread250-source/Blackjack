@@ -81,9 +81,60 @@
   }
   function isUnlocked(mode, v) {
     if (v === 0) return true;
+    if (v >= ICONS.COUNT) return setOwned(mode, ICONS.SETS[v - ICONS.COUNT]);
     const k = ICONS.ORDER.findIndex(([m, x]) => m === mode && x === v);
     return k >= 0 && k < levelsBeaten();
   }
+
+  // ------------------------------------------------------------ economy
+  // Mana orbs come in as you set new bests (5% of a level's orbs for each
+  // new 10%, the rest on the clear) and buy icons in the shop. Diamonds
+  // come from first clears and secret coins and buy the Prism set.
+  // Practice mode (checkpoints) pays nothing, same as GD.
+  const ORB_BY_STARS = { 1: 25, 2: 50, 3: 75, 4: 125, 5: 175, 6: 225, 7: 275, 8: 350, 9: 425, 10: 500, 12: 600, 15: 750 };
+  const ORB_BY_TIER = [25, 50, 75, 125, 175, 225, 275, 350, 425, 500];
+  const orbsOf = (L) => (L.training ? ORB_BY_TIER[L.tier] : ORB_BY_STARS[L.stars] || L.stars * 50);
+  const diamondsOf = (L) => (L.training ? L.tier + 1 : L.stars + 2);
+  const COIN_DIAMONDS = 2;
+  // Orbs a level has paid out once milestone m is reached (1..9 = 10%..90%, 10 = cleared).
+  function orbsUpTo(L, m) {
+    const share = Math.round(orbsOf(L) * 0.05);
+    return Math.min(m, 9) * share + (m >= 10 ? orbsOf(L) - 9 * share : 0);
+  }
+  const wallet = () => ({ orbs: store.get('orbs', 0), diamonds: store.get('diamonds', 0) });
+  const walletHtml = () => { const w = wallet(); return `<span class="orb-i"></span>${w.orbs}<span class="dia-i"></span>${w.diamonds}`; };
+
+  // ------------------------------------------------------- special sets
+  // Each special set (icons.js) is earned one way: bought per mode in the
+  // shop, Golden per mode for total secret coins, Demon from a vault code,
+  // three from main-menu easter eggs, Angel from beating the secret level.
+  const SHOP_ORBS = { checker: 200, neon: 350, ice: 500, flame: 700, galaxy: 900 };
+  const SHOP_DIAMONDS = { prism: 40 };
+  const GOLD_COINS = { cube: 3, ship: 6, ball: 10, ufo: 14, wave: 20, robot: 26, spider: 33, swing: 40 };
+  const EGG_SET = { moon: 'ghost', logo: 'glitch', corners: 'royal' };
+  const hasEgg = (k) => store.get('eggs', []).indexOf(k) !== -1;
+  function coinTotal() {
+    let n = 0;
+    for (let i = 0; i < LEVELS.length; i++) n += store.get('coins:' + (LEVELS[i].slot || String(i)), []).length;
+    return n;
+  }
+  function setOwned(mode, key) {
+    if (SHOP_ORBS[key] || SHOP_DIAMONDS[key]) return store.get('owned', []).indexOf(mode + ':' + key) !== -1;
+    if (key === 'gold') return coinTotal() >= GOLD_COINS[mode];
+    if (key === 'demon') return store.get('vault', []).indexOf('demon') !== -1;
+    if (key === 'angel') return SECRET >= 0 && store.get('best:' + (LEVELS[SECRET].slot || String(SECRET)), 0) === 100;
+    for (const e in EGG_SET) if (EGG_SET[e] === key) return hasEgg(e);
+    return false;
+  }
+  function setHint(mode, key) {
+    if (SHOP_ORBS[key]) return `Shop: ${SHOP_ORBS[key]} orbs`;
+    if (SHOP_DIAMONDS[key]) return `Shop: ${SHOP_DIAMONDS[key]} diamonds`;
+    if (key === 'gold') return `Collect ${GOLD_COINS[mode]} secret coins (you have ${coinTotal()})`;
+    if (key === 'demon') return 'Unlocked by a vault code';
+    if (key === 'angel') return 'Beat the secret level';
+    return 'Hidden somewhere on the main menu';
+  }
+  const SECRET = LEVELS.findIndex((L) => L.secret);
   function equipped(mode) {
     const v = SKIN.icons[mode] || 0;
     return isUnlocked(mode, v) ? v : 0;
@@ -213,16 +264,19 @@
 
   const JUMP_KEYS = new Set(['Space', 'ArrowUp', 'KeyW']);
   window.addEventListener('keydown', (e) => {
+    if (G.screen === 'editor') { edKey(e); return; }
     if (G.screen === 'play' && (JUMP_KEYS.has(e.code) || e.code === 'Enter')) {
       e.preventDefault(); if (!e.repeat) press();
       return;
     }
     if (e.repeat) return;
     const scr = G.screen;
+    if (scr === 'home') konamiKey(e.code);
     if (e.code === 'Escape' || e.code === 'KeyP') {
       if (scr === 'play') pause();
       else if (scr === 'pause') resume();
       else if (scr === 'settings') closeSettings();
+      else if (scr === 'shared') leaveShared();
       else if (scr !== 'home' && scr !== 'complete') show('home');
     } else if (e.code === 'KeyR' && (scr === 'play' || scr === 'pause')) restart(true);
     else if (e.code === 'KeyZ' && scr === 'play') addCheckpoint();
@@ -231,7 +285,7 @@
     else if (scr === 'select') {
       if (e.code === 'ArrowLeft') setPage(G.page - 1);
       else if (e.code === 'ArrowRight') setPage(G.page + 1);
-      else if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); startLevel(MAIN[G.page], false, 'select'); }
+      else if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); if (G.page < MAIN.length) startLevel(MAIN[G.page], false, 'select'); else soonTap(); }
     } else if (scr === 'home' && (e.code === 'Enter' || e.code === 'Space')) { e.preventDefault(); show('select'); }
     else if (scr === 'complete' && e.code === 'Enter') ($('nextBtn').style.display !== 'none' ? $('nextBtn') : $('againBtn')).click();
   });
@@ -239,11 +293,18 @@
 
   // Track every finger so lifting one while another is down doesn't drop the hold.
   const pointers = new Set();
-  canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); pointers.add(e.pointerId); press(); });
+  canvas.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (G.screen === 'editor') { edPointer(e, 'down'); return; }
+    pointers.add(e.pointerId); press();
+  });
+  canvas.addEventListener('pointermove', (e) => { if (G.screen === 'editor') edPointer(e, 'move'); });
+  window.addEventListener('pointerup', (e) => { if (G.screen === 'editor') edPointer(e, 'up'); });
+  canvas.addEventListener('wheel', (e) => { if (G.screen === 'editor') { e.preventDefault(); edWheel(e); } }, { passive: false });
   const lift = (e) => { pointers.delete(e.pointerId); if (pointers.size === 0) release(); };
   window.addEventListener('pointerup', lift);
   window.addEventListener('pointercancel', lift);
-  window.addEventListener('contextmenu', (e) => { if (G.screen === 'play') e.preventDefault(); });
+  window.addEventListener('contextmenu', (e) => { if (G.screen === 'play' || G.screen === 'editor') e.preventDefault(); });
   canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
   canvas.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
   window.addEventListener('blur', () => { releaseAll(); if (G.screen === 'play') pause(); });
@@ -270,7 +331,7 @@
 
   // Save-slot for a level: main levels keep their index (so old saves still
   // line up), practice tiers use their mode/tier id.
-  const slotOf = (i) => LEVELS[i].slot || String(i);
+  const slotOf = (i) => (i < 0 ? G.L.slot : LEVELS[i].slot || String(i));
   const bestOf = (i, practice) => store.get((practice ? 'practice:' : 'best:') + slotOf(i), 0);
 
   function startLevel(idx, practice, from) {
@@ -284,6 +345,7 @@
     G.jumps = 0;
     G.time = 0;
     G.prevBest = bestOf(idx, practice);
+    G.orbM = store.get('orbm:' + slotOf(idx), 0);
     bump('attempts'); bump('att:' + slotOf(idx));
     spawnPlayer();
     show('play');
@@ -304,6 +366,7 @@
     G.camX = G.s.x - VIEW_W * playerX();
     G.camY = cp ? cp.camY : -groundLift();
     G.flash = 0;
+    G.fin = null; G.orbPop = null;
   }
 
   function restart(fresh) {
@@ -347,40 +410,77 @@
   function win() {
     AUDIO.stop();
     AUDIO.win();
+    const L = G.L;
     const first = !G.practice && bestOf(G.idx, false) < 100;
     const before = levelsBeaten();
+    // Everything you own before this clear, to show what it unlocked.
+    const ownedBefore = specialsOwned();
     saveBest(100);
-    if (!G.practice && G.s.coins.length) {
+    let newCoins = 0;
+    if (!G.practice && !L.custom && G.s.coins.length) {
       const got = new Set(store.get('coins:' + slotOf(G.idx), []));
+      const had = got.size;
       for (const id of G.s.coins) got.add(G.L.coinIds.indexOf(id));
       store.set('coins:' + slotOf(G.idx), [...got]);
+      newCoins = got.size - had;
     }
     beatenCache = -1;
-    const unlock = first ? ICONS.ORDER[before] : null;
+    // Player-made levels pay nothing, same as unrated levels in GD.
+    const orbs = G.practice || L.custom ? 0 : payOrbs(10);
+    const diamonds = L.custom ? 0 : (first ? diamondsOf(L) : 0) + newCoins * COIN_DIAMONDS;
+    if (diamonds) bump('diamonds', diamonds);
+    const unlocks = [];
+    if (first && !L.custom && before < ICONS.ORDER.length) unlocks.push(ICONS.ORDER[before]);
+    for (const k of specialsOwned()) if (ownedBefore.indexOf(k) === -1) { const [m, set] = k.split(':'); unlocks.push([m, ICONS.special(set)]); }
     flushJumps();
-    if (first) bump('cleared');
-    for (let i = 0; i < 140; i++) {
-      const a = Math.random() * Math.PI * 2, v = 3 + Math.random() * 12;
-      spawn(G.s.x, G.s.y, Math.cos(a) * v, Math.sin(a) * v + 4, 1 + Math.random(),
-        0.12 + Math.random() * 0.2, ['#ffe23b', SKIN.c1, SKIN.c2, '#ff4fd8'][i % 4], i % 2 === 0);
-    }
-    const L = G.L;
+    if (first && !L.custom) bump('cleared');
+    // GD-style finish: the icon is pulled into the end wall, light bursts
+    // out of it and the banner drops in; the results follow (see finish()).
+    G.fin = { t: 0, x: G.s.x, y: G.s.y, hit: false };
     $('completeStats').innerHTML = `${L.name}${G.practice ? ' (practice)' : ''}<br>` +
       `Attempts: ${G.attempts} &middot; Jumps: ${G.jumps} &middot; Time: ${G.time.toFixed(1)}s`;
-    $('completeEarn').textContent = first && !L.training ? `+${L.stars} ★` : first ? 'Cleared!' : '';
-    $('unlockBox').style.display = unlock ? '' : 'none';
-    if (unlock) {
-      $('unlockName').textContent = `New ${MODE_LABEL[unlock[0]]} icon: ${ICONS.name(unlock[0], unlock[1])}`;
-      iconCanvasV($('unlockCv'), unlock[0], 64, 0.7, unlock[1]);
-    }
+    const earn = [];
+    if (first && L.custom) earn.push('Cleared!');
+    else if (first && !L.training) earn.push(`+${L.stars} ★`);
+    else if (first) earn.push('Cleared!');
+    if (orbs) earn.push(`<span class="orb-i"></span>+${orbs}`);
+    if (diamonds) earn.push(`<span class="dia-i"></span>+${diamonds}`);
+    $('completeEarn').innerHTML = earn.join(' &nbsp;');
+    showUnlocks($('unlockBox'), unlocks);
     faceCanvas($('completeFace'), L.difficulty, 96, auraOf(L));
     const next = nextLevel();
     $('nextBtn').style.display = next == null ? 'none' : '';
-    setTimeout(() => { if (G.screen === 'play' && G.s.won) show('complete'); }, 1400);
+  }
+
+  // Icon box on the complete and vault screens: one icon gets its name,
+  // several get a count.
+  function showUnlocks(box, list) {
+    box.style.display = list.length ? '' : 'none';
+    if (!list.length) return;
+    box.innerHTML = list.slice(0, 4).map(() => '<canvas></canvas>').join('') +
+      `<span>${list.length === 1 ? `New ${MODE_LABEL[list[0][0]]} icon: ${ICONS.name(list[0][0], list[0][1])}` : `${list.length} new icons!`}</span>`;
+    box.querySelectorAll('canvas').forEach((cv, i) => iconCanvasV(cv, list[i][0], 64, 0.7, list[i][1]));
+  }
+  // "mode:set" for every special icon currently owned.
+  function specialsOwned() {
+    const out = [];
+    for (const set of ICONS.SETS) for (const m of P.MODES) if (setOwned(m, set)) out.push(m + ':' + set);
+    return out;
+  }
+
+  // Orbs for each new 10% of a level, paid the moment you pass it.
+  function payOrbs(m) {
+    const k = 'orbm:' + slotOf(G.idx), had = store.get(k, 0);
+    if (m <= had) return 0;
+    const n = orbsUpTo(G.L, m) - orbsUpTo(G.L, had);
+    store.set(k, m);
+    bump('orbs', n);
+    return n;
   }
 
   // The next level in whichever list the player came from.
   function nextLevel() {
+    if (G.L.custom) return null;
     if (G.L.training) {
       const list = PRACTICE[!!G.L.mini][G.L.mode];
       return G.L.tier + 1 < list.length ? list[G.L.tier + 1] : null;
@@ -429,6 +529,7 @@
       if (G.screen === 'play') update(dt);
     }
     if (G.s) render(dt);
+    else if (G.screen === 'editor') renderEditor();
     else renderMenuBg(dt);
     animateFaces(dt);
     requestAnimationFrame(frame);
@@ -442,12 +543,13 @@
     G.shake = Math.max(0, G.shake - dt);
     G.flash = Math.max(0, G.flash - dt * 3);
     if (G.popup && (G.popup.t -= dt) <= 0) G.popup = null;
+    if (G.orbPop && (G.orbPop.t -= dt) <= 0) G.orbPop = null;
     if (s.dead) {
       G.deadTimer -= dt;
       if (G.deadTimer <= 0) restart(false);
       return;
     }
-    if (s.won) return;
+    if (s.won) { if (G.fin && G.fin.t > 2.5) show('complete'); return; }
     G.time += dt;
     G.acc += dt;
     while (G.acc >= P.DT) {
@@ -461,6 +563,14 @@
       }
       if (s.dead) { die(); break; }
       if (s.won) { win(); break; }
+    }
+    if (!G.practice && !s.won && !G.L.custom) {
+      const m = Math.min(9, Math.floor(progress() / 10));
+      if (m > G.orbM) {
+        G.orbM = m;
+        const n = payOrbs(m);
+        if (n) { G.orbPop = { n, t: 1.1 }; AUDIO.orb(); }
+      }
     }
     if (s.dead || s.won) return;
     if (G.practice && SET.autoCp) {
@@ -570,7 +680,8 @@
     const px = G.prevX + (s.x - G.prevX) * alpha;
     const py = G.prevY + (s.y - G.prevY) * alpha;
 
-    G.camX = px - VIEW_W * playerX();
+    // GD-style end: the camera stops and the icon runs on into the end wall.
+    G.camX = Math.min(px - VIEW_W * playerX(), L.length - VIEW_W * 0.8);
     let targetY;
     if (s.bounds) {
       targetY = (s.bounds.floor + s.bounds.ceil) / 2 - viewH / 2;
@@ -581,7 +692,8 @@
       if (py - targetY < bot) targetY = py - bot;
       targetY = Math.max(-groundLift(), targetY);
     }
-    if (!s.dead) G.camY += (targetY - G.camY) * Math.min(1, dt * 5);
+    if (!s.dead && !s.won) G.camY += (targetY - G.camY) * Math.min(1, dt * 5);
+    if (G.fin) G.fin.t += dt;
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     if (G.shake > 0) {
@@ -601,13 +713,15 @@
     drawParts(true);
     drawStreaks();
     drawTrail(s);
-    if (!s.dead) drawPlayer(s, px, py);
+    if (G.fin) drawFinish(s);
+    else if (!s.dead) drawPlayer(s, px, py);
     drawParts(false);
     if (G.flash > 0) {
       ctx.fillStyle = `rgba(255,255,255,${G.flash * 0.35})`;
       ctx.fillRect(0, 0, W, H);
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawFinishBanner();
     drawHud();
   }
 
@@ -756,6 +870,7 @@
       else if (o.t === 'saw') drawSaw(o, col);
       else if (o.t === 'coin') drawCoin(o);
     }
+    for (const o of others) if (o.t === 'fake') drawFake(o, top, edge);
     if (detail()) drawSigns(others, pulse);
     for (const o of others) if (o.t === 'p') drawPortal(o, pulse, false);
     drawEndLine(L);
@@ -908,10 +1023,10 @@
   // Secret coin: spinning gold disc with a star. Taken this run = gone;
   // collected on an earlier clear = ghostly.
   function drawCoin(o) {
-    if (G.s.coins.indexOf(o.id) !== -1) return;
+    if (G.s && G.s.coins.indexOf(o.id) !== -1) return;
     const x = sx(o.x + 0.5), y = sy(o.y + 0.5) + Math.sin(G.t * 3 + o.id) * S * 0.06;
     if (x < -S || x > W + S) return;
-    const owned = (G.ownedCoins || []).indexOf(G.L.coinIds.indexOf(o.id)) !== -1;
+    const owned = !!(G.s && G.L.coinIds) && (G.ownedCoins || []).indexOf(G.L.coinIds.indexOf(o.id)) !== -1;
     const k = Math.abs(Math.cos(G.t * 2.5)) * 0.8 + 0.2;
     ctx.save();
     ctx.translate(x, y); ctx.scale(k, 1);
@@ -932,7 +1047,48 @@
     ctx.closePath(); ctx.fill(); ctx.stroke();
     ctx.restore();
     ctx.globalAlpha = 1;
-    if (detail() && Math.random() < 0.15) spawn(o.x + 0.2 + Math.random() * 0.6, o.y + Math.random(), 0, 0.8, 0.5, 0.08, '#ffe066', true);
+    if (G.s && detail() && Math.random() < 0.15) spawn(o.x + 0.2 + Math.random() * 0.6, o.y + Math.random(), 0, 0.8, 0.5, 0.08, '#ffe066', true);
+  }
+
+  // Fake wall over a secret coin: looks like the column around it, with a
+  // faint shimmer as the only hint. Goes see-through once you're inside.
+  function drawFake(o, topCol, edgeCol) {
+    const x = sx(o.x), y = sy(o.y + o.h), w = o.w * S, h = o.h * S;
+    if (x > W || x + w < 0) return;
+    const s = G.s, inside = !!s && s.x + 1 > o.x && s.x < o.x + o.w && s.y + 1 > o.y && s.y < o.y + o.h;
+    o._a = (o._a === undefined ? 0.94 : o._a) + ((inside ? 0.3 : 0.94) - (o._a === undefined ? 0.94 : o._a)) * 0.15;
+    ctx.save();
+    ctx.globalAlpha = o._a;
+    ctx.fillStyle = 'rgba(0,0,0,0.92)';
+    ctx.fillRect(x, y, w, h);
+    ctx.strokeStyle = 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let i = 1; i < o.w; i++) { ctx.moveTo(x + i * S, y); ctx.lineTo(x + i * S, y + h); }
+    ctx.stroke();
+    if (detail()) {
+      ctx.strokeStyle = edgeCol;
+      ctx.globalAlpha = o._a * 0.35;
+      ctx.strokeRect(x + S * 0.16, y + S * 0.16, w - S * 0.32, h - S * 0.32);
+      // A slow diagonal glint sweeping across every few seconds
+      const ph = ((G.t * 0.45 + o.x * 0.07) % 1) * 1.6 - 0.3;
+      ctx.beginPath(); ctx.rect(x, y, w, h); ctx.clip();
+      ctx.globalAlpha = o._a * 0.16;
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      const gx = x + ph * (w + h);
+      ctx.moveTo(gx, y); ctx.lineTo(gx + S * 0.35, y); ctx.lineTo(gx + S * 0.35 - h, y + h); ctx.lineTo(gx - h, y + h);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalAlpha = o._a;
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = Math.max(1.5, S * 0.06);
+    ctx.beginPath();
+    ctx.moveTo(x + 1, y); ctx.lineTo(x + 1, y + h);
+    ctx.moveTo(x + w - 1, y); ctx.lineTo(x + w - 1, y + h);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   }
 
   function drawBlock(o, topCol, edgeCol, pulse) {
@@ -1001,7 +1157,7 @@
   }
 
   function drawPad(o, pulse) {
-    const used = G.s.used.indexOf(o.id) !== -1;
+    const used = !!G.s && G.s.used.indexOf(o.id) !== -1;
     const c = PAD_COL[o.c];
     const flip = o.d === -1;
     const x = sx(o.x + 0.5), y = flip ? sy(o.y + 1) : sy(o.y);
@@ -1027,7 +1183,7 @@
   }
 
   function drawOrb(o, pulse) {
-    const used = G.s.used.indexOf(o.id) !== -1;
+    const used = !!G.s && G.s.used.indexOf(o.id) !== -1;
     const c = ORB_COL[o.c];
     const x = sx(o.x + 0.5), y = sy(o.y + 0.5);
     const r = S * 0.36 * (1 + pulse * 0.12);
@@ -1178,14 +1334,105 @@
     }
   }
 
+  // The end wall: a glowing band with a bright edge, a block past the
+  // level's last column. Flares up when the icon hits it.
+  const WALL = 1.5;
   function drawEndLine(L) {
-    const x = sx(L.length);
+    const x = sx(L.length + WALL);
     if (x > W + 10) return;
+    const hit = G.fin && G.fin.hit ? Math.max(0, 1 - (G.fin.t - 0.5) * 1.5) : 0;
     const g = ctx.createLinearGradient(x - S * 3, 0, x, 0);
     g.addColorStop(0, 'rgba(255,255,255,0)');
-    g.addColorStop(1, 'rgba(255,255,255,0.7)');
+    g.addColorStop(1, `rgba(255,255,255,${0.7 + hit * 0.3})`);
     ctx.fillStyle = g;
     ctx.fillRect(x - S * 3, 0, S * 3, H);
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(x - 2, 0, 4 + hit * S * 0.3, H);
+    if (G.s && detail() && Math.random() < 0.5) {
+      spawn(L.length + WALL - Math.random() * 0.4, G.camY + Math.random() * viewH, -0.5 - Math.random(), 1 + Math.random() * 2, 0.6, 0.08, '#fff', true);
+    }
+  }
+
+  // Finish: 0-0.5s the icon is pulled in an arc into the end wall, spinning
+  // and shrinking; on contact a flash, a ring and a burst of light rays;
+  // from 0.75s the banner drops in. game.update() opens the results at 2.5s.
+  function drawFinish(s) {
+    const f = G.fin, L = G.L;
+    const wx = L.length + WALL, wy = G.camY + viewH / 2;
+    const k = Math.min(1, f.t / 0.5), e = k * k;
+    if (!f.hit) {
+      const cx = (f.x + wx) / 2, cy = Math.max(f.y, wy) + 2.5;
+      const x = (1 - e) * (1 - e) * f.x + 2 * (1 - e) * e * cx + e * e * wx;
+      const y = (1 - e) * (1 - e) * f.y + 2 * (1 - e) * e * cy + e * e * wy;
+      G.rot += 0.35 + k * 0.5;
+      drawPlayer(s, x, y, 1 - 0.75 * e);
+      if (k >= 1) {
+        f.hit = true;
+        G.flash = 1;
+        if (SET.shake) G.shake = 0.25;
+        AUDIO.boom();
+        for (let i = 0; i < 150; i++) {
+          const a = Math.random() * Math.PI * 2, v = 3 + Math.random() * 14;
+          spawn(wx, wy, Math.cos(a) * v - 3, Math.sin(a) * v, 0.8 + Math.random(),
+            0.1 + Math.random() * 0.2, ['#ffe23b', SKIN.c1, SKIN.c2, '#fff'][i % 4], i % 2 === 0);
+        }
+      }
+      return;
+    }
+    const t = f.t - 0.5;
+    const X = sx(wx), Y = sy(wy);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    // Light rays fanning out from the impact, slowly turning.
+    const R = Math.max(W, H) * 1.3 * Math.min(1, t / 0.35);
+    const fade = t > 1.6 ? Math.max(0.35, 1 - (t - 1.6)) : 1;
+    const n = 16;
+    for (let i = 0; i < n; i++) {
+      const a = G.t * 0.35 + (i / n) * Math.PI * 2, w = Math.PI / n * 0.55;
+      ctx.fillStyle = i % 2 ? `rgba(255,226,90,${0.22 * fade})` : `rgba(255,255,255,${0.16 * fade})`;
+      ctx.beginPath(); ctx.moveTo(X, Y);
+      ctx.lineTo(X + Math.cos(a - w) * R, Y + Math.sin(a - w) * R);
+      ctx.lineTo(X + Math.cos(a + w) * R, Y + Math.sin(a + w) * R);
+      ctx.closePath(); ctx.fill();
+    }
+    // Two shock rings
+    for (const d of [0, 0.18]) {
+      const p = (t - d) / 0.7;
+      if (p <= 0 || p >= 1) continue;
+      ctx.strokeStyle = `rgba(255,255,255,${1 - p})`;
+      ctx.lineWidth = S * 0.35 * (1 - p) + 1;
+      ctx.beginPath(); ctx.arc(X, Y, S * (0.5 + p * 9), 0, Math.PI * 2); ctx.stroke();
+    }
+    const glow = ctx.createRadialGradient(X, Y, 0, X, Y, S * 4);
+    glow.addColorStop(0, `rgba(255,255,255,${0.9 * fade})`); glow.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = glow; ctx.fillRect(X - S * 4, Y - S * 4, S * 8, S * 8);
+    ctx.restore();
+  }
+
+  // "LEVEL COMPLETE!" drops in big, overshoots and settles (screen space).
+  function drawFinishBanner() {
+    const f = G.fin;
+    if (!f || G.screen === 'complete') return;
+    const p = Math.min(1, (f.t - 0.75) / 0.55);
+    if (p <= 0) return;
+    const c1 = 1.70158, c3 = c1 + 1;
+    const back = 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2);
+    const sc = 1 + (1 - back) * 1.6;
+    const px = Math.min(W * 0.085, 86) * sc;
+    const text = G.practice ? 'PRACTICE COMPLETE!' : 'LEVEL COMPLETE!';
+    const y = H * 0.3;
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, p * 3);
+    ctx.font = `${Math.round(px)}px 'Lilita One', system-ui, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+    ctx.lineWidth = Math.max(4, px * 0.16); ctx.strokeStyle = '#000';
+    ctx.strokeText(text, W / 2, y + px * 0.07);
+    ctx.strokeText(text, W / 2, y);
+    const g = ctx.createLinearGradient(0, y - px / 2, 0, y + px / 2);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#ffe066'); g.addColorStop(1, '#ffa600');
+    ctx.fillStyle = g;
+    ctx.fillText(text, W / 2, y);
+    ctx.restore();
   }
 
   function drawHitboxes(L, s) {
@@ -1289,8 +1536,8 @@
 
   // ------------------------------------------------------------ player
 
-  function drawPlayer(s, px, py) {
-    const size = (s.mini ? 0.6 : 1) * S;
+  function drawPlayer(s, px, py, scale = 1) {
+    const size = (s.mini ? 0.6 : 1) * S * scale;
     if (s.mode === 'wave' && G.trail.length >= 4) drawWaveTrail(s);
     ctx.save();
     ctx.translate(sx(px), sy(py));
@@ -1347,6 +1594,14 @@
       ctx.fillRect(bx + bw * best / 100 - 1.5, by - 4, 3, bh + 8);
     }
     if (SET.pct) outlinedText(`${pct}%`, bx + bw + 12, by + bh / 2, 18);
+    if (G.orbPop) {
+      const rise = (1.1 - G.orbPop.t) * 16;
+      ctx.globalAlpha = Math.min(1, G.orbPop.t * 3);
+      const ox = bx + bw + 20, oy = by + bh + 26 - rise;
+      drawOrbIcon(ox, oy, 9);
+      outlinedText(`+${G.orbPop.n}`, ox + 14, oy, 18, 'left', '#9ff3ff');
+      ctx.globalAlpha = 1;
+    }
     if (G.practice) outlinedText('PRACTICE', W / 2, by + bh + 18, 18, 'center');
     if (SET.fps) outlinedText(`${G.fps} fps`, W - 12, H - 16, 16, 'right');
     if (G.popup) {
@@ -1357,6 +1612,13 @@
       outlinedText(G.popup.sub, W / 2, H * 0.38 + 46, 30, 'center');
       ctx.globalAlpha = 1;
     }
+  }
+
+  function drawOrbIcon(x, y, r) {
+    const g = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r);
+    g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#5ff0ff'); g.addColorStop(1, '#1060e0');
+    ctx.fillStyle = g; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   }
 
   function roundRect(x, y, w, h, r) {
@@ -1371,11 +1633,16 @@
   // ---------------------------------------------------------------- UI
 
   const $ = (id) => document.getElementById(id);
-  const SCREENS = ['home', 'select', 'practice', 'settings', 'statsScr', 'skin', 'pause', 'complete'];
+  const SCREENS = ['home', 'select', 'practice', 'settings', 'statsScr', 'skin', 'shop', 'vault', 'create', 'editor', 'shared', 'pause', 'complete'];
 
   // Main levels, easiest first (indexes stay stable so saves don't move).
-  const MAIN = LEVELS.map((L, i) => i).filter((i) => !LEVELS[i].training)
-    .sort((a, b) => (LEVELS[a].order ?? LEVELS[a].stars) - (LEVELS[b].order ?? LEVELS[b].stars) || a - b);
+  // The secret level joins the end once its door has been found.
+  let MAIN = [];
+  function refreshMain() {
+    MAIN = LEVELS.map((L, i) => i).filter((i) => !LEVELS[i].training && (!LEVELS[i].secret || hasEgg('door')))
+      .sort((a, b) => (LEVELS[a].order ?? LEVELS[a].stars) - (LEVELS[b].order ?? LEVELS[b].stars) || a - b);
+  }
+  refreshMain();
   function coinSlots(i) {
     const got = store.get('coins:' + slotOf(i), []);
     return Array.from({ length: LEVELS[i].coinCount || 0 }, (_, k) =>
@@ -1421,7 +1688,7 @@
     for (const id of SCREENS) $(id).classList.toggle('show', screen === id);
     $('hud').classList.toggle('show', screen === 'play');
     $('cpbtns').classList.toggle('show', screen === 'play' && G.practice);
-    if (screen === 'home' || screen === 'select' || screen === 'practice' || screen === 'statsScr' || screen === 'skin' || (screen === 'settings' && !G.s)) {
+    if (['home', 'select', 'practice', 'statsScr', 'skin', 'shop', 'vault', 'create', 'editor', 'shared'].indexOf(screen) !== -1 || (screen === 'settings' && !G.s)) {
       if (G.s && screen !== 'settings') { AUDIO.stop(); G.s = null; }
     }
     if (screen === 'home') buildHome();
@@ -1429,6 +1696,10 @@
     if (screen === 'practice') buildPractice();
     if (screen === 'statsScr') buildStats();
     if (screen === 'skin') buildSkin();
+    if (screen === 'shop') buildShop();
+    if (screen === 'vault') buildVault();
+    if (screen === 'create') buildCreate();
+    if (screen === 'editor') buildEditor();
   }
 
   // ---------------------------------------------------------- home
@@ -1438,7 +1709,84 @@
     $('tagline').textContent = `${MAIN.length} levels · 160 mode practices · ${beaten}/${MAIN.length} beaten`;
     iconCanvas($('hIconCv'), 'cube', 64, 0.7);
     iconCanvas($('hPracCv'), 'ship', 64, 0.8);
+    $('hWallet').innerHTML = walletHtml();
+    $('moon').classList.toggle('found', hasEgg('moon'));
+    $('keyhole').className = 'keyhole' + (hasEgg('door') ? ' open' : '');
   }
+
+  // ------------------------------------------------------ easter eggs
+  // Main menu secrets: tap the logo 10 times (Glitch set), tap the faint
+  // moon (Ghost), tap the four corners clockwise from the top left or
+  // type the Konami code (Royal), and tap the keyhole in the ground three
+  // times to open the secret level.
+  let toastTimer = 0;
+  function toast(text, icon) {
+    $('toastText').textContent = text;
+    $('toastCv').style.display = icon ? '' : 'none';
+    if (icon) iconCanvasV($('toastCv'), icon[0], 48, 0.75, icon[1]);
+    $('toast').classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => $('toast').classList.remove('show'), 3400);
+  }
+  function findEgg(k) {
+    if (hasEgg(k)) return;
+    store.set('eggs', store.get('eggs', []).concat(k));
+    AUDIO.unlock();
+    if (k === 'door') {
+      refreshMain();
+      toast('A secret door opened... check the level select!');
+    } else {
+      const set = EGG_SET[k];
+      toast(`Secret found! ${ICONS.setName(set)} icon set unlocked`, ['cube', ICONS.special(set)]);
+    }
+    buildHome();
+  }
+
+  let logoTaps = 0, logoT = 0;
+  $('logo').addEventListener('click', () => {
+    const now = performance.now(), el = $('logo');
+    logoTaps = now - logoT < 1500 ? logoTaps + 1 : 1;
+    logoT = now;
+    el.classList.add('bump');
+    setTimeout(() => el.classList.remove('bump'), 110);
+    AUDIO.tick();
+    if (logoTaps >= 10) {
+      logoTaps = 0;
+      el.classList.remove('spin'); void el.offsetWidth; el.classList.add('spin');
+      findEgg('logo');
+    }
+  });
+  $('moon').addEventListener('click', () => { $('moon').classList.add('found'); findEgg('moon'); });
+
+  const CORNERS = ['tl', 'tr', 'br', 'bl'];
+  let cornerSeq = [], cornerT = 0;
+  $('home').addEventListener('pointerdown', (e) => {
+    const m = Math.max(56, Math.min(W, H) * 0.14);
+    const h = e.clientX < m ? 'l' : e.clientX > W - m ? 'r' : null;
+    const v = e.clientY < m ? 't' : e.clientY > H - m ? 'b' : null;
+    if (!h || !v) { cornerSeq = []; return; }
+    const now = performance.now();
+    if (now - cornerT > 6000) cornerSeq = [];
+    cornerT = now;
+    cornerSeq.push(v + h);
+    if (cornerSeq.join() !== CORNERS.slice(0, cornerSeq.length).join()) cornerSeq = v + h === 'tl' ? ['tl'] : [];
+    if (cornerSeq.length === 4) { cornerSeq = []; findEgg('corners'); }
+  });
+  const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'KeyB', 'KeyA'];
+  let konami = 0;
+  function konamiKey(code) {
+    konami = code === KONAMI[konami] ? konami + 1 : code === KONAMI[0] ? (konami === 2 ? 2 : 1) : 0;
+    if (konami === KONAMI.length) { konami = 0; findEgg('corners'); }
+  }
+
+  let keyTaps = 0;
+  $('keyhole').addEventListener('click', () => {
+    if (hasEgg('door')) { show('select'); setPage(MAIN.indexOf(SECRET)); return; }
+    keyTaps++;
+    AUDIO.tick();
+    $('keyhole').className = 'keyhole k' + Math.min(2, keyTaps);
+    if (keyTaps >= 3) findEgg('door');
+  });
 
   // -------------------------------------------------- level selector
   function buildSelect() {
@@ -1450,10 +1798,10 @@
       const slide = document.createElement('div');
       slide.className = 'slide';
       slide.innerHTML = `
-        <div class="lvcard" role="button" tabindex="0" aria-label="Play ${L.name}" style="--lvc:${L.colors[0].bg}">
+        <div class="lvcard${L.secret ? ' secret' : ''}" role="button" tabindex="0" aria-label="Play ${L.name}" style="--lvc:${L.secret ? '#2a0a4a' : L.colors[0].bg}">
           <canvas></canvas>
           <div>
-            <div class="lvno">Level ${L.levelNo || ''}</div>
+            <div class="lvno">${L.secret ? 'Secret Level' : 'Level ' + (L.levelNo || '')}</div>
             <div class="lvname">${L.name}</div>
             <div class="lvmeta"><span>${L.difficulty}</span><span class="star">${L.stars} ★</span>
               <span>${lengthLabel(L)}</span><span>${best === 100 ? '✓ Beaten' : ''}</span></div>
@@ -1474,11 +1822,29 @@
       const dot = document.createElement('i');
       dots.appendChild(dot);
     });
+    // GD's "Coming soon" page at the end. It talks back, and drops hints.
+    const soon = document.createElement('div');
+    soon.className = 'slide';
+    soon.innerHTML = '<div class="soon" role="button" tabindex="0" aria-label="Coming soon">Coming Soon!<small></small></div>';
+    soon.firstChild.addEventListener('click', () => { if (!swiped) soonTap(); });
+    track.appendChild(soon);
+    dots.appendChild(document.createElement('i'));
     setPage(G.page, true);
   }
 
+  const SOON = [
+    'Stop poking it.', 'It is still coming soon.', 'Seriously, there is nothing here.', 'Okay. Want a secret?',
+    'Tap the logo. A lot.', 'The moon is watching you.', 'Corners. Clockwise, from the top left.',
+    'Something is buried in the ground...', 'Codes go in the Vault.', 'That is all I know.', 'Go away.', '...',
+  ];
+  function soonTap() {
+    G.soonN = ((G.soonN || 0) % SOON.length) + 1;
+    $('track').querySelector('.soon small').textContent = SOON[G.soonN - 1];
+    AUDIO.tick();
+  }
+
   function setPage(p, instant) {
-    const n = MAIN.length;
+    const n = MAIN.length + 1;
     G.page = ((p % n) + n) % n;
     store.set('page', G.page);
     const track = $('track');
@@ -1486,7 +1852,7 @@
     track.style.transform = `translateX(${-G.page * 100}%)`;
     [...$('dots').children].forEach((d, k) => d.classList.toggle('on', k === G.page));
     const L = LEVELS[MAIN[G.page]];
-    G.menuBg = [L.colors[0].bg, L.colors[0].gr];
+    G.menuBg = L ? [L.colors[0].bg, L.colors[0].gr] : ['#20203a', '#121224'];
   }
 
   // Swipe between slides; a swipe suppresses the card's click.
@@ -1584,7 +1950,9 @@
       ['Stars', `${stars} ★`], ['Levels beaten', `${beaten.length}/${MAIN.length}`],
       ['Demons beaten', demons], ['Mode practices', `${prac}/160`],
       ['Coins', `${LEVELS.reduce((n, L, i) => n + store.get('coins:' + slotOf(i), []).length, 0)}/${LEVELS.reduce((n, L) => n + (L.coinCount || 0), 0)}`],
-      ['Icons', `${Math.min(ICONS.COUNT * 8, 8 + levelsBeaten())}/${ICONS.COUNT * 8}`],
+      ['Icons', `${iconsOwned()}/${ICONS.TOTAL * 8}`],
+      ['Orbs', store.get('orbs', 0)], ['Diamonds', store.get('diamonds', 0)],
+      ['Secrets found', `${['moon', 'logo', 'corners', 'door'].filter(hasEgg).length}/4`],
       ['Attempts', store.get('attempts', 0)], ['Jumps', store.get('jumps', 0)],
     ];
     $('statGrid').innerHTML = cells.map(([k, v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join('');
@@ -1657,26 +2025,699 @@
       tabs.appendChild(b);
       iconCanvas(b.querySelector('canvas'), m, 40, 0.7);
     }
-    const total = ICONS.COUNT * P.MODES.length;
-    const owned = Math.min(total, P.MODES.length + levelsBeaten());
-    $('kitCount').textContent = `${owned}/${total} icons unlocked \u00b7 beat any level to unlock the next`;
+    $('kitCount').textContent = `${iconsOwned()}/${ICONS.TOTAL * P.MODES.length} icons unlocked \u00b7 beat any level to unlock the next`;
     const grid = $('kitGrid');
     grid.innerHTML = '';
-    for (let v = 0; v < ICONS.COUNT; v++) {
+    for (let v = 0; v < ICONS.TOTAL; v++) {
       const m = G.kitMode;
+      if (v === ICONS.COUNT) {
+        const sep = document.createElement('div');
+        sep.className = 'label kitsep';
+        sep.textContent = 'Special icons: shop, secret coins, vault codes and secrets';
+        grid.appendChild(sep);
+      }
       const open = isUnlocked(m, v);
+      const hint = v >= ICONS.COUNT ? setHint(m, ICONS.SETS[v - ICONS.COUNT]) : 'Beat more levels';
       const b = document.createElement('button');
       b.className = (equipped(m) === v ? 'on' : '') + (open ? '' : ' locked');
-      b.title = open ? ICONS.name(m, v) : 'Locked';
-      b.setAttribute('aria-label', open ? `${ICONS.name(m, v)} ${MODE_LABEL[m]}` : `Locked ${MODE_LABEL[m]} icon`);
+      b.title = open ? ICONS.name(m, v) : 'Locked: ' + hint;
+      b.setAttribute('aria-label', open ? `${ICONS.name(m, v)} ${MODE_LABEL[m]}` : `Locked ${MODE_LABEL[m]} icon. ${hint}`);
       b.innerHTML = '<canvas></canvas>' + (open ? '' : '<span class="lock">\ud83d\udd12</span>');
-      if (open) b.addEventListener('click', () => { SKIN.icons[m] = v; saveSkin(); buildSkin(); });
+      b.addEventListener('click', () => {
+        if (open) { SKIN.icons[m] = v; saveSkin(); buildSkin(); } else toast(hint, null);
+      });
       grid.appendChild(b);
       iconCanvasV(b.querySelector('canvas'), m, 48, 0.68, v);
     }
     $('glowBtn').textContent = `Glow: ${SKIN.glow ? 'On' : 'Off'}`;
     requestAnimationFrame(renderSkinPreview);
   }
+
+  function iconsOwned() {
+    return Math.min(ICONS.COUNT * 8, 8 + levelsBeaten()) + specialsOwned().length;
+  }
+
+  // ------------------------------------------------------------- shop
+  const SHOP_SETS = Object.keys(SHOP_ORBS).concat(Object.keys(SHOP_DIAMONDS));
+  const KEEPER = [
+    'Welcome! Spend those orbs.', 'Fresh icons, just in.', 'No refunds. Ever.',
+    'Prism costs diamonds. Worth every one.', 'Back again? Good taste.', 'Orbs come from beating your best. Go earn some.',
+  ];
+  function buildShop(say) {
+    G.menuBg = ['#6a3300', '#3a1a00'];
+    const m = G.shopMode || 'cube';
+    $('shopSay').textContent = say || KEEPER[Math.floor(Math.random() * KEEPER.length)];
+    $('shopWallet').innerHTML = walletHtml();
+    const tabs = $('shopTabs');
+    tabs.innerHTML = '';
+    for (const mm of P.MODES) {
+      const b = document.createElement('button');
+      b.className = mm === m ? 'on' : '';
+      b.setAttribute('aria-label', MODE_LABEL[mm]); b.title = MODE_LABEL[mm];
+      b.innerHTML = '<canvas></canvas>';
+      b.addEventListener('click', () => { G.shopMode = mm; buildShop($('shopSay').textContent); });
+      tabs.appendChild(b);
+      iconCanvasV(b.querySelector('canvas'), mm, 40, 0.7, ICONS.special(SHOP_SETS[P.MODES.indexOf(mm) % SHOP_SETS.length]));
+    }
+    const grid = $('shopGrid');
+    grid.innerHTML = '';
+    const w = wallet();
+    for (const set of SHOP_SETS) {
+      const v = ICONS.special(set);
+      const own = setOwned(m, set);
+      const orbs = SHOP_ORBS[set], price = orbs || SHOP_DIAMONDS[set];
+      const can = orbs ? w.orbs >= price : w.diamonds >= price;
+      const it = document.createElement('div');
+      it.className = 'item';
+      const btn = own ? (equipped(m) === v ? 'Equipped' : 'Equip') : `<span class="${orbs ? 'orb-i' : 'dia-i'}"></span>${price}`;
+      it.innerHTML = `<canvas></canvas><span class="nm">${ICONS.name(m, v)}</span><button class="${own ? 'ghost' : 'gold'}${own || can ? '' : ' poor'}">${btn}</button>`;
+      it.querySelector('button').addEventListener('click', () => {
+        if (own) { SKIN.icons[m] = v; saveSkin(); buildShop('Looking sharp.'); return; }
+        if (!can) { AUDIO.nope(); buildShop(`You need ${price - (orbs ? w.orbs : w.diamonds)} more ${orbs ? 'orbs' : 'diamonds'} for that one.`); return; }
+        bump(orbs ? 'orbs' : 'diamonds', -price);
+        store.set('owned', store.get('owned', []).concat(m + ':' + set));
+        SKIN.icons[m] = v; saveSkin();
+        AUDIO.buy();
+        buildShop(`Thanks! The ${ICONS.name(m, v)} is yours, and equipped.`);
+      });
+      grid.appendChild(it);
+      iconCanvasV(it.querySelector('canvas'), m, 64, 0.68, v);
+    }
+  }
+
+  // ------------------------------------------------------------ vault
+  // Codes are kept as FNV-1a hashes of the upper-cased code, so reading
+  // the source doesn't give them away. Each unlocks a set (or pays out).
+  const VAULT = {
+    '1v4lpa8': { set: 'demon', say: 'ELLOIT... The demons answer to you now.' },
+  };
+  const VAULT_NO = [
+    'Nope.', 'Try again.', 'That is not a code.', 'Are you even trying?', 'Wrong. Obviously.',
+    'Hmm... no.', 'I have all day.', 'Nice try.', 'The lock did not even move.',
+  ];
+  function hashCode(str) {
+    let h = 0x811c9dc5;
+    for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+    return h.toString(36);
+  }
+  function buildVault() {
+    G.menuBg = ['#2e2a40', '#16141f'];
+    $('vaultSay').textContent = 'Got a code? Let\'s hear it.';
+    $('vaultCode').value = '';
+    $('vaultBox').style.display = 'none';
+    $('vaultLock').classList.remove('shake', 'open');
+    if (!TOUCH) setTimeout(() => $('vaultCode').focus(), 50);
+  }
+  function tryCode() {
+    const code = $('vaultCode').value.trim().toUpperCase().replace(/\s+/g, '');
+    if (!code) { $('vaultCode').focus(); return; }
+    const h = hashCode(code), r = VAULT[h];
+    const lock = $('vaultLock');
+    lock.classList.remove('shake', 'open'); void lock.offsetWidth;
+    $('vaultBox').style.display = 'none';
+    if (!r) {
+      AUDIO.nope(); lock.classList.add('shake');
+      $('vaultSay').textContent = VAULT_NO[Math.floor(Math.random() * VAULT_NO.length)];
+      return;
+    }
+    const used = store.get('codes', []);
+    if (used.indexOf(h) !== -1) { $('vaultSay').textContent = 'You already used that one.'; return; }
+    store.set('codes', used.concat(h));
+    if (r.set) store.set('vault', store.get('vault', []).concat(r.set));
+    if (r.orbs) bump('orbs', r.orbs);
+    if (r.diamonds) bump('diamonds', r.diamonds);
+    AUDIO.unlock(); lock.classList.add('open');
+    $('vaultSay').textContent = r.say;
+    if (r.set) showUnlocks($('vaultBox'), P.MODES.map((m) => [m, ICONS.special(r.set)]));
+    $('vaultCode').value = '';
+  }
+  $('vaultGo').addEventListener('click', tryCode);
+  $('vaultCode').addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') tryCode(); });
+  $('vaultDone').addEventListener('click', () => show('home'));
+  $('shopDone').addEventListener('click', () => show('home'));
+  $('hShop').addEventListener('click', () => show('shop'));
+  $('hVault').addEventListener('click', () => show('vault'));
+
+  // Saves from before orbs and diamonds existed: pay out what their
+  // progress would have earned, once.
+  if (!store.get('econ', 0)) {
+    let orbs = 0, dia = 0;
+    LEVELS.forEach((L, i) => {
+      const best = store.get('best:' + slotOf(i), 0);
+      const m = best === 100 ? 10 : Math.floor(best / 10);
+      if (m) { orbs += orbsUpTo(L, m); store.set('orbm:' + slotOf(i), m); }
+      if (best === 100) dia += diamondsOf(L);
+      dia += COIN_DIAMONDS * store.get('coins:' + slotOf(i), []).length;
+    });
+    store.set('orbs', store.get('orbs', 0) + orbs);
+    store.set('diamonds', store.get('diamonds', 0) + dia);
+    store.set('econ', 1);
+  }
+
+  // ----------------------------------------------------------- editor
+  // Player-made levels. A level is { id, name, mode, mini, speed, face,
+  // bg, gr, song, o } where o lists objects as [kind, x, y, extra, flip]
+  // on whole-block cells:
+  //   b block · f fake wall · c coin · s spike · ss small spike · w saw
+  //   o orb (extra = colour) · d pad (extra = colour) · p portal (extra = kind)
+  // flip = -1 hangs a spike or pad upside down. Saved levels live under
+  // 'my:levels'; sharing packs one into a link (deflated JSON, base64url).
+  const ED_KINDS = ['b', 'f', 'c', 's', 'ss', 'w', 'o', 'd', 'p'];
+  const ED_CATS = [
+    ['Blocks', [['b'], ['f'], ['c']]],
+    ['Spikes', [['s'], ['ss'], ['w']]],
+    ['Orbs', ['yellow', 'pink', 'red', 'blue', 'green', 'black', 'dash', 'dashp'].map((c) => ['o', c])],
+    ['Pads', ['yellow', 'pink', 'red', 'blue'].map((c) => ['d', c])],
+    ['Modes', P.MODES.map((m) => ['p', m])],
+    ['Portals', ['grav+', 'grav-', 'mini', 'big', 's0', 's1', 's2', 's3', 's4'].map((k) => ['p', k])],
+  ];
+  const PORTAL_NAME = {
+    'grav+': 'Gravity flip', 'grav-': 'Normal gravity', mini: 'Mini', big: 'Normal size',
+    s0: '0.5x speed', s1: '1x speed', s2: '2x speed', s3: '3x speed', s4: '4x speed',
+  };
+  const cap1 = (w) => (w ? w[0].toUpperCase() + w.slice(1) : '');
+  function edItemName([k, e]) {
+    return { b: 'Block', f: 'Fake wall (fly through it)', c: 'Secret coin (3 max)', s: 'Spike', ss: 'Small spike', w: 'Saw',
+      o: `${e === 'dash' ? 'Dash' : e === 'dashp' ? 'Pink dash' : cap1(e || '')} orb`, d: `${cap1(e || '')} pad`,
+      p: MODE_LABEL[e] ? `${MODE_LABEL[e]} portal` : PORTAL_NAME[e] }[k];
+  }
+  const ED_COLORS = [
+    ['#2b5bff', '#1a3acc'], ['#c22bff', '#7a17b0'], ['#ff3b5c', '#b01734'], ['#ff8a1f', '#b0560f'],
+    ['#16c79a', '#0d7d61'], ['#00a8ff', '#0068a0'], ['#3b1c6b', '#22104a'], ['#300010', '#180008'],
+  ];
+  // Corridor heights of the bounded modes (physics.js MODE_CFG.bound).
+  const BOUND = { ship: 10, ball: 8, ufo: 10, wave: 10, spider: 8, swing: 10 };
+  const ED = { lv: null, L: null, cam: { x: -3, y: -3 }, cat: 0, item: ['b'], tool: 'build', flip: false,
+    undo: [], drag: null, hover: null };
+
+  const myLevels = () => store.get('my:levels', []);
+  function saveMine(lv) {
+    const list = myLevels(), i = list.findIndex((x) => x.id === lv.id);
+    if (i >= 0) list[i] = lv; else list.unshift(lv);
+    store.set('my:levels', list);
+  }
+  function newLevel() {
+    return { id: Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36), name: `My Level ${myLevels().length + 1}`,
+      mode: 'cube', mini: false, speed: 1, face: 'Normal', bg: '#2b5bff', gr: '#1a3acc', song: 1 + Math.floor(Math.random() * 9999), o: [] };
+  }
+
+  // Editor entry -> game object (see physics.js for the object shapes).
+  function toGame([k, x, y, e, f], id) {
+    switch (k) {
+      case 'b': return { t: 'b', x, y, w: 1, h: 1, id };
+      case 'f': return { t: 'fake', x, y, w: 1, h: 1, id };
+      case 'c': return { t: 'coin', x, y, w: 1, h: 1, id };
+      case 's': case 'ss': return { t: k, x, y, d: f || 1, w: 1, h: 1, id };
+      case 'w': return { t: 'saw', x: x - 0.5, y: y - 0.5, w: 2, h: 2, r: 1, id };
+      case 'o': return { t: 'orb', x, y, c: e, w: 1, h: 1, id };
+      case 'd': return { t: 'pad', x, y, c: e, d: f || 1, w: 1, h: 1, id };
+      default: {
+        const o = { t: 'p', x, y: y + 0.5, k: e, h: 3, w: 1, id };
+        // Corridor modes get a corridor centred on the portal.
+        if (BOUND[e]) { const fl = Math.max(0, Math.round(y + 0.5 - BOUND[e] / 2)); o.b = [fl, fl + BOUND[e]]; }
+        return o;
+      }
+    }
+  }
+  function edBox([k, x, y]) {
+    if (k === 'w') return [x - 0.5, y - 0.5, x + 1.5, y + 1.5];
+    if (k === 'p') return [x, y - 1, x + 1, y + 2];
+    return [x, y, x + 1, y + 1];
+  }
+  function edToDef(lv, slot) {
+    const objects = lv.o.map((e, i) => toGame(e, i));
+    let maxX = 10;
+    for (const o of objects) maxX = Math.max(maxX, o.x + o.w);
+    return {
+      name: lv.name, objects, colors: [{ x: 0, bg: lv.bg, gr: lv.gr }], length: Math.ceil(maxX) + 12,
+      startMode: lv.mode, startMini: !!lv.mini, startSpeed: lv.speed, difficulty: lv.face, stars: 0,
+      bpm: 118 + (lv.song % 8) * 7, key: lv.song % 12, seed: lv.song, custom: true, slot,
+      coinCount: objects.filter((o) => o.t === 'coin').length,
+    };
+  }
+  function edCompile() {
+    ED.L = P.compile(edToDef(ED.lv, 'my:' + ED.lv.id));
+    ED.L.coinIds = [];
+  }
+
+  // Anything shared over a link is untrusted: keep only what the editor
+  // could have made itself.
+  const FACE_NAMES = ['Easy', 'Normal', 'Hard', 'Harder', 'Insane', 'Easy Demon', 'Medium Demon', 'Hard Demon', 'Insane Demon', 'Extreme Demon'];
+  function cleanLevel(d) {
+    const okCol = (c, dflt) => (typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c : dflt);
+    const extras = { o: ED_CATS[2][1].map((i) => i[1]), d: ED_CATS[3][1].map((i) => i[1]), p: ED_CATS[4][1].concat(ED_CATS[5][1]).map((i) => i[1]) };
+    const o = [];
+    let coins = 0;
+    for (const e of Array.isArray(d.o) ? d.o.slice(0, 6000) : []) {
+      if (!Array.isArray(e)) continue;
+      const [k, x, y, ex, f] = e;
+      if (ED_KINDS.indexOf(k) === -1 || !Number.isInteger(x) || !Number.isInteger(y) || x < 0 || x > 9999 || y < 0 || y > 80) continue;
+      if (extras[k] && extras[k].indexOf(ex) === -1) continue;
+      if (k === 'c' && ++coins > 3) continue;
+      const item = [k, x, y];
+      if (extras[k]) item.push(ex);
+      if ((k === 's' || k === 'ss' || k === 'd') && f === -1) { if (item.length === 3) item.push(0); item.push(-1); }
+      o.push(item);
+    }
+    return {
+      id: typeof d.id === 'string' ? d.id.slice(0, 24) : newLevel().id,
+      name: String(d.name || d.n || 'Untitled').slice(0, 28),
+      mode: P.MODES.indexOf(d.mode || d.m) !== -1 ? d.mode || d.m : 'cube',
+      mini: !!(d.mini || d.mi), speed: [0, 1, 2, 3, 4].indexOf(d.speed ?? d.s) !== -1 ? d.speed ?? d.s : 1,
+      face: FACE_NAMES.indexOf(d.face || d.f) !== -1 ? d.face || d.f : 'Normal',
+      bg: okCol(d.bg, '#2b5bff'), gr: okCol(d.gr, '#1a3acc'),
+      song: Number.isInteger(d.song ?? d.so) ? Math.abs(d.song ?? d.so) % 100000 : 1, o,
+    };
+  }
+
+  // Share links: #lvl= + 'z' (deflate-raw) or 'j' (plain), base64url JSON.
+  async function packLevel(lv) {
+    const json = JSON.stringify({ v: 1, n: lv.name, m: lv.mode, mi: lv.mini ? 1 : 0, s: lv.speed, f: lv.face, bg: lv.bg, gr: lv.gr, so: lv.song, o: lv.o });
+    let bytes = new TextEncoder().encode(json), tag = 'j';
+    if (window.CompressionStream) {
+      try {
+        const cs = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate-raw'));
+        bytes = new Uint8Array(await new Response(cs).arrayBuffer());
+        tag = 'z';
+      } catch (e) { /* plain JSON then */ }
+    }
+    let bin = '';
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return tag + btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  async function unpackLevel(code) {
+    const tag = code[0];
+    const bin = atob(code.slice(1).replace(/-/g, '+').replace(/_/g, '/'));
+    let bytes = Uint8Array.from(bin, (ch) => ch.charCodeAt(0));
+    if (tag === 'z') {
+      const ds = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
+      bytes = new Uint8Array(await new Response(ds).arrayBuffer());
+    } else if (tag !== 'j') throw new Error('bad code');
+    return cleanLevel(JSON.parse(new TextDecoder().decode(bytes)));
+  }
+  const shareUrl = (code) => `${location.origin}${location.pathname}#lvl=${code}`;
+
+  // Draw one game object at its own position (previews, ghost, editor).
+  function drawGameObj(o, col) {
+    const top = shade(col.gr, 0.55), edge = tint(col.gr, 0.55);
+    if (o.t === 'b') drawBlock(o, top, edge, 0);
+    else if (o.t === 'fake') drawFake(o, top, edge);
+    else if (o.t === 's' || o.t === 'ss') drawSpike(o, top);
+    else if (o.t === 'pad') drawPad(o, 0);
+    else if (o.t === 'orb') drawOrb(o, 0);
+    else if (o.t === 'p') { drawPortal(o, 0, true); drawPortal(o, 0, false); }
+    else if (o.t === 'saw') drawSaw(o, col);
+    else if (o.t === 'coin') drawCoin(o);
+  }
+  // Render an object into a small menu canvas by pointing the world
+  // transform (S, W, H, camera) at it for one draw.
+  function edPreview(cv, item, size) {
+    const r = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+    cv.width = size * r; cv.height = size * r;
+    const c = cv.getContext('2d');
+    c.setTransform(r, 0, 0, r, 0, 0);
+    const o = toGame([item[0], 0, 0, item[1], ED.flip ? -1 : 1], 0);
+    const span = o.t === 'p' ? 3.4 : o.t === 'saw' ? 2.3 : 1.5;
+    const bb = edBox([item[0], 0, 0]);
+    const keep = [W, H, S, G.camX, G.camY, viewH];
+    S = size / span; W = size; H = size; viewH = span;
+    G.camX = (bb[0] + bb[2]) / 2 - span / 2; G.camY = (bb[1] + bb[3]) / 2 - span / 2;
+    ctx = c;
+    try { drawGameObj(o, { bg: ED.lv.bg, gr: ED.lv.gr }); } finally {
+      [W, H, S, G.camX, G.camY, viewH] = keep;
+      ctx = mainCtx;
+    }
+  }
+
+  function renderEditor() {
+    if (!ED.L) return;
+    G.camX = ED.cam.x; G.camY = ED.cam.y;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const col = { bg: ED.lv.bg, gr: ED.lv.gr };
+    drawBackground(col.bg, col.gr, 0);
+    drawObjects(ED.L, 0, col);
+    drawGround(col.gr, 0);
+    // Grid, with every fifth line a bit stronger
+    const g0 = Math.max(0, Math.floor(G.camY)), gy = sy(0);
+    for (const strong of [false, true]) {
+      ctx.strokeStyle = strong ? 'rgba(255,255,255,0.22)' : 'rgba(255,255,255,0.09)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let x = Math.floor(G.camX); x <= G.camX + VIEW_W + 1; x++) {
+        if ((x % 5 === 0) !== strong) continue;
+        const px = Math.round(sx(x)) + 0.5; ctx.moveTo(px, 0); ctx.lineTo(px, gy);
+      }
+      for (let y = g0; y <= G.camY + viewH + 1; y++) {
+        if ((y % 5 === 0) !== strong) continue;
+        const py = Math.round(sy(y)) + 0.5; ctx.moveTo(0, py); ctx.lineTo(W, py);
+      }
+      ctx.stroke();
+    }
+    // Start position: the icon you'll play, faded
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.translate(sx(0), sy(0.5));
+    drawIcon(ED.lv.mode, S * (ED.lv.mini ? 0.6 : 1), null);
+    ctx.restore();
+    outlinedText('Start', sx(0), sy(0.5) - S * 0.95, Math.max(12, S * 0.32), 'center');
+    // Hovered cell: what you're about to place, or the delete box
+    const h = ED.hover;
+    if (h && ED.tool !== 'move') {
+      ctx.save();
+      if (ED.tool === 'build') {
+        ctx.globalAlpha = 0.55;
+        drawGameObj(toGame([ED.item[0], h.x, h.y, ED.item[1], ED.flip ? -1 : 1], -1), col);
+        ctx.restore(); ctx.save();
+      }
+      ctx.strokeStyle = ED.tool === 'build' ? '#7dff3a' : '#ff3b3b';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(sx(h.x) + 1, sy(h.y + 1) + 1, S - 2, S - 2);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function edCell(e) {
+    const wx = G.camX + e.clientX / S, wy = G.camY + (H - e.clientY) / S;
+    return { x: Math.floor(wx), y: Math.floor(wy) };
+  }
+  function edPush() {
+    ED.undo.push(JSON.stringify(ED.lv.o));
+    if (ED.undo.length > 120) ED.undo.shift();
+  }
+  function edChanged() { edCompile(); saveMine(ED.lv); }
+  function edAt(x, y) {
+    const cx = x + 0.5, cy = y + 0.5;
+    return ED.lv.o.filter((e) => { const b = edBox(e); return cx > b[0] && cx < b[2] && cy > b[1] && cy < b[3]; });
+  }
+  function edPlace(c) {
+    if (c.y < 0 || c.x < -2) return false;
+    const [k, ex] = ED.item;
+    const same = ED.lv.o.find((e) => e[1] === c.x && e[2] === c.y);
+    if (same && same[0] === k && same[3] === ex && (same[4] || 1) === (ED.flip ? -1 : 1)) return false;
+    if (k === 'c' && ED.lv.o.filter((e) => e[0] === 'c').length >= 3) { toast('Three secret coins per level, max'); return false; }
+    ED.lv.o = ED.lv.o.filter((e) => !(e[1] === c.x && e[2] === c.y));
+    const item = [k, c.x, c.y];
+    if (ex) item.push(ex);
+    if (ED.flip && (k === 's' || k === 'ss' || k === 'd')) { if (item.length === 3) item.push(0); item.push(-1); }
+    ED.lv.o.push(item);
+    return true;
+  }
+  function edErase(c) {
+    const hit = edAt(c.x, c.y);
+    if (!hit.length) return false;
+    ED.lv.o = ED.lv.o.filter((e) => hit.indexOf(e) === -1);
+    return true;
+  }
+  function edPointer(e, kind) {
+    if (kind === 'down') {
+      const pan = ED.tool === 'move' || e.button === 1 || e.button === 2 || (ED.drag && ED.drag.id !== e.pointerId);
+      ED.drag = { id: e.pointerId, x: e.clientX, y: e.clientY, pan, last: null, pushed: false };
+      if (!pan) edPointer(e, 'paint');
+      return;
+    }
+    if (kind === 'move') {
+      ED.hover = e.pointerType === 'mouse' ? edCell(e) : null;
+      if (!ED.drag || ED.drag.id !== e.pointerId) return;
+      if (ED.drag.pan) {
+        ED.cam.x -= (e.clientX - ED.drag.x) / S; ED.cam.y += (e.clientY - ED.drag.y) / S;
+        ED.drag.x = e.clientX; ED.drag.y = e.clientY;
+        edClamp();
+      } else edPointer(e, 'paint');
+      return;
+    }
+    if (kind === 'up') { if (ED.drag && ED.drag.id === e.pointerId) ED.drag = null; return; }
+    // paint: place or erase on each new cell the pointer crosses
+    const c = edCell(e), d = ED.drag;
+    if (d.last && d.last.x === c.x && d.last.y === c.y) return;
+    d.last = c;
+    const before = JSON.stringify(ED.lv.o);
+    if (!d.pushed) { ED.undo.push(before); d.pushed = true; if (ED.undo.length > 120) ED.undo.shift(); }
+    if (ED.tool === 'erase' ? edErase(c) : edPlace(c)) { edChanged(); AUDIO.tick(); }
+  }
+  function edClamp() {
+    ED.cam.x = Math.max(-6, Math.min(9999, ED.cam.x));
+    ED.cam.y = Math.max(-groundLift() - 4, Math.min(60, ED.cam.y));
+  }
+  function edWheel(e) {
+    const k = e.deltaMode === 1 ? 0.6 : 0.025;
+    if (e.shiftKey) ED.cam.y -= e.deltaY * k;
+    else { ED.cam.x += (e.deltaX || e.deltaY) * k; ED.cam.y -= (e.deltaX ? e.deltaY : 0) * k; }
+    edClamp();
+  }
+  function edKey(e) {
+    const t = e.target;
+    if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
+    const step = e.shiftKey ? 5 : 1;
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') ED.cam.x -= step;
+    else if (e.code === 'ArrowRight' || e.code === 'KeyD') ED.cam.x += step;
+    else if (e.code === 'ArrowUp' || e.code === 'KeyW') ED.cam.y += step;
+    else if (e.code === 'ArrowDown' || e.code === 'KeyS') ED.cam.y -= step;
+    else if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey)) edUndo();
+    else if (e.code === 'Digit1') edTool('build');
+    else if (e.code === 'Digit2') edTool('erase');
+    else if (e.code === 'Digit3') edTool('move');
+    else if (e.code === 'KeyF') edFlip();
+    else if (e.code === 'Enter') edTest();
+    else if (e.code === 'Escape') { if ($('edSet').classList.contains('show') || $('edShareBox').classList.contains('show')) edPanels(); else edExit(); }
+    else return;
+    e.preventDefault();
+    edClamp();
+  }
+  function edUndo() {
+    if (!ED.undo.length) return;
+    ED.lv.o = JSON.parse(ED.undo.pop());
+    edChanged();
+  }
+  function edTool(t) {
+    ED.tool = t;
+    for (const [id, k] of [['edBuild', 'build'], ['edErase', 'erase'], ['edMove', 'move']]) $(id).classList.toggle('on', k === t);
+  }
+  function edFlip() { ED.flip = !ED.flip; $('edFlip').classList.toggle('on', ED.flip); buildEdItems(); }
+  function edPanels(which) {
+    $('edSet').classList.toggle('show', which === 'set');
+    $('edShareBox').classList.toggle('show', which === 'share');
+  }
+
+  function openEditor(lv) {
+    ED.lv = lv; ED.undo = []; ED.hover = null; ED.drag = null;
+    ED.cam = { x: -3, y: -3 };
+    show('editor');
+  }
+  function buildEditor() {
+    G.menuBg = [ED.lv.bg, ED.lv.gr];
+    edCompile();
+    $('edName').value = ED.lv.name;
+    edTool(ED.tool);
+    $('edFlip').classList.toggle('on', ED.flip);
+    edPanels();
+    const cats = $('edCats');
+    cats.innerHTML = '';
+    ED_CATS.forEach(([name], i) => {
+      const b = document.createElement('button');
+      b.className = 'ghost' + (i === ED.cat ? ' on' : '');
+      b.textContent = name;
+      b.addEventListener('click', () => { ED.cat = i; ED.item = ED_CATS[i][1][0]; buildEditor(); });
+      cats.appendChild(b);
+    });
+    buildEdItems();
+    // First open: keep the ground just above the bottom toolbar.
+    if (ED.cam.y === -3) ED.cam.y = -(($('edBottom').getBoundingClientRect().height || 120) / S) - 0.3;
+  }
+  function buildEdItems() {
+    const row = $('edItems');
+    row.innerHTML = '';
+    for (const it of ED_CATS[ED.cat][1]) {
+      const b = document.createElement('button');
+      const on = it[0] === ED.item[0] && it[1] === ED.item[1];
+      b.className = 'ghost' + (on ? ' on' : '');
+      b.title = edItemName(it);
+      b.setAttribute('aria-label', edItemName(it));
+      b.innerHTML = '<canvas></canvas>';
+      b.addEventListener('click', () => { ED.item = it; if (ED.tool !== 'build') edTool('build'); buildEdItems(); });
+      row.appendChild(b);
+      edPreview(b.querySelector('canvas'), it, 44);
+    }
+  }
+  function buildEdSettings() {
+    const lv = ED.lv;
+    const modes = $('esModes');
+    modes.innerHTML = '';
+    for (const m of P.MODES) {
+      const b = document.createElement('button');
+      b.className = m === lv.mode ? 'on' : '';
+      b.title = MODE_LABEL[m]; b.setAttribute('aria-label', 'Start as ' + MODE_LABEL[m]);
+      b.innerHTML = '<canvas></canvas>';
+      b.addEventListener('click', () => { lv.mode = m; edChanged(); buildEdSettings(); });
+      modes.appendChild(b);
+      iconCanvas(b.querySelector('canvas'), m, 34, 0.75);
+    }
+    const seg = (id, opts, cur, set) => {
+      const el = $(id);
+      el.innerHTML = '';
+      for (const [v, label] of opts) {
+        const b = document.createElement('button');
+        b.textContent = label;
+        b.className = v === cur ? 'on' : '';
+        b.addEventListener('click', () => { set(v); edChanged(); buildEdSettings(); });
+        el.appendChild(b);
+      }
+    };
+    seg('esSize', [[false, 'Normal'], [true, 'Mini']], lv.mini, (v) => { lv.mini = v; });
+    seg('esSpeed', [[0, '0.5x'], [1, '1x'], [2, '2x'], [3, '3x'], [4, '4x']], lv.speed, (v) => { lv.speed = v; });
+    const cols = $('esCols');
+    cols.innerHTML = '';
+    for (const [bg, gr] of ED_COLORS) {
+      const b = document.createElement('button');
+      b.style.background = `linear-gradient(${bg} 50%, ${gr} 50%)`;
+      b.className = bg === lv.bg ? 'on' : '';
+      b.setAttribute('aria-label', 'Colour ' + bg);
+      b.addEventListener('click', () => { lv.bg = bg; lv.gr = gr; G.menuBg = [bg, gr]; edChanged(); buildEdSettings(); buildEdItems(); });
+      cols.appendChild(b);
+    }
+    const face = $('esFace');
+    face.innerHTML = FACE_NAMES.map((f) => `<option${f === lv.face ? ' selected' : ''}>${f}</option>`).join('');
+    $('esSong').textContent = `Song #${lv.song}`;
+  }
+
+  function edExit() {
+    ED.lv.name = $('edName').value.trim().slice(0, 28) || ED.lv.name;
+    saveMine(ED.lv);
+    show('create');
+  }
+  function edTest() {
+    ED.lv.name = $('edName').value.trim().slice(0, 28) || ED.lv.name;
+    saveMine(ED.lv);
+    edPanels();
+    startCustom(edToDef(ED.lv, 'my:' + ED.lv.id), 'editor');
+  }
+  async function edShare(lv) {
+    const code = await packLevel(lv);
+    const url = shareUrl(code);
+    $('edShareUrl').value = url;
+    $('edShareInfo').textContent = `${lv.name}: ${lv.o.length} objects. Anyone with this link can play it.`;
+    $('edShareNative').style.display = navigator.share ? '' : 'none';
+    edPanels('share');
+  }
+
+  // Play a level that isn't one of the built-in ones (editor test, a link).
+  function startCustom(def, from) {
+    const L = P.compile(def);
+    L.coinIds = L.objects.filter((o) => o.t === 'coin').map((o) => o.id);
+    goFullscreen();
+    G.idx = -1; G.L = L; G.practice = false; G.returnTo = from;
+    G.checkpoints = []; G.attempts = 1; G.jumps = 0; G.time = 0;
+    G.prevBest = store.get('best:' + L.slot, 0);
+    G.orbM = 10;
+    bump('attempts');
+    spawnPlayer();
+    show('play');
+    AUDIO.start(L);
+  }
+
+  // ------------------------------------------------------ create list
+  function buildCreate() {
+    G.menuBg = ['#1a6b3a', '#0d4022'];
+    const list = myLevels(), root = $('crList');
+    root.innerHTML = '';
+    if (!list.length) root.innerHTML = '<div class="label">No levels yet. Make one!</div>';
+    for (const lv of list) {
+      const row = document.createElement('div');
+      row.className = 'myrow';
+      row.innerHTML = '<canvas></canvas><div class="mi"><b></b><span></span></div>' +
+        '<button class="alt">Edit</button><button>Play</button><button class="gold">Share</button><button class="ghost" aria-label="Delete">✕</button>';
+      row.querySelector('b').textContent = lv.name;
+      row.querySelector('span').textContent = `${lv.o.length} objects · best ${store.get('best:my:' + lv.id, 0)}%`;
+      const [edit, play, share, del] = row.querySelectorAll('button');
+      edit.addEventListener('click', () => openEditor(lv));
+      play.addEventListener('click', () => startCustom(edToDef(lv, 'my:' + lv.id), 'create'));
+      share.addEventListener('click', async () => {
+        const url = shareUrl(await packLevel(lv));
+        $('crShareUrl').value = url; $('crShareRow').style.display = '';
+        $('crShareUrl').select();
+        if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => toast('Link copied! Send it to anyone.'), () => {});
+      });
+      del.addEventListener('click', () => {
+        if (!confirm(`Delete "${lv.name}"? This can't be undone.`)) return;
+        store.set('my:levels', myLevels().filter((x) => x.id !== lv.id));
+        buildCreate();
+      });
+      root.appendChild(row);
+      faceCanvas(row.querySelector('canvas'), lv.face, 44, null);
+    }
+  }
+  $('crNew').addEventListener('click', () => { const lv = newLevel(); saveMine(lv); openEditor(lv); });
+  $('crDone').addEventListener('click', () => show('home'));
+  $('crOpen').addEventListener('click', () => {
+    const v = $('crShareUrl').value.trim();
+    const m = v.match(/lvl=([A-Za-z0-9_-]+)/) || v.match(/^([zj][A-Za-z0-9_-]+)$/);
+    if (!m) { $('crShareRow').style.display = ''; $('crShareUrl').focus(); toast('Paste a level link into the box first'); return; }
+    openShared(m[1]);
+  });
+  $('crShareUrl').addEventListener('keydown', (e) => e.stopPropagation());
+  $('hCreate').addEventListener('click', () => show('create'));
+
+  // Editor buttons
+  $('edBack').addEventListener('click', edExit);
+  $('edTest').addEventListener('click', edTest);
+  $('edUndo').addEventListener('click', edUndo);
+  $('edBuild').addEventListener('click', () => edTool('build'));
+  $('edErase').addEventListener('click', () => edTool('erase'));
+  $('edMove').addEventListener('click', () => edTool('move'));
+  $('edFlip').addEventListener('click', edFlip);
+  $('edSetBtn').addEventListener('click', () => { buildEdSettings(); edPanels($('edSet').classList.contains('show') ? null : 'set'); });
+  $('edShare').addEventListener('click', () => { ED.lv.name = $('edName').value.trim().slice(0, 28) || ED.lv.name; saveMine(ED.lv); edShare(ED.lv); });
+  $('esDone').addEventListener('click', () => edPanels());
+  $('esFace').addEventListener('change', () => { ED.lv.face = $('esFace').value; edChanged(); });
+  $('esNewSong').addEventListener('click', () => { ED.lv.song = 1 + Math.floor(Math.random() * 9999); edChanged(); buildEdSettings(); });
+  $('esClear').addEventListener('click', () => {
+    if (!ED.lv.o.length || !confirm('Clear every object in this level?')) return;
+    edPush(); ED.lv.o = []; edChanged();
+  });
+  $('edShareCopy').addEventListener('click', () => {
+    $('edShareUrl').select();
+    if (navigator.clipboard) navigator.clipboard.writeText($('edShareUrl').value).then(() => toast('Link copied! Send it to anyone.'), () => {});
+  });
+  $('edShareNative').addEventListener('click', () => {
+    navigator.share({ title: ED.lv.name, text: `Play my Geometry Dash level "${ED.lv.name}"`, url: $('edShareUrl').value }).catch(() => {});
+  });
+  $('edShareClose').addEventListener('click', () => edPanels());
+  for (const id of ['edName', 'edShareUrl']) $(id).addEventListener('keydown', (e) => e.stopPropagation());
+  $('edName').addEventListener('change', () => { ED.lv.name = $('edName').value.trim().slice(0, 28) || ED.lv.name; saveMine(ED.lv); });
+
+  // ------------------------------------------------- shared level links
+  let sharedLv = null, sharedCode = '';
+  async function openShared(code) {
+    try {
+      sharedLv = await unpackLevel(code);
+      sharedCode = code;
+    } catch (e) {
+      toast('That level link is broken or incomplete');
+      return;
+    }
+    G.menuBg = [sharedLv.bg, sharedLv.gr];
+    show('shared');
+    $('shName').textContent = sharedLv.name;
+    $('shInfo').textContent = `Player-made level · ${sharedLv.o.length} objects · starts as ${MODE_LABEL[sharedLv.mode]}${sharedLv.mini ? ' (mini)' : ''}`;
+    faceCanvas($('shFace'), sharedLv.face, 96, null);
+  }
+  const sharedSlot = () => 'sh:' + hashCode(sharedCode);
+  function leaveShared() {
+    if (location.hash.startsWith('#lvl=')) history.replaceState(null, '', location.pathname + location.search);
+    show('home');
+  }
+  $('shPlay').addEventListener('click', () => startCustom(edToDef(sharedLv, sharedSlot()), 'shared'));
+  $('shSave').addEventListener('click', () => {
+    const copy = Object.assign({}, sharedLv, { id: newLevel().id, o: sharedLv.o.map((e) => e.slice()) });
+    saveMine(copy);
+    toast(`Saved "${copy.name}" to your levels`);
+  });
+  $('shBack').addEventListener('click', leaveShared);
+  function checkHash() {
+    const m = location.hash.match(/^#lvl=([A-Za-z0-9_-]+)/);
+    if (m) openShared(m[1]);
+  }
+  window.addEventListener('hashchange', checkHash);
 
   // ------------------------------------------------------ pause / end
   function pause() {
@@ -1777,5 +2818,6 @@
   applyAudio();
   window.GD = G; // handy from the console when building levels
   show('home');
+  checkHash();
   requestAnimationFrame(frame);
 })();

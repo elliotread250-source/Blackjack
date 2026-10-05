@@ -26,11 +26,50 @@
   };
   const DECALS = ['', 'Striped', 'Dotted', 'Two-tone'];
 
+  // Special sets (variants COUNT and up): one design per mode for each set,
+  // earned from the shop, vault codes, secret coins and easter eggs. Each
+  // set forces its own colours (null keeps the player's), a special decal
+  // and sometimes something on top (horns, crown, halo).
+  const SPECIAL = [
+    { key: 'demon', name: 'Demon', c1: '#2a0505', c2: '#ff2a1a', decal: 10, glow: '#ff2a1a', over: 'horns' },
+    { key: 'gold', name: 'Golden', c1: '#ffd21f', c2: '#ff9a00', decal: 11, glow: '#ffcf33' },
+    { key: 'checker', name: 'Checker', c1: null, c2: null, decal: 7 },
+    { key: 'neon', name: 'Neon', c1: '#07070f', c2: null, decal: 0, neon: true },
+    { key: 'ice', name: 'Frost', c1: '#8fe3ff', c2: '#ffffff', decal: 6, glow: '#bff3ff' },
+    { key: 'flame', name: 'Inferno', c1: '#ff5a1a', c2: '#ffe23b', decal: 5 },
+    { key: 'galaxy', name: 'Galaxy', c1: '#24105e', c2: '#d6a8ff', decal: 4 },
+    { key: 'prism', name: 'Prism', c1: '#ffffff', c2: '#ffffff', decal: 8 },
+    { key: 'ghost', name: 'Ghost', c1: '#e8eeff', c2: '#a9b8ff', decal: 0, alpha: 0.62 },
+    { key: 'glitch', name: 'Glitch', c1: null, c2: null, decal: 9, jitter: true },
+    { key: 'royal', name: 'Royal', c1: '#7b2bff', c2: '#ffd21f', decal: 0, over: 'crown' },
+    { key: 'angel', name: 'Angel', c1: '#ffffff', c2: '#ffe28a', decal: 0, over: 'halo', glow: '#fff3b0' },
+  ];
+  // Body shape each set uses, per mode (index into that mode's shapes).
+  const SP_SHAPE = {
+    demon: { cube: 0, ship: 2, ball: 4, ufo: 4, wave: 5, robot: 3, spider: 3, swing: 1 },
+    gold: { cube: 5, ship: 0, ball: 1, ufo: 1, wave: 4, robot: 0, spider: 4, swing: 3 },
+    checker: { cube: 1, ship: 4, ball: 0, ufo: 0, wave: 0, robot: 2, spider: 0, swing: 0 },
+    neon: { cube: 3, ship: 1, ball: 3, ufo: 2, wave: 1, robot: 4, spider: 5, swing: 4 },
+    ice: { cube: 2, ship: 3, ball: 5, ufo: 5, wave: 4, robot: 1, spider: 1, swing: 2 },
+    flame: { cube: 7, ship: 2, ball: 4, ufo: 3, wave: 2, robot: 3, spider: 2, swing: 1 },
+    galaxy: { cube: 6, ship: 3, ball: 2, ufo: 1, wave: 3, robot: 5, spider: 5, swing: 3 },
+    prism: { cube: 4, ship: 5, ball: 1, ufo: 4, wave: 5, robot: 0, spider: 4, swing: 5 },
+    ghost: { cube: 6, ship: 3, ball: 2, ufo: 3, wave: 3, robot: 2, spider: 3, swing: 2 },
+    glitch: { cube: 1, ship: 1, ball: 1, ufo: 5, wave: 1, robot: 5, spider: 4, swing: 4 },
+    royal: { cube: 5, ship: 0, ball: 3, ufo: 0, wave: 4, robot: 0, spider: 0, swing: 3 },
+    angel: { cube: 6, ship: 3, ball: 5, ufo: 0, wave: 3, robot: 1, spider: 5, swing: 0 },
+  };
+
   function split(mode, v) {
+    if (v >= COUNT) {
+      const sp = SPECIAL[v - COUNT];
+      return { shape: SP_SHAPE[sp.key][mode], decal: sp.decal };
+    }
     const n = SHAPES[mode];
     return { shape: v % n, decal: Math.floor(v / n) % (mode === 'cube' ? 3 : 4) };
   }
   function name(mode, v) {
+    if (v >= COUNT) return SPECIAL[v - COUNT].name + ' ' + NAMES[mode][split(mode, v).shape];
     const { shape, decal } = split(mode, v);
     return (DECALS[decal] ? DECALS[decal] + ' ' : '') + NAMES[mode][shape];
   }
@@ -69,9 +108,122 @@
       c.fillRect(-z, 0, z * 2, z);
       c.fillStyle = 'rgba(255,255,255,0.35)';
       c.fillRect(-z, -z * 0.04, z * 2, z * 0.06);
-    }
+    } else specialDecal(c, kind, z, o);
     c.restore();
   }
+
+  function specialDecal(c, kind, z, o) {
+    const t = o.t || 0;
+    if (kind === 4) { // galaxy: nebula glow and twinkling stars
+      const g = c.createRadialGradient(z * 0.15, -z * 0.15, 0, 0, 0, z);
+      g.addColorStop(0, 'rgba(200,120,255,0.6)'); g.addColorStop(0.5, 'rgba(70,30,170,0.35)'); g.addColorStop(1, 'rgba(0,0,10,0.6)');
+      c.fillStyle = g; c.fillRect(-z, -z, 2 * z, 2 * z);
+      for (let i = 0; i < 18; i++) {
+        const x = (((i * 37) % 19) / 19 - 0.5) * 1.7 * z, y = (((i * 53) % 23) / 23 - 0.5) * 1.7 * z;
+        c.globalAlpha = 0.4 + 0.6 * Math.abs(Math.sin(t * 2 + i * 1.7));
+        c.fillStyle = i % 3 ? '#fff' : o.c2;
+        c.beginPath(); c.arc(x, y, z * (i % 4 ? 0.022 : 0.042), 0, Math.PI * 2); c.fill();
+      }
+    } else if (kind === 5) { // inferno: flames licking up from the bottom
+      for (let i = 0; i < 7; i++) {
+        const x = (-0.9 + i * 0.3) * z, hgt = (0.5 + 0.22 * Math.sin(t * 9 + i * 2.1)) * z;
+        c.fillStyle = i % 2 ? o.c2 : '#ff2a0a'; c.globalAlpha = 0.8;
+        c.beginPath(); c.moveTo(x - 0.2 * z, 0.6 * z);
+        c.quadraticCurveTo(x - 0.12 * z, 0.6 * z - hgt * 0.6, x, 0.6 * z - hgt);
+        c.quadraticCurveTo(x + 0.12 * z, 0.6 * z - hgt * 0.6, x + 0.2 * z, 0.6 * z);
+        c.fill();
+      }
+    } else if (kind === 6) { // frost: crystal facets and a glint
+      c.fillStyle = '#fff';
+      const facets = [[[-1, -1], [0.1, -1], [-0.4, 0.2], [-1, 0.5]], [[0.3, -1], [1, -1], [1, -0.2], [0.1, 0.3]], [[-0.2, 0.5], [0.6, 0.1], [1, 1], [-0.3, 1]]];
+      facets.forEach((f, i) => {
+        c.globalAlpha = [0.38, 0.2, 0.28][i];
+        c.beginPath(); f.forEach(([x, y], k) => (k ? c.lineTo(x * z, y * z) : c.moveTo(x * z, y * z))); c.closePath(); c.fill();
+      });
+      c.globalAlpha = 0.8; c.strokeStyle = '#fff'; c.lineWidth = Math.max(1, z * 0.03);
+      c.beginPath(); c.moveTo(-0.4 * z, 0.2 * z); c.lineTo(0.1 * z, 0.3 * z); c.lineTo(0.6 * z, 0.1 * z); c.stroke();
+      const gx = ((t * 0.5) % 1.4 - 0.7) * 2 * z;
+      c.globalAlpha = 0.5; c.fillRect(gx, -z, z * 0.1, 2 * z);
+    } else if (kind === 7) { // checkerboard
+      const q = z * 0.25;
+      c.fillStyle = o.c2; c.globalAlpha = 0.75;
+      for (let i = -4; i < 4; i++) for (let j = -4; j < 4; j++) if ((i + j) & 1) c.fillRect(i * q, j * q, q, q);
+    } else if (kind === 8) { // prism: sliding rainbow bands
+      c.rotate(-0.6);
+      const q = z * 0.22, off = (t * 0.6 * z) % (q * 7);
+      for (let k = -12; k < 12; k++) {
+        c.fillStyle = `hsl(${((k + 12) % 7) * 51}, 95%, 60%)`;
+        c.fillRect(k * q + off, -2 * z, q + 1, 4 * z);
+      }
+    } else if (kind === 9) { // glitch: shifting RGB scanlines
+      const seed = Math.floor(t * 7);
+      for (let i = 0; i < 6; i++) {
+        const y = ((((i * 31 + seed * 17) % 20) / 20) - 0.5) * 2 * z;
+        const off = ((((i * 13 + seed * 7) % 9) / 9) - 0.5) * 0.4 * z;
+        c.globalAlpha = 0.7;
+        c.fillStyle = ['#00f0ff', '#ff00e0', '#000'][i % 3];
+        c.fillRect(-z + off, y, 2 * z, z * (0.05 + (i % 2) * 0.05));
+      }
+    } else if (kind === 10) { // demon: glowing lava cracks over a dark hide
+      const g = c.createLinearGradient(0, z * 0.6, 0, -z * 0.2);
+      g.addColorStop(0, 'rgba(255,60,20,0.55)'); g.addColorStop(1, 'rgba(255,60,20,0)');
+      c.fillStyle = g; c.fillRect(-z, -z, 2 * z, 2 * z);
+      c.strokeStyle = o.c2; c.lineWidth = Math.max(1, z * 0.045); c.lineJoin = 'miter';
+      c.globalAlpha = 0.65 + 0.35 * Math.abs(Math.sin(t * 3));
+      for (const line of [[[-0.9, 0.3], [-0.5, 0.12], [-0.38, 0.36], [0, 0.22]], [[0.9, -0.2], [0.52, 0.02], [0.42, 0.34], [0.12, 0.5]], [[-0.25, -0.9], [-0.12, -0.55], [0.15, -0.46], [0.22, -0.2]]]) {
+        c.beginPath(); line.forEach(([x, y], k) => (k ? c.lineTo(x * z, y * z) : c.moveTo(x * z, y * z))); c.stroke();
+      }
+    } else if (kind === 11) { // gold: metallic bands and a moving sheen
+      c.rotate(-0.7);
+      for (let k = -6; k < 6; k++) {
+        c.fillStyle = k % 2 ? 'rgba(255,255,255,0.18)' : 'rgba(150,80,0,0.18)';
+        c.fillRect(k * z * 0.26, -2 * z, z * 0.26, 4 * z);
+      }
+      const gx = ((t * 0.7) % 2 - 1) * 1.6 * z;
+      c.fillStyle = 'rgba(255,255,240,0.6)'; c.fillRect(gx, -2 * z, z * 0.14, 4 * z);
+    }
+  }
+
+  // Things worn on top: demon horns, a crown, an angel's halo. (X, Y) is
+  // the top centre of the head and S its width, in pixels.
+  function horns(c, X, Y, S) {
+    for (const k of [-1, 1]) {
+      const p = new Path2D();
+      p.moveTo(X + k * S * 0.38, Y + S * 0.03);
+      p.quadraticCurveTo(X + k * S * 0.52, Y - S * 0.14, X + k * S * 0.47, Y - S * 0.4);
+      p.quadraticCurveTo(X + k * S * 0.3, Y - S * 0.12, X + k * S * 0.12, Y + S * 0.03);
+      p.closePath();
+      const g = c.createLinearGradient(0, Y, 0, Y - S * 0.4);
+      g.addColorStop(0, '#5a0600'); g.addColorStop(1, '#ff6a3a');
+      c.fillStyle = g; c.fill(p); c.stroke(p);
+    }
+  }
+  function crown(c, X, Y, S) {
+    const pts = [[-0.32, 0.03], [-0.32, -0.22], [-0.17, -0.09], [0, -0.32], [0.17, -0.09], [0.32, -0.22], [0.32, 0.03]];
+    const p = new Path2D();
+    pts.forEach(([x, y], i) => (i ? p.lineTo(X + x * S, Y + y * S) : p.moveTo(X + x * S, Y + y * S)));
+    p.closePath();
+    const g = c.createLinearGradient(0, Y - S * 0.32, 0, Y);
+    g.addColorStop(0, '#fff3a0'); g.addColorStop(1, '#e0a000');
+    c.fillStyle = g; c.fill(p); c.stroke(p);
+    c.fillStyle = '#ff3b6b'; c.beginPath(); c.arc(X, Y - S * 0.06, S * 0.05, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#3bc8ff';
+    for (const k of [-1, 1]) { c.beginPath(); c.arc(X + k * S * 0.19, Y - S * 0.04, S * 0.035, 0, Math.PI * 2); c.fill(); }
+  }
+  function halo(c, X, Y, S, t) {
+    const y = Y - S * 0.22 + Math.sin(t * 3) * S * 0.03;
+    c.save();
+    c.shadowColor = '#fff3b0'; c.shadowBlur = S * 0.3;
+    withWidth(c, Math.max(2, S * 0.07), () => {
+      c.strokeStyle = '#ffe066'; c.beginPath(); c.ellipse(X, y, S * 0.3, S * 0.08, 0, 0, Math.PI * 2); c.stroke();
+    });
+    c.restore();
+  }
+  // Top centre of each mode's head (x, y, width as fractions of the size).
+  const HEAD = {
+    cube: [0, -0.5, 1], ship: [-0.03, -0.5, 0.48], ball: [0, -0.46, 0.8], ufo: [0, -0.48, 0.6],
+    wave: [-0.12, -0.28, 0.62], robot: [0, -0.5, 0.8], spider: [0.05, -0.42, 0.72], swing: [0, -0.38, 0.75],
+  };
 
   // Fill a body path with the primary colour, decal it, outline it.
   function hull(c, path, z, o, d, fill) {
@@ -112,7 +264,8 @@
       c.fillRect(h * 0.45 - w + w * 0.15, y + hh * 0.12, w * 0.35, hh * 0.3);
     };
     hull(c, rect(-h, -h, 2 * h, 2 * h), z, o, d);
-    switch (shape) {
+    if (o.sp === 'demon') demonFace(c, h, c2);
+    else switch (shape) {
       case 1:
         box(-h * 0.8, -h * 0.45, h * 1.6, h * 0.6, c2);
         c.fillStyle = '#000'; c.fillRect(-h * 0.6, -h * 0.25, h * 1.2, h * 0.18);
@@ -162,8 +315,31 @@
     c.lineWidth = lw;
   }
 
+  // Slanted glowing eyes and a fanged grin.
+  function demonFace(c, h, c2) {
+    c.save();
+    c.shadowColor = c2; c.shadowBlur = h * 0.5;
+    c.fillStyle = c2;
+    for (const k of [-1, 1]) {
+      c.beginPath();
+      c.moveTo(k * h * 0.12, -h * 0.12); c.lineTo(k * h * 0.72, -h * 0.42); c.lineTo(k * h * 0.62, -h * 0.02);
+      c.closePath(); c.fill(); c.stroke();
+    }
+    c.restore();
+    c.fillStyle = '#000';
+    c.beginPath(); c.moveTo(-h * 0.6, h * 0.22); c.quadraticCurveTo(0, h * 0.42, h * 0.6, h * 0.22);
+    c.quadraticCurveTo(0, h * 0.85, -h * 0.6, h * 0.22); c.fill();
+    c.fillStyle = '#fff';
+    for (const x of [-0.36, -0.12, 0.12, 0.36]) {
+      c.beginPath(); c.moveTo((x - 0.08) * h, h * 0.3); c.lineTo(x * h, h * 0.5); c.lineTo((x + 0.08) * h, h * 0.3); c.fill();
+    }
+  }
+
+  // The player's own cube riding in the ship or UFO, in its own colours.
   function rider(c, z, o, x, y, scale) {
-    c.save(); c.translate(x * z, y * z); cube(c, z * scale, o, o.cube || 0); c.restore();
+    c.save(); c.translate(x * z, y * z);
+    draw(c, 'cube', z * scale, Object.assign({}, o.orig || o, { v: o.cube || 0 }));
+    c.restore();
   }
 
   // --------------------------------------------------------------- ship
@@ -668,9 +844,24 @@
   const DRAW = { cube, ship, ball, ufo, wave, robot, spider, swing };
 
   function draw(c, mode, z, o) {
-    const v = Math.max(0, Math.min(COUNT - 1, o.v | 0));
-    if (mode === 'cube') cube(c, z, o, v);
-    else DRAW[mode](c, z, o, v);
+    const v = Math.max(0, Math.min(COUNT + SPECIAL.length - 1, o.v | 0));
+    if (v < COUNT) { DRAW[mode](c, z, o, v); return; }
+    const sp = SPECIAL[v - COUNT];
+    const o2 = Object.assign({}, o, {
+      c1: sp.c1 || o.c1, c2: sp.c2 || (sp.neon ? o.c1 : o.c2), orig: o.orig || o, sp: sp.key,
+    });
+    const t = o.t || 0;
+    c.save();
+    if (sp.glow) { c.shadowColor = sp.glow; c.shadowBlur = z * 0.3; }
+    if (sp.neon) { c.strokeStyle = o.c1; c.shadowColor = o.c1; c.shadowBlur = z * 0.35; }
+    if (sp.alpha) c.globalAlpha *= sp.alpha + 0.12 * Math.sin(t * 4);
+    if (sp.jitter && Math.floor(t * 8) % 7 === 0) c.translate(z * 0.06, 0);
+    DRAW[mode](c, z, o2, v);
+    c.restore();
+    const hd = HEAD[mode];
+    const X = hd[0] * z, Y = hd[1] * z, S = hd[2] * z;
+    if (sp.over === 'halo') halo(c, X, Y, S, t);
+    else if (sp.over && mode !== 'ship' && mode !== 'ufo') (sp.over === 'horns' ? horns : crown)(c, X, Y, S);
   }
 
   // Unlock order: every mode's second icon first, then every mode's third,
@@ -679,5 +870,11 @@
   const ORDER = [];
   for (let v = 1; v < COUNT; v++) for (const m of MODES) ORDER.push([m, v]);
 
-  root.GDIcons = { draw, COUNT, ORDER, name, MODES };
+  // Variant number of a special set for drawing: COUNT + its index.
+  const SETS = SPECIAL.map((sp) => sp.key);
+  const special = (key) => COUNT + SETS.indexOf(key);
+
+  const setName = (key) => SPECIAL[SETS.indexOf(key)].name;
+
+  root.GDIcons = { draw, COUNT, ORDER, name, MODES, SETS, special, setName, TOTAL: COUNT + SPECIAL.length };
 })(typeof self !== 'undefined' ? self : this);

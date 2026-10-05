@@ -32,8 +32,13 @@ function key(s, i) {
     s.grounded ? 1 : 0, s.held ? 1 : 0, s.used.length, s.speed, s.dash ? 1 : 0].join('|');
 }
 
-function solve(def, K = stepOf(def)) {
+// need: how many coins the winning run must collect. coinFront tracks how
+// far the search got while holding every coin passed so far, so a failure
+// can be pinned on the first coin it couldn't reach.
+function solve(def, K = stepOf(def), need = 0) {
   const L = P.compile(def);
+  const coinXs = L.objects.filter((o) => o.t === 'coin').map((o) => o.x).sort((a, b) => a - b);
+  let coinFront = 0;
   const seen = new Set();
   const stack = [{ s: P.create(L), i: 0, inputs: [], next: 0 }];
   let expanded = 0;
@@ -47,26 +52,35 @@ function solve(def, K = stepOf(def)) {
     top.next++;
     const s = P.clone(top.s);
     for (let k = 0; k < K && !s.dead && !s.won; k++) P.step(s, L, choice === 1);
-    if (++expanded > BUDGET) return { ok: false, furthest, reason: 'budget' };
+    if (++expanded > BUDGET) return { ok: false, furthest: need ? missAt(coinXs, coinFront) : furthest, reason: 'budget' };
     furthest = Math.max(furthest, s.x);
     const inputs = top.inputs.concat(choice);
-    if (s.won) return { ok: true, inputs, expanded };
-    if (s.dead) continue;
-    const kk = key(s, top.i + 1);
+    if (need) {
+      let passed = 0;
+      while (passed < coinXs.length && coinXs[passed] < s.x - 1.5) passed++;
+      if (s.coins.length >= passed) coinFront = Math.max(coinFront, s.x);
+      else continue; // already missed a coin: this branch can't succeed
+    }
+    if (s.won && s.coins.length >= need) return { ok: true, inputs, expanded };
+    if (s.won || s.dead) continue;
+    const kk = key(s, top.i + 1) + '|' + s.coins.length;
     if (seen.has(kk)) continue;
     seen.add(kk);
     stack.push({ s, i: top.i + 1, inputs, next: 0 });
   }
+  if (need) return { ok: false, furthest: missAt(coinXs, coinFront), reason: 'secret coin unreachable' };
   return { ok: false, furthest, reason: 'exhausted' };
 }
+function missAt(xs, front) { return xs.find((x) => x > front - 1.5) ?? front; }
 
 // Impossible tiers must also be proven unbeatable with 50ms inputs.
 function check(def) {
-  if (stepOf(def) >= 12) return solve(def);
+  const need = def.coinCount || 0;
+  if (stepOf(def) >= 12) return solve(def, 12, need);
   // Cheap test first: if 50ms inputs already win, it isn't Impossible.
   const human = solve(def, 12);
   if (human.ok) return { ok: false, furthest: 0, reason: 'too easy: beatable with 50ms inputs' };
-  const r = solve(def);
+  const r = solve(def, stepOf(def), need);
   if (r.ok && human.reason === 'budget') r.note = 'human-timing run unproven (budget)';
   return r;
 }
@@ -98,30 +112,46 @@ function findRepeat(levels) {
   return null;
 }
 
-// Replays a winning input list and drops coins on the path it took: three
-// for main levels (30%, 55%, 80% of the way), one for practice (60%). Each
-// prefers a moment the player is airborne, so coins float over obstacles.
-function coinsFor(def, inputs, K) {
+// Levels without flying sections get one secret coin up high: replay the
+// winning run, and from its 60% point try spots 3, 2.5, 2, 1.5 blocks above
+// the player's path (against gravity), keeping the highest one a run can
+// still collect at that level's input timing. Blocked spots are skipped.
+function highCoin(def, inputs, K) {
   const L = P.compile(def);
   const s = P.create(L);
   const path = [];
   for (const choice of inputs) {
     for (let k = 0; k < K && !s.dead && !s.won; k++) {
       P.step(s, L, choice === 1);
-      path.push([s.x, s.y, s.grounded]);
+      path.push([s.x, s.y, s.grav, s.bounds ? s.bounds.floor + s.bounds.ceil : null]);
     }
   }
-  const at = def.training ? [0.6] : [0.3, 0.55, 0.8];
-  return at.map((f) => {
-    const tx = def.length * f;
-    let best = null, bd = Infinity;
-    for (const [x, y, g] of path) {
-      const dd = Math.abs(x - tx) + (g ? 6 : 0);
-      if (dd < bd) { bd = dd; best = [x, y]; }
-    }
-    const q = (v) => Math.round(v * 4) / 4;
-    return [q(best[0] - 0.5), q(best[1] - 0.5)];
+  for (const f of [0.6, 0.45, 0.75, 0.3, 0.85]) {
+    const c = coinNear(def, K, L, path, def.length * f);
+    if (c) return c;
+  }
+  return null;
+}
+function coinNear(def, K, L, path, tx) {
+  const order = path.slice().sort((a, b) => Math.abs(a[0] - tx) - Math.abs(b[0] - tx)).slice(0, 400);
+  const blocked = (cx, cy) => L.objects.some((o) => {
+    if (o.t === 'b' || o.t === 'saw') return cx + 0.6 > o.x && cx - 0.6 < o.x + o.w && cy + 0.6 > o.y && cy - 0.6 < o.y + o.h;
+    if (o.t === 's' || o.t === 'ss') { const h = P.hazardBox(o); return cx + 0.6 > h[0] && cx - 0.6 < h[2] && cy + 0.6 > h[1] && cy - 0.6 < h[3]; }
+    return false;
   });
+  const q = (v) => Math.round(v * 4) / 4;
+  // Above the run (against gravity), or for corridor modes the mirror
+  // spot on the far surface: the spider has to teleport over and back.
+  for (const dy of [3, 2.5, 2, 1.5, 'mirror']) {
+    for (const [x, y, g, fc] of order.filter((_, i) => i % 40 === 0)) {
+      if (dy === 'mirror' && fc == null) continue;
+      const cx = q(x), cy = q(dy === 'mirror' ? fc - y : y + dy * g);
+      if (cy < 0.6 || cy > 30 || blocked(cx, cy)) continue;
+      const trial = Object.assign({}, def, { objects: def.objects.concat([{ t: 'coin', x: cx - 0.5, y: cy - 0.5 }]), coinCount: 1 });
+      if (solve(trial, K, 1).ok) return [[cx - 0.5, cy - 0.5]];
+    }
+  }
+  return null;
 }
 
 function sectionAt(def, x) {
@@ -224,7 +254,11 @@ function fix() {
     for (const def of LEVELS.buildAll(bumps, tight, {})) {
       const ck = def.name + JSON.stringify(bumps[def.name] || []) + (tight[def.name] || '');
       const r = cache.get(ck);
-      if (r && r.ok) coins[def.name] = coinsFor(def, r.inputs, stepOf(def));
+      if (r && r.ok && !def.coinCount) {
+        const c = highCoin(def, r.inputs, stepOf(def));
+        if (c) coins[def.name] = c;
+        else console.error(`  ${def.name}: no secret coin spot found`);
+      }
     }
     save();
     if (stuck.size) { console.error('STUCK: ' + [...stuck].join(', ')); return 2; }
@@ -235,7 +269,24 @@ function fix() {
   return 1;
 }
 
+// Place table coins only (levels with no coin yet), keeping the rest.
+function coinsOnly() {
+  const fs = require('fs');
+  const path = require('path').join(__dirname, '../js/levels.js');
+  const coins = Object.assign({}, LEVELS.COINS);
+  for (const def of LEVELS) {
+    if (def.coinCount) continue;
+    const r = check(def);
+    if (!r.ok) { console.error(`  ${def.name}: ${r.reason}`); continue; }
+    const c = highCoin(def, r.inputs, stepOf(def));
+    if (c) { coins[def.name] = c; console.log(`  ${def.name}: coin at ${c[0]}`); } else console.error(`  ${def.name}: no secret coin spot found`);
+  }
+  fs.writeFileSync(path, writeTable(fs.readFileSync(path, 'utf8'), 'COINS', coins));
+  return 0;
+}
+
 if (process.argv[2] === '--fix') process.exit(fix());
+if (process.argv[2] === '--coins') process.exit(coinsOnly());
 
 const only = process.argv[2] ? [+process.argv[2] - 1] : LEVELS.map((_, i) => i);
 let failed = 0;
@@ -244,12 +295,7 @@ for (const i of only) {
   const t0 = Date.now();
   const r = check(def);
   const ms = Date.now() - t0;
-  if (r.ok && def.coinCount) {
-    // The run that proves the level must also pass through every coin.
-    const L = P.compile(def), st = P.create(L), K = stepOf(def);
-    for (const ch of r.inputs) for (let k = 0; k < K && !st.dead && !st.won; k++) P.step(st, L, ch === 1);
-    r.note = (r.note ? r.note + '; ' : '') + `coins ${st.coins.length}/${def.coinCount} on solver path`;
-  }
+  if (r.ok && def.coinCount) r.note = (r.note ? r.note + '; ' : '') + `all ${def.coinCount} coins collected`;
   if (r.ok) {
     const secs = (r.inputs.length * stepOf(def) / P.TPS).toFixed(1);
     console.log(`PASS  ${def.name}  length ${def.length}  ${secs}s run  (${r.expanded} nodes, ${ms}ms)${r.note ? '  [' + r.note + ']' : ''}`);

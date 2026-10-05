@@ -30,6 +30,8 @@
       // Saw blade centred on (cx, cy); the box is its bounding square.
       saw: (cx, cy, r, chain = false) => o.push({ t: 'saw', x: cx - r, y: cy - r, w: 2 * r, h: 2 * r, r, chain }),
       coin: (x, y) => o.push({ t: 'coin', x, y }),
+      // Fake wall: drawn like a block, solid to the eye only.
+      fake: (x, y, w, h) => o.push({ t: 'fake', x, y, w, h }),
       color: (x, bg, gr) => colors.push({ x, bg, gr }),
     };
     return B;
@@ -235,12 +237,86 @@
       x += Math.max(w + 2, Math.round(space + r() * 3 - 1));
     }
     const cols = new Set();
+    // Secret coins: a tunnel through a pillar, away from the main gap,
+    // hidden behind a fake wall. p.secrets lists where (0..1 along the run).
+    // A tunnel only goes where the icon can dive into it from the gate
+    // before and climb out to the gate after: R is a safe climb per block
+    // of run (the wave holds 45 degrees at any speed; the others climb at
+    // a fixed rate, so faster speeds leave less room).
+    const holeH = mode === 'wave' ? 1.4 : mode === 'ufo' ? 2.2 : 2;
+    const R = { ship: 0.7, swing: 0.7, ufo: 0.65, wave: 0.8 }[mode] / (mode === 'wave' ? 1 : sf);
+    const centres = (lo, hi) => [lo + 0.5, hi - 0.5]; // where a 1-block icon's centre fits
+    const reach = (A, ax, Bi, bx) => Math.max(0, A[0] - Bi[1], Bi[0] - A[1]) <= R * (bx - ax);
+    const around = (gx) => {
+      let a = null, b = null;
+      for (const q of gates) {
+        if (q.x < gx && (!a || q.x > a.x)) a = q;
+        if (q.x > gx && (!b || q.x < b.x)) b = q;
+      }
+      return [a, b];
+    };
+    // Tunnel [h0, h1] in a column at gx, gw wide: reachable both ways, and
+    // not next to another tunnel (taking both would need hole-to-hole moves).
+    const tunnelOk = (gx, gw, hole) => {
+      const [a, b] = around(gx), H = centres(hole[0], hole[1]);
+      if ((a && a.hole) || (b && b.hole)) return false;
+      return (!a || reach(centres(a.lo, a.hi), a.x + a.w, H, gx)) && (!b || reach(H, gx + gw, centres(b.lo, b.hi), b.x));
+    };
+    const sides = (lo, hi) => [[1.2, 1.2 + holeH, lo - 1.2], [top - 1.2 - holeH, top - 1.2, top - 1.2 - hi]];
+    for (const f of p.secrets || []) {
+      const want = Math.min(gates.length - 1, Math.floor(f * gates.length));
+      // Gates nearest the wanted spot first; each side of the column that
+      // has room for the tunnel plus half a block of wall.
+      const order = gates.map((q, k) => k).filter((k) => k < n)
+        .sort((u, v) => Math.abs(u - want) - Math.abs(v - want) || u - v);
+      let done = false;
+      for (const k of order) {
+        const g = gates[k];
+        if (g.hole) continue;
+        const gw = Math.max(g.w, 2);
+        if (gates.some((q) => q !== g && q.x > g.x && q.x < g.x + gw + 2)) continue;
+        const opts = sides(g.lo, g.hi).filter(([h0, h1, room]) => room - holeH >= 0.5 && tunnelOk(g.x, gw, [h0, h1]))
+          .sort((u, v) => v[2] - u[2]);
+        if (!opts.length) continue;
+        g.w = gw; g.hole = [opts[0][0], opts[0][1]];
+        done = true; break;
+      }
+      if (done) continue;
+      // No usable pillar (wide early-game gaps): stand a secret pillar
+      // halfway between two gates, keeping the main route over or under it.
+      for (const k of order) {
+        const a = gates[k], b = gates[k + 1];
+        if (!a || a.hole || (b && b.hole)) continue;
+        const n2 = b ? b.x : x, px = Math.round((a.x + a.w + n2) / 2) - 1;
+        if (n2 - (a.x + a.w) < 6 || gates.some((q) => Math.abs(q.x - px) < 3)) continue;
+        const ph = holeH + 2.6;
+        const pls = [{ x: px, lo: ph, hi: top, w: 2, hole: [1.2, 1.2 + holeH] }, { x: px, lo: 0, hi: top - ph, w: 2, hole: [top - 1.2 - holeH, top - 1.2] }];
+        const ok = pls.find((pl) => {
+          const G = centres(pl.lo, pl.hi);
+          const mainOk = reach(centres(a.lo, a.hi), a.x + a.w, G, px) && (!b || reach(G, px + 2, centres(b.lo, b.hi), b.x));
+          return mainOk && tunnelOk(px, 2, pl.hole);
+        });
+        if (ok) { gates.push(ok); done = true; break; }
+      }
+    }
+    for (const g of gates) {
+      if (!g.hole) continue;
+      for (let j = 0; j < g.w; j++) cols.add(g.x + j);
+    }
+    for (const g of gates) {
+      if (!g.hole) { gate(B, g.x, g.lo, g.hi, top, g.w, tips); continue; }
+      const [h0, h1] = g.hole;
+      const below = h0 < g.lo; // tunnel is in the floor column
+      if (below) { B.b(g.x, 0, g.w, h0); B.b(g.x, h1, g.w, g.lo - h1); if (g.hi < top) B.b(g.x, g.hi, g.w, top - g.hi); }
+      else { if (g.lo > 0) B.b(g.x, 0, g.w, g.lo); B.b(g.x, g.hi, g.w, h0 - g.hi); B.b(g.x, h1, g.w, top - h1); }
+      B.fake(g.x, h0, g.w, h1 - h0);
+      B.coin(g.x + g.w / 2 - 0.5, (h0 + h1) / 2 - 0.5);
+    }
     for (const g of gates) for (let j = 0; j < g.w; j++) cols.add(g.x + j);
     for (let xx = c + 6; xx < x - 1; xx++) {
       if (cols.has(xx)) continue;
       B.sf(xx, 0, 1); B.sf(xx, top - 1, -1);
     }
-    for (const g of gates) gate(B, g.x, g.lo, g.hi, top, g.w, tips);
     if (p.saws) {
       // Saws on chains under ceiling columns, or perched on floor columns.
       const rr = rng(gates.length * 977 + Math.round(c));
@@ -400,10 +476,23 @@
     let c = 6, cur = Math.min(cap, def.sp0 == null ? 1 : def.sp0);
     const sections = [];
     const n = def.secs.length;
+    // Spread the level's secret coins over its flying sections.
+    const fly = def.secs.map(([k], i) => i).filter((i) => FLY[def.secs[i][0]]);
+    const want = def.secs.length && def.meta && def.meta.training ? 1 : 3;
+    const secrets = {};
+    if (fly.length) {
+      const spots = want === 1 ? [0.55] : [0.3, 0.55, 0.8];
+      spots.forEach((f, k) => {
+        const si = fly[Math.min(fly.length - 1, Math.floor(f * fly.length))];
+        const local = fly.length >= want ? 0.5 : (k + 1) / (want + 1);
+        (secrets[si] = secrets[si] || []).push(fly.length >= want ? 0.5 : local);
+      });
+    }
     def.secs.forEach(([kind, p0], i) => {
       // Main levels: every section takes its difficulty from the level's D,
       // warming up from 85% at the start to 100% at the end.
       const p = Object.assign({}, p0);
+      if (secrets[i]) p.secrets = secrets[i];
       if (def.D != null) {
         p.d = def.D * (0.85 + 0.15 * (n > 1 ? i / (n - 1) : 1));
         if (p.sp != null) p.sp = Math.min(cap, p.sp);
@@ -416,11 +505,12 @@
       c = GEN[kind](B, c, r, Object.assign({}, p, { sp: cur, tight: tight == null ? 0.5 : tight }));
       sections.push([x0, c]);
     });
-    // Coins sit on a winning path the verifier recorded (COINS table).
-    for (const [x, y] of coins || []) B.coin(x, y);
+    // Levels without flying sections get their coin from the COINS table:
+    // a high spot off the usual route that the verifier proved reachable.
+    if (!fly.length) for (const [x, y] of coins || []) B.coin(x, y);
     return Object.assign({
       name: def.name, objects: B.o, colors: B.colors, length: c + 14, sections,
-      startSpeed: Math.min(cap, def.sp0 == null ? 1 : def.sp0), coinCount: (coins || []).length,
+      startSpeed: Math.min(cap, def.sp0 == null ? 1 : def.sp0), coinCount: B.o.filter((o) => o.t === 'coin').length,
     }, def.meta);
   }
 
@@ -563,7 +653,19 @@
     }
   }
 
-  const DEFS = MAIN.concat(PRACTICE);
+  // The secret level, behind the keyhole on the main menu. It stays out of
+  // the selector until the door is found (game.js) and sits between Static
+  // Storm and Neon Abyss on the ramp.
+  const SECRET = [
+    { name: 'Shadow Gate', D: 2.1, sp0: 1,
+      meta: { difficulty: 'Insane', stars: 8, bpm: 148, key: 6, seed: 77, secret: true, slot: 'secret', order: 99 },
+      pal: [['#1a0630', '#0c0218'], ['#3a0a5a', '#1c042c'], ['#0a1a3a', '#040c1e'], ['#2a0a4a', '#140424'], ['#4a0a3a', '#24041c'],
+        ['#1a1a4a', '#0c0c24'], ['#3a0a5a', '#1c042c'], ['#5a1aff', '#2a0a80']],
+      secs: [['cube', { n: 6, ext: true }], ['ship', { n: 8, saws: true }], ['spider', { n: 8 }], ['swing', { n: 8, sp: 2 }],
+        ['ball', { n: 8 }], ['ufo', { n: 7, saws: true }], ['wave', { n: 9 }], ['cube', { n: 6, ext: true, sp: 2 }]] },
+  ];
+
+  const DEFS = MAIN.concat(PRACTICE, SECRET);
 
   // Seed bumps per level, per section (missing = 0). Written by
   // `node tools/verify.js --fix`.
@@ -610,6 +712,7 @@
     'Spider Harder': [1],
     'Mini Robot Normal': [3],
     'Mini Robot Easy Demon': [1],
+    'Shadow Gate': [0, 0, 0, 0, 1],
   };
 
   // Extreme Demon tightness per level (missing = 0.5), also from --fix.
@@ -618,11 +721,11 @@
     'Ship Extreme Demon': 0.219,
     'Ball Extreme Demon': 0.276,
     'UFO Extreme Demon': 0.032,
-    'Wave Extreme Demon': 0.016,
+    'Wave Extreme Demon': 0.008,
     'Robot Extreme Demon': 0.625,
-    'Swing Extreme Demon': 0.25,
+    'Swing Extreme Demon': 0.438,
     'Mini Cube Extreme Demon': 0.625,
-    'Mini Ship Extreme Demon': 0.321,
+    'Mini Ship Extreme Demon': 0.327,
     'Mini Ball Extreme Demon': 0.563,
     'Mini UFO Extreme Demon': 0.375,
     'Mini Wave Extreme Demon': 0.004,
@@ -633,182 +736,86 @@
 
   // Coin positions per level, written by `node tools/verify.js --coins`.
   const COINS = {
-    'Neon Steps': [[171.75, 4], [315.5, 4.5], [459, 2.25]],
-    'Pulse Circuit': [[181.25, 0.5], [332.75, 0], [484.25, 8]],
-    'Gravity Overdrive': [[244.5, 2], [448.75, 7], [653, 6]],
-    'Cyber Hop': [[114.75, 3.75], [210.75, 2.75], [306.75, 0.5]],
-    'Midnight Drift': [[153.75, 2], [282.5, 3.25], [411, 6.25]],
-    'Bass Reactor': [[173.5, 0], [318.5, 1.75], [463.5, 2]],
-    'Hyperwave': [[164.5, 2], [302, 5.75], [439.5, 2.25]],
-    'Final Ascent': [[270.75, 5.75], [497, 4.75], [728.5, 0]],
-    'Prism Drop': [[160.25, 5], [294.75, 7], [429, 7.25]],
-    'Solar Flux': [[192.75, 2.5], [354, 2], [515, 2.25]],
-    'Static Storm': [[207.75, 1.75], [379.75, -0.25], [554.75, 5.75]],
-    'Neon Abyss': [[261.75, 2.5], [480.25, 5.75], [703.5, 2]],
-    'Chaos Theory': [[310.5, 3], [569.75, 0.25], [829, 2]],
-    'Fingerflash': [[232.75, 8], [431, 7], [621.75, 1.25]],
-    'Last Dash': [[257.5, 0], [474, 1.5], [689.5, 1]],
-    'Lockdown': [[376, 6.5], [689.5, 5.5], [1003.25, 1.75]],
-    'Cube Easy': [[71, 1.75]],
-    'Cube Normal': [[106.25, 4]],
-    'Cube Hard': [[75.75, 1]],
-    'Cube Harder': [[99.75, 1]],
-    'Cube Insane': [[119, 3.25]],
-    'Cube Easy Demon': [[124.75, 1.75]],
-    'Cube Medium Demon': [[129, 4.5]],
-    'Cube Hard Demon': [[165, 1.25]],
-    'Cube Insane Demon': [[161.5, 2.5]],
-    'Cube Extreme Demon': [[148.25, 1]],
-    'Ship Easy': [[84, 2.5]],
-    'Ship Normal': [[87.75, 3.25]],
-    'Ship Hard': [[82.25, 7.25]],
-    'Ship Harder': [[86.5, 6.25]],
-    'Ship Insane': [[108.75, 2.5]],
-    'Ship Easy Demon': [[108, 2.25]],
-    'Ship Medium Demon': [[112.25, 6]],
-    'Ship Hard Demon': [[132, 6]],
-    'Ship Insane Demon': [[126, 6.25]],
-    'Ship Extreme Demon': [[148.75, 7.5]],
-    'Ball Easy': [[83.75, 5.75]],
-    'Ball Normal': [[83, 0]],
-    'Ball Hard': [[88.25, 2]],
-    'Ball Harder': [[92.75, 7]],
-    'Ball Insane': [[105.25, 6]],
-    'Ball Easy Demon': [[113.5, 7]],
-    'Ball Medium Demon': [[112, 6.5]],
-    'Ball Hard Demon': [[140, 0]],
-    'Ball Insane Demon': [[135, 0.25]],
-    'Ball Extreme Demon': [[168.75, 2.75]],
-    'UFO Easy': [[77.5, 4]],
-    'UFO Normal': [[80, 2.5]],
-    'UFO Hard': [[74.25, 1.5]],
-    'UFO Harder': [[82.25, 2.5]],
-    'UFO Insane': [[100.25, 2]],
-    'UFO Easy Demon': [[104.5, 4]],
-    'UFO Medium Demon': [[116.5, 2.75]],
-    'UFO Hard Demon': [[128.5, 3]],
-    'UFO Insane Demon': [[123.75, 4.75]],
-    'UFO Extreme Demon': [[160.25, 4]],
-    'Wave Easy': [[65.5, 4]],
-    'Wave Normal': [[65, 4.5]],
-    'Wave Hard': [[62, 3.75]],
-    'Wave Harder': [[68, 8.5]],
-    'Wave Insane': [[78, 7]],
-    'Wave Easy Demon': [[77, 6.75]],
-    'Wave Medium Demon': [[81, 3]],
-    'Wave Hard Demon': [[92.5, 5]],
-    'Wave Insane Demon': [[87.75, 8]],
-    'Wave Extreme Demon': [[164.5, 8.25]],
-    'Robot Easy': [[77, 2]],
-    'Robot Normal': [[83, 0.75]],
-    'Robot Hard': [[80.5, 2.75]],
-    'Robot Harder': [[86.5, 2.25]],
-    'Robot Insane': [[98, 2.75]],
-    'Robot Easy Demon': [[107.5, 4.75]],
-    'Robot Medium Demon': [[102.75, 2.75]],
-    'Robot Hard Demon': [[121.25, 1]],
-    'Robot Insane Demon': [[105, 2.25]],
-    'Robot Extreme Demon': [[93, 2.5]],
-    'Spider Easy': [[83.25, 7]],
-    'Spider Normal': [[88.5, 7]],
-    'Spider Hard': [[86, 7]],
-    'Spider Harder': [[92.75, 0]],
-    'Spider Insane': [[104.5, 0]],
-    'Spider Easy Demon': [[110.25, 0]],
-    'Spider Medium Demon': [[115, 0]],
-    'Spider Hard Demon': [[135.5, 1.75]],
-    'Spider Insane Demon': [[132.75, 0]],
-    'Spider Extreme Demon': [[78.25, 7]],
-    'Swing Easy': [[88, 3]],
-    'Swing Normal': [[86, 3.5]],
-    'Swing Hard': [[83, 2]],
-    'Swing Harder': [[87, 8.25]],
-    'Swing Insane': [[103.25, 2.75]],
-    'Swing Easy Demon': [[108, 8.5]],
-    'Swing Medium Demon': [[111, 4.5]],
-    'Swing Hard Demon': [[129.75, 8]],
-    'Swing Insane Demon': [[127.25, 1.5]],
-    'Swing Extreme Demon': [[151.25, 6]],
-    'Mini Cube Easy': [[70.25, 1]],
-    'Mini Cube Normal': [[87.75, 1.75]],
-    'Mini Cube Hard': [[93.75, 3.25]],
-    'Mini Cube Harder': [[87.75, 1.75]],
-    'Mini Cube Insane': [[104, 1]],
-    'Mini Cube Easy Demon': [[129.75, 1]],
-    'Mini Cube Medium Demon': [[129.25, -0.25]],
-    'Mini Cube Hard Demon': [[167.25, -0.25]],
-    'Mini Cube Insane Demon': [[167.5, 1]],
-    'Mini Cube Extreme Demon': [[146, 1.25]],
-    'Mini Ship Easy': [[86.75, 3.25]],
-    'Mini Ship Normal': [[89, 1.75]],
-    'Mini Ship Hard': [[84, 1.5]],
-    'Mini Ship Harder': [[86.5, 5.75]],
-    'Mini Ship Insane': [[104.5, 5.5]],
-    'Mini Ship Easy Demon': [[106.25, 1]],
-    'Mini Ship Medium Demon': [[111, 2]],
-    'Mini Ship Hard Demon': [[131.5, 4]],
-    'Mini Ship Insane Demon': [[125, 3.75]],
-    'Mini Ship Extreme Demon': [[146, 4.75]],
-    'Mini Ball Easy': [[83.25, 5.5]],
-    'Mini Ball Normal': [[88.5, 5]],
-    'Mini Ball Hard': [[83.25, 0]],
-    'Mini Ball Harder': [[93.75, 4.75]],
-    'Mini Ball Insane': [[101.75, 1.75]],
-    'Mini Ball Easy Demon': [[112.25, 2]],
-    'Mini Ball Medium Demon': [[111.5, 0]],
-    'Mini Ball Hard Demon': [[130.25, 7]],
-    'Mini Ball Insane Demon': [[133.25, 5]],
-    'Mini Ball Extreme Demon': [[149.75, 0.75]],
-    'Mini UFO Easy': [[74.5, 1]],
-    'Mini UFO Normal': [[80, 4]],
-    'Mini UFO Hard': [[77, 1.5]],
-    'Mini UFO Harder': [[79.25, 1.25]],
-    'Mini UFO Insane': [[98, 3.5]],
-    'Mini UFO Easy Demon': [[105.25, 1]],
-    'Mini UFO Medium Demon': [[108, 3.75]],
-    'Mini UFO Hard Demon': [[133.25, 3.25]],
-    'Mini UFO Insane Demon': [[124.25, 3]],
-    'Mini UFO Extreme Demon': [[146, 3]],
-    'Mini Wave Easy': [[65.5, 6.75]],
-    'Mini Wave Normal': [[71, 4.75]],
-    'Mini Wave Hard': [[66, 5.75]],
-    'Mini Wave Harder': [[68.5, 1]],
-    'Mini Wave Insane': [[81, 6.25]],
-    'Mini Wave Easy Demon': [[80, 3]],
-    'Mini Wave Medium Demon': [[78, 7.25]],
-    'Mini Wave Hard Demon': [[91.25, 1]],
-    'Mini Wave Insane Demon': [[89.5, 4.75]],
-    'Mini Wave Extreme Demon': [[164.5, 2.25]],
-    'Mini Robot Easy': [[78.75, 0]],
-    'Mini Robot Normal': [[84.75, 1.75]],
-    'Mini Robot Hard': [[83.5, 1.25]],
-    'Mini Robot Harder': [[83, 0.75]],
-    'Mini Robot Insane': [[104, 1.75]],
-    'Mini Robot Easy Demon': [[98.5, 0.5]],
-    'Mini Robot Medium Demon': [[99.75, 1.25]],
-    'Mini Robot Hard Demon': [[116, -0.25]],
-    'Mini Robot Insane Demon': [[100.25, 0.75]],
-    'Mini Robot Extreme Demon': [[116, 0.5]],
-    'Mini Spider Easy': [[81.75, 7.25]],
-    'Mini Spider Normal': [[84.75, 7.25]],
-    'Mini Spider Hard': [[85.5, 7.25]],
-    'Mini Spider Harder': [[86, -0.25]],
-    'Mini Spider Insane': [[105.75, 7.25]],
-    'Mini Spider Easy Demon': [[114.75, 0.75]],
-    'Mini Spider Medium Demon': [[110, -0.25]],
-    'Mini Spider Hard Demon': [[135.75, -0.25]],
-    'Mini Spider Insane Demon': [[141.5, 1.25]],
-    'Mini Spider Extreme Demon': [[69.75, 7.25]],
-    'Mini Swing Easy': [[81, 2.5]],
-    'Mini Swing Normal': [[88.25, 1.25]],
-    'Mini Swing Hard': [[83, 8]],
-    'Mini Swing Harder': [[88.25, 1.75]],
-    'Mini Swing Insane': [[104.5, 4]],
-    'Mini Swing Easy Demon': [[107.5, 5.75]],
-    'Mini Swing Medium Demon': [[112.25, 1.25]],
-    'Mini Swing Hard Demon': [[129.75, 0.5]],
-    'Mini Swing Insane Demon': [[124.25, 1.75]],
-    'Mini Swing Extreme Demon': [[140, 7.75]],
+    'Cube Easy': [[74.25, 3]],
+    'Cube Normal': [[109, 6]],
+    'Cube Hard': [[79.25, 3.25]],
+    'Cube Harder': [[99.75, 4]],
+    'Cube Insane': [[127.5, 6.25]],
+    'Cube Easy Demon': [[123.75, 3.25]],
+    'Cube Medium Demon': [[130.25, 6.25]],
+    'Cube Hard Demon': [[165, 4.25]],
+    'Cube Insane Demon': [[155, 3.25]],
+    'Cube Extreme Demon': [[162.75, 5]],
+    'Ball Easy': [[83.75, 2.75]],
+    'Ball Normal': [[86.5, 3]],
+    'Ball Hard': [[89.25, 0.75]],
+    'Ball Harder': [[92.75, 4]],
+    'Ball Insane': [[106.25, 7.75]],
+    'Ball Easy Demon': [[113.5, 4]],
+    'Ball Medium Demon': [[112, 3.5]],
+    'Ball Hard Demon': [[136.5, 3]],
+    'Ball Insane Demon': [[133.75, 4.25]],
+    'Ball Extreme Demon': [[170.25, 1.5]],
+    'Robot Easy': [[77.75, 4.25]],
+    'Robot Normal': [[83, 3.75]],
+    'Robot Hard': [[83, 3.25]],
+    'Robot Harder': [[86.5, 5.25]],
+    'Robot Insane': [[100, 3.75]],
+    'Robot Easy Demon': [[104.25, 5.75]],
+    'Robot Medium Demon': [[104.75, 3.5]],
+    'Robot Hard Demon': [[121.25, 3.5]],
+    'Robot Insane Demon': [[107.75, 4.25]],
+    'Robot Extreme Demon': [[82, 4.75]],
+    'Spider Hard Demon': [[136.75, 3.75]],
+    'Spider Insane Demon': [[135.25, 3]],
+    'Mini Cube Easy': [[65, 3]],
+    'Mini Cube Normal': [[86.75, 2.75]],
+    'Mini Cube Hard': [[99.75, 2.75]],
+    'Mini Cube Harder': [[86.75, 3]],
+    'Mini Cube Insane': [[97.5, 2.75]],
+    'Mini Cube Easy Demon': [[139.5, 3]],
+    'Mini Cube Medium Demon': [[129.75, 2.75]],
+    'Mini Cube Hard Demon': [[164.25, 2.75]],
+    'Mini Cube Insane Demon': [[168.75, 2.75]],
+    'Mini Cube Extreme Demon': [[158.75, 3]],
+    'Mini Ball Easy': [[81.5, 3.75]],
+    'Mini Ball Normal': [[90.25, 4.25]],
+    'Mini Ball Hard': [[86.25, 2.75]],
+    'Mini Ball Harder': [[93.75, 1.75]],
+    'Mini Ball Insane': [[101.75, 4.75]],
+    'Mini Ball Easy Demon': [[109, 4.75]],
+    'Mini Ball Medium Demon': [[116.5, 2.75]],
+    'Mini Ball Hard Demon': [[130.25, 4]],
+    'Mini Ball Insane Demon': [[133.25, 8]],
+    'Mini Ball Extreme Demon': [[153, 1]],
+    'Mini Robot Easy': [[78.75, 2.5]],
+    'Mini Robot Normal': [[87.25, 2.5]],
+    'Mini Robot Hard': [[75.75, 2.75]],
+    'Mini Robot Harder': [[76, 2.75]],
+    'Mini Robot Insane': [[102.75, 3.5]],
+    'Mini Robot Easy Demon': [[98.5, 3.5]],
+    'Mini Robot Medium Demon': [[94.25, 3]],
+    'Mini Robot Hard Demon': [[116, 2.75]],
+    'Mini Robot Insane Demon': [[105.5, 3]],
+    'Mini Robot Extreme Demon': [[116, 3.5]],
+    'Mini Spider Easy Demon': [[114.75, 3.75]],
+    'Spider Easy': [[79.75, 7]],
+    'Spider Normal': [[93.75, 7]],
+    'Spider Hard': [[92, 7]],
+    'Spider Harder': [[92.75, 7]],
+    'Spider Insane': [[104.5, 7]],
+    'Spider Easy Demon': [[110.25, 7]],
+    'Spider Medium Demon': [[115, 7]],
+    'Mini Spider Easy': [[80, 7.25]],
+    'Mini Spider Normal': [[90.75, 7.25]],
+    'Mini Spider Hard': [[90, 7.25]],
+    'Mini Spider Harder': [[87.75, 7.25]],
+    'Mini Spider Insane': [[115.5, 7.25]],
+    'Mini Spider Medium Demon': [[110, 7.25]],
+    'Mini Spider Hard Demon': [[135.75, 7.25]],
+    'Mini Spider Extreme Demon': [[79.25, 7.25]],
+    'Spider Extreme Demon': [[63.25, 7]],
+    'Mini Spider Insane Demon': [[96.75, 7.25]],
   };
 
   function buildAll(bumps, tight, coins) {

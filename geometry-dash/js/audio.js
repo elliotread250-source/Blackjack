@@ -229,6 +229,48 @@
       src.start(t, 0, 0.5);
     }
 
+    // Short jingles on the effects bus: semitones above 660Hz.
+    tones(notes, type, gap, len, vol) {
+      if (!this.ensure()) return;
+      const t = this.ctx.currentTime;
+      notes.forEach((semi, i) => {
+        const o = this.ctx.createOscillator();
+        o.type = type;
+        o.frequency.value = 660 * Math.pow(2, semi / 12);
+        const g = this.ctx.createGain();
+        this.env(g, t + i * gap, 0.005, vol, len);
+        o.connect(g).connect(this.fx);
+        o.start(t + i * gap); o.stop(t + i * gap + len + 0.1);
+      });
+    }
+    orb() { this.tones([0, 7], 'sine', 0.05, 0.14, 0.2); }
+    buy() { this.tones([0, 4, 7, 12], 'triangle', 0.06, 0.2, 0.25); }
+    unlock() { this.tones([0, 4, 7, 12, 16, 19, 24], 'square', 0.06, 0.18, 0.1); }
+    nope() { this.tones([-14, -15], 'sawtooth', 0.13, 0.2, 0.12); }
+    tick() { this.tones([10], 'square', 0, 0.05, 0.12); }
+
+    // Finish impact: a low thump under a burst of filtered noise.
+    boom() {
+      if (!this.ensure()) return;
+      const t = this.ctx.currentTime;
+      const o = this.ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(160, t);
+      o.frequency.exponentialRampToValueAtTime(40, t + 0.5);
+      const g = this.ctx.createGain();
+      this.env(g, t, 0.004, 0.7, 0.55);
+      o.connect(g).connect(this.fx);
+      o.start(t); o.stop(t + 0.6);
+      const src = this.ctx.createBufferSource();
+      src.buffer = this.noise;
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'bandpass'; f.frequency.setValueAtTime(2400, t); f.frequency.exponentialRampToValueAtTime(500, t + 0.6);
+      const g2 = this.ctx.createGain();
+      this.env(g2, t, 0.003, 0.35, 0.6);
+      src.connect(f).connect(g2).connect(this.fx);
+      src.start(t, 0, 0.7);
+    }
+
     win() {
       if (!this.ensure()) return;
       const t = this.ctx.currentTime;
