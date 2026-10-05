@@ -175,6 +175,9 @@
   function applyPortal(s, p) {
     const k = p.k;
     if (MODE_CFG[k]) {
+      // Every mode portal puts gravity back to normal, so a flip from the
+      // section before can't carry over into the next mode.
+      if (s.grav !== 1) { s.grav = 1; s.vy *= 0.5; s.grounded = false; }
       if (s.mode !== k) {
         s.mode = k;
         s.vy *= 0.5;

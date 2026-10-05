@@ -562,8 +562,10 @@
       G.acc -= P.DT;
       if (s.teleported) {
         if (s.mode === 'spider' && Math.abs(s.x - G.prevX) < 1) {
-          // GD-style spider streak from where it was to where it landed.
+          // GD-style spider streak from where it was to where it landed,
+          // with a splash where it lands.
           G.streaks.push({ x: s.x, y0: G.prevY, y1: s.y, w: P.size(s), life: 0.3 });
+          for (let i = 0; i < 12; i++) spawn(s.x + (Math.random() - 0.5) * 0.8, s.y - 0.45 * s.grav, (Math.random() - 0.5) * 6, -s.grav * Math.random() * 4, 0.35, 0.08 + Math.random() * 0.08, i % 2 ? SKIN.c2 : '#fff', true);
         } else {
           // Loop teleport: flash and clear trails so nothing streaks across.
           G.trail.length = 0; G.ptrail.length = 0; G.flash = 0.6;
@@ -1102,6 +1104,45 @@
       }
       ctx.fillStyle = `rgba(255,230,120,${0.7 + pulse * 0.3})`; ctx.fillRect(x, y, w, Math.max(2, S * 0.07));
       ctx.strokeStyle = '#2a0400'; ctx.lineWidth = Math.max(1.5, S * 0.05); ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+    } else if (sk === 'skull') {
+      drawSkinBlock(o, 'lava', pulse);
+      if (o.hang) {
+        // Chains up into the dark, and the odd hanging cage
+        ctx.strokeStyle = '#1a0606'; ctx.lineWidth = Math.max(2, S * 0.07);
+        for (const fx of [0.2, 0.8]) {
+          const cx = x + w * fx;
+          for (let yy = y - S * 0.25; yy > -S; yy -= S * 0.3) {
+            ctx.beginPath(); ctx.ellipse(cx, yy, S * 0.06, S * 0.12, 0, 0, Math.PI * 2); ctx.stroke();
+          }
+        }
+        // Spiked sides
+        ctx.fillStyle = '#c8c8d0';
+        for (const side of [0, 1]) {
+          for (let j = 0; j < o.h * 3; j++) {
+            const yy = y + (j + 0.5) * S / 3, xx = side ? x + w : x, dir = side ? 1 : -1;
+            ctx.beginPath(); ctx.moveTo(xx, yy - S * 0.1); ctx.lineTo(xx + dir * S * 0.22, yy); ctx.lineTo(xx, yy + S * 0.1); ctx.fill();
+          }
+        }
+        if (Math.floor(o.x) % 3 === 0) {
+          const cx = x + w + S * 0.9, cy = y + S * 0.6;
+          ctx.beginPath(); ctx.moveTo(cx, -S); ctx.lineTo(cx, cy - S * 0.45); ctx.stroke();
+          ctx.strokeStyle = '#3a2a2a'; ctx.lineWidth = Math.max(1.5, S * 0.04);
+          ctx.strokeRect(cx - S * 0.3, cy - S * 0.45, S * 0.6, S * 0.8);
+          for (let i = 1; i < 4; i++) { ctx.beginPath(); ctx.moveTo(cx - S * 0.3 + i * S * 0.15, cy - S * 0.45); ctx.lineTo(cx - S * 0.3 + i * S * 0.15, cy + S * 0.35); ctx.stroke(); }
+        }
+      }
+      if (o.w >= 2 && o.h >= 2) {
+        // Demon skull face
+        const cx = x + w / 2, cy = y + h * (o.hang ? 0.5 : 0.45), z = Math.min(w, h) * 0.32;
+        ctx.fillStyle = 'rgba(40,0,0,0.75)';
+        ctx.beginPath(); ctx.ellipse(cx, cy, z, z * 0.9, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = `rgba(255,${200 + pulse * 55},60,1)`;
+        for (const k of [-1, 1]) { ctx.beginPath(); ctx.moveTo(cx + k * z * 0.15, cy - z * 0.15); ctx.lineTo(cx + k * z * 0.65, cy - z * 0.45); ctx.lineTo(cx + k * z * 0.55, cy + z * 0.05); ctx.closePath(); ctx.fill(); }
+        ctx.fillStyle = '#ffe9c0';
+        for (let i = -2; i <= 2; i++) ctx.fillRect(cx + i * z * 0.2 - z * 0.07, cy + z * 0.3, z * 0.14, z * 0.22);
+        ctx.fillStyle = '#ffb000';
+        for (const k of [-1, 1]) { ctx.beginPath(); ctx.moveTo(cx + k * z * 0.6, cy - z * 0.7); ctx.lineTo(cx + k * z * 1.0, cy - z * 1.25); ctx.lineTo(cx + k * z * 0.9, cy - z * 0.6); ctx.fill(); }
+      }
     } else if (sk === 'gold') {
       // Fluted golden pillar with a capital
       const g = ctx.createLinearGradient(x, 0, x + w, 0);
