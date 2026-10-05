@@ -34,6 +34,9 @@
       }
       const AC = root.AudioContext || root.webkitAudioContext;
       if (!AC) return false;
+      // iOS mutes WebAudio when the ring/silent switch is off unless the
+      // session is marked as playback (Safari 16.4+).
+      try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* older iOS */ }
       this.ctx = new AC();
       this.master = this.ctx.createGain();
       this.master.gain.value = 0.55;
