@@ -1,22 +1,29 @@
 #!/usr/bin/env node
-/* Proves each built-in level can be beaten.
+/* Checks every level, main and practice.
  *
- * Depth-first search over hold/release decisions made every 50ms (12 physics
- * steps). A human can comfortably hit 50ms windows, so a level that only
- * passes with finer inputs fails here. Visited states are bucketed so the
- * search stays fast on long levels.
+ * Beatable: depth-first search over hold/release decisions made every 50ms
+ * (12 physics steps). A human can comfortably hit 50ms windows, so a level
+ * that only passes with finer inputs fails. Impossible tiers (verifyStep 4)
+ * must pass at 1/60s AND be proven unbeatable at 50ms.
  *
- *   node tools/verify.js          all levels
- *   node tools/verify.js 2        just level 2
+ * Unique: no 30-block stretch of any level with at least 4 real obstacles
+ * in it (corridor spike rows and portals don't count) may appear anywhere
+ * else, in the same level or another one.
+ *
+ *   node tools/verify.js         check everything
+ *   node tools/verify.js 2       just level 2 (beatability only)
+ *   node tools/verify.js --fix   reseed failing sections until all pass,
+ *                                then print the BUMPS table for levels.js
  */
 'use strict';
 const P = require('../js/physics.js');
 const LEVELS = require('../js/levels.js');
 
 const BUDGET = 3e6;
+const WINDOW = 30;
+const MIN_FEATURES = 4; // real obstacles: not filler spike rows, not portals
 
-// Input granularity in physics steps: 12 = 50ms. A level can ask for a finer
-// check (verifyStep) when it's meant to be beyond human timing.
+// Input granularity in physics steps: 12 = 50ms.
 function stepOf(def) { return def.verifyStep || 12; }
 
 function key(s, i) {
@@ -24,8 +31,7 @@ function key(s, i) {
     s.grounded ? 1 : 0, s.held ? 1 : 0, s.used.length, s.speed].join('|');
 }
 
-function solve(def) {
-  const K = stepOf(def);
+function solve(def, K = stepOf(def)) {
   const L = P.compile(def);
   const seen = new Set();
   const stack = [{ s: P.create(L), i: 0, inputs: [], next: 0 }];
@@ -53,32 +59,92 @@ function solve(def) {
   return { ok: false, furthest, reason: 'exhausted' };
 }
 
-// Levels checked at finer-than-human timing must also be proven unbeatable
-// at 50ms; otherwise they aren't the "Impossible" they claim to be.
+// Impossible tiers must also be proven unbeatable with 50ms inputs.
 function check(def) {
   const r = solve(def);
   if (!r.ok || stepOf(def) >= 12) return r;
-  const human = solve(Object.assign({}, def, { verifyStep: 12 }));
-  if (human.ok) return { ok: false, furthest: def.length, reason: 'too easy: beatable with 50ms inputs' };
+  const human = solve(def, 12);
+  if (human.ok) return { ok: false, furthest: 0, reason: 'too easy: beatable with 50ms inputs' };
   if (human.reason === 'budget') r.note = 'human-timing run unproven (budget)';
   return r;
 }
 
-// --seeds [mode]: for each practice tier, search seeds 1..60 and print the first that passes.
-if (process.argv[2] === '--seeds') {
-  const out = {};
-  for (const def of LEVELS.filter((d) => d.training && (!process.argv[3] || d.mode === process.argv[3]))) {
-    out[def.mode] = out[def.mode] || [];
-    let seed = 0;
-    for (let k = 1; k <= 60; k++) {
-      if (check(LEVELS.buildTraining(def.mode, def.tier, k)).ok) { seed = k; break; }
+// Every window of WINDOW blocks starting at an object, as a normalised
+// signature. Returns the first stretch that already appeared elsewhere.
+function findRepeat(levels) {
+  const seen = new Map();
+  for (let li = 0; li < levels.length; li++) {
+    const objs = levels[li].objects.slice().sort((a, b) => a.x - b.x || a.y - b.y);
+    for (let i = 0; i < objs.length; i++) {
+      const x0 = objs[i].x;
+      if (i > 0 && objs[i - 1].x === x0) continue;
+      const parts = [];
+      let features = 0, fx = null;
+      for (let j = i; j < objs.length && objs[j].x < x0 + WINDOW; j++) {
+        const o = objs[j];
+        if (!o.f && o.t !== 'p') { features++; if (fx === null) fx = o.x; }
+        parts.push(`${o.t}${o.x - x0},${o.y},${o.w || ''},${o.h || ''},${o.d || ''},${o.c || o.k || ''}`);
+      }
+      if (features < MIN_FEATURES) continue;
+      const sig = parts.join(';');
+      const prev = seen.get(sig);
+      // fx: first real obstacle, so --fix reseeds the section that owns it.
+      if (prev) return { a: prev, b: { li, x: x0, fx } };
+      seen.set(sig, { li, x: x0, fx });
     }
-    out[def.mode][def.tier] = seed;
-    console.log(def.name, seed || 'NONE');
   }
-  console.log(JSON.stringify(out));
-  process.exit(0);
+  return null;
 }
+
+function sectionAt(def, x) {
+  const secs = def.sections || [[0, def.length]];
+  for (let i = 0; i < secs.length; i++) if (x < secs[i][1]) return i;
+  return secs.length - 1;
+}
+
+function fix() {
+  const bumps = JSON.parse(JSON.stringify(LEVELS.BUMPS));
+  const cache = new Map();
+  const bump = (name, sec) => {
+    bumps[name] = bumps[name] || [];
+    bumps[name][sec] = (bumps[name][sec] || 0) + 1;
+  };
+  for (let round = 0; round < 400; round++) {
+    const levels = LEVELS.buildAll(bumps);
+    let changed = false;
+    for (const def of levels) {
+      const ck = def.name + JSON.stringify(bumps[def.name] || []);
+      let r = cache.get(ck);
+      if (!r) { r = check(def); cache.set(ck, r); }
+      if (!r.ok) {
+        const sec = sectionAt(def, r.furthest);
+        console.error(`  ${def.name}: ${r.reason} near x=${r.furthest.toFixed(0)} -> reseed section ${sec}`);
+        bump(def.name, sec);
+        changed = true;
+      }
+    }
+    if (changed) continue;
+    const rep = findRepeat(levels);
+    if (rep) {
+      const def = levels[rep.b.li];
+      const sec = sectionAt(def, rep.b.fx);
+      console.error(`  repeat: ${levels[rep.a.li].name}@${rep.a.x} = ${def.name}@${rep.b.x} -> reseed section ${sec}`);
+      bump(def.name, sec);
+      continue;
+    }
+    const clean = {};
+    for (const [k, v] of Object.entries(bumps)) {
+      const arr = Array.from(v, (n) => n || 0);
+      if (arr.some((n) => n)) clean[k] = arr;
+    }
+    console.log(JSON.stringify(clean));
+    return 0;
+  }
+  console.error('gave up after 400 rounds');
+  return 1;
+}
+
+if (process.argv[2] === '--fix') process.exit(fix());
 
 const only = process.argv[2] ? [+process.argv[2] - 1] : LEVELS.map((_, i) => i);
 let failed = 0;
@@ -92,7 +158,16 @@ for (const i of only) {
     console.log(`PASS  ${def.name}  length ${def.length}  ${secs}s run  (${r.expanded} nodes, ${ms}ms)${r.note ? '  [' + r.note + ']' : ''}`);
   } else {
     failed++;
-    console.log(`FAIL  ${def.name}  stuck near x=${r.furthest.toFixed(1)}  (${r.reason}, ${ms}ms)`);
+    console.log(`FAIL  ${def.name}  ${r.reason} near x=${r.furthest.toFixed(1)}  (${ms}ms)`);
+  }
+}
+if (!process.argv[2]) {
+  const rep = findRepeat(LEVELS);
+  if (rep) {
+    failed++;
+    console.log(`FAIL  repeated stretch: ${LEVELS[rep.a.li].name} @${rep.a.x} = ${LEVELS[rep.b.li].name} @${rep.b.x}`);
+  } else {
+    console.log(`PASS  no ${WINDOW}-block stretch repeats anywhere across ${LEVELS.length} levels`);
   }
 }
 process.exit(failed ? 1 : 0);
