@@ -3,9 +3,10 @@
 **Play it: https://elliotread250-source.github.io/Blackjack/geometry-dash/**
 
 A browser rhythm platformer built to play like Geometry Dash: all eight game
-modes, physics tuned to GD's own constants, 16 levels plus a secret one,
+modes, physics tuned to GD's own constants, 17 levels plus a secret one,
 160 mode practices and a level editor with share links. No build step, no dependencies, no assets to download. The music
-is synthesised live in WebAudio.
+is synthesised live in WebAudio, and every level can also use your own
+music file.
 
 ## Game modes
 
@@ -70,11 +71,22 @@ in order like GD's: arrows, swipe, or the arrow keys.
 | 14 | Final Ascent | Medium Demon | 10 |
 | 15 | Chaos Theory | Hard Demon | 10 |
 | 16 | Lockdown | Insane Demon | 15 |
+| 17 | Dash | Insane | 12 |
 
 The last three are modelled on GD's own finales: Fingerflash on Fingerdash
 (dash orbs, red pads, saws, spider), Last Dash on Dash (swing-heavy), and
 Lockdown on Deadlocked (a dark, saw-filled 15-star demon). Original layouts
 and names.
+
+Dash, the final level, is a rebuild of GD's newest final level (Dash, 2.2)
+from its published walkthrough: the same modes, speeds and sizes in the
+same order at the same percentages (within about 3%), no UFO, like the
+original, and coins at 14% (cube), 37% (swing) and 68% (start of the 3x
+ship). It has every orb type (yellow, pink, red, blue, green, black, dash
+and pink dash) and every pad type (yellow, pink, red, blue). The block by
+block layout inside each section is generated: RobTop's level data isn't
+public, and GD's camera and teleport cutscenes don't exist in this engine.
+Like GD, it's Insane, 12 stars, after the demon finales.
 
 Every level has secret coins (three per main level, one per practice level),
 and they're hidden. In flying sections a coin sits in a tunnel through one
@@ -212,6 +224,18 @@ Levels save on your device. Share packs the whole level into a link
 (compressed into the URL, no server needed): anyone who opens it gets the
 level ready to play, and can save a copy to edit. Player-made levels track
 your best but pay no orbs.
+
+## Music
+
+Every level has its own song, generated live in one of eight styles
+(Electro, Dubstep, Drum & Bass, Chiptune, Trance, Synthwave, Hardstyle,
+House) at its own tempo and key, arranged in 16-bar loops: intro, verse, a
+snare-roll build, then the drop. The level selector shows each song.
+
+The Song button (level selector, pause menu, editor settings) lets you
+pick any audio file from your device for that level. It's stored on the
+device (IndexedDB), loops from the top on every attempt like GD, and can be
+switched back to the built-in song.
 
 ## Saving
 

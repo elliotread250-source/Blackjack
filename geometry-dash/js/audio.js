@@ -5,8 +5,29 @@
 (function (root) {
   'use strict';
 
-  // Minor-key progression in semitones from the root: i - VI - III - VII
-  const PROG = [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5]];
+  // Each level's song is built from a style: chord progression (semitones
+  // from the root), drum pattern (16 steps: k kick, s snare, h hat, o open
+  // hat), bass rhythm, lead voice and how the lead plays (riff or arpeggio).
+  // Songs run in 16-bar loops: a 1-bar intro, an 8-bar verse with a thinner
+  // lead, a 1-bar snare build, then a full drop.
+  const STYLES = [
+    { name: 'Electro', prog: [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5]],
+      drums: 'k.h.k.h.k.h.k.hh', snare: [4, 12], bass: 'eighths', lead: 'square', play: 'riff' },
+    { name: 'Dubstep', prog: [[0, 3, 7], [0, 3, 7], [-4, 0, 3], [-2, 2, 5]], half: true,
+      drums: 'k.h.h.h.h.h.k.h.', snare: [8], bass: 'wobble', lead: 'saw', play: 'riff' },
+    { name: 'Drum & Bass', prog: [[0, 3, 7], [-5, -2, 2], [-4, 0, 3], [-2, 2, 5]],
+      drums: 'k.h.h.h.h.k.h.hh', snare: [4, 12], bass: 'reese', lead: 'triangle', play: 'arp' },
+    { name: 'Chiptune', prog: [[0, 4, 7], [7, 11, 14], [9, 12, 16], [5, 9, 12]],
+      drums: 'k.h.h.h.k.h.h.h.', snare: [4, 12], bass: 'octave', lead: 'square', play: 'arp' },
+    { name: 'Trance', prog: [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5]],
+      drums: 'k.o.k.o.k.o.k.o.', snare: [4, 12], bass: 'offbeat', lead: 'saw', play: 'arp' },
+    { name: 'Synthwave', prog: [[-3, 0, 4], [-7, -3, 0], [0, 4, 7], [-5, -1, 2]],
+      drums: 'k...h...k.k.h...', snare: [4, 12], bass: 'eighths', lead: 'saw', play: 'riff' },
+    { name: 'Hardstyle', prog: [[0, 3, 7], [-2, 2, 5], [-4, 0, 3], [-5, -2, 2]],
+      drums: 'k...k...k...k...', snare: [4, 12], bass: 'offbeat', lead: 'square', play: 'riff' },
+    { name: 'House', prog: [[0, 3, 7], [5, 8, 12], [3, 7, 10], [-2, 2, 5]],
+      drums: 'k.o.k.o.k.o.k.o.', snare: [4, 12], bass: 'offbeat', lead: 'triangle', play: 'riff' },
+  ];
 
   function rng(seed) {
     let a = seed * 2654435761 >>> 0;
@@ -77,6 +98,7 @@
       if (!this.ensure()) return;
       this.stop();
       const r = rng(level.seed || 1);
+      this.style = STYLES[level.style != null ? level.style % STYLES.length : (level.seed || 1) % STYLES.length];
       this.bpm = level.bpm || 130;
       this.root = 110 * Math.pow(2, (level.key || 0) / 12);
       this.lead = Array.from({ length: 16 }, () => Math.floor(r() * 3) + (r() < 0.3 ? 3 : 0));
@@ -96,6 +118,7 @@
     stop() {
       if (this.timer) clearInterval(this.timer);
       this.timer = null;
+      if (this.src) { try { this.src.stop(this.ctx.currentTime + 0.06); } catch (e) { /* already stopped */ } this.src = null; }
       if (this.playing && this.ctx) {
         const t = this.ctx.currentTime;
         this.music.gain.cancelScheduledValues(t);
@@ -123,23 +146,78 @@
     }
 
     note(n, t) {
+      const st = this.style || STYLES[0];
       const s = n % 16;
       const bar = Math.floor(n / 16);
-      const chord = PROG[bar % 4];
-      const intro = bar < 1;
-      if (s % 4 === 0) this.kick(t);
-      if (!intro && (s === 4 || s === 12)) this.snare(t);
-      if (s % 2 === 1) this.hat(t, s % 4 === 3 ? 0.07 : 0.04);
-      if (s % 2 === 0) {
-        const semis = chord[0] + (s % 4 === 2 ? 12 : 0);
-        this.bass(t, this.root / 2 * Math.pow(2, semis / 12) * this.bassOct[(s / 2) | 0]);
-      }
-      if (!intro && this.leadOn[s]) {
-        const idx = this.lead[s];
-        const semi = chord[idx % 3] + (idx >= 3 ? 12 : 0) + 12;
-        this.pluck(t, this.root * Math.pow(2, semi / 12));
+      const chord = st.prog[bar % 4];
+      const part = bar % 16; // 0 intro, 1-8 verse, 9 build, 10-15 drop
+      const intro = bar < 1, build = part === 9, drop = part >= 10 || part === 0 && bar > 0;
+      const d = st.drums[s];
+      if (d === 'k') this.kick(t);
+      if (d === 'h' || d === 'o') this.hat(t, d === 'o' ? 0.08 : s % 4 === 3 ? 0.07 : 0.04, d === 'o');
+      if (build) {
+        // Snare roll that speeds up into the drop
+        if (s % (s < 8 ? 4 : s < 12 ? 2 : 1) === 0) this.snare(t, 0.15 + s * 0.02);
+      } else if (!intro && st.snare.indexOf(s) !== -1) this.snare(t);
+      const f0 = this.root / 2 * Math.pow(2, chord[0] / 12);
+      if (!build) this.bassLine(st.bass, s, t, f0);
+      if (!intro && !build && this.leadOn[s] && (drop || s % 4 === 0 || st.play === 'arp')) {
+        let semi;
+        if (st.play === 'arp') semi = chord[s % 3] + (s % 6 >= 3 ? 24 : 12);
+        else { const idx = this.lead[s]; semi = chord[idx % 3] + (idx >= 3 ? 12 : 0) + 12; }
+        this.pluck(t, this.root * Math.pow(2, semi / 12), st.lead, drop ? 0.1 : 0.06);
       }
       if (s === 0 && bar % 2 === 0 && !intro) this.pad(t, chord);
+    }
+
+    bassLine(kind, s, t, f) {
+      const oct = this.bassOct[(s / 2) | 0];
+      if (kind === 'eighths') { if (s % 2 === 0) this.bass(t, f * (s % 4 === 2 ? 2 : 1) * oct); }
+      else if (kind === 'offbeat') { if (s % 4 === 2) this.bass(t, f * 2); }
+      else if (kind === 'octave') { if (s % 2 === 0) this.bass(t, f * (s % 4 === 0 ? 1 : 2), 'square'); }
+      else if (kind === 'wobble') { if (s % 8 === 0) this.wobble(t, f, this.step16 * 8, s === 8 ? 3 : 2); }
+      else if (kind === 'reese') { if (s % 8 === 0) this.wobble(t, f, this.step16 * 7, 0.5); }
+    }
+
+    // Sustained bass with a filter swept by an LFO (rate in sweeps per beat).
+    wobble(t, f, len, rate) {
+      const ctx = this.ctx;
+      const g = ctx.createGain();
+      const lp = ctx.createBiquadFilter();
+      lp.type = 'lowpass'; lp.Q.value = 9; lp.frequency.value = 500;
+      const lfo = ctx.createOscillator(), depth = ctx.createGain();
+      lfo.frequency.value = rate / (this.step16 * 4);
+      depth.gain.value = 420;
+      lfo.connect(depth).connect(lp.frequency);
+      for (const det of [-9, 9]) {
+        const o = ctx.createOscillator();
+        o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det;
+        o.connect(lp);
+        o.start(t); o.stop(t + len + 0.05);
+      }
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.22, t + 0.01);
+      g.gain.setValueAtTime(0.22, t + len - 0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      lp.connect(g).connect(this.music);
+      lfo.start(t); lfo.stop(t + len + 0.05);
+    }
+
+    // Your own music file for a level: loops from the top on every attempt.
+    startBuffer(buf, bpm) {
+      if (!this.ensure()) return;
+      this.stop();
+      const src = this.ctx.createBufferSource();
+      src.buffer = buf; src.loop = true;
+      src.connect(this.music);
+      this.bpm = bpm || 120;
+      this.step16 = 60 / this.bpm / 4;
+      this.t0 = this.ctx.currentTime + 0.02;
+      this.music.gain.cancelScheduledValues(this.ctx.currentTime);
+      this.music.gain.setValueAtTime(this.enabled ? this.musicVol : 0, this.ctx.currentTime);
+      src.start(this.t0);
+      this.src = src;
+      this.playing = true;
     }
 
     env(g, t, a, peak, d) {
@@ -169,12 +247,12 @@
       src.start(t, Math.random() * 0.5, dur + 0.05);
     }
 
-    snare(t) { this.noiseHit(t, 1800, 'bandpass', 0.45, 0.16); }
-    hat(t, v) { this.noiseHit(t, 8000, 'highpass', v, 0.04); }
+    snare(t, v = 0.45) { this.noiseHit(t, 1800, 'bandpass', v, 0.16); }
+    hat(t, v, open) { this.noiseHit(t, 8000, 'highpass', v, open ? 0.14 : 0.04); }
 
-    bass(t, f) {
+    bass(t, f, type = 'sawtooth') {
       const o = this.ctx.createOscillator();
-      o.type = 'sawtooth'; o.frequency.value = f;
+      o.type = type; o.frequency.value = f;
       const lp = this.ctx.createBiquadFilter();
       lp.type = 'lowpass'; lp.Q.value = 6;
       lp.frequency.setValueAtTime(1400, t);
@@ -185,15 +263,15 @@
       o.start(t); o.stop(t + 0.22);
     }
 
-    pluck(t, f) {
+    pluck(t, f, type = 'square', vol = 0.09) {
       const o = this.ctx.createOscillator();
-      o.type = 'square'; o.frequency.value = f;
+      o.type = type; o.frequency.value = f;
       const lp = this.ctx.createBiquadFilter();
       lp.type = 'lowpass';
       lp.frequency.setValueAtTime(4000, t);
       lp.frequency.exponentialRampToValueAtTime(600, t + 0.12);
       const g = this.ctx.createGain();
-      this.env(g, t, 0.003, 0.09, 0.14);
+      this.env(g, t, 0.003, vol, 0.14);
       o.connect(lp).connect(g).connect(this.music);
       o.start(t); o.stop(t + 0.2);
     }
@@ -287,4 +365,5 @@
   }
 
   root.GDAudio = new Audio();
+  root.GDAudio.STYLES = STYLES.map((x) => x.name);
 })(typeof self !== 'undefined' ? self : this);

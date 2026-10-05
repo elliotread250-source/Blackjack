@@ -349,7 +349,7 @@
     bump('attempts'); bump('att:' + slotOf(idx));
     spawnPlayer();
     show('play');
-    AUDIO.start(G.L);
+    playMusic(G.L);
   }
 
   function spawnPlayer() {
@@ -374,7 +374,7 @@
     G.attempts++;
     bump('attempts'); bump('att:' + slotOf(G.idx));
     spawnPlayer();
-    if (!G.practice || fresh) AUDIO.start(G.L);
+    if (!G.practice || fresh) playMusic(G.L);
     show('play');
   }
 
@@ -1812,13 +1812,16 @@
           <div class="bar"><i style="width:${best}%"></i><b>Normal ${best}%</b></div>
           <div class="bar p"><i style="width:${prac}%"></i><b>Practice ${prac}%</b></div>
         </div>
-        <div class="row"><button class="alt" data-prac="${i}">Practice</button></div>`;
+        <div class="row"><button class="alt" data-prac="${i}">Practice</button><button class="ghost songbtn" data-song="${i}"></button></div>`;
       track.appendChild(slide);
       faceCanvas(slide.querySelector('canvas'), L.difficulty, 120, auraOf(L));
       const card = slide.querySelector('.lvcard');
       card.addEventListener('click', () => { if (!swiped) startLevel(i, false, 'select'); });
       card.addEventListener('keydown', (e) => { if (e.key === 'Enter') startLevel(i, false, 'select'); });
       slide.querySelector('[data-prac]').addEventListener('click', () => startLevel(i, true, 'select'));
+      const sb = slide.querySelector('[data-song]');
+      sb.textContent = '\u266a ' + songLabel(L, slotOf(i));
+      sb.addEventListener('click', () => openSong(L, slotOf(i), () => buildSelect()));
       const dot = document.createElement('i');
       dots.appendChild(dot);
     });
@@ -2577,7 +2580,7 @@
     }
     const face = $('esFace');
     face.innerHTML = FACE_NAMES.map((f) => `<option${f === lv.face ? ' selected' : ''}>${f}</option>`).join('');
-    $('esSong').textContent = `Song #${lv.song}`;
+    $('esSong').textContent = '\u266a ' + songLabel(edToDef(lv, 'my:' + lv.id), 'my:' + lv.id);
   }
 
   function edExit() {
@@ -2612,7 +2615,7 @@
     bump('attempts');
     spawnPlayer();
     show('play');
-    AUDIO.start(L);
+    playMusic(L);
   }
 
   // ------------------------------------------------------ create list
@@ -2719,6 +2722,106 @@
   }
   window.addEventListener('hashchange', checkHash);
 
+  // ------------------------------------------------------------ songs
+  // Every level has a generated song in its own style (audio.js). Players
+  // can also give any level their own music file: it's kept in IndexedDB on
+  // this device under the level's save slot, decoded once, and loops from
+  // the top on every attempt like GD's songs.
+  const songCache = new Map(); // slot -> AudioBuffer
+  function songDB() {
+    return new Promise((ok, no) => {
+      if (!window.indexedDB) { no(new Error('no IndexedDB')); return; }
+      const rq = indexedDB.open('gdr-songs', 1);
+      rq.onupgradeneeded = () => rq.result.createObjectStore('songs');
+      rq.onsuccess = () => ok(rq.result);
+      rq.onerror = () => no(rq.error);
+    });
+  }
+  async function songOp(mode, fn) {
+    const db = await songDB();
+    return new Promise((ok, no) => {
+      const tx = db.transaction('songs', mode), st = tx.objectStore('songs');
+      const rq = fn(st);
+      tx.oncomplete = () => ok(rq && rq.result);
+      tx.onerror = () => no(tx.error);
+    });
+  }
+  const songName = (slot) => store.get('song:' + slot, null);
+  function songLabel(L, slot) {
+    const own = songName(slot);
+    if (own) return own;
+    return `${AUDIO.STYLES[(L.style != null ? L.style : L.seed || 1) % AUDIO.STYLES.length]} \u00b7 ${L.bpm || 130} BPM`;
+  }
+  function playMusic(L) {
+    const slot = L.slot || slotOf(G.idx);
+    if (!songName(slot)) { AUDIO.start(L); return; }
+    const buf = songCache.get(slot);
+    if (buf) { AUDIO.startBuffer(buf, L.bpm); return; }
+    AUDIO.start(L); // generated song until the file is decoded
+    loadSong(slot).then((b) => {
+      if (b && G.L === L && (G.screen === 'play' || G.screen === 'pause') && !G.s.won) AUDIO.startBuffer(b, L.bpm);
+    });
+  }
+  async function loadSong(slot) {
+    if (songCache.has(slot)) return songCache.get(slot);
+    try {
+      const blob = await songOp('readonly', (st) => st.get(slot));
+      if (!blob || !AUDIO.ensure()) return null;
+      const buf = await AUDIO.ctx.decodeAudioData(await blob.arrayBuffer());
+      songCache.set(slot, buf);
+      return buf;
+    } catch (e) { return null; }
+  }
+  let songTarget = null;
+  function openSong(L, slot, after) {
+    songTarget = { L, slot, after };
+    $('songLevel').textContent = L.name;
+    $('songNow').textContent = '\u266a ' + songLabel(L, slot) + (songName(slot) ? ' (your file)' : ' (built-in)');
+    $('songReset').style.display = songName(slot) ? '' : 'none';
+    $('songBox').classList.add('show');
+  }
+  function closeSong() {
+    $('songBox').classList.remove('show');
+    AUDIO.stop();
+    if (songTarget && songTarget.after) songTarget.after();
+    // Back in a paused level: the level's (possibly new) song from the top on resume.
+    if (G.s && songTarget && G.L === songTarget.L) G.songChanged = true;
+  }
+  $('songFile').addEventListener('change', async () => {
+    const f = $('songFile').files[0];
+    $('songFile').value = '';
+    if (!f || !songTarget) return;
+    if (f.size > 40 * 1024 * 1024) { toast('That file is over 40MB, pick a smaller one'); return; }
+    const { slot } = songTarget;
+    try {
+      AUDIO.ensure();
+      const buf = await AUDIO.ctx.decodeAudioData(await f.arrayBuffer());
+      await songOp('readwrite', (st) => st.put(f, slot));
+      songCache.set(slot, buf);
+      store.set('song:' + slot, f.name.replace(/\.[^.]+$/, '').slice(0, 40));
+      toast('Song added to ' + songTarget.L.name);
+      openSong(songTarget.L, slot, songTarget.after);
+    } catch (e) {
+      toast("Couldn't read that file as audio");
+    }
+  });
+  $('songPick').addEventListener('click', () => $('songFile').click());
+  $('songPlay').addEventListener('click', async () => {
+    const { L, slot } = songTarget;
+    const buf = songName(slot) ? await loadSong(slot) : null;
+    if (buf) AUDIO.startBuffer(buf, L.bpm); else AUDIO.start(L);
+  });
+  $('songReset').addEventListener('click', async () => {
+    const { L, slot } = songTarget;
+    store.set('song:' + slot, null);
+    songCache.delete(slot);
+    try { await songOp('readwrite', (st) => st.delete(slot)); } catch (e) { /* storage blocked */ }
+    openSong(L, slot, songTarget.after);
+  });
+  $('songDone').addEventListener('click', closeSong);
+  $('pauseSong').addEventListener('click', () => openSong(G.L, G.L.slot || slotOf(G.idx), null));
+  $('esOwnSong').addEventListener('click', () => openSong(edToDef(ED.lv, 'my:' + ED.lv.id), 'my:' + ED.lv.id, () => buildEdSettings()));
+
   // ------------------------------------------------------ pause / end
   function pause() {
     if (G.s && G.s.won) return;
@@ -2734,6 +2837,7 @@
   }
   function resume() {
     if (AUDIO.ctx) AUDIO.ctx.resume();
+    if (G.songChanged) { G.songChanged = false; playMusic(G.L); }
     last = performance.now();
     show('play');
   }
