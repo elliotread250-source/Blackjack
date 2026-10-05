@@ -27,6 +27,9 @@
       pad: (x, y, c, d = 1) => o.push({ t: 'pad', x, y, c, d }),
       orb: (x, y, c) => o.push({ t: 'orb', x, y, c }),
       p: (x, y, k, h = 3, b) => o.push({ t: 'p', x, y, k, h, b }),
+      // Saw blade centred on (cx, cy); the box is its bounding square.
+      saw: (cx, cy, r, chain = false) => o.push({ t: 'saw', x: cx - r, y: cy - r, w: 2 * r, h: 2 * r, r, chain }),
+      coin: (x, y) => o.push({ t: 'coin', x, y }),
       color: (x, bg, gr) => colors.push({ x, bg, gr }),
     };
     return B;
@@ -114,6 +117,26 @@
       B.orb(x + Math.floor((L - 1) / 2), r() < 0.5 ? 1.6 : 2, 'yellow');
       return x + L;
     },
+    // Fingerdash-era families, used by sections flagged ext.
+    saw(B, x, r) {
+      const rad = 1 + r() * 0.4;
+      B.saw(x + rad, -0.3, rad);
+      return x + rad * 2;
+    },
+    dashPit(B, x, r, q) {
+      B.orb(x, 1.5, 'dash');
+      const L = int(r, 6, q.sp >= 2 ? 11 : 9);
+      B.spikes(x + 1, 0, L);
+      return x + 1 + L;
+    },
+    redPad(B, x, r) {
+      B.pad(x, 0, 'red');
+      const px = x + int(r, 5, 6), w = int(r, 4, 6), h = int(r, 4, 5);
+      B.b(px, 0, w, h);
+      const t = int(r, 1, 2);
+      B.spikes(px + w, 0, t);
+      return px + w + t;
+    },
     pillars(B, x, r, q) {
       const m = int(r, 2, 3);
       for (let j = 0; j < m; j++) {
@@ -137,6 +160,7 @@
     if (d >= 0.8 && p.sp <= 2) fams.push('pinkHop');
     if (d >= 1) fams.push('orbPit');
     if (d >= 1.5) fams.push('pillars');
+    if (p.ext && !mini) fams.push('saw', 'dashPit', 'redPad');
     if (p.impossible) { fams = ['spikes', 'pillars', 'orbPit', 'stairs', 'blockSpike']; q.maxSp = 3; }
     // Extreme Demon: p.tight (0..1, tuned per level by verify.js --fix)
     // squeezes the gaps until 50ms inputs can't make it but 1/60s ones can.
@@ -217,6 +241,15 @@
       B.sf(xx, 0, 1); B.sf(xx, top - 1, -1);
     }
     for (const g of gates) gate(B, g.x, g.lo, g.hi, top, g.w, tips);
+    if (p.saws) {
+      // Saws on chains under ceiling columns, or perched on floor columns.
+      const rr = rng(gates.length * 977 + Math.round(c));
+      for (const g of gates) {
+        if (rr() > 0.45) continue;
+        if (g.hi < top && rr() < 0.6) B.saw(g.x + g.w / 2, g.hi - 0.15, 0.7, true);
+        else if (g.lo > 0) B.saw(g.x + g.w / 2, g.lo + 0.15, 0.7);
+      }
+    }
     B.p(x, top / 2, 'cube', top);
     if (p.mini) B.p(x + 1, 10, 'big', 20);
     return x + 8;
@@ -357,11 +390,24 @@
   };
 
   // Builds a level from its section list. bumps[i] reseeds section i only.
-  function buildLevel(def, bumps, tight) {
+  // Fastest speed portal a level of difficulty D may use: early levels stay
+  // at 1x, mid levels reach 2x, only the hardest get 3x.
+  const maxSpeed = (D) => (D < 1 ? 1 : D < 2 ? 2 : 3);
+
+  function buildLevel(def, bumps, tight, coins) {
     const B = builder();
-    let c = 6, cur = def.sp0 == null ? 1 : def.sp0;
+    const cap = def.D == null ? 4 : maxSpeed(def.D);
+    let c = 6, cur = Math.min(cap, def.sp0 == null ? 1 : def.sp0);
     const sections = [];
-    def.secs.forEach(([kind, p], i) => {
+    const n = def.secs.length;
+    def.secs.forEach(([kind, p0], i) => {
+      // Main levels: every section takes its difficulty from the level's D,
+      // warming up from 85% at the start to 100% at the end.
+      const p = Object.assign({}, p0);
+      if (def.D != null) {
+        p.d = def.D * (0.85 + 0.15 * (n > 1 ? i / (n - 1) : 1));
+        if (p.sp != null) p.sp = Math.min(cap, p.sp);
+      }
       const r = rng(hash(def.name) + i * 7919 + ((bumps && bumps[i]) || 0) * 104729);
       const pal = (def.pal && def.pal[i % def.pal.length]) || MODE_COLORS[kind];
       B.color(c, pal[0], pal[1]);
@@ -370,9 +416,11 @@
       c = GEN[kind](B, c, r, Object.assign({}, p, { sp: cur, tight: tight == null ? 0.5 : tight }));
       sections.push([x0, c]);
     });
+    // Coins sit on a winning path the verifier recorded (COINS table).
+    for (const [x, y] of coins || []) B.coin(x, y);
     return Object.assign({
       name: def.name, objects: B.o, colors: B.colors, length: c + 14, sections,
-      startSpeed: def.sp0 == null ? 1 : def.sp0,
+      startSpeed: Math.min(cap, def.sp0 == null ? 1 : def.sp0), coinCount: (coins || []).length,
     }, def.meta);
   }
 
@@ -445,7 +493,40 @@
       secs: [['cube', { d: 3.4, n: 6 }], ['ship', { d: 3.4, n: 9, sp: 3 }], ['ball', { d: 3.4, n: 10 }],
         ['wave', { d: 3.3, n: 10, mini: true, sp: 2 }], ['robot', { d: 3.4, n: 8 }], ['swing', { d: 3.4, n: 7, sp: 3 }],
         ['spider', { d: 3.5, n: 9 }], ['ufo', { d: 3.4, n: 7 }], ['cube', { d: 3.6, n: 6, sp: 3 }]] },
+    { name: 'Fingerflash', meta: { bpm: 156, key: 2, seed: 14 },
+      pal: [['#18c24a', '#0c7a2c'], ['#9b30ff', '#5a1a99'], ['#20d860', '#108838'], ['#18c24a', '#0c7a2c'], ['#ff3b5c', '#b01734'],
+        ['#00c8ff', '#00708a'], ['#7a7ab8', '#4a4a80'], ['#2bff7a', '#14a048']],
+      secs: [['cube', { n: 7, ext: true }], ['spider', { n: 9 }], ['ship', { n: 9, saws: true }], ['cube', { n: 6, ext: true }],
+        ['ball', { n: 9 }], ['wave', { n: 10, sp: 2 }], ['robot', { n: 8 }], ['cube', { n: 6, ext: true, sp: 2 }]] },
+    { name: 'Last Dash', meta: { bpm: 162, key: 7, seed: 15 },
+      pal: [['#ff8a00', '#a05000'], ['#ffd21f', '#a08410'], ['#1fb4ff', '#0f6fa0'], ['#ff5a00', '#a03800'], ['#ff2bd0', '#a0178a'],
+        ['#ffb000', '#a07000'], ['#ffe23b', '#a0901e'], ['#ff7a00', '#a04800']],
+      secs: [['cube', { n: 6, ext: true }], ['swing', { n: 9, saws: true }], ['wave', { n: 9, mini: true }],
+        ['swing', { n: 9, sp: 2, saws: true }], ['ufo', { n: 8 }], ['ship', { n: 9, sp: 3, saws: true }], ['swing', { n: 9 }],
+        ['cube', { n: 6, ext: true }]] },
+    { name: 'Lockdown', meta: { bpm: 178, key: 9, seed: 16 }, sp0: 2,
+      pal: [['#120018', '#06000c'], ['#3a0010', '#1a0008'], ['#001a3a', '#000c1e'], ['#2a0030', '#140018'], ['#3a1a00', '#1e0c00'],
+        ['#002a2a', '#001414'], ['#30001a', '#18000c'], ['#1a1a1a', '#0a0a0a'], ['#3a0000', '#1a0000'], ['#ff0040', '#80001e']],
+      secs: [['cube', { n: 7, ext: true }], ['ship', { n: 10, saws: true, sp: 3 }], ['ball', { n: 11 }], ['swing', { n: 9, saws: true }],
+        ['robot', { n: 9 }], ['wave', { n: 12, sp: 2 }], ['spider', { n: 10 }], ['ufo', { n: 8, saws: true }],
+        ['cube', { n: 7, ext: true, sp: 3 }], ['ship', { n: 10, saws: true }]] },
   ];
+
+  // One difficulty ramp for all main levels, easiest first: each level's D
+  // is evenly spaced from 0.2 to 3.55, every section is generated from it,
+  // and the selector lists levels in this order.
+  const RAMP = [
+    ['Neon Steps', 'Easy', 1], ['Cyber Hop', 'Easy', 2], ['Prism Drop', 'Normal', 3], ['Midnight Drift', 'Normal', 3],
+    ['Solar Flux', 'Hard', 4], ['Bass Reactor', 'Hard', 5], ['Pulse Circuit', 'Harder', 6], ['Static Storm', 'Harder', 6],
+    ['Hyperwave', 'Harder', 7], ['Neon Abyss', 'Insane', 8], ['Gravity Overdrive', 'Insane', 9], ['Fingerflash', 'Insane', 12],
+    ['Last Dash', 'Insane', 12], ['Final Ascent', 'Medium Demon', 10], ['Chaos Theory', 'Hard Demon', 10],
+    ['Lockdown', 'Insane Demon', 15],
+  ];
+  RAMP.forEach(([name, difficulty, stars], k) => {
+    const def = MAIN.find((d) => d.name === name);
+    def.D = 0.2 + (k * (3.55 - 0.2)) / (RAMP.length - 1);
+    Object.assign(def.meta, { difficulty, stars, order: k, levelNo: k + 1 });
+  });
 
   // ------------------------------------------------------ mode practice
   // Every mode, normal and mini size, at GD's ten difficulties. Each is one
@@ -488,7 +569,7 @@
   // `node tools/verify.js --fix`.
   const BUMPS = {
     'Gravity Overdrive': [0, 0, 0, 0, 0, 0, 0, 1],
-    'Final Ascent': [0, 0, 0, 0, 0, 3],
+    'Final Ascent': [0, 0, 0, 0, 1, 3],
     'Midnight Drift': [1],
     'Cube Extreme Demon': [8],
     'Swing Extreme Demon': [2],
@@ -509,14 +590,26 @@
     'Mini UFO Normal': [1],
     'Mini UFO Insane Demon': [1],
     'Mini Wave Extreme Demon': [5],
-    'Mini Robot Hard': [1],
-    'Mini Robot Insane': [2],
+    'Mini Robot Hard': [3],
+    'Mini Robot Insane': [7],
     'Mini Robot Medium Demon': [1],
     'Mini Robot Hard Demon': [1],
     'Mini Spider Insane': [1],
     'Mini Swing Easy': [1],
     'Mini Swing Normal': [2],
     'Mini Swing Easy Demon': [1],
+    'Pulse Circuit': [0, 1],
+    'Solar Flux': [0, 1],
+    'Neon Abyss': [0, 0, 1],
+    'Fingerflash': [0, 0, 0, 0, 0, 0, 1],
+    'Last Dash': [0, 0, 0, 0, 1],
+    'Cube Hard Demon': [1],
+    'Robot Easy': [1],
+    'Robot Insane': [1],
+    'Robot Medium Demon': [2],
+    'Spider Harder': [1],
+    'Mini Robot Normal': [3],
+    'Mini Robot Easy Demon': [1],
   };
 
   // Extreme Demon tightness per level (missing = 0.5), also from --fix.
@@ -538,11 +631,192 @@
     'Mini Swing Extreme Demon': 0.438,
   };
 
-  function buildAll(bumps, tight) {
-    return DEFS.map((def) => buildLevel(def, bumps[def.name], tight[def.name]));
+  // Coin positions per level, written by `node tools/verify.js --coins`.
+  const COINS = {
+    'Neon Steps': [[171.75, 4], [315.5, 4.5], [459, 2.25]],
+    'Pulse Circuit': [[181.25, 0.5], [332.75, 0], [484.25, 8]],
+    'Gravity Overdrive': [[244.5, 2], [448.75, 7], [653, 6]],
+    'Cyber Hop': [[114.75, 3.75], [210.75, 2.75], [306.75, 0.5]],
+    'Midnight Drift': [[153.75, 2], [282.5, 3.25], [411, 6.25]],
+    'Bass Reactor': [[173.5, 0], [318.5, 1.75], [463.5, 2]],
+    'Hyperwave': [[164.5, 2], [302, 5.75], [439.5, 2.25]],
+    'Final Ascent': [[270.75, 5.75], [497, 4.75], [728.5, 0]],
+    'Prism Drop': [[160.25, 5], [294.75, 7], [429, 7.25]],
+    'Solar Flux': [[192.75, 2.5], [354, 2], [515, 2.25]],
+    'Static Storm': [[207.75, 1.75], [379.75, -0.25], [554.75, 5.75]],
+    'Neon Abyss': [[261.75, 2.5], [480.25, 5.75], [703.5, 2]],
+    'Chaos Theory': [[310.5, 3], [569.75, 0.25], [829, 2]],
+    'Fingerflash': [[232.75, 8], [431, 7], [621.75, 1.25]],
+    'Last Dash': [[257.5, 0], [474, 1.5], [689.5, 1]],
+    'Lockdown': [[376, 6.5], [689.5, 5.5], [1003.25, 1.75]],
+    'Cube Easy': [[71, 1.75]],
+    'Cube Normal': [[106.25, 4]],
+    'Cube Hard': [[75.75, 1]],
+    'Cube Harder': [[99.75, 1]],
+    'Cube Insane': [[119, 3.25]],
+    'Cube Easy Demon': [[124.75, 1.75]],
+    'Cube Medium Demon': [[129, 4.5]],
+    'Cube Hard Demon': [[165, 1.25]],
+    'Cube Insane Demon': [[161.5, 2.5]],
+    'Cube Extreme Demon': [[148.25, 1]],
+    'Ship Easy': [[84, 2.5]],
+    'Ship Normal': [[87.75, 3.25]],
+    'Ship Hard': [[82.25, 7.25]],
+    'Ship Harder': [[86.5, 6.25]],
+    'Ship Insane': [[108.75, 2.5]],
+    'Ship Easy Demon': [[108, 2.25]],
+    'Ship Medium Demon': [[112.25, 6]],
+    'Ship Hard Demon': [[132, 6]],
+    'Ship Insane Demon': [[126, 6.25]],
+    'Ship Extreme Demon': [[148.75, 7.5]],
+    'Ball Easy': [[83.75, 5.75]],
+    'Ball Normal': [[83, 0]],
+    'Ball Hard': [[88.25, 2]],
+    'Ball Harder': [[92.75, 7]],
+    'Ball Insane': [[105.25, 6]],
+    'Ball Easy Demon': [[113.5, 7]],
+    'Ball Medium Demon': [[112, 6.5]],
+    'Ball Hard Demon': [[140, 0]],
+    'Ball Insane Demon': [[135, 0.25]],
+    'Ball Extreme Demon': [[168.75, 2.75]],
+    'UFO Easy': [[77.5, 4]],
+    'UFO Normal': [[80, 2.5]],
+    'UFO Hard': [[74.25, 1.5]],
+    'UFO Harder': [[82.25, 2.5]],
+    'UFO Insane': [[100.25, 2]],
+    'UFO Easy Demon': [[104.5, 4]],
+    'UFO Medium Demon': [[116.5, 2.75]],
+    'UFO Hard Demon': [[128.5, 3]],
+    'UFO Insane Demon': [[123.75, 4.75]],
+    'UFO Extreme Demon': [[160.25, 4]],
+    'Wave Easy': [[65.5, 4]],
+    'Wave Normal': [[65, 4.5]],
+    'Wave Hard': [[62, 3.75]],
+    'Wave Harder': [[68, 8.5]],
+    'Wave Insane': [[78, 7]],
+    'Wave Easy Demon': [[77, 6.75]],
+    'Wave Medium Demon': [[81, 3]],
+    'Wave Hard Demon': [[92.5, 5]],
+    'Wave Insane Demon': [[87.75, 8]],
+    'Wave Extreme Demon': [[164.5, 8.25]],
+    'Robot Easy': [[77, 2]],
+    'Robot Normal': [[83, 0.75]],
+    'Robot Hard': [[80.5, 2.75]],
+    'Robot Harder': [[86.5, 2.25]],
+    'Robot Insane': [[98, 2.75]],
+    'Robot Easy Demon': [[107.5, 4.75]],
+    'Robot Medium Demon': [[102.75, 2.75]],
+    'Robot Hard Demon': [[121.25, 1]],
+    'Robot Insane Demon': [[105, 2.25]],
+    'Robot Extreme Demon': [[93, 2.5]],
+    'Spider Easy': [[83.25, 7]],
+    'Spider Normal': [[88.5, 7]],
+    'Spider Hard': [[86, 7]],
+    'Spider Harder': [[92.75, 0]],
+    'Spider Insane': [[104.5, 0]],
+    'Spider Easy Demon': [[110.25, 0]],
+    'Spider Medium Demon': [[115, 0]],
+    'Spider Hard Demon': [[135.5, 1.75]],
+    'Spider Insane Demon': [[132.75, 0]],
+    'Spider Extreme Demon': [[78.25, 7]],
+    'Swing Easy': [[88, 3]],
+    'Swing Normal': [[86, 3.5]],
+    'Swing Hard': [[83, 2]],
+    'Swing Harder': [[87, 8.25]],
+    'Swing Insane': [[103.25, 2.75]],
+    'Swing Easy Demon': [[108, 8.5]],
+    'Swing Medium Demon': [[111, 4.5]],
+    'Swing Hard Demon': [[129.75, 8]],
+    'Swing Insane Demon': [[127.25, 1.5]],
+    'Swing Extreme Demon': [[151.25, 6]],
+    'Mini Cube Easy': [[70.25, 1]],
+    'Mini Cube Normal': [[87.75, 1.75]],
+    'Mini Cube Hard': [[93.75, 3.25]],
+    'Mini Cube Harder': [[87.75, 1.75]],
+    'Mini Cube Insane': [[104, 1]],
+    'Mini Cube Easy Demon': [[129.75, 1]],
+    'Mini Cube Medium Demon': [[129.25, -0.25]],
+    'Mini Cube Hard Demon': [[167.25, -0.25]],
+    'Mini Cube Insane Demon': [[167.5, 1]],
+    'Mini Cube Extreme Demon': [[146, 1.25]],
+    'Mini Ship Easy': [[86.75, 3.25]],
+    'Mini Ship Normal': [[89, 1.75]],
+    'Mini Ship Hard': [[84, 1.5]],
+    'Mini Ship Harder': [[86.5, 5.75]],
+    'Mini Ship Insane': [[104.5, 5.5]],
+    'Mini Ship Easy Demon': [[106.25, 1]],
+    'Mini Ship Medium Demon': [[111, 2]],
+    'Mini Ship Hard Demon': [[131.5, 4]],
+    'Mini Ship Insane Demon': [[125, 3.75]],
+    'Mini Ship Extreme Demon': [[146, 4.75]],
+    'Mini Ball Easy': [[83.25, 5.5]],
+    'Mini Ball Normal': [[88.5, 5]],
+    'Mini Ball Hard': [[83.25, 0]],
+    'Mini Ball Harder': [[93.75, 4.75]],
+    'Mini Ball Insane': [[101.75, 1.75]],
+    'Mini Ball Easy Demon': [[112.25, 2]],
+    'Mini Ball Medium Demon': [[111.5, 0]],
+    'Mini Ball Hard Demon': [[130.25, 7]],
+    'Mini Ball Insane Demon': [[133.25, 5]],
+    'Mini Ball Extreme Demon': [[149.75, 0.75]],
+    'Mini UFO Easy': [[74.5, 1]],
+    'Mini UFO Normal': [[80, 4]],
+    'Mini UFO Hard': [[77, 1.5]],
+    'Mini UFO Harder': [[79.25, 1.25]],
+    'Mini UFO Insane': [[98, 3.5]],
+    'Mini UFO Easy Demon': [[105.25, 1]],
+    'Mini UFO Medium Demon': [[108, 3.75]],
+    'Mini UFO Hard Demon': [[133.25, 3.25]],
+    'Mini UFO Insane Demon': [[124.25, 3]],
+    'Mini UFO Extreme Demon': [[146, 3]],
+    'Mini Wave Easy': [[65.5, 6.75]],
+    'Mini Wave Normal': [[71, 4.75]],
+    'Mini Wave Hard': [[66, 5.75]],
+    'Mini Wave Harder': [[68.5, 1]],
+    'Mini Wave Insane': [[81, 6.25]],
+    'Mini Wave Easy Demon': [[80, 3]],
+    'Mini Wave Medium Demon': [[78, 7.25]],
+    'Mini Wave Hard Demon': [[91.25, 1]],
+    'Mini Wave Insane Demon': [[89.5, 4.75]],
+    'Mini Wave Extreme Demon': [[164.5, 2.25]],
+    'Mini Robot Easy': [[78.75, 0]],
+    'Mini Robot Normal': [[84.75, 1.75]],
+    'Mini Robot Hard': [[83.5, 1.25]],
+    'Mini Robot Harder': [[83, 0.75]],
+    'Mini Robot Insane': [[104, 1.75]],
+    'Mini Robot Easy Demon': [[98.5, 0.5]],
+    'Mini Robot Medium Demon': [[99.75, 1.25]],
+    'Mini Robot Hard Demon': [[116, -0.25]],
+    'Mini Robot Insane Demon': [[100.25, 0.75]],
+    'Mini Robot Extreme Demon': [[116, 0.5]],
+    'Mini Spider Easy': [[81.75, 7.25]],
+    'Mini Spider Normal': [[84.75, 7.25]],
+    'Mini Spider Hard': [[85.5, 7.25]],
+    'Mini Spider Harder': [[86, -0.25]],
+    'Mini Spider Insane': [[105.75, 7.25]],
+    'Mini Spider Easy Demon': [[114.75, 0.75]],
+    'Mini Spider Medium Demon': [[110, -0.25]],
+    'Mini Spider Hard Demon': [[135.75, -0.25]],
+    'Mini Spider Insane Demon': [[141.5, 1.25]],
+    'Mini Spider Extreme Demon': [[69.75, 7.25]],
+    'Mini Swing Easy': [[81, 2.5]],
+    'Mini Swing Normal': [[88.25, 1.25]],
+    'Mini Swing Hard': [[83, 8]],
+    'Mini Swing Harder': [[88.25, 1.75]],
+    'Mini Swing Insane': [[104.5, 4]],
+    'Mini Swing Easy Demon': [[107.5, 5.75]],
+    'Mini Swing Medium Demon': [[112.25, 1.25]],
+    'Mini Swing Hard Demon': [[129.75, 0.5]],
+    'Mini Swing Insane Demon': [[124.25, 1.75]],
+    'Mini Swing Extreme Demon': [[140, 7.75]],
+  };
+
+  function buildAll(bumps, tight, coins) {
+    return DEFS.map((def) => buildLevel(def, bumps[def.name], tight[def.name], (coins || COINS)[def.name]));
   }
 
-  const LEVELS = buildAll(BUMPS, TIGHT);
+  const LEVELS = buildAll(BUMPS, TIGHT, COINS);
+  LEVELS.COINS = COINS;
   LEVELS.TIERS = TIERS;
   LEVELS.BUMPS = BUMPS;
   LEVELS.TIGHT = TIGHT;

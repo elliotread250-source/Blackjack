@@ -29,7 +29,7 @@ function stepOf(def) { return def.verifyStep || 12; }
 
 function key(s, i) {
   return [i, Math.round(s.y * 20), Math.round(s.vy * 2), s.grav, s.mode, s.mini,
-    s.grounded ? 1 : 0, s.held ? 1 : 0, s.used.length, s.speed].join('|');
+    s.grounded ? 1 : 0, s.held ? 1 : 0, s.used.length, s.speed, s.dash ? 1 : 0].join('|');
 }
 
 function solve(def, K = stepOf(def)) {
@@ -98,6 +98,32 @@ function findRepeat(levels) {
   return null;
 }
 
+// Replays a winning input list and drops coins on the path it took: three
+// for main levels (30%, 55%, 80% of the way), one for practice (60%). Each
+// prefers a moment the player is airborne, so coins float over obstacles.
+function coinsFor(def, inputs, K) {
+  const L = P.compile(def);
+  const s = P.create(L);
+  const path = [];
+  for (const choice of inputs) {
+    for (let k = 0; k < K && !s.dead && !s.won; k++) {
+      P.step(s, L, choice === 1);
+      path.push([s.x, s.y, s.grounded]);
+    }
+  }
+  const at = def.training ? [0.6] : [0.3, 0.55, 0.8];
+  return at.map((f) => {
+    const tx = def.length * f;
+    let best = null, bd = Infinity;
+    for (const [x, y, g] of path) {
+      const dd = Math.abs(x - tx) + (g ? 6 : 0);
+      if (dd < bd) { bd = dd; best = [x, y]; }
+    }
+    const q = (v) => Math.round(v * 4) / 4;
+    return [q(best[0] - 0.5), q(best[1] - 0.5)];
+  });
+}
+
 function sectionAt(def, x) {
   const secs = def.sections || [[0, def.length]];
   for (let i = 0; i < secs.length; i++) if (x < secs[i][1]) return i;
@@ -151,6 +177,7 @@ function fix() {
     }
   };
   // Progress is written back even when stuck, so a rerun resumes from it.
+  let coins = null;
   const save = () => {
     const clean = {};
     for (const [k, v] of Object.entries(bumps)) {
@@ -160,11 +187,12 @@ function fix() {
     let src = fs.readFileSync(path, 'utf8');
     src = writeTable(src, 'BUMPS', clean);
     src = writeTable(src, 'TIGHT', tight);
+    if (coins) src = writeTable(src, 'COINS', coins);
     fs.writeFileSync(path, src);
     console.log('levels.js updated: ' + Object.keys(clean).length + ' reseeded, ' + Object.keys(tight).length + ' tuned');
   };
   for (let round = 0; round < 3000; round++) {
-    const levels = LEVELS.buildAll(bumps, tight);
+    const levels = LEVELS.buildAll(bumps, tight, {});
     let changed = false;
     for (const def of levels) {
       const ck = def.name + JSON.stringify(bumps[def.name] || []) + (tight[def.name] || '');
@@ -191,6 +219,13 @@ function fix() {
       bump(def.name, sec);
       continue;
     }
+    // Everything passes: place coins along each level's winning run.
+    coins = {};
+    for (const def of LEVELS.buildAll(bumps, tight, {})) {
+      const ck = def.name + JSON.stringify(bumps[def.name] || []) + (tight[def.name] || '');
+      const r = cache.get(ck);
+      if (r && r.ok) coins[def.name] = coinsFor(def, r.inputs, stepOf(def));
+    }
     save();
     if (stuck.size) { console.error('STUCK: ' + [...stuck].join(', ')); return 2; }
     return 0;
@@ -209,6 +244,12 @@ for (const i of only) {
   const t0 = Date.now();
   const r = check(def);
   const ms = Date.now() - t0;
+  if (r.ok && def.coinCount) {
+    // The run that proves the level must also pass through every coin.
+    const L = P.compile(def), st = P.create(L), K = stepOf(def);
+    for (const ch of r.inputs) for (let k = 0; k < K && !st.dead && !st.won; k++) P.step(st, L, ch === 1);
+    r.note = (r.note ? r.note + '; ' : '') + `coins ${st.coins.length}/${def.coinCount} on solver path`;
+  }
   if (r.ok) {
     const secs = (r.inputs.length * stepOf(def) / P.TPS).toFixed(1);
     console.log(`PASS  ${def.name}  length ${def.length}  ${secs}s run  (${r.expanded} nodes, ${ms}ms)${r.note ? '  [' + r.note + ']' : ''}`);

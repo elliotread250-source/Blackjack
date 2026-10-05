@@ -61,6 +61,9 @@
   const MINI_JUMP = 0.8;
 
   const ORB = {
+    // Dash orbs (Fingerdash): fly dead straight while the button stays held.
+    dash:   { dash: true },
+    dashp:  { dash: true, flip: true },
     yellow: { v: 1.0 },
     pink:   { v: 0.72 },
     red:    { v: 1.38 },
@@ -126,7 +129,7 @@
       mode,
       grav: 1, mini: !!L.startMini, speed: L.startSpeed == null ? 1 : L.startSpeed,
       grounded: true, held: false, buffer: false,
-      boost: 0, bounds: boundsFor(mode, null), used: [],
+      boost: 0, bounds: boundsFor(mode, null), used: [], coins: [], dash: false,
       dead: false, won: false, t: 0,
     };
   }
@@ -134,6 +137,7 @@
   function clone(s) {
     const c = Object.assign({}, s);
     c.used = s.used.slice();
+    c.coins = s.coins.slice();
     c.bounds = s.bounds && { floor: s.bounds.floor, ceil: s.bounds.ceil };
     return c;
   }
@@ -191,6 +195,11 @@
   // Applies an orb or pad push in the player's gravity frame.
   function push(s, fx) {
     const cfg = MODE_CFG[s.mode];
+    if (fx.dash) {
+      if (fx.flip) s.grav = -s.grav;
+      s.dash = true; s.vy = 0; s.grounded = false; s.boost = 0;
+      return;
+    }
     if (s.mode === 'wave') {
       if (fx.flip) s.grav = -s.grav;
       return;
@@ -258,7 +267,8 @@
     const jm = s.mini ? MINI_JUMP : 1;
     let vf = s.vy * s.grav; // velocity in gravity frame (+ = away from floor)
 
-    switch (s.mode) {
+    if (s.dash && !held) s.dash = false;
+    if (s.dash) { vf = 0; s.vy = 0; } else switch (s.mode) {
       case 'cube':
         if (s.grounded && held) { vf = JUMP * jm; s.grounded = false; s.buffer = false; }
         vf -= G * cfg.grav * DT;
@@ -380,6 +390,9 @@
       if (o.t === 'p') {
         if (overlap(s.x - half, s.y - half, s.x + half, s.y + half,
           o.x, o.y - o.h / 2, o.x + 1, o.y + o.h / 2)) applyPortal(s, o);
+      } else if (o.t === 'coin') {
+        if (s.coins.indexOf(o.id) === -1 &&
+          overlap(s.x - half, s.y - half, s.x + half, s.y + half, o.x - 0.15, o.y - 0.15, o.x + 1.15, o.y + 1.15)) s.coins.push(o.id);
       } else if (o.t === 'pad') {
         if (s.used.indexOf(o.id) !== -1) return;
         const y0 = o.d === -1 ? o.y + 0.6 : o.y, y1 = o.d === -1 ? o.y + 1 : o.y + 0.4;
@@ -393,6 +406,14 @@
 
   function hazards(s, L, half) {
     near(L, s.x - half - 0.1, s.x + half + 0.1, (o) => {
+      if (o.t === 'saw') {
+        // Circle hitbox at 75% of the drawn radius, against the player box.
+        const cx = o.x + o.r, cy = o.y + o.r, hr = o.r * 0.75;
+        const dx = cx - Math.max(s.x - half, Math.min(cx, s.x + half));
+        const dy = cy - Math.max(s.y - half, Math.min(cy, s.y + half));
+        if (dx * dx + dy * dy < hr * hr) { kill(s); return false; }
+        return;
+      }
       if (o.t !== 's' && o.t !== 'ss') return;
       const h = hazardBox(o);
       if (overlap(s.x - half, s.y - half, s.x + half, s.y + half, h[0], h[1], h[2], h[3])) {

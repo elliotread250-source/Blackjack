@@ -119,6 +119,10 @@
   .lvmeta { margin-top: 8px; font-size: clamp(14px, 2.2vw, 18px); display: flex; gap: 14px; flex-wrap: wrap; }
   .lvmeta span { -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
   .star { color: var(--gold); }
+  .lvno { font-size: 15px; color: #e8ecff; -webkit-text-stroke: 1px #000; paint-order: stroke fill; margin-bottom: 2px; }
+  .coins { display: inline-flex; gap: 5px; align-items: center; }
+  .coin { width: 18px; height: 18px; border-radius: 50%; border: 2px solid #000; background: rgba(0,0,0,0.35); display: inline-block; }
+  .coin.got { background: radial-gradient(circle at 35% 35%, #fff6b0, #ffc61a 55%, #c07a00); }
   .lvbars { width: min(620px, 100%); margin-top: 22px; display: flex; flex-direction: column; gap: 10px; }
   .bar { position: relative; height: 26px; border-radius: 13px; background: rgba(0,0,0,0.6); border: 3px solid #000; overflow: hidden; }
   .bar i { display: block; height: 100%; background: linear-gradient(#a6ff6b, #4ccf14); }
@@ -178,6 +182,18 @@
   .cubes { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
   .cubes button { padding: 3px; background: #1a1f4a; min-width: 0; box-shadow: 0 3px 0 #000; }
   .cubes canvas { width: 100%; height: auto; aspect-ratio: 1; display: block; }
+  .kittabs { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+  .kittabs button { padding: 3px; min-width: 0; background: linear-gradient(#2c3270, #1a1f4a); }
+  .kittabs button.on { background: linear-gradient(#3ad6ff, #1180c0); }
+  .kittabs canvas { width: 100%; height: auto; aspect-ratio: 1; display: block; }
+  .cubes button { position: relative; }
+  .cubes button.locked canvas { filter: brightness(0.25) grayscale(1); }
+  .cubes .lock { position: absolute; inset: 0; display: grid; place-items: center; font-size: 18px; -webkit-text-stroke: 0; }
+  .unlock { display: flex; align-items: center; gap: 10px; justify-content: center; background: rgba(255,210,31,0.15);
+    border: 2px solid var(--gold); border-radius: 12px; padding: 6px 12px; font-size: 16px; }
+  .unlock canvas { width: 64px; height: 64px; }
+  #saveCode { width: 100%; font: 12px monospace; background: rgba(0,0,0,0.4); color: #fff; border: 2px solid #000; border-radius: 8px;
+    padding: 6px; resize: none; user-select: text; -webkit-user-select: text; touch-action: auto; }
   #completeFace { width: 96px; height: 96px; align-self: center; }
   .earn { color: var(--gold); font-size: 24px; -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
 
@@ -292,6 +308,12 @@
   <div class="panel">
     <h2>Settings</h2>
     <div class="setlist" id="setList"></div>
+    <div class="label">Backup save: copy the code, paste it on another device to move your progress</div>
+    <div class="row">
+      <button class="ghost" id="saveExport">Copy save code</button>
+      <button class="ghost" id="saveImport">Load save code</button>
+    </div>
+    <textarea id="saveCode" rows="3" aria-label="Save code" placeholder="Paste a save code here, then press Load save code"></textarea>
     <button id="setDone">Done</button>
   </div>
 </div>
@@ -310,12 +332,13 @@
   <div class="panel skinpanel">
     <h2>Icon Kit</h2>
     <canvas id="skinPreview"></canvas>
+    <div class="kittabs" id="kitTabs"></div>
+    <div class="label" id="kitCount"></div>
+    <div class="cubes" id="kitGrid"></div>
     <div class="label">Primary colour</div>
     <div class="swatches" id="sw1"></div>
     <div class="label">Secondary colour</div>
     <div class="swatches" id="sw2"></div>
-    <div class="label">Cube design</div>
-    <div class="cubes" id="cubeStyles"></div>
     <div class="row">
       <button class="ghost" id="swapBtn">Swap colours</button>
       <button class="ghost" id="glowBtn">Glow: Off</button>
@@ -351,6 +374,7 @@
     <h2>Level Complete!</h2>
     <canvas id="completeFace"></canvas>
     <div class="earn" id="completeEarn"></div>
+    <div class="unlock" id="unlockBox" style="display:none"><canvas id="unlockCv"></canvas><span id="unlockName"></span></div>
     <div class="stats" id="completeStats"></div>
     <button class="gold" id="nextBtn">Next Level</button>
     <div class="row">
@@ -364,6 +388,7 @@
 <script src="js/levels.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/faces.js"></script>
+<script src="js/icons.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>
