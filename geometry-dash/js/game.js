@@ -96,18 +96,37 @@
   const parts = [];
   for (let i = 0; i < MAX_PARTS; i++) parts.push({ life: 0 });
   let partIdx = 0;
-  function spawn(x, y, vx, vy, life, size, color, square) {
+  // fire: shrinking, no gravity, drawn behind the player (robot boost jet)
+  function spawn(x, y, vx, vy, life, size, color, square, fire = false) {
     const p = parts[partIdx];
     partIdx = (partIdx + 1) % MAX_PARTS;
     p.x = x; p.y = y; p.vx = vx; p.vy = vy; p.life = life; p.max = life;
-    p.size = size; p.color = color; p.square = square;
+    p.size = size; p.color = color; p.square = square; p.fire = fire;
   }
   function updateParts(dt) {
     for (const p of parts) {
       if (p.life <= 0) continue;
       p.life -= dt;
       p.x += p.vx * dt; p.y += p.vy * dt;
-      p.vy -= 6 * dt;
+      if (p.fire) {
+        p.vx *= 1 - dt * 3; p.vy *= 1 - dt * 3;
+        // Sparks skid along the ground instead of sinking through it.
+        if (p.y < 0.08 && p.vy < 0) { p.y = 0.08; p.vy = 0; p.vx -= 4 * dt * 60 * 0.05; }
+      } else p.vy -= 6 * dt;
+    }
+  }
+
+  const FLAME = ['#fff0a0', '#ffd21f', '#ffa31f', '#ff6a1f', '#ff3a14', '#e0200f'];
+  function flame(s, n, power) {
+    const half = P.size(s) / 2;
+    for (let i = 0; i < n; i++) {
+      const k = Math.random();
+      spawn(s.x - half * 0.2 + (Math.random() - 0.5) * half * 0.9,
+        s.y - half * 0.85 * s.grav,
+        -1.5 - Math.random() * 2.5 + (Math.random() - 0.5) * 2,
+        -s.grav * (power * (3 + Math.random() * 5)),
+        0.16 + Math.random() * 0.18, (0.18 + Math.random() * 0.2) * half * 2,
+        FLAME[Math.floor(k * k * FLAME.length)], false, true);
     }
   }
 
@@ -379,6 +398,17 @@
       G.rot += (0 - G.rot) * Math.min(1, dt * 14);
     }
 
+    // Robot boost: a burst on takeoff, then a steady jet while the boost lasts.
+    const boosting = s.mode === 'robot' && s.boost > 0 && s.held;
+    if (boosting) {
+      if (!G.wasBoost) flame(s, 14, 1.4);
+      G.fireAcc = (G.fireAcc || 0) + dt * 140;
+      const n = Math.floor(G.fireAcc);
+      G.fireAcc -= n;
+      flame(s, n, 1);
+    }
+    G.wasBoost = boosting;
+
     if (s.mode === 'wave') {
       G.trail.push(s.x, s.y);
       while (G.trail.length > 2 && G.trail[0] < G.camX - 1) G.trail.splice(0, 2);
@@ -444,8 +474,9 @@
     drawGround(col.gr, s.bounds ? s.bounds.floor : 0, s.bounds);
     drawCheckpoints();
     drawAttemptText();
+    drawParts(true);
     if (!s.dead) drawPlayer(s, px, py);
-    drawParts();
+    drawParts(false);
     if (G.flash > 0) {
       ctx.fillStyle = `rgba(255,255,255,${G.flash * 0.35})`;
       ctx.fillRect(0, 0, W, H);
@@ -715,12 +746,15 @@
     ctx.fillText(label, x, y);
   }
 
-  function drawParts() {
+  // fire=true draws the flame particles (behind the player),
+  // fire=false everything else (in front).
+  function drawParts(fire) {
     for (const p of parts) {
-      if (p.life <= 0) continue;
-      ctx.globalAlpha = Math.max(0, p.life / p.max);
+      if (p.life <= 0 || !!p.fire !== fire) continue;
+      const k = Math.max(0, p.life / p.max);
+      ctx.globalAlpha = fire ? k * 0.9 : k;
       ctx.fillStyle = p.color;
-      const s = p.size * S;
+      const s = p.size * S * (fire ? 0.35 + k * 0.65 : 1);
       const x = sx(p.x), y = sy(p.y);
       if (p.square) ctx.fillRect(x - s / 2, y - s / 2, s, s);
       else { ctx.beginPath(); ctx.arc(x, y, s / 2, 0, Math.PI * 2); ctx.fill(); }
@@ -922,6 +956,24 @@
 
   function drawRobot(z, s) {
     const t = G.time * 14;
+    if (s.boost > 0 && s.held) {
+      // Flickering exhaust cone under the feet; local +y is "down" for any gravity.
+      const len = z * (0.55 + Math.random() * 0.25);
+      const g = ctx.createLinearGradient(0, z * 0.45, 0, z * 0.45 + len);
+      g.addColorStop(0, 'rgba(255,240,160,1)');
+      g.addColorStop(0.3, 'rgba(255,163,31,0.95)');
+      g.addColorStop(0.7, 'rgba(255,58,20,0.7)');
+      g.addColorStop(1, 'rgba(224,32,15,0)');
+      ctx.save();
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(-z * 0.34, z * 0.45);
+      ctx.quadraticCurveTo(-z * 0.2, z * 0.45 + len * 0.6, 0, z * 0.45 + len);
+      ctx.quadraticCurveTo(z * 0.2, z * 0.45 + len * 0.6, z * 0.34, z * 0.45);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
     const step = s.grounded ? Math.sin(t) * z * 0.12 : z * 0.1;
     ctx.fillStyle = SKIN.c2;
     ctx.fillRect(-z * 0.32 + step, z * 0.15, z * 0.2, z * 0.35);
@@ -1021,13 +1073,16 @@
   // ---------------------------------------------------------------- UI
 
   const $ = (id) => document.getElementById(id);
-  const FACE = { Easy: '#3bc8ff', Normal: '#3bff6b', Hard: '#ffd21f', Harder: '#ff7a1f', Insane: '#ff3bd0' };
+  const FACE = { Easy: '#3bc8ff', Normal: '#3bff6b', Hard: '#ffd21f', Harder: '#ff7a1f', Insane: '#ff3bd0', Demon: '#d0182a' };
 
   function buildMenu() {
     const root = $('levels');
     root.innerHTML = '';
-    LEVELS.forEach((L, i) => {
-      if (L.training) return;
+    // Easiest first; indexes stay stable so saved progress keys don't move.
+    const order = LEVELS.map((L, i) => i).filter((i) => !LEVELS[i].training)
+      .sort((a, b) => LEVELS[a].stars - LEVELS[b].stars);
+    order.forEach((i) => {
+      const L = LEVELS[i];
       const best = store.get('best:' + i, 0), prac = store.get('practice:' + i, 0);
       const card = document.createElement('div');
       card.className = 'card';

@@ -3,7 +3,7 @@
 **Play it: https://elliotread250-source.github.io/Blackjack/geometry-dash/**
 
 A browser rhythm platformer built to play like Geometry Dash: all eight game
-modes, physics tuned to GD's own constants, and three levels you can beat.
+modes, physics tuned to GD's own constants, and eight levels you can beat.
 No build step, no dependencies, no assets to download. The music is
 synthesised live in WebAudio.
 
@@ -40,7 +40,12 @@ at any frame rate.
 |---|---|---|
 | Neon Steps | Easy | cube, ship, ball, UFO |
 | Pulse Circuit | Harder | cube, wave, robot, spider, ship (2x) |
+| Cyber Hop | Easy | cube, UFO, robot |
+| Midnight Drift | Normal | mini cube, ship, ball, wave |
+| Bass Reactor | Hard | cube, spider, upside-down cube, swing (2x), robot |
+| Hyperwave | Harder | cube (2x), wave, mini wave, ship (3x), UFO |
 | Gravity Overdrive | Insane | mini cube, swing, upside-down cube, UFO (2x), mini wave, spider, robot, ship (3x) |
+| Final Ascent | Demon | every mode, at 2x and 3x |
 
 There's also a short practice level for each of the eight modes (Game Mode
 Practice on the menu). Each one starts already in that mode, so you can drill
