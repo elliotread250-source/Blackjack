@@ -611,8 +611,50 @@
     return x + 5;
   }
 
+  // Dash's first spider: teleport between raised floor blocks and lava
+  // blocks hanging from the ceiling. Spikes line the floor and ceiling
+  // wherever there's no block, so you can only flip while the next block
+  // overlaps the one you're on: a window of about a block and a half,
+  // shrinking with difficulty. Some blocks are short, for quick double flips.
+  function spiderWallSec(B, c, r, p) {
+    const top = 8, sf = SPEED_RATIO[p.sp];
+    const ov = tbl([2.6, 2.1, 1.7, 1.4, 1.2], p.d) * sf;
+    const n = p.n || 10;
+    B.p(c, 2, 'spider', 4);
+    const floorCols = new Set(), ceilCols = new Set();
+    const put = (x, y, w, h, ceil) => {
+      B.b(x, y, w, h);
+      for (let k = Math.floor(x); k < Math.ceil(x + w); k++) (ceil ? ceilCols : floorCols).add(k);
+    };
+    let fh = 2;
+    put(c, 0, 10, fh, false);
+    let end = c + 10, onFloor = true;
+    for (let i = 0; i < n; i++) {
+      const short = r() < 0.3;
+      const w = half(Math.max(ov + 1, (short ? 2 + r() : 3.5 + r() * 3) * sf));
+      const x = half(end - ov);
+      if (onFloor) {
+        // Hanging block: its underside at least 2.5 above the floor block
+        const bot = half(Math.max(fh + 2.5, 4 + r() * 1.5));
+        put(x, bot, w, top - bot, true);
+      } else {
+        fh = half(1 + r() * 2);
+        put(x, 0, w, fh, false);
+      }
+      end = x + w; onFloor = !onFloor;
+    }
+    // Land back on the floor for the exit
+    if (!onFloor) { put(half(end - ov), 0, 8, 1, false); end = half(end - ov) + 8; }
+    for (let xx = c + 1; xx < end; xx++) {
+      if (!floorCols.has(xx)) B.sf(xx, 0, 1);
+      if (!ceilCols.has(xx)) B.sf(xx, top - 1, -1);
+    }
+    B.p(end + 1, top / 2, 'cube', top);
+    return end + 8;
+  }
+
   const GEN = {
-    open: openSec,
+    open: openSec, spiderWalls: spiderWallSec,
     chain: (B, c, r, p) => chainSec(B, c, r, p, 'swing'),
     switches: switchSec, loop: loopSec, auto: autoSec, zig: zigSec,
     curve: (B, c, r, p) => curveSec(B, c, r, p, 'ship'),
@@ -798,7 +840,7 @@
       cam: [[7, -12, 1], [9, 'sway', 0.95], [17, 0, 0.9], [18, 8, 1], [21, 0, 1.08]],
       secs: [
         ['open', {}],                                     // 0-2%   dark run, red ring, golden pillars
-        ['spider', { n: 2 }],                             // 2-5%   lava blocks
+        ['spiderWalls', { n: 7 }],                        // 2-5%   spider between floor and hanging lava blocks
         ['flip', { orbs: true, len: 40 }],                // 5-9%   blue pad, green/blue/pink-dash orbs
         ['ball', { n: 2, sp: 2 }],                        // 9-10%
         ['switches', { switches: 4, sp: 1 }],             // 10-15% coin 1: light the hanging blocks
