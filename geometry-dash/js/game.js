@@ -12,6 +12,7 @@
   const AUDIO = window.GDAudio;
   const FACES = window.GDFaces;
   const LEVELS = window.GDLevels.map(P.compile);
+  for (const L of LEVELS) L.coinIds = L.objects.filter((o) => o.t === 'coin').map((o) => o.id);
 
   const VIEW_H = 10.67;        // blocks visible vertically, same as GD's 320 units
   const PLAYER_SCREEN_X = 0.3; // fraction of screen width the player sits at (landscape)
@@ -23,7 +24,7 @@
     'grav+': '#ffd21f', 'grav-': '#2b8bff', mini: '#3bff9b', big: '#ff4fd8',
     s0: '#ff9e2b', s1: '#36b3ff', s2: '#3bff6b', s3: '#ff4fd8', s4: '#ff3b3b',
   };
-  const ORB_COL = { yellow: '#ffe23b', pink: '#ff6bd8', red: '#ff3b3b', blue: '#3bc8ff', green: '#4bff5b', black: '#222' };
+  const ORB_COL = { yellow: '#ffe23b', pink: '#ff6bd8', red: '#ff3b3b', blue: '#3bc8ff', green: '#4bff5b', black: '#222', dash: '#5bffb0', dashp: '#ff6bd8' };
   const PAD_COL = { yellow: '#ffe23b', pink: '#ff6bd8', red: '#ff3b3b', blue: '#3bc8ff' };
   const MODE_LABEL = { cube: 'Cube', ship: 'Ship', ball: 'Ball', ufo: 'UFO', wave: 'Wave', robot: 'Robot', spider: 'Spider', swing: 'Swing' };
 
@@ -63,9 +64,30 @@
     '#7dff3a', '#3af0ff', '#ffe23b', '#ff9e2b', '#ff3b3b', '#ff4fd8', '#a04bff', '#3b6bff',
     '#00c878', '#00a0ff', '#ffc0e0', '#ffffff', '#b0b0b0', '#505050', '#000000', '#8b4a1f',
   ];
-  const CUBE_STYLES = ['Classic', 'Visor', 'Cross', 'Diamond', 'Split', 'Target', 'Smile', 'Stripes'];
-  const SKIN = Object.assign({ c1: '#7dff3a', c2: '#3af0ff', cube: 0, glow: false }, store.get('skin', {}));
+  const ICONS = window.GDIcons;
+  const SKIN = Object.assign({ c1: '#7dff3a', c2: '#3af0ff', glow: false, icons: {} }, store.get('skin', {}));
+  SKIN.icons = SKIN.icons || {};
   const saveSkin = () => store.set('skin', SKIN);
+
+  // ------------------------------------------------------------ unlocks
+  // Everyone starts with icon 0 of each mode. Every level beaten (main or
+  // mode practice, normal mode) unlocks the next icon in GDIcons.ORDER.
+  let beatenCache = -1;
+  function levelsBeaten() {
+    if (beatenCache >= 0) return beatenCache;
+    let n = 0;
+    for (let i = 0; i < LEVELS.length; i++) if (store.get('best:' + (LEVELS[i].slot || String(i)), 0) === 100) n++;
+    return (beatenCache = n);
+  }
+  function isUnlocked(mode, v) {
+    if (v === 0) return true;
+    const k = ICONS.ORDER.findIndex(([m, x]) => m === mode && x === v);
+    return k >= 0 && k < levelsBeaten();
+  }
+  function equipped(mode) {
+    const v = SKIN.icons[mode] || 0;
+    return isUnlocked(mode, v) ? v : 0;
+  }
 
   // ------------------------------------------------------------ canvas
 
@@ -104,9 +126,9 @@
     deadTimer: 0, camX: 0, camY: -2.2,
     rot: 0, trail: [], lastMode: 'cube',
     fps: 60, fpsAcc: 0, fpsN: 0,
-    shake: 0, flash: 0, streaks: [], popup: null, t: 0,
+    shake: 0, flash: 0, streaks: [], popup: null, t: 0, ptrail: [], coinSeen: 0,
     menuBg: ['#2b5bff', '#1a3acc'], menuBgNow: ['#2b5bff', '#1a3acc'],
-    page: store.get('page', 0), prMode: store.get('prMode', 'cube'), prMini: store.get('prMini', false),
+    page: store.get('page', 0), kitMode: 'cube', prMode: store.get('prMode', 'cube'), prMini: store.get('prMini', false),
   };
   let held = false;
   let pendingJumps = 0;
@@ -274,7 +296,9 @@
     G.s.held = held;
     G.prevX = G.s.x; G.prevY = G.s.y;
     G.acc = 0; G.deadTimer = 0; G.cpTimer = 0;
-    G.trail.length = 0; G.streaks.length = 0;
+    G.trail.length = 0; G.streaks.length = 0; G.ptrail.length = 0;
+    G.coinSeen = G.s.coins.length;
+    G.ownedCoins = store.get('coins:' + slotOf(G.idx), []);
     G.lastMode = G.s.mode;
     G.rot = cp ? cp.rot : 0;
     G.camX = G.s.x - VIEW_W * playerX();
@@ -324,7 +348,15 @@
     AUDIO.stop();
     AUDIO.win();
     const first = !G.practice && bestOf(G.idx, false) < 100;
+    const before = levelsBeaten();
     saveBest(100);
+    if (!G.practice && G.s.coins.length) {
+      const got = new Set(store.get('coins:' + slotOf(G.idx), []));
+      for (const id of G.s.coins) got.add(G.L.coinIds.indexOf(id));
+      store.set('coins:' + slotOf(G.idx), [...got]);
+    }
+    beatenCache = -1;
+    const unlock = first ? ICONS.ORDER[before] : null;
     flushJumps();
     if (first) bump('cleared');
     for (let i = 0; i < 140; i++) {
@@ -336,6 +368,11 @@
     $('completeStats').innerHTML = `${L.name}${G.practice ? ' (practice)' : ''}<br>` +
       `Attempts: ${G.attempts} &middot; Jumps: ${G.jumps} &middot; Time: ${G.time.toFixed(1)}s`;
     $('completeEarn').textContent = first && !L.training ? `+${L.stars} ★` : first ? 'Cleared!' : '';
+    $('unlockBox').style.display = unlock ? '' : 'none';
+    if (unlock) {
+      $('unlockName').textContent = `New ${MODE_LABEL[unlock[0]]} icon: ${ICONS.name(unlock[0], unlock[1])}`;
+      iconCanvasV($('unlockCv'), unlock[0], 64, 0.7, unlock[1]);
+    }
     faceCanvas($('completeFace'), L.difficulty, 96, auraOf(L));
     const next = nextLevel();
     $('nextBtn').style.display = next == null ? 'none' : '';
@@ -468,6 +505,23 @@
       G.trail.push(s.x, s.y);
       while (G.trail.length > 2 && G.trail[0] < G.camX - 1) G.trail.splice(0, 2);
     }
+    // Light trail for flying icons and dashes (the wave draws its own).
+    if (s.dash || (s.mode !== 'wave' && s.mode !== 'cube' && s.mode !== 'robot' && !s.grounded)) {
+      G.ptrail.push(s.x, s.y, G.t);
+    }
+    while (G.ptrail.length && G.t - G.ptrail[2] > 0.3) G.ptrail.splice(0, 3);
+    if (s.dash && Math.random() < dt * 80) {
+      spawn(s.x - 0.4, s.y + (Math.random() - 0.5) * 0.8, -8 - Math.random() * 6, 0, 0.2, 0.06 + Math.random() * 0.05, '#fff', true);
+    }
+    // Coin pickup sparkle
+    if (s.coins.length > G.coinSeen) {
+      G.coinSeen = s.coins.length;
+      for (let i = 0; i < 24; i++) {
+        const a = Math.random() * Math.PI * 2;
+        spawn(s.x, s.y, Math.cos(a) * 5, Math.sin(a) * 5 + 2, 0.6, 0.12, i % 2 ? '#ffe066' : '#fff', true);
+      }
+      G.popup = { text: 'Coin!', sub: `${G.coinSeen}/${G.L.coinCount}`, t: 0.9 };
+    }
     if (s.grounded && Math.random() < dt * 40 && s.mode !== 'wave') {
       const half = P.size(s) / 2;
       spawn(s.x - half, s.y - half * s.grav, -2 - Math.random() * 2, 1.5 * s.grav * Math.random(),
@@ -540,11 +594,13 @@
     drawObjects(L, pulse, col);
     if (s.bounds) drawCeiling(col.gr, s.bounds.ceil);
     drawGround(col.gr, s.bounds ? s.bounds.floor : 0);
+    if (s.bounds && detail()) { drawThorns(sy(s.bounds.floor), 1); drawThorns(sy(s.bounds.ceil), -1); }
     if (SET.hitboxes && (G.practice || L.training)) drawHitboxes(L, s);
     drawCheckpoints();
     drawAttemptText();
     drawParts(true);
     drawStreaks();
+    drawTrail(s);
     if (!s.dead) drawPlayer(s, px, py);
     drawParts(false);
     if (G.flash > 0) {
@@ -692,11 +748,15 @@
     if (detail()) drawDecor(L, blocks, pulse, col);
     for (const o of others) if (o.t === 'p') drawPortal(o, pulse, true);
     for (const o of blocks) drawBlock(o, top, edge, pulse);
+    if (detail()) drawBlockDeco(blocks, col, pulse);
     for (const o of others) {
       if (o.t === 's' || o.t === 'ss') drawSpike(o, top);
       else if (o.t === 'pad') drawPad(o, pulse);
       else if (o.t === 'orb') drawOrb(o, pulse);
+      else if (o.t === 'saw') drawSaw(o, col);
+      else if (o.t === 'coin') drawCoin(o);
     }
+    if (detail()) drawSigns(others, pulse);
     for (const o of others) if (o.t === 'p') drawPortal(o, pulse, false);
     drawEndLine(L);
   }
@@ -713,14 +773,166 @@
       ctx.fillStyle = g;
       ctx.fillRect(x + w * 0.15, yb, w * 0.7, yg - yb);
     }
-    // Rings anchored every 24 blocks, half parallax.
+    // Slowly turning background gears every 16 blocks, half parallax.
     const off = G.camX * 0.5;
-    ctx.lineWidth = Math.max(2, S * 0.06);
-    for (let k = Math.floor(off / 24) - 1; k <= Math.ceil((off + VIEW_W) / 24) + 1; k++) {
-      const x = (k * 24 + 6 - off) * S, y = sy(6 + (k % 3));
-      ctx.strokeStyle = tint(col.bg, 0.6, 0.1 + pulse * 0.15);
-      ctx.beginPath(); ctx.arc(x, y, S * (1.4 + pulse * 0.5 + (k % 2) * 0.6), 0, Math.PI * 2); ctx.stroke();
+    ctx.lineWidth = Math.max(2, S * 0.08);
+    for (let k = Math.floor(off / 16) - 1; k <= Math.ceil((off + VIEW_W) / 16) + 1; k++) {
+      const x = (k * 16 + 6 - off) * S, y = sy(2.5 + ((k * 7) % 5));
+      const R = S * (1.3 + ((k * 13) % 3) * 0.5);
+      ctx.strokeStyle = tint(col.bg, 0.55, 0.1 + pulse * 0.12);
+      gear(x, y, R, G.t * (k % 2 ? 0.4 : -0.3));
     }
+  }
+
+  function gear(x, y, R, rot) {
+    const teeth = 12;
+    ctx.beginPath();
+    for (let i = 0; i <= teeth * 4; i++) {
+      const a = rot + (i / (teeth * 4)) * Math.PI * 2;
+      const rr = (i % 4 < 2) ? R : R * 0.84;
+      const px = x + Math.cos(a) * rr, py = y + Math.sin(a) * rr;
+      i ? ctx.lineTo(px, py) : ctx.moveTo(px, py);
+    }
+    ctx.closePath(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, R * 0.55, 0, Math.PI * 2); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, R * 0.18, 0, Math.PI * 2); ctx.stroke();
+    for (let i = 0; i < 4; i++) {
+      const a = rot + i * Math.PI / 2;
+      ctx.beginPath(); ctx.moveTo(x + Math.cos(a) * R * 0.18, y + Math.sin(a) * R * 0.18);
+      ctx.lineTo(x + Math.cos(a) * R * 0.55, y + Math.sin(a) * R * 0.55); ctx.stroke();
+    }
+  }
+
+  // Deterministic 0..1 noise by integer, for decoration that must not flicker.
+  const noise = (n) => { const v = Math.sin(n * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
+
+  // Chains under ceiling-hung columns, crystal shards on column tips.
+  function drawBlockDeco(blocks, col, pulse) {
+    for (const o of blocks) {
+      const x = sx(o.x), w = o.w * S;
+      if (x > W + S || x + w < -S) continue;
+      const hung = G.s && G.s.bounds && o.y > 0.5 && o.y + o.h >= G.s.bounds.ceil - 0.01;
+      if (hung && noise(o.id) < 0.5) {
+        // Swaying chain with a ring on the end
+        const cx = x + w / 2, top = sy(o.y);
+        const sway = Math.sin(G.t * 2 + o.id) * S * 0.08;
+        ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.lineWidth = Math.max(2, S * 0.07);
+        for (let i = 0; i < 4; i++) {
+          const yy = top + S * (0.12 + i * 0.22);
+          ctx.beginPath(); ctx.ellipse(cx + sway * (i / 4), yy, S * 0.06, S * 0.11, 0, 0, Math.PI * 2); ctx.stroke();
+        }
+        ctx.strokeStyle = tint(col.gr, 0.7);
+        ctx.beginPath(); ctx.arc(cx + sway, top + S * 1.12, S * 0.16, 0, Math.PI * 2); ctx.stroke();
+      }
+      if (o.h >= 2 && o.w <= 2 && noise(o.id + 50) < 0.6) {
+        // Shards jutting from the sides near the free end
+        const tipY = o.y > 0.5 ? sy(o.y) : sy(o.y + o.h);
+        const dir = o.y > 0.5 ? -1 : 1; // toward the column's body
+        ctx.fillStyle = tint(col.bg, 0.75, 0.75 + 0.25 * Math.sin(G.t * 3 + o.id));
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
+        for (const side of [-1, 1]) {
+          const bx = side < 0 ? x : x + w;
+          const by = tipY + dir * S * (0.4 + noise(o.id + side) * 0.5);
+          ctx.beginPath();
+          ctx.moveTo(bx, by - S * 0.18); ctx.lineTo(bx + side * S * (0.45 + noise(o.id * 3 + side) * 0.3), by - dir * S * 0.2);
+          ctx.lineTo(bx, by + S * 0.12); ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+      }
+    }
+  }
+
+  // Glowing arrows ahead of mode portals, "!" ahead of speed changes.
+  function drawSigns(others, pulse) {
+    for (const o of others) {
+      if (o.t !== 'p') continue;
+      const speed = o.k[0] === 's';
+      if (!speed && !P.MODE_CFG[o.k]) continue;
+      const x = sx(o.x - 4), y = Math.min(H - S * 1.5, Math.max(S * 1.5, sy(o.h > 4 ? G.camY + viewH / 2 : o.y)));
+      if (x < -S * 2 || x > W + S * 2) continue;
+      ctx.globalAlpha = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(G.t * 6)) + pulse * 0.2;
+      outlinedText(speed ? '!' : '\u279c', x, y, S * 1.3, 'center', PORTAL_COL[o.k] || '#fff');
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // Thorny silhouette along a corridor edge; dir 1 = floor, -1 = ceiling.
+  function drawThorns(y, dir) {
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    const x0 = Math.floor(G.camX * 2) / 2 - 1;
+    ctx.moveTo(sx(x0), y + dir * S * 0.5);
+    for (let wx = x0; wx < G.camX + VIEW_W + 1; wx += 0.5) {
+      const k = Math.round(wx * 2);
+      const hgt = S * (0.18 + noise(k) * 0.32);
+      ctx.lineTo(sx(wx), y + dir * S * 0.05);
+      ctx.lineTo(sx(wx + 0.12 + noise(k + 9) * 0.25), y - dir * hgt);
+      ctx.lineTo(sx(wx + 0.5), y + dir * S * 0.05);
+    }
+    ctx.lineTo(sx(G.camX + VIEW_W + 1), y + dir * S * 0.5);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawSaw(o, col) {
+    const cx = sx(o.x + o.r), cy = sy(o.y + o.r), R = o.r * S;
+    if (cx + R < 0 || cx - R > W) return;
+    const rot = G.t * 6;
+    if (o.chain) {
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.lineWidth = Math.max(2, S * 0.07);
+      for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.ellipse(cx, cy - R - S * (0.1 + i * 0.2), S * 0.05, S * 0.1, 0, 0, Math.PI * 2); ctx.stroke(); }
+    }
+    ctx.save();
+    ctx.translate(cx, cy); ctx.rotate(rot);
+    ctx.fillStyle = '#050505';
+    ctx.beginPath();
+    const n = 14;
+    for (let i = 0; i <= n * 2; i++) {
+      const a = (i / (n * 2)) * Math.PI * 2;
+      const rr = i % 2 ? R * 0.78 : R;
+      i ? ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : ctx.moveTo(rr, 0);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)'; ctx.lineWidth = 1.5; ctx.stroke();
+    const g = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 0.65);
+    g.addColorStop(0, tint(col.gr, 0.5, 0.9)); g.addColorStop(1, 'rgba(0,0,0,0.9)');
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, R * 0.62, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#000'; ctx.lineWidth = Math.max(2, R * 0.12);
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2;
+      ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(Math.cos(a) * R * 0.5, Math.sin(a) * R * 0.5); ctx.stroke();
+    }
+    ctx.fillStyle = tint(col.gr, 0.7); ctx.beginPath(); ctx.arc(0, 0, R * 0.14, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.restore();
+  }
+
+  // Secret coin: spinning gold disc with a star. Taken this run = gone;
+  // collected on an earlier clear = ghostly.
+  function drawCoin(o) {
+    if (G.s.coins.indexOf(o.id) !== -1) return;
+    const x = sx(o.x + 0.5), y = sy(o.y + 0.5) + Math.sin(G.t * 3 + o.id) * S * 0.06;
+    if (x < -S || x > W + S) return;
+    const owned = (G.ownedCoins || []).indexOf(G.L.coinIds.indexOf(o.id)) !== -1;
+    const k = Math.abs(Math.cos(G.t * 2.5)) * 0.8 + 0.2;
+    ctx.save();
+    ctx.translate(x, y); ctx.scale(k, 1);
+    ctx.globalAlpha = owned ? 0.45 : 1;
+    const R = S * 0.5;
+    const g = ctx.createRadialGradient(-R * 0.3, -R * 0.3, 0, 0, 0, R);
+    g.addColorStop(0, '#fff6b0'); g.addColorStop(0.5, owned ? '#c8c8d8' : '#ffc61a'); g.addColorStop(1, owned ? '#6a6a80' : '#c07a00');
+    ctx.fillStyle = g; ctx.strokeStyle = '#000'; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.arc(0, 0, R, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(0, 0, R * 0.78, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = owned ? '#9a9ab0' : '#e09000'; ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i / 10) * Math.PI * 2, rr = i % 2 ? R * 0.25 : R * 0.6;
+      i ? ctx.lineTo(Math.cos(a) * rr, Math.sin(a) * rr) : ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+    }
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.restore();
+    ctx.globalAlpha = 1;
+    if (detail() && Math.random() < 0.15) spawn(o.x + 0.2 + Math.random() * 0.6, o.y + Math.random(), 0, 0.8, 0.5, 0.08, '#ffe066', true);
   }
 
   function drawBlock(o, topCol, edgeCol, pulse) {
@@ -833,58 +1045,136 @@
     ctx.fillStyle = c;
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
     ctx.lineWidth = 2; ctx.strokeStyle = '#000'; ctx.stroke();
+    if (o.c === 'dash' || o.c === 'dashp') {
+      // Dash orb: double chevron
+      ctx.fillStyle = '#fff';
+      for (const dx of [-0.12, 0.12]) {
+        ctx.beginPath();
+        ctx.moveTo(x + (dx - 0.1) * S, y - 0.18 * S); ctx.lineTo(x + (dx + 0.1) * S, y);
+        ctx.lineTo(x + (dx - 0.1) * S, y + 0.18 * S); ctx.closePath(); ctx.fill(); ctx.stroke();
+      }
+    }
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.3, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
   }
 
+  // GD-style portals. Tall trigger portals (full-height ones placed where
+  // the player could be anywhere) draw as a normal-sized portal near the
+  // middle of the view, plus a faint beam marking the whole trigger range.
+  const PORTAL_VIS = 3.2;
   function drawPortal(o, pulse, back) {
     const c = PORTAL_COL[o.k] || '#fff';
-    const x = sx(o.x + 0.5), y = sy(o.y);
-    const rx = S * 0.42, ry = (o.h / 2) * S;
-    if (y + ry < 0 || y - ry > H || x < -S * 2 || x > W + S * 2) return;
-    if (o.k[0] === 's') {
-      if (back) return;
-      const n = { s0: 1, s1: 2, s2: 3, s3: 4, s4: 5 }[o.k];
-      const yc = Math.min(Math.max(y, S * 2), H - S * 2);
-      ctx.fillStyle = c; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
-      for (let i = 0; i < n; i++) {
-        const cx = x + (i - (n - 1) / 2) * S * 0.32;
-        ctx.beginPath();
-        ctx.moveTo(cx - S * 0.2, yc - S * 0.7); ctx.lineTo(cx + S * 0.2, yc);
-        ctx.lineTo(cx - S * 0.2, yc + S * 0.7); ctx.lineTo(cx - S * 0.05, yc);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
+    const x = sx(o.x + 0.5);
+    if (x < -S * 2 || x > W + S * 2) return;
+    let cy = o.y, h = o.h;
+    if (o.h > PORTAL_VIS + 0.5) {
+      if (back) {
+        const g = ctx.createLinearGradient(x - S * 0.2, 0, x + S * 0.2, 0);
+        g.addColorStop(0, tint(c, 0, 0)); g.addColorStop(0.5, tint(c, 0.3, 0.18 + pulse * 0.1)); g.addColorStop(1, tint(c, 0, 0));
+        ctx.fillStyle = g;
+        ctx.fillRect(x - S * 0.2, sy(o.y + o.h / 2), S * 0.4, o.h * S);
       }
-      return;
+      const mid = G.camY + viewH / 2;
+      cy = Math.min(o.y + o.h / 2 - PORTAL_VIS / 2, Math.max(o.y - o.h / 2 + PORTAL_VIS / 2, mid));
+      h = PORTAL_VIS;
     }
-    ctx.lineWidth = S * (0.2 + pulse * 0.04);
-    ctx.strokeStyle = c;
-    ctx.beginPath();
-    if (back) ctx.ellipse(x, y, rx, ry, 0, Math.PI * 0.5, Math.PI * 1.5);
-    else ctx.ellipse(x, y, rx, ry, 0, -Math.PI * 0.5, Math.PI * 0.5);
-    ctx.stroke();
-    ctx.lineWidth = 2;
-    ctx.strokeStyle = 'rgba(0,0,0,0.8)';
-    ctx.beginPath();
-    if (back) ctx.ellipse(x, y, rx + S * 0.1, ry + S * 0.1, 0, Math.PI * 0.5, Math.PI * 1.5);
-    else ctx.ellipse(x, y, rx + S * 0.1, ry + S * 0.1, 0, -Math.PI * 0.5, Math.PI * 0.5);
-    ctx.stroke();
+    const y = sy(cy);
+    if (o.k[0] === 's') { if (!back) drawSpeedPortal(o, c, x, y, pulse); return; }
+    const rx = S * 0.42, ry = (h / 2) * S;
+    const a0 = back ? Math.PI * 0.5 : -Math.PI * 0.5, a1 = back ? Math.PI * 1.5 : Math.PI * 0.5;
     if (back) {
-      ctx.fillStyle = c;
-      ctx.globalAlpha = 0.15 + pulse * 0.1;
+      // Inner glow and a slow swirl
+      const g = ctx.createRadialGradient(x, y, 0, x, y, ry);
+      g.addColorStop(0, tint(c, 0.4, 0.55 + pulse * 0.2));
+      g.addColorStop(1, tint(c, 0, 0.05));
+      ctx.fillStyle = g;
       ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.globalAlpha = 1;
-    } else if (detail()) {
+      if (detail()) {
+        ctx.save();
+        ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); ctx.clip();
+        ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = S * 0.06;
+        for (let i = 0; i < 3; i++) {
+          const ph = (G.t * 0.8 + i / 3) % 1;
+          ctx.globalAlpha = 1 - ph;
+          ctx.beginPath(); ctx.ellipse(x, y, rx * ph, ry * ph, 0, 0, Math.PI * 2); ctx.stroke();
+        }
+        ctx.restore();
+        ctx.globalAlpha = 1;
+      }
+    }
+    // Frame: outer glow, black outline, colour band, white highlight
+    if (detail()) {
+      ctx.strokeStyle = tint(c, 0.2, 0.25 + pulse * 0.15); ctx.lineWidth = S * 0.6;
+      ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, a0, a1); ctx.stroke();
+    }
+    ctx.strokeStyle = '#000'; ctx.lineWidth = S * 0.34;
+    ctx.beginPath(); ctx.ellipse(x, y, rx, ry, 0, a0, a1); ctx.stroke();
+    ctx.strokeStyle = c; ctx.lineWidth = S * (0.22 + pulse * 0.04);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = S * 0.05;
+    ctx.beginPath(); ctx.ellipse(x, y, rx - S * 0.05, ry - S * 0.05, 0, a0, a1); ctx.stroke();
+    if (back) return;
+    // Caps top and bottom
+    for (const sgn of [-1, 1]) {
+      const yy = y + sgn * ry;
+      ctx.fillStyle = c; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x - S * 0.28, yy); ctx.lineTo(x, yy + sgn * S * 0.3); ctx.lineTo(x + S * 0.28, yy); ctx.lineTo(x, yy - sgn * S * 0.12);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    // Emblem badge above the portal: what it turns you into / does
+    const by = y - ry - S * 0.8;
+    ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.strokeStyle = c; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, by, S * 0.36, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.save();
+    ctx.translate(x, by);
+    if (P.MODE_CFG[o.k]) drawIcon(o.k, S * 0.42, null);
+    else if (o.k === 'grav+' || o.k === 'grav-') {
+      const d = o.k === 'grav+' ? -1 : 1;
+      ctx.fillStyle = c; ctx.strokeStyle = '#000';
+      ctx.beginPath(); ctx.moveTo(0, d * S * 0.22); ctx.lineTo(S * 0.18, -d * S * 0.02); ctx.lineTo(S * 0.07, -d * S * 0.02);
+      ctx.lineTo(S * 0.07, -d * S * 0.2); ctx.lineTo(-S * 0.07, -d * S * 0.2); ctx.lineTo(-S * 0.07, -d * S * 0.02);
+      ctx.lineTo(-S * 0.18, -d * S * 0.02); ctx.closePath(); ctx.fill(); ctx.stroke();
+    } else {
+      const z = o.k === 'mini' ? S * 0.16 : S * 0.32;
+      ctx.fillStyle = c; ctx.strokeStyle = '#000';
+      ctx.fillRect(-z / 2, -z / 2, z, z); ctx.strokeRect(-z / 2, -z / 2, z, z);
+    }
+    ctx.restore();
+    if (detail()) {
       // Motes spiralling into the portal
       ctx.fillStyle = c;
-      for (let i = 0; i < 6; i++) {
-        const ph = (G.t * 0.9 + i / 6) % 1;
+      for (let i = 0; i < 8; i++) {
+        const ph = (G.t * 0.9 + i / 8) % 1;
         const a = i * 1.7 + G.t * 3;
         const k = 1 - ph;
         ctx.globalAlpha = ph;
-        ctx.fillRect(x - S * 0.9 * k + Math.cos(a) * S * 0.15, y + Math.sin(a) * ry * 0.8 * k, S * 0.1, S * 0.1);
+        ctx.fillRect(x - S * 1.1 * k + Math.cos(a) * S * 0.15, y + Math.sin(a) * ry * 0.8 * k, S * 0.11, S * 0.11);
       }
       ctx.globalAlpha = 1;
+    }
+  }
+
+  // Speed portal: a framed panel of chevrons, more chevrons = faster.
+  function drawSpeedPortal(o, c, x, y, pulse) {
+    const n = { s0: 1, s1: 2, s2: 3, s3: 4, s4: 5 }[o.k];
+    const w = S * (0.5 + n * 0.22), h = S * 1.9;
+    if (detail()) {
+      ctx.fillStyle = tint(c, 0.2, 0.2 + pulse * 0.15);
+      roundRect(x - w / 2 - S * 0.25, y - h / 2 - S * 0.25, w + S * 0.5, h + S * 0.5, S * 0.4); ctx.fill();
+    }
+    ctx.fillStyle = 'rgba(0,0,0,0.65)'; ctx.strokeStyle = '#000'; ctx.lineWidth = 3;
+    roundRect(x - w / 2, y - h / 2, w, h, S * 0.25); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = c; ctx.lineWidth = 2;
+    roundRect(x - w / 2 + 3, y - h / 2 + 3, w - 6, h - 6, S * 0.2); ctx.stroke();
+    ctx.fillStyle = c; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+    for (let i = 0; i < n; i++) {
+      const cx = x + (i - (n - 1) / 2) * S * 0.24 + Math.sin(G.t * 6 - i) * S * 0.03;
+      ctx.beginPath();
+      ctx.moveTo(cx - S * 0.16, y - S * 0.6); ctx.lineTo(cx + S * 0.16, y);
+      ctx.lineTo(cx - S * 0.16, y + S * 0.6); ctx.lineTo(cx - S * 0.04, y);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
     }
   }
 
@@ -951,6 +1241,19 @@
     outlinedText(`Attempt ${G.attempts}`, x, sy(5), S * 0.9);
   }
 
+  function drawTrail(s) {
+    const tr = G.ptrail;
+    if (tr.length < 6) return;
+    ctx.lineCap = 'round';
+    for (let i = 3; i < tr.length; i += 3) {
+      const k = 1 - (G.t - tr[i + 2]) / 0.3;
+      ctx.strokeStyle = s.dash ? `rgba(255,255,255,${k * 0.9})` : `rgba(255,255,255,${k * 0.55})`;
+      ctx.lineWidth = S * (s.mini ? 0.18 : 0.3) * k;
+      ctx.beginPath(); ctx.moveTo(sx(tr[i - 3]), sy(tr[i - 2])); ctx.lineTo(sx(tr[i]), sy(tr[i + 1])); ctx.stroke();
+    }
+    ctx.lineCap = 'butt';
+  }
+
   function drawStreaks() {
     for (const k of G.streaks) {
       const a = Math.max(0, k.life / 0.3);
@@ -998,203 +1301,18 @@
   }
 
   // Draws one mode's icon centred on the current origin.
-  function drawIcon(mode, size, s) {
+  // Draws one mode's icon centred on the current origin. variant overrides
+  // the equipped icon (icon kit previews).
+  function drawIcon(mode, size, s, variant) {
     ctx.lineJoin = 'round';
     ctx.lineWidth = Math.max(2, size * 0.08);
     ctx.strokeStyle = '#000';
     if (SKIN.glow && !(lowQuality && ctx === mainCtx)) { ctx.shadowColor = SKIN.c2; ctx.shadowBlur = size * 0.45; }
-    switch (mode) {
-      case 'cube': drawCube(size); break;
-      case 'ship': drawShip(size); break;
-      case 'ball': drawBall(size); break;
-      case 'ufo': drawUfo(size); break;
-      case 'wave': drawWave(size); break;
-      case 'robot': drawRobot(size, s); break;
-      case 'spider': drawSpider(size, s); break;
-      case 'swing': drawSwing(size); break;
-    }
+    ICONS.draw(ctx, mode, size, {
+      c1: SKIN.c1, c2: SKIN.c2, v: variant == null ? equipped(mode) : variant, cube: equipped('cube'),
+      t: G.t, grounded: !s || s.grounded, boost: !!(s && s.boost > 0 && s.held),
+    });
     ctx.shadowBlur = 0;
-  }
-
-  // Glassy top-left shine laid over a shape's bounding box.
-  function shine(x, y, w, h) {
-    const g = ctx.createLinearGradient(x, y, x, y + h);
-    g.addColorStop(0, 'rgba(255,255,255,0.38)');
-    g.addColorStop(0.45, 'rgba(255,255,255,0.06)');
-    g.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = g;
-    ctx.fillRect(x, y, w, h);
-  }
-
-  function drawCube(z, scale = 1) {
-    const h = (z * scale) / 2;
-    const c1 = SKIN.c1, c2 = SKIN.c2;
-    const lw = ctx.lineWidth;
-    const box = (x, y, w, hh, fill) => { ctx.fillStyle = fill; ctx.fillRect(x, y, w, hh); ctx.strokeRect(x, y, w, hh); };
-    const eyes = (y, w, hh) => {
-      ctx.fillStyle = '#000';
-      ctx.fillRect(-h * 0.45, y, w, hh);
-      ctx.fillRect(h * 0.45 - w, y, w, hh);
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(-h * 0.45 + w * 0.15, y + hh * 0.12, w * 0.35, hh * 0.3);
-      ctx.fillRect(h * 0.45 - w + w * 0.15, y + hh * 0.12, w * 0.35, hh * 0.3);
-    };
-    box(-h, -h, 2 * h, 2 * h, c1);
-    switch (SKIN.cube) {
-      case 1: // Visor
-        box(-h * 0.8, -h * 0.45, h * 1.6, h * 0.6, c2);
-        ctx.fillStyle = '#000'; ctx.fillRect(-h * 0.6, -h * 0.25, h * 1.2, h * 0.18);
-        ctx.fillStyle = '#fff'; ctx.fillRect(h * 0.25, -h * 0.25, h * 0.2, h * 0.08);
-        break;
-      case 2: // Cross
-        ctx.fillStyle = c2;
-        ctx.beginPath(); ctx.rect(-h * 0.25, -h * 0.75, h * 0.5, h * 1.5); ctx.rect(-h * 0.75, -h * 0.25, h * 1.5, h * 0.5); ctx.fill();
-        ctx.fillStyle = '#000'; ctx.fillRect(-h * 0.12, -h * 0.12, h * 0.24, h * 0.24);
-        break;
-      case 3: // Diamond
-        ctx.fillStyle = c2;
-        ctx.beginPath(); ctx.moveTo(0, -h * 0.75); ctx.lineTo(h * 0.75, 0); ctx.lineTo(0, h * 0.75); ctx.lineTo(-h * 0.75, 0);
-        ctx.closePath(); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(0, 0, h * 0.18, 0, Math.PI * 2); ctx.fill();
-        break;
-      case 4: // Split
-        ctx.fillStyle = c2;
-        ctx.beginPath(); ctx.moveTo(h, -h); ctx.lineTo(h, h); ctx.lineTo(-h, h); ctx.closePath(); ctx.fill(); ctx.stroke();
-        eyes(-h * 0.4, h * 0.25, h * 0.35);
-        break;
-      case 5: // Target
-        box(-h * 0.65, -h * 0.65, h * 1.3, h * 1.3, c2);
-        box(-h * 0.38, -h * 0.38, h * 0.76, h * 0.76, c1);
-        box(-h * 0.14, -h * 0.14, h * 0.28, h * 0.28, c2);
-        break;
-      case 6: // Smile
-        box(-h * 0.7, -h * 0.7, h * 1.4, h * 1.4, c2);
-        eyes(-h * 0.4, h * 0.22, h * 0.32);
-        ctx.lineWidth = Math.max(1.5, h * 0.12);
-        ctx.beginPath(); ctx.arc(0, h * 0.05, h * 0.38, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
-        break;
-      case 7: // Stripes
-        ctx.fillStyle = c2;
-        for (let i = 0; i < 3; i++) ctx.fillRect(-h * 0.7 + i * h * 0.55, -h * 0.75, h * 0.3, h * 1.5);
-        eyes(-h * 0.35, h * 0.22, h * 0.3);
-        break;
-      default: { // Classic
-        const i = h * 0.5;
-        box(-i, -i, 2 * i, 2 * i, c2);
-        ctx.fillStyle = '#000';
-        ctx.fillRect(-i * 0.7, -i * 0.55, i * 0.45, i * 0.5);
-        ctx.fillRect(i * 0.25, -i * 0.55, i * 0.45, i * 0.5);
-        ctx.fillStyle = '#fff';
-        ctx.fillRect(-i * 0.62, -i * 0.5, i * 0.16, i * 0.16);
-        ctx.fillRect(i * 0.33, -i * 0.5, i * 0.16, i * 0.16);
-      }
-    }
-    // Bevel: dark inner edge, then a glassy shine on top.
-    ctx.strokeStyle = 'rgba(0,0,0,0.28)';
-    ctx.lineWidth = Math.max(1, h * 0.1);
-    ctx.strokeRect(-h + h * 0.14, -h + h * 0.14, 2 * h - h * 0.28, 2 * h - h * 0.28);
-    ctx.strokeStyle = '#000';
-    shine(-h, -h, 2 * h, h);
-    ctx.lineWidth = lw;
-  }
-
-  function drawShip(z) {
-    // Cockpit glass behind the rider
-    ctx.fillStyle = 'rgba(170,235,255,0.5)';
-    ctx.beginPath(); ctx.arc(-z * 0.02, -z * 0.08, z * 0.32, Math.PI, 0); ctx.fill(); ctx.stroke();
-    ctx.save(); ctx.translate(-z * 0.05, -z * 0.28); drawCube(z, 0.48); ctx.restore();
-    // Rear exhaust
-    ctx.fillStyle = '#222';
-    ctx.fillRect(-z * 0.8, z * 0.04, z * 0.14, z * 0.24); ctx.strokeRect(-z * 0.8, z * 0.04, z * 0.14, z * 0.24);
-    ctx.fillStyle = SKIN.c2; ctx.fillRect(-z * 0.78, z * 0.09, z * 0.06, z * 0.14);
-    // Hull
-    ctx.fillStyle = SKIN.c1;
-    ctx.beginPath();
-    ctx.moveTo(-z * 0.68, -z * 0.05);
-    ctx.lineTo(z * 0.28, -z * 0.05);
-    ctx.lineTo(z * 0.74, z * 0.12);
-    ctx.lineTo(z * 0.38, z * 0.36);
-    ctx.lineTo(-z * 0.56, z * 0.36);
-    ctx.lineTo(-z * 0.72, z * 0.15);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-    // Stripe + wing
-    ctx.fillStyle = SKIN.c2;
-    ctx.beginPath();
-    ctx.moveTo(-z * 0.4, z * 0.08); ctx.lineTo(z * 0.3, z * 0.08); ctx.lineTo(z * 0.16, z * 0.24); ctx.lineTo(-z * 0.4, z * 0.24);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = SKIN.c1;
-    ctx.beginPath();
-    ctx.moveTo(-z * 0.3, z * 0.36); ctx.lineTo(-z * 0.05, z * 0.36); ctx.lineTo(-z * 0.32, z * 0.56); ctx.lineTo(-z * 0.5, z * 0.56);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-    // Nose light
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(z * 0.52, z * 0.13, z * 0.04, 0, Math.PI * 2); ctx.fill();
-    shine(-z * 0.68, -z * 0.05, z * 1.4, z * 0.14);
-  }
-
-  function drawBall(z) {
-    const r = z / 2;
-    ctx.fillStyle = SKIN.c1;
-    ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    // Rim rivets
-    ctx.fillStyle = '#000';
-    for (let i = 0; i < 8; i++) {
-      const a = i * Math.PI / 4 + Math.PI / 8;
-      ctx.beginPath(); ctx.arc(Math.cos(a) * r * 0.86, Math.sin(a) * r * 0.86, r * 0.06, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.fillStyle = SKIN.c2;
-    for (let i = 0; i < 4; i++) {
-      ctx.beginPath(); ctx.moveTo(0, 0);
-      ctx.arc(0, 0, r * 0.72, i * Math.PI / 2, i * Math.PI / 2 + Math.PI / 4);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-    }
-    ctx.lineWidth = Math.max(1, r * 0.08);
-    ctx.beginPath(); ctx.arc(0, 0, r * 0.72, 0, Math.PI * 2); ctx.stroke();
-    // Gem core
-    ctx.fillStyle = '#000';
-    ctx.beginPath(); ctx.arc(0, 0, r * 0.26, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = SKIN.c2;
-    ctx.beginPath(); ctx.arc(0, 0, r * 0.15, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
-    ctx.beginPath(); ctx.ellipse(-r * 0.3, -r * 0.4, r * 0.35, r * 0.18, -0.5, 0, Math.PI * 2); ctx.fill();
-  }
-
-  function drawUfo(z) {
-    ctx.save(); ctx.translate(0, -z * 0.22); drawCube(z, 0.42); ctx.restore();
-    // Dome glass with a reflection
-    const g = ctx.createLinearGradient(0, -z * 0.5, 0, -z * 0.12);
-    g.addColorStop(0, 'rgba(200,245,255,0.55)');
-    g.addColorStop(1, 'rgba(120,200,255,0.25)');
-    ctx.fillStyle = g;
-    ctx.beginPath(); ctx.arc(0, -z * 0.12, z * 0.38, Math.PI, 0); ctx.fill(); ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,0.7)'; ctx.lineWidth = Math.max(1, z * 0.04);
-    ctx.beginPath(); ctx.arc(0, -z * 0.12, z * 0.3, Math.PI * 1.15, Math.PI * 1.4); ctx.stroke();
-    ctx.strokeStyle = '#000'; ctx.lineWidth = Math.max(2, z * 0.08);
-    // Saucer
-    ctx.fillStyle = SKIN.c1;
-    ctx.beginPath(); ctx.ellipse(0, z * 0.12, z * 0.64, z * 0.22, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = SKIN.c2;
-    ctx.beginPath(); ctx.ellipse(0, z * 0.2, z * 0.38, z * 0.08, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    // Blinking rim lights
-    for (let i = 0; i < 5; i++) {
-      const on = Math.floor(G.t * 6 + i) % 2 === 0;
-      ctx.fillStyle = on ? '#fff' : SKIN.c2;
-      ctx.beginPath(); ctx.arc(-z * 0.44 + i * z * 0.22, z * 0.08, z * 0.045, 0, Math.PI * 2); ctx.fill();
-    }
-  }
-
-  function drawWave(z) {
-    const h = z * 0.5;
-    ctx.fillStyle = SKIN.c1;
-    ctx.beginPath();
-    ctx.moveTo(h * 1.15, 0); ctx.lineTo(-h * 0.8, -h * 0.85); ctx.lineTo(-h * 0.4, 0); ctx.lineTo(-h * 0.8, h * 0.85);
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = SKIN.c2;
-    ctx.beginPath();
-    ctx.moveTo(h * 0.6, 0); ctx.lineTo(-h * 0.35, -h * 0.4); ctx.lineTo(-h * 0.15, 0); ctx.lineTo(-h * 0.35, h * 0.4);
-    ctx.closePath(); ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.moveTo(h * 0.75, -h * 0.05); ctx.lineTo(-h * 0.5, -h * 0.65); ctx.lineTo(-h * 0.45, -h * 0.5); ctx.closePath(); ctx.fill();
   }
 
   function drawWaveTrail(s) {
@@ -1209,124 +1327,6 @@
     ctx.strokeStyle = '#fff'; ctx.lineWidth = S * 0.08;
     ctx.stroke();
     ctx.restore();
-  }
-
-  function drawRobot(z, s) {
-    const t = G.t * 14;
-    if (s.boost > 0 && s.held) {
-      // Flickering exhaust cone under the feet; local +y is "down" for any gravity.
-      const len = z * (0.55 + Math.random() * 0.25);
-      const g = ctx.createLinearGradient(0, z * 0.45, 0, z * 0.45 + len);
-      g.addColorStop(0, 'rgba(255,240,160,1)');
-      g.addColorStop(0.3, 'rgba(255,163,31,0.95)');
-      g.addColorStop(0.7, 'rgba(255,58,20,0.7)');
-      g.addColorStop(1, 'rgba(224,32,15,0)');
-      ctx.save();
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.moveTo(-z * 0.34, z * 0.45);
-      ctx.quadraticCurveTo(-z * 0.2, z * 0.45 + len * 0.6, 0, z * 0.45 + len);
-      ctx.quadraticCurveTo(z * 0.2, z * 0.45 + len * 0.6, z * 0.34, z * 0.45);
-      ctx.closePath(); ctx.fill();
-      ctx.restore();
-    }
-    const step = s.grounded ? Math.sin(t) * z * 0.12 : z * 0.1;
-    // Legs: thigh, shin, foot
-    for (const [lx, k] of [[-z * 0.28, step], [z * 0.12, -step]]) {
-      ctx.fillStyle = SKIN.c2;
-      ctx.fillRect(lx + k * 0.5, z * 0.15, z * 0.17, z * 0.18); ctx.strokeRect(lx + k * 0.5, z * 0.15, z * 0.17, z * 0.18);
-      ctx.fillRect(lx + k, z * 0.31, z * 0.17, z * 0.14); ctx.strokeRect(lx + k, z * 0.31, z * 0.17, z * 0.14);
-      ctx.fillStyle = '#222';
-      ctx.fillRect(lx + k - z * 0.03, z * 0.43, z * 0.26, z * 0.08); ctx.strokeRect(lx + k - z * 0.03, z * 0.43, z * 0.26, z * 0.08);
-    }
-    // Arm (behind body)
-    ctx.fillStyle = SKIN.c2;
-    ctx.fillRect(-z * 0.58, -z * 0.18 + step * 0.4, z * 0.16, z * 0.32); ctx.strokeRect(-z * 0.58, -z * 0.18 + step * 0.4, z * 0.16, z * 0.32);
-    // Torso + head
-    ctx.fillStyle = SKIN.c1;
-    ctx.fillRect(-z * 0.45, -z * 0.5, z * 0.9, z * 0.68); ctx.strokeRect(-z * 0.45, -z * 0.5, z * 0.9, z * 0.68);
-    // Antenna
-    ctx.beginPath(); ctx.moveTo(-z * 0.2, -z * 0.5); ctx.lineTo(-z * 0.26, -z * 0.66); ctx.stroke();
-    ctx.fillStyle = Math.floor(G.t * 3) % 2 ? '#ff3b3b' : '#fff';
-    ctx.beginPath(); ctx.arc(-z * 0.26, -z * 0.68, z * 0.05, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    // Visor + eye
-    ctx.fillStyle = '#111';
-    ctx.fillRect(-z * 0.08, -z * 0.4, z * 0.46, z * 0.22);
-    ctx.fillStyle = SKIN.c2;
-    ctx.fillRect(z * 0.12, -z * 0.36, z * 0.16, z * 0.14);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(z * 0.2, -z * 0.35, z * 0.05, z * 0.05);
-    // Chest plate with light
-    ctx.fillStyle = SKIN.c2;
-    ctx.fillRect(-z * 0.32, -z * 0.08, z * 0.38, z * 0.18); ctx.strokeRect(-z * 0.32, -z * 0.08, z * 0.38, z * 0.18);
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(-z * 0.13, z * 0.01, z * 0.04, 0, Math.PI * 2); ctx.fill();
-    shine(-z * 0.45, -z * 0.5, z * 0.9, z * 0.3);
-  }
-
-  function drawSpider(z, s) {
-    const t = G.t * 18;
-    // Six jointed legs
-    for (let i = 0; i < 6; i++) {
-      const side = i < 3 ? -1 : 1;
-      const j = i % 3;
-      const hipX = side * z * (0.08 + j * 0.12);
-      const kneeX = side * z * (0.32 + j * 0.12), kneeY = -z * 0.02;
-      const k = s.grounded ? Math.sin(t + i * 1.4) * z * 0.06 : 0;
-      const footX = side * z * (0.42 + j * 0.06) + k, footY = z * 0.5;
-      ctx.lineCap = 'round';
-      ctx.lineWidth = Math.max(3, z * 0.12); ctx.strokeStyle = '#000';
-      ctx.beginPath(); ctx.moveTo(hipX, z * 0.05); ctx.lineTo(kneeX, kneeY); ctx.lineTo(footX, footY); ctx.stroke();
-      ctx.lineWidth = Math.max(1.5, z * 0.055); ctx.strokeStyle = j === 1 ? SKIN.c1 : SKIN.c2;
-      ctx.stroke();
-    }
-    ctx.lineWidth = Math.max(2, z * 0.08); ctx.strokeStyle = '#000';
-    // Abdomen + head
-    ctx.fillStyle = SKIN.c1;
-    ctx.beginPath(); ctx.ellipse(-z * 0.12, -z * 0.1, z * 0.38, z * 0.27, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = SKIN.c2;
-    ctx.beginPath(); ctx.ellipse(-z * 0.2, -z * 0.12, z * 0.18, z * 0.1, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = SKIN.c1;
-    ctx.beginPath(); ctx.arc(z * 0.3, -z * 0.08, z * 0.2, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    // Eyes and fangs
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(z * 0.32, -z * 0.14, z * 0.07, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(z * 0.43, -z * 0.08, z * 0.05, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#000';
-    ctx.beginPath(); ctx.arc(z * 0.34, -z * 0.14, z * 0.035, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(z * 0.44, -z * 0.08, z * 0.025, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.moveTo(z * 0.38, z * 0.06); ctx.lineTo(z * 0.42, z * 0.16); ctx.lineTo(z * 0.45, z * 0.05); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.beginPath(); ctx.ellipse(-z * 0.2, -z * 0.24, z * 0.2, z * 0.07, 0, 0, Math.PI * 2); ctx.fill();
-  }
-
-  function drawSwing(z) {
-    // Tail flame fins
-    ctx.fillStyle = SKIN.c2;
-    for (const d of [-1, 1]) {
-      ctx.beginPath();
-      ctx.moveTo(-z * 0.15, d * z * 0.22); ctx.quadraticCurveTo(-z * 0.5, d * z * 0.62, -z * 0.68, d * z * 0.5);
-      ctx.lineTo(-z * 0.4, d * z * 0.28); ctx.lineTo(z * 0.08, d * z * 0.32);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(z * 0.05, d * z * 0.3); ctx.lineTo(z * 0.3, d * z * 0.55); ctx.lineTo(z * 0.32, d * z * 0.28);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-    }
-    ctx.fillStyle = SKIN.c1;
-    ctx.beginPath(); ctx.moveTo(-z * 0.5, 0); ctx.lineTo(-z * 0.72, -z * 0.12); ctx.lineTo(-z * 0.72, z * 0.12); ctx.closePath(); ctx.fill(); ctx.stroke();
-    // Body ring + eye
-    ctx.beginPath(); ctx.arc(0, 0, z * 0.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.lineWidth = Math.max(1, z * 0.05);
-    ctx.beginPath(); ctx.arc(0, 0, z * 0.3, 0, Math.PI * 2); ctx.stroke();
-    ctx.lineWidth = Math.max(2, z * 0.08);
-    ctx.fillStyle = SKIN.c2;
-    ctx.beginPath(); ctx.arc(z * 0.1, 0, z * 0.18, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#000';
-    ctx.beginPath(); ctx.arc(z * 0.14, 0, z * 0.08, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.beginPath(); ctx.arc(z * 0.11, -z * 0.04, z * 0.03, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,0.3)';
-    ctx.beginPath(); ctx.ellipse(-z * 0.08, -z * 0.24, z * 0.2, z * 0.08, 0, 0, Math.PI * 2); ctx.fill();
   }
 
   // --------------------------------------------------------------- HUD
@@ -1375,7 +1375,12 @@
 
   // Main levels, easiest first (indexes stay stable so saves don't move).
   const MAIN = LEVELS.map((L, i) => i).filter((i) => !LEVELS[i].training)
-    .sort((a, b) => LEVELS[a].stars - LEVELS[b].stars || a - b);
+    .sort((a, b) => (LEVELS[a].order ?? LEVELS[a].stars) - (LEVELS[b].order ?? LEVELS[b].stars) || a - b);
+  function coinSlots(i) {
+    const got = store.get('coins:' + slotOf(i), []);
+    return Array.from({ length: LEVELS[i].coinCount || 0 }, (_, k) =>
+      `<span class="coin${got.indexOf(k) !== -1 ? ' got' : ''}"></span>`).join('');
+  }
   // Practice levels: PRACTICE[mini][mode][tier] -> LEVELS index.
   const PRACTICE = { false: {}, true: {} };
   LEVELS.forEach((L, i) => { if (L.training) (PRACTICE[!!L.mini][L.mode] = PRACTICE[!!L.mini][L.mode] || [])[L.tier] = i; });
@@ -1448,10 +1453,11 @@
         <div class="lvcard" role="button" tabindex="0" aria-label="Play ${L.name}" style="--lvc:${L.colors[0].bg}">
           <canvas></canvas>
           <div>
+            <div class="lvno">Level ${L.levelNo || ''}</div>
             <div class="lvname">${L.name}</div>
             <div class="lvmeta"><span>${L.difficulty}</span><span class="star">${L.stars} ★</span>
               <span>${lengthLabel(L)}</span><span>${best === 100 ? '✓ Beaten' : ''}</span></div>
-            <div class="lvmeta"><span style="color:#d8deff">Attempts: ${store.get('att:' + slotOf(i), 0)}</span></div>
+            <div class="lvmeta"><span style="color:#d8deff">Attempts: ${store.get('att:' + slotOf(i), 0)}</span><span class="coins">${coinSlots(i)}</span></div>
           </div>
         </div>
         <div class="lvbars">
@@ -1577,6 +1583,8 @@
     const cells = [
       ['Stars', `${stars} ★`], ['Levels beaten', `${beaten.length}/${MAIN.length}`],
       ['Demons beaten', demons], ['Mode practices', `${prac}/160`],
+      ['Coins', `${LEVELS.reduce((n, L, i) => n + store.get('coins:' + slotOf(i), []).length, 0)}/${LEVELS.reduce((n, L) => n + (L.coinCount || 0), 0)}`],
+      ['Icons', `${Math.min(ICONS.COUNT * 8, 8 + levelsBeaten())}/${ICONS.COUNT * 8}`],
       ['Attempts', store.get('attempts', 0)], ['Jumps', store.get('jumps', 0)],
     ];
     $('statGrid').innerHTML = cells.map(([k, v]) => `<div class="stat"><b>${v}</b><span>${k}</span></div>`).join('');
@@ -1593,6 +1601,16 @@
     withCtx(c, () => drawIcon(mode, cssSize * fill, { grounded: true }));
   }
   function withCtx(c, fn) { ctx = c; try { fn(); } finally { ctx = mainCtx; } }
+  // Same as iconCanvas but for a specific (possibly locked) variant.
+  function iconCanvasV(cv, mode, cssSize, fill, v) {
+    const r = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+    cv.width = cssSize * r; cv.height = cssSize * r;
+    const c = cv.getContext('2d');
+    c.setTransform(r, 0, 0, r, 0, 0);
+    c.clearRect(0, 0, cssSize, cssSize);
+    c.translate(cssSize / 2, cssSize / 2);
+    withCtx(c, () => drawIcon(mode, cssSize * fill, { grounded: true }, v));
+  }
 
   function renderSkinPreview() {
     const cv = $('skinPreview');
@@ -1626,21 +1644,36 @@
         root.appendChild(b);
       }
     }
-    const styles = $('cubeStyles');
-    styles.innerHTML = '';
-    CUBE_STYLES.forEach((name, i) => {
+    // Mode tabs, then the 24 icons of the selected mode.
+    const tabs = $('kitTabs');
+    tabs.innerHTML = '';
+    for (const m of P.MODES) {
       const b = document.createElement('button');
-      b.title = name;
-      b.setAttribute('aria-label', `${name} cube`);
-      if (SKIN.cube === i) b.className = 'on';
+      b.className = m === G.kitMode ? 'on' : '';
+      b.title = MODE_LABEL[m];
+      b.setAttribute('aria-label', MODE_LABEL[m]);
       b.innerHTML = '<canvas></canvas>';
-      b.addEventListener('click', () => { SKIN.cube = i; saveSkin(); buildSkin(); });
-      styles.appendChild(b);
-      const prev = SKIN.cube;
-      SKIN.cube = i;
-      iconCanvas(b.querySelector('canvas'), 'cube', 48, 0.7);
-      SKIN.cube = prev;
-    });
+      b.addEventListener('click', () => { G.kitMode = m; buildSkin(); });
+      tabs.appendChild(b);
+      iconCanvas(b.querySelector('canvas'), m, 40, 0.7);
+    }
+    const total = ICONS.COUNT * P.MODES.length;
+    const owned = Math.min(total, P.MODES.length + levelsBeaten());
+    $('kitCount').textContent = `${owned}/${total} icons unlocked \u00b7 beat any level to unlock the next`;
+    const grid = $('kitGrid');
+    grid.innerHTML = '';
+    for (let v = 0; v < ICONS.COUNT; v++) {
+      const m = G.kitMode;
+      const open = isUnlocked(m, v);
+      const b = document.createElement('button');
+      b.className = (equipped(m) === v ? 'on' : '') + (open ? '' : ' locked');
+      b.title = open ? ICONS.name(m, v) : 'Locked';
+      b.setAttribute('aria-label', open ? `${ICONS.name(m, v)} ${MODE_LABEL[m]}` : `Locked ${MODE_LABEL[m]} icon`);
+      b.innerHTML = '<canvas></canvas>' + (open ? '' : '<span class="lock">\ud83d\udd12</span>');
+      if (open) b.addEventListener('click', () => { SKIN.icons[m] = v; saveSkin(); buildSkin(); });
+      grid.appendChild(b);
+      iconCanvasV(b.querySelector('canvas'), m, 48, 0.68, v);
+    }
     $('glowBtn').textContent = `Glow: ${SKIN.glow ? 'On' : 'Off'}`;
     requestAnimationFrame(renderSkinPreview);
   }
@@ -1703,6 +1736,38 @@
   $('prNormal').addEventListener('click', () => { G.prMini = false; store.set('prMini', false); buildPractice(); });
   $('prMini').addEventListener('click', () => { G.prMini = true; store.set('prMini', true); buildPractice(); });
   $('setDone').addEventListener('click', closeSettings);
+
+  // Save backup: everything this game keeps in localStorage, as one code.
+  $('saveExport').addEventListener('click', () => {
+    const data = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k.startsWith('gdr:')) data[k] = localStorage.getItem(k);
+      }
+    } catch (e) { /* storage blocked */ }
+    const code = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+    $('saveCode').value = code;
+    $('saveCode').select();
+    const done = () => { $('saveExport').textContent = 'Copied!'; setTimeout(() => { $('saveExport').textContent = 'Copy save code'; }, 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(code).then(done, () => {});
+  });
+  $('saveImport').addEventListener('click', () => {
+    const code = $('saveCode').value.trim();
+    if (!code) { $('saveCode').focus(); return; }
+    try {
+      const data = JSON.parse(decodeURIComponent(escape(atob(code))));
+      const keys = Object.keys(data).filter((k) => k.startsWith('gdr:'));
+      if (!keys.length) throw new Error('empty');
+      if (!confirm(`Replace this device's progress with the save code (${keys.length} entries)?`)) return;
+      for (const k of keys) localStorage.setItem(k, data[k]);
+      location.reload();
+    } catch (e) {
+      $('saveImport').textContent = 'Invalid code';
+      setTimeout(() => { $('saveImport').textContent = 'Load save code'; }, 1500);
+    }
+  });
+  $('saveCode').addEventListener('keydown', (e) => e.stopPropagation());
   $('statsDone').addEventListener('click', () => show('home'));
   $('skinDone').addEventListener('click', () => show('home'));
   $('swapBtn').addEventListener('click', () => { [SKIN.c1, SKIN.c2] = [SKIN.c2, SKIN.c1]; saveSkin(); buildSkin(); });

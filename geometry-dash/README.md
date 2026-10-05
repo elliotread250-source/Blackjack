@@ -12,7 +12,8 @@ is synthesised live in WebAudio.
 Cube, ship, ball, UFO, wave, robot, spider and swing, plus the portals that
 go with them: gravity flip, mini/normal size, and the five speed portals
 (0.5x, 1x, 2x, 3x, 4x). Yellow, pink, red, blue, green and black orbs;
-yellow, pink, red and blue pads.
+dash orbs (hit one while holding and you fly dead straight until you let
+go); yellow, pink, red and blue pads; spinning saw blades.
 
 ## Physics
 
@@ -44,24 +45,40 @@ at any frame rate.
 
 ## Levels
 
-The level selector pages through them like GD's: arrows, swipe, or the
-arrow keys.
+Sixteen main levels on one smooth difficulty ramp. Each level has a single
+difficulty value, evenly spaced from Level 1 to Level 16, and every section
+in it is generated from that value (warming up from 85% to 100% across the
+level). Speed portals are capped by it too: 1x for the early levels, up to 2x
+in the middle, 3x only near the end. The level selector pages through them
+in order like GD's: arrows, swipe, or the arrow keys.
 
-| Level | Difficulty | Modes |
-|---|---|---|
-| Neon Steps | Easy | cube, ship, ball, UFO |
-| Cyber Hop | Easy | cube, UFO, robot |
-| Prism Drop | Normal | cube, swing, spider, ship |
-| Midnight Drift | Normal | mini cube, ship, ball, wave |
-| Bass Reactor | Hard | spider, upside-down cube, swing (2x), robot |
-| Solar Flux | Hard | ball, upside-down cube, wave, UFO (2x), robot |
-| Pulse Circuit | Harder | wave, robot, spider, ship (2x) |
-| Hyperwave | Harder | wave, mini wave, ship (3x), UFO (2x) |
-| Static Storm | Harder | spider, swing, mini cube, ship (3x), ball (2x) |
-| Neon Abyss | Insane | wave (2x), robot, upside-down cube, UFO (3x), swing, spider |
-| Gravity Overdrive | Insane | every mode, mini cube and mini wave, 2x and 3x |
-| Final Ascent | Medium Demon | every mode at 2x-3x |
-| Chaos Theory | Hard Demon | every mode at 2x-3x, mini wave |
+| # | Level | Difficulty | Stars |
+|---|---|---|---|
+| 1 | Neon Steps | Easy | 1 |
+| 2 | Cyber Hop | Easy | 2 |
+| 3 | Prism Drop | Normal | 3 |
+| 4 | Midnight Drift | Normal | 3 |
+| 5 | Solar Flux | Hard | 4 |
+| 6 | Bass Reactor | Hard | 5 |
+| 7 | Pulse Circuit | Harder | 6 |
+| 8 | Static Storm | Harder | 6 |
+| 9 | Hyperwave | Harder | 7 |
+| 10 | Neon Abyss | Insane | 8 |
+| 11 | Gravity Overdrive | Insane | 9 |
+| 12 | Fingerflash | Insane | 12 |
+| 13 | Last Dash | Insane | 12 |
+| 14 | Final Ascent | Medium Demon | 10 |
+| 15 | Chaos Theory | Hard Demon | 10 |
+| 16 | Lockdown | Insane Demon | 15 |
+
+The last three are modelled on GD's own finales: Fingerflash on Fingerdash
+(dash orbs, red pads, saws, spider), Last Dash on Dash (swing-heavy), and
+Lockdown on Deadlocked (a dark, saw-filled 15-star demon). Original layouts
+and names.
+
+Every level has secret coins (three per main level, one per practice level).
+The verifier places them on the winning run it finds, so each one is
+reachable, and the level selector and stats track which you've collected.
 
 ## Mode practice
 
@@ -91,8 +108,9 @@ the parts.
 
 ```bash
 node tools/verify.js         # every level: beatable, plus the no-repeats rule
-node tools/verify.js --fix   # reseed failing sections and tune Extreme Demons,
-                             # then write the BUMPS and TIGHT tables to levels.js
+node tools/verify.js --fix   # reseed failing sections, tune Extreme Demons and
+                             # place coins, then write BUMPS, TIGHT and COINS
+                             # into levels.js
 ```
 
 `--fix` reseeds only the section that failed. Extreme Demons have a
@@ -101,7 +119,11 @@ tightness dial (0 to 1) that `--fix` bisects between "too easy" and
 
 ## Look and feel
 
-Detailed GD-style difficulty faces (horns, fangs and a fire aura on the
+GD-style portals (glowing frame, swirl, emblem badge showing what the portal
+does; tall triggers show a normal-sized portal plus a beam), thorny corridor
+edges, rotating background gears, hanging chains and crystal shards on
+columns, glowing arrow and "!" signs ahead of portals, a light trail behind
+flying icons, detailed GD-style difficulty faces (horns, fangs and a fire aura on the
 demons), featured and epic glows on the main levels, layered backgrounds
 (skyline, parallax squares, drifting motes, a beat-synced glow), bevelled
 blocks tinted to each section's colours, light shafts under floating blocks,
@@ -118,12 +140,20 @@ popup, Next Level on the complete screen, and per-level attempt counts.
 A stats screen totals stars, levels and demons beaten, practices cleared,
 attempts and jumps.
 
-## Icon customisation
+## Icons
 
-Icon Kit on the home screen: 16 primary and 16 secondary colours, 8 cube
-designs (the cube also rides inside the ship and UFO), a colour swap, and a
-glow toggle. A live preview shows all eight modes, and your choice is saved
-in the browser.
+The Icon Kit has 24 designs for each of the eight modes (192 in all): 6
+body shapes per mode (8 faces for the cube) in plain, striped, dotted and
+two-tone versions. You start with the first of each, and every level you
+beat for the first time, main or practice, unlocks the next icon, spread
+across all eight modes. Your cube rides inside the ship and UFO. Colours,
+colour swap and glow are free.
+
+## Saving
+
+Progress lives in your browser's local storage, so it survives closing the
+tab or restarting. It's per browser and device: Settings has a backup save
+code you can copy on one device and load on another.
 
 ## Controls
 
