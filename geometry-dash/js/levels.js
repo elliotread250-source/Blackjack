@@ -477,11 +477,13 @@
       x += Math.round((7 + r() * 5) * sf);
     }
     if (p.orbs) {
-      // Optional ways down before the exit: green and pink-dash orbs flip
-      // you to the floor, a blue orb flips you back up.
-      B.orb(c + L - 13, 3.5, 'green');
-      B.orb(c + L - 10, 2, 'blue');
-      B.orb(c + L - 8, 4, 'dashp');
+      // On the paths you actually run: a green orb on the ceiling path
+      // fires you down to the floor, a blue orb on the floor path flips you
+      // back up, and a pink dash orb on the ceiling path dashes you along
+      // and drops you to the floor before the exit.
+      B.orb(c + L - 17, 4.6, 'green');
+      B.orb(c + L - 12, 0.3, 'blue');
+      B.orb(c + L - 8, 4.6, 'dashp');
     }
     B.p(c + L - 6, 3, 'grav-', 6);
     return c + L + 4;
