@@ -76,7 +76,16 @@ function missAt(xs, front) { return xs.find((x) => x > front - 1.5) ?? front; }
 // Impossible tiers must also be proven unbeatable with 50ms inputs.
 function check(def) {
   const need = def.coinCount || 0;
-  if (stepOf(def) >= 12) return solve(def, 12, need);
+  if (stepOf(def) >= 12) {
+    const r = solve(def, 12, need);
+    // Out of budget chasing coins: if the level can't be beaten even
+    // ignoring them, report where it really fails, not the next coin.
+    if (!r.ok && need && r.reason === 'budget') {
+      const r0 = solve(def, 12, 0);
+      if (!r0.ok) return r0;
+    }
+    return r;
+  }
   // Cheap test first: if 50ms inputs already win, it isn't Impossible.
   const human = solve(def, 12);
   if (human.ok) return { ok: false, furthest: 0, reason: 'too easy: beatable with 50ms inputs' };
@@ -126,7 +135,8 @@ function highCoin(def, inputs, K) {
       path.push([s.x, s.y, s.grav, s.bounds ? s.bounds.floor + s.bounds.ceil : null]);
     }
   }
-  for (const f of [0.6, 0.45, 0.75, 0.3, 0.85]) {
+  // def.cubeCoin: a level that also wants a table coin at that fraction.
+  for (const f of def.cubeCoin ? [def.cubeCoin, def.cubeCoin + 0.015, def.cubeCoin - 0.015] : [0.6, 0.45, 0.75, 0.3, 0.85]) {
     const c = coinNear(def, K, L, path, def.length * f);
     if (c) return c;
   }
@@ -254,7 +264,7 @@ function fix() {
     for (const def of LEVELS.buildAll(bumps, tight, {})) {
       const ck = def.name + JSON.stringify(bumps[def.name] || []) + (tight[def.name] || '');
       const r = cache.get(ck);
-      if (r && r.ok && !def.coinCount) {
+      if (r && r.ok && (!def.coinCount || def.cubeCoin)) {
         const c = highCoin(def, r.inputs, stepOf(def));
         if (c) coins[def.name] = c;
         else console.error(`  ${def.name}: no secret coin spot found`);
@@ -275,7 +285,7 @@ function coinsOnly() {
   const path = require('path').join(__dirname, '../js/levels.js');
   const coins = Object.assign({}, LEVELS.COINS);
   for (const def of LEVELS) {
-    if (def.coinCount) continue;
+    if (def.coinCount && !(def.cubeCoin && !LEVELS.COINS[def.name])) continue;
     const r = check(def);
     if (!r.ok) { console.error(`  ${def.name}: ${r.reason}`); continue; }
     const c = highCoin(def, r.inputs, stepOf(def));

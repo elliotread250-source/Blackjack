@@ -129,6 +129,9 @@
   .bar.p i { background: linear-gradient(#8ff6ff, #18b8e0); }
   .bar b { position: absolute; inset: 0; display: grid; place-items: center; font-weight: normal; font-size: 15px; -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
   .slide .row { margin-top: 14px; }
+  .slide .row { width: min(460px, 100%); }
+  .songbtn { flex: 1.6 !important; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #songBox { z-index: 8; }
   .arrow {
     position: absolute; top: 50%; transform: translateY(-50%); width: clamp(48px, 7vw, 66px); height: clamp(70px, 11vw, 96px);
     padding: 0; font-size: 40px; border-radius: 14px; z-index: 2;
@@ -530,7 +533,7 @@
     <div class="esline"><div class="seg" id="esSize"></div><div class="seg" id="esSpeed"></div></div>
     <div class="label">Colours</div><div class="escols" id="esCols"></div>
     <div class="esline"><span class="label">Difficulty</span><select id="esFace" aria-label="Difficulty"></select></div>
-    <div class="esline"><span class="label" id="esSong"></span><button class="ghost" id="esNewSong">New song</button></div>
+    <div class="esline"><span class="label" id="esSong"></span><span><button class="ghost" id="esNewSong">New song</button> <button class="ghost" id="esOwnSong">Your own</button></span></div>
     <div class="row"><button class="ghost" id="esClear">Clear level</button><button id="esDone">Done</button></div>
   </div>
   <div class="panel edpanel" id="edShareBox">
@@ -553,6 +556,20 @@
   </div>
 </div>
 
+<!-- Level song: built-in or your own file -->
+<div class="overlay shade" id="songBox">
+  <div class="panel">
+    <h2>Level Song</h2>
+    <div class="stats" id="songLevel"></div>
+    <div class="keeper" id="songNow"></div>
+    <button class="gold" id="songPick">Use my own song&hellip;</button>
+    <input type="file" id="songFile" accept="audio/*" style="display:none">
+    <div class="row"><button class="alt" id="songPlay">&#9654; Preview</button><button class="ghost" id="songReset">Built-in song</button></div>
+    <div class="label">Your file stays on this device. Shared level links use the built-in song.</div>
+    <button id="songDone">Done</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"><canvas id="toastCv"></canvas><span id="toastText"></span></div>
 
 <div class="overlay" id="rotate">
@@ -571,6 +588,7 @@
     <button class="alt" id="practiceBtn">Practice Mode</button>
     <div class="row">
       <button class="ghost" id="restartBtn">Restart</button>
+      <button class="ghost" id="pauseSong">Song</button>
       <button class="ghost" id="pauseSet">Settings</button>
     </div>
     <button class="ghost" id="menuBtn">Exit</button>

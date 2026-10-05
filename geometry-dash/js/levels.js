@@ -139,6 +139,29 @@
       B.spikes(px + w, 0, t);
       return px + w + t;
     },
+    // Every remaining orb type, for sections flagged orbs (Dash).
+    pinkOrb(B, x, r) {
+      const L = int(r, 2, 3);
+      B.spikes(x, 0, L);
+      B.orb(x + 1, 1.6, 'pink');
+      return x + L;
+    },
+    redOrb(B, x, r) {
+      // A wall too tall for a jump: the red orb's big launch clears it.
+      B.spikes(x, 0, 3);
+      B.orb(x, 1.6, 'red');
+      const w = int(r, 2, 4);
+      B.b(x + 4, 0, w, 3);
+      return x + 4 + w;
+    },
+    blackOrb(B, x, r) {
+      // Pad launch, then a black orb to slam back down early (optional).
+      B.pad(x, 0, 'yellow');
+      B.orb(x + 3, 3.4, 'black');
+      const L = int(r, 2, 3);
+      B.spikes(x + 7, 0, L);
+      return x + 7 + L;
+    },
     pillars(B, x, r, q) {
       const m = int(r, 2, 3);
       for (let j = 0; j < m; j++) {
@@ -163,6 +186,7 @@
     if (d >= 1) fams.push('orbPit');
     if (d >= 1.5) fams.push('pillars');
     if (p.ext && !mini) fams.push('saw', 'dashPit', 'redPad');
+    if (p.orbs && !mini) fams.push('pinkOrb', 'redOrb', 'blackOrb');
     if (p.impossible) { fams = ['spikes', 'pillars', 'orbPit', 'stairs', 'blockSpike']; q.maxSp = 3; }
     // Extreme Demon: p.tight (0..1, tuned per level by verify.js --fix)
     // squeezes the gaps until 50ms inputs can't make it but 1/60s ones can.
@@ -171,9 +195,12 @@
     if (p.mini) { B.p(c + 1, 10, 'mini', 20); c += 2; }
     const n = p.n || Math.round(8 + 2 * d);
     let x = c + 3, last = '';
+    // Orb sections open with each of their orb tricks once, in random order.
+    const forced = p.orbs && !mini ? ['pinkOrb', 'redOrb', 'blackOrb'].concat(p.ext ? ['dashPit', 'redPad'] : []) : [];
+    const k0 = forced.length ? Math.floor(r() * 3) : 0; // no draw otherwise: other levels keep their layouts
     for (let i = 0; i < n; i++) {
-      let f = pick(r, fams);
-      if (f === last) f = pick(r, fams); // fewer back-to-back repeats
+      let f = i < forced.length ? forced[(i + k0) % forced.length] : pick(r, fams);
+      if (i >= forced.length && f === last) f = pick(r, fams); // fewer back-to-back repeats
       last = f;
       x += Math.max(Math.ceil(minGap * sf), Math.round((gapBase + r() * 3) * sf));
       x = FAM[f](B, x, r, q);
@@ -243,7 +270,7 @@
     // before and climb out to the gate after: R is a safe climb per block
     // of run (the wave holds 45 degrees at any speed; the others climb at
     // a fixed rate, so faster speeds leave less room).
-    const holeH = mode === 'wave' ? 1.4 : mode === 'ufo' ? 2.2 : 2;
+    const holeH = p.secretH || (mode === 'wave' ? 1.4 : mode === 'ufo' ? 2.2 : 2);
     const R = { ship: 0.7, swing: 0.7, ufo: 0.65, wave: 0.8 }[mode] / (mode === 'wave' ? 1 : sf);
     const centres = (lo, hi) => [lo + 0.5, hi - 0.5]; // where a 1-block icon's centre fits
     const reach = (A, ax, Bi, bx) => Math.max(0, A[0] - Bi[1], Bi[0] - A[1]) <= R * (bx - ax);
@@ -429,7 +456,8 @@
   function flipSec(B, c, r, p) {
     const ceil = 6, L = 56 + Math.floor(r() * 20), sf = SPEED_RATIO[p.sp];
     B.b(c + 2, ceil, L, 1);
-    B.p(c + 6, 2, 'grav+', 4);
+    // Orb sections (Dash) flip with a blue pad instead of a portal.
+    if (p.orbs) B.pad(c + 6, 0, 'blue'); else B.p(c + 6, 2, 'grav+', 4);
     let x = c + 16;
     while (x < c + L - 14) {
       const f = r();
@@ -444,6 +472,13 @@
         B.b(x, ceil - 1, w, 1); x += w;
       }
       x += Math.round((7 + r() * 5) * sf);
+    }
+    if (p.orbs) {
+      // Optional ways down before the exit: green and pink-dash orbs flip
+      // you to the floor, a blue orb flips you back up.
+      B.orb(c + L - 13, 3.5, 'green');
+      B.orb(c + L - 10, 2, 'blue');
+      B.orb(c + L - 8, 4, 'dashp');
     }
     B.p(c + L - 6, 3, 'grav-', 6);
     return c + L + 4;
@@ -480,7 +515,10 @@
     const fly = def.secs.map(([k], i) => i).filter((i) => FLY[def.secs[i][0]]);
     const want = def.secs.length && def.meta && def.meta.training ? 1 : 3;
     const secrets = {};
-    if (fly.length) {
+    if (def.coinSecs) {
+      // Hand-placed: [section index, fraction along it] per tunnel coin.
+      for (const [si, f] of def.coinSecs) (secrets[si] = secrets[si] || []).push(f);
+    } else if (fly.length) {
       const spots = want === 1 ? [0.55] : [0.3, 0.55, 0.8];
       spots.forEach((f, k) => {
         const si = fly[Math.min(fly.length - 1, Math.floor(f * fly.length))];
@@ -507,7 +545,7 @@
     });
     // Levels without flying sections get their coin from the COINS table:
     // a high spot off the usual route that the verifier proved reachable.
-    if (!fly.length) for (const [x, y] of coins || []) B.coin(x, y);
+    if (!fly.length || def.cubeCoin) for (const [x, y] of coins || []) B.coin(x, y);
     return Object.assign({
       name: def.name, objects: B.o, colors: B.colors, length: c + 14, sections,
       startSpeed: Math.min(cap, def.sp0 == null ? 1 : def.sp0), coinCount: B.o.filter((o) => o.t === 'coin').length,
@@ -600,6 +638,41 @@
       secs: [['cube', { n: 7, ext: true }], ['ship', { n: 10, saws: true, sp: 3 }], ['ball', { n: 11 }], ['swing', { n: 9, saws: true }],
         ['robot', { n: 9 }], ['wave', { n: 12, sp: 2 }], ['spider', { n: 10 }], ['ufo', { n: 8, saws: true }],
         ['cube', { n: 7, ext: true, sp: 3 }], ['ship', { n: 10, saws: true }]] },
+    // Dash, GD's newest final level (2.2), rebuilt from its published
+    // walkthrough: the same modes, speeds and sizes in the same order at the
+    // same percentages, no UFO, coins at 14% (cube), 37% (swing) and 68%
+    // (start of the ship). Layout inside each section is generated.
+    { name: 'Dash', D: 2.95, sp0: 1, cubeCoin: 0.14,
+      coinSecs: [[10, 0.5], [16, 0.08]],
+      meta: { difficulty: 'Insane', stars: 12, bpm: 150, key: 4, seed: 22, order: 16, levelNo: 17, cubeCoin: 0.14 },
+      pal: [['#1e64ff', '#0f3ca0'], ['#8a2be2', '#4b1680'], ['#1e64ff', '#0f3ca0'], ['#8a2be2', '#4b1680'], ['#ff3b8a', '#a01850'],
+        ['#ff7a1e', '#a04a0c'], ['#00c8ff', '#00708a'], ['#2bff9a', '#14a058'], ['#c0c0d8', '#6a6a88'], ['#ff3b5c', '#a01830'],
+        ['#ffb31e', '#a0700c'], ['#9b30ff', '#5a1a99'], ['#1e90ff', '#0f50a0'], ['#30d0ff', '#1880a0'], ['#ff2bd0', '#a0178a'],
+        ['#ffffff', '#8888aa'], ['#ff3b1e', '#a0200c'], ['#c0c0d8', '#6a6a88'], ['#00e0a0', '#008a60'], ['#00b4ff', '#0068a0'],
+        ['#ffe23b', '#a0901e']],
+      secs: [
+        ['cube', { n: 3 }],                              // 0-3%
+        ['spider', { n: 1 }],                            // 3-5%
+        ['cube', { n: 1 }],                              // 5-7%
+        ['spider', { n: 1 }],                            // 7-9%
+        ['ball', { n: 1 }],                              // 9-10%
+        ['cube', { n: 7, orbs: true }],                  // 10-17%, coin 1
+        ['swing', { n: 5, sp: 2, saws: true }],          // 17-23%, fast
+        ['cube', { n: 3, mini: true, sp: 0 }],           // 23-26%, mini, slow
+        ['robot', { n: 2, sp: 2 }],                      // 26-28%, fast
+        ['ball', { n: 5 }],                              // 28-34%
+        ['swing', { n: 5, secretH: 2.8 }],               // 34-40%, coin 2
+        ['spider', { n: 1 }],                            // 40-42%
+        ['cube', { n: 7, ext: true, orbs: true }],       // 42-51%, fast
+        ['flip', { orbs: true }],                        // 51-57%, blue pad, green/blue/pink-dash orbs
+        ['cube', { n: 4, mini: true, sp: 1 }],           // 57-63%, mini
+        ['cube', { n: 3 }],                              // 63-67%, the countdown
+        ['ship', { n: 6, sp: 3, saws: true }],          // 67-75%, very fast, coin 3
+        ['robot', { n: 7 }],                            // 75-83%
+        ['cube', { n: 7, ext: true, orbs: true, sp: 2 }], // 84-92%
+        ['wave', { n: 2 }],                              // 92-94%
+        ['cube', { n: 3, mini: true }],                  // 96-100%, mini
+      ] },
   ];
 
   // One difficulty ramp for all main levels, easiest first: each level's D
@@ -612,6 +685,13 @@
     ['Last Dash', 'Insane', 12], ['Final Ascent', 'Medium Demon', 10], ['Chaos Theory', 'Hard Demon', 10],
     ['Lockdown', 'Insane Demon', 15],
   ];
+  // Song style per level (audio.js STYLES), picked to suit each one.
+  const SONG = {
+    'Neon Steps': 3, 'Cyber Hop': 7, 'Prism Drop': 5, 'Midnight Drift': 4, 'Solar Flux': 0, 'Bass Reactor': 1,
+    'Pulse Circuit': 2, 'Static Storm': 6, 'Hyperwave': 4, 'Neon Abyss': 2, 'Gravity Overdrive': 6, 'Fingerflash': 0,
+    'Last Dash': 7, 'Final Ascent': 5, 'Chaos Theory': 1, 'Lockdown': 6, 'Dash': 0,
+  };
+  for (const def of MAIN) def.meta.style = SONG[def.name];
   RAMP.forEach(([name, difficulty, stars], k) => {
     const def = MAIN.find((d) => d.name === name);
     def.D = 0.2 + (k * (3.55 - 0.2)) / (RAMP.length - 1);
@@ -658,7 +738,7 @@
   // Storm and Neon Abyss on the ramp.
   const SECRET = [
     { name: 'Shadow Gate', D: 2.1, sp0: 1,
-      meta: { difficulty: 'Insane', stars: 8, bpm: 148, key: 6, seed: 77, secret: true, slot: 'secret', order: 99 },
+      meta: { difficulty: 'Insane', stars: 8, bpm: 148, key: 6, seed: 77, style: 1, secret: true, slot: 'secret', order: 99 },
       pal: [['#1a0630', '#0c0218'], ['#3a0a5a', '#1c042c'], ['#0a1a3a', '#040c1e'], ['#2a0a4a', '#140424'], ['#4a0a3a', '#24041c'],
         ['#1a1a4a', '#0c0c24'], ['#3a0a5a', '#1c042c'], ['#5a1aff', '#2a0a80']],
       secs: [['cube', { n: 6, ext: true }], ['ship', { n: 8, saws: true }], ['spider', { n: 8 }], ['swing', { n: 8, sp: 2 }],
@@ -713,6 +793,7 @@
     'Mini Robot Normal': [3],
     'Mini Robot Easy Demon': [1],
     'Shadow Gate': [0, 0, 0, 0, 1],
+    'Dash': [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1],
   };
 
   // Extreme Demon tightness per level (missing = 0.5), also from --fix.
@@ -736,6 +817,7 @@
 
   // Coin positions per level, written by `node tools/verify.js --coins`.
   const COINS = {
+    'Dash': [[179.5, 4.25]],
     'Cube Easy': [[74.25, 3]],
     'Cube Normal': [[109, 6]],
     'Cube Hard': [[79.25, 3.25]],
@@ -766,8 +848,16 @@
     'Robot Hard Demon': [[121.25, 3.5]],
     'Robot Insane Demon': [[107.75, 4.25]],
     'Robot Extreme Demon': [[82, 4.75]],
+    'Spider Easy': [[79.75, 7]],
+    'Spider Normal': [[93.75, 7]],
+    'Spider Hard': [[92, 7]],
+    'Spider Harder': [[92.75, 7]],
+    'Spider Insane': [[104.5, 7]],
+    'Spider Easy Demon': [[110.25, 7]],
+    'Spider Medium Demon': [[115, 7]],
     'Spider Hard Demon': [[136.75, 3.75]],
     'Spider Insane Demon': [[135.25, 3]],
+    'Spider Extreme Demon': [[63.25, 7]],
     'Mini Cube Easy': [[65, 3]],
     'Mini Cube Normal': [[86.75, 2.75]],
     'Mini Cube Hard': [[99.75, 2.75]],
@@ -798,24 +888,16 @@
     'Mini Robot Hard Demon': [[116, 2.75]],
     'Mini Robot Insane Demon': [[105.5, 3]],
     'Mini Robot Extreme Demon': [[116, 3.5]],
-    'Mini Spider Easy Demon': [[114.75, 3.75]],
-    'Spider Easy': [[79.75, 7]],
-    'Spider Normal': [[93.75, 7]],
-    'Spider Hard': [[92, 7]],
-    'Spider Harder': [[92.75, 7]],
-    'Spider Insane': [[104.5, 7]],
-    'Spider Easy Demon': [[110.25, 7]],
-    'Spider Medium Demon': [[115, 7]],
     'Mini Spider Easy': [[80, 7.25]],
     'Mini Spider Normal': [[90.75, 7.25]],
     'Mini Spider Hard': [[90, 7.25]],
     'Mini Spider Harder': [[87.75, 7.25]],
     'Mini Spider Insane': [[115.5, 7.25]],
+    'Mini Spider Easy Demon': [[114.75, 3.75]],
     'Mini Spider Medium Demon': [[110, 7.25]],
     'Mini Spider Hard Demon': [[135.75, 7.25]],
-    'Mini Spider Extreme Demon': [[79.25, 7.25]],
-    'Spider Extreme Demon': [[63.25, 7]],
     'Mini Spider Insane Demon': [[96.75, 7.25]],
+    'Mini Spider Extreme Demon': [[79.25, 7.25]],
   };
 
   function buildAll(bumps, tight, coins) {
