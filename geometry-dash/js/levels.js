@@ -139,6 +139,24 @@
     return c + 58;
   }
 
+  // Upside-down cube run under a long ceiling, flipped in and out by
+  // gravity portals. Returns the cursor after the ceiling ends.
+  function upsideDown(B, c) {
+    const ceil = 6;
+    B.b(c + 2, ceil, 70, 1);
+    B.p(c + 6, 2, 'grav+', 4);
+    B.s(c + 18, ceil - 1, -1);
+    B.spikes(c + 28, ceil - 1, 2, -1);
+    B.b(c + 38, ceil - 1, 3, 1); B.s(c + 41, ceil - 1, -1);
+    B.spikes(c + 50, ceil - 1, 2, -1);
+    B.p(c + 62, 3, 'grav-', 6);
+    return c + 72;
+  }
+
+  // Full-height speed portal, safe to place right after a flying section
+  // when the player could be anywhere vertically.
+  function speed(B, x, n) { B.p(x, 10, 's' + n, 20); }
+
   function finish(B, c, name, meta) {
     return Object.assign({ name, objects: B.o, colors: B.colors, length: c + 14 }, meta);
   }
@@ -200,17 +218,8 @@
     B.color(c, '#ffd21f', '#a08410');
     c = corridor(B, c, 'swing', [[3, 7], [5, 9], [2, 6], [4, 8], [1, 5], [3, 7], [5, 9]], { spacing: 9 });
 
-    // Upside-down cube under a long ceiling.
     B.color(c, '#7a2bff', '#45179a');
-    const ceil = 6;
-    B.b(c + 2, ceil, 70, 1);
-    B.p(c + 6, 2, 'grav+', 4);
-    B.s(c + 18, ceil - 1, -1);
-    B.spikes(c + 28, ceil - 1, 2, -1);
-    B.b(c + 38, ceil - 1, 3, 1); B.s(c + 41, ceil - 1, -1);
-    B.spikes(c + 50, ceil - 1, 2, -1);
-    B.p(c + 62, 3, 'grav-', 6);
-    c += 72;
+    c = upsideDown(B, c);
     c = cubeRun(B, c, ['single']);
 
     B.color(c, '#ff8a1f', '#b0560f');
@@ -240,6 +249,121 @@
     return finish(B, c, 'Gravity Overdrive', {
       difficulty: 'Insane', stars: 9, bpm: 150, key: 5, seed: 3,
     });
+  }
+
+  function cyberHop() {
+    const B = builder();
+    let c = 6;
+    B.color(0, '#00b4a0', '#00786a');
+    c = cubeRun(B, c, ['single', 'block', 'double', 'padUp', 'single', 'platform']);
+    B.color(c, '#ff8a1f', '#b0560f');
+    c = corridor(B, c, 'ufo', [[1, 6], [2, 7], [3, 8], [2, 7], [1, 6], [3, 8], [2, 7]], { spacing: 9 });
+    B.color(c, '#00b4a0', '#00786a');
+    c = cubeRun(B, c, ['stairs', 'pinkHop', 'double']);
+    B.color(c, '#7a7ab8', '#4a4a80');
+    c = robot(B, c);
+    B.color(c, '#00b4a0', '#00786a');
+    c = cubeRun(B, c, ['orbGap', 'single', 'blockSpike', 'double']);
+    return finish(B, c, 'Cyber Hop', { difficulty: 'Easy', stars: 3, bpm: 124, key: 7, seed: 4 });
+  }
+
+  function midnightDrift() {
+    const B = builder();
+    let c = 6;
+    B.color(0, '#1c2a6b', '#0f1840');
+    B.p(c + 2, 2, 'mini', 4);
+    c = cubeRun(B, c + 2, ['single', 'double', 'block', 'platform']);
+    B.p(c + 2, 2, 'big', 4);
+    c += 4;
+    c = cubeRun(B, c, ['stairs', 'double']);
+    B.color(c, '#3b1c6b', '#22104a');
+    c = corridor(B, c, 'ship', [[2, 6], [4, 8], [3, 7], [1, 5], [3, 7], [5, 9], [4, 8], [2, 6]], { spacing: 9 });
+    B.color(c, '#6b1c3b', '#4a1026');
+    c = ball(B, c, 10);
+    B.color(c, '#1c4a6b', '#103048');
+    c = corridor(B, c, 'wave',
+      [[3, 6.5], [4.5, 8], [3, 6.5], [1.5, 5], [3, 6.5], [5, 8.5], [3.5, 7], [2, 5.5], [3.5, 7]],
+      { spacing: 6, width: 2, lead: 10 });
+    B.color(c, '#1c2a6b', '#0f1840');
+    c = cubeRun(B, c, ['pillars', 'orbGap', 'double', 'single']);
+    return finish(B, c, 'Midnight Drift', { difficulty: 'Normal', stars: 4, bpm: 132, key: 2, seed: 5 });
+  }
+
+  function bassReactor() {
+    const B = builder();
+    let c = 6;
+    B.color(0, '#c21b4b', '#801030');
+    c = cubeRun(B, c, ['double', 'blockSpike', 'stairs', 'orbGap']);
+    B.color(c, '#9b30ff', '#5a1a99');
+    c = spider(B, c, 10);
+    B.color(c, '#7a2bff', '#45179a');
+    c = upsideDown(B, c);
+    c = cubeRun(B, c, ['single']);
+    B.color(c, '#ffd21f', '#a08410');
+    B.p(c + 2, 2, 's2', 4);
+    c = corridor(B, c + 4, 'swing', [[3, 7], [5, 9], [3, 7], [1, 5], [3, 7], [5, 9], [2, 6]], { spacing: 11, lead: 12 });
+    speed(B, c - 6, 1);
+    B.color(c, '#7a7ab8', '#4a4a80');
+    c = robot(B, c);
+    B.color(c, '#c21b4b', '#801030');
+    c = cubeRun(B, c, ['padUp', 'pillars', 'double', 'orbGap', 'single']);
+    return finish(B, c, 'Bass Reactor', { difficulty: 'Hard', stars: 5, bpm: 145, key: 4, seed: 6 });
+  }
+
+  function hyperwave() {
+    const B = builder();
+    let c = 6;
+    B.color(0, '#00a8ff', '#0068a0');
+    B.p(c + 2, 2, 's2', 4);
+    c = cubeRun(B, c + 4, ['double', 'single', 'platform', 'double']);
+    c = corridor(B, c, 'wave',
+      [[3, 6], [5, 8], [3, 6], [1, 4], [3, 6], [6, 9], [4, 7], [2, 5], [4, 7], [6, 9], [3, 6]],
+      { spacing: 6, width: 2, lead: 12 });
+    B.color(c, '#00e0ff', '#008aa0');
+    B.p(c + 2, 2, 'mini', 4);
+    c = corridor(B, c + 3, 'wave',
+      [[4, 6.5], [6, 8.5], [4, 6.5], [2, 4.5], [3.5, 6], [5.5, 8], [3, 5.5], [1.5, 4], [3.5, 6]],
+      { spacing: 6, width: 2, lead: 12 });
+    B.p(c - 6, 10, 'big', 20);
+    B.color(c, '#ff2bd0', '#a0178a');
+    speed(B, c - 4, 3);
+    c = corridor(B, c, 'ship', [[3, 7], [5, 9], [2, 6], [4, 8], [2, 6], [5, 9], [3, 7]], { spacing: 13, lead: 14 });
+    speed(B, c - 6, 2);
+    B.color(c, '#ff8a1f', '#b0560f');
+    c = corridor(B, c, 'ufo', [[2, 6], [4, 8], [3, 7], [1, 5], [3, 7], [5, 9]], { spacing: 10, lead: 11 });
+    B.color(c, '#00a8ff', '#0068a0');
+    c = cubeRun(B, c, ['triple', 'stairs', 'double', 'single']);
+    return finish(B, c, 'Hyperwave', { difficulty: 'Harder', stars: 7, bpm: 160, key: 9, seed: 7 });
+  }
+
+  function finalAscent() {
+    const B = builder();
+    let c = 6;
+    B.color(0, '#300010', '#180008');
+    B.p(c + 2, 2, 's3', 4);
+    c = cubeRun(B, c + 4, ['triple', 'double', 'triple', 'pillars', 'triple']);
+    B.color(c, '#600020', '#300010');
+    c = corridor(B, c, 'ship', [[3, 7], [5, 9], [2, 6], [4, 8], [1, 5], [4, 8], [2, 6], [5, 9]], { spacing: 13, lead: 15 });
+    speed(B, c - 6, 2);
+    B.color(c, '#40104a', '#200828');
+    B.p(c + 2, 2, 'mini', 4);
+    c = corridor(B, c + 3, 'wave',
+      [[4, 6.5], [6, 8.5], [3.5, 6], [1.5, 4], [4, 6.5], [6, 8.5], [3.5, 6], [1.5, 4], [3.5, 6]],
+      { spacing: 6, width: 2, lead: 12 });
+    B.p(c - 6, 10, 'big', 20);
+    B.color(c, '#300010', '#180008');
+    c = spider(B, c, 10);
+    c = corridor(B, c, 'swing', [[3, 7], [5, 9], [2, 6], [4, 8], [2, 6], [5, 9]], { spacing: 11, lead: 12 });
+    speed(B, c - 6, 1);
+    B.color(c, '#600020', '#300010');
+    c = robot(B, c);
+    c = ball(B, c, 10);
+    B.p(c + 2, 2, 's2', 4);
+    c = corridor(B, c + 4, 'ufo', [[2, 6], [4, 8], [2, 6], [5, 9], [3, 7], [1, 5]], { spacing: 10, lead: 11 });
+    B.color(c, '#ff1f3b', '#900018');
+    speed(B, c - 6, 3);
+    c = cubeRun(B, c, ['triple', 'double', 'stairs', 'triple', 'single']);
+    return finish(B, c, 'Final Ascent', { difficulty: 'Demon', stars: 10, bpm: 170, key: 6, seed: 8 });
   }
 
   // ------------------------------------------------------ mode practice
@@ -275,7 +399,8 @@
     });
   });
 
-  const LEVELS = [neonSteps(), pulseCircuit(), gravityOverdrive()].concat(TRAINING);
+  const LEVELS = [neonSteps(), pulseCircuit(), gravityOverdrive(),
+    cyberHop(), midnightDrift(), bassReactor(), hyperwave(), finalAscent()].concat(TRAINING);
 
   if (typeof module !== 'undefined' && module.exports) module.exports = LEVELS;
   else root.GDLevels = LEVELS;
