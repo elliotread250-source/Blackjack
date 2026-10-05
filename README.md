@@ -4,7 +4,9 @@ A single-page blackjack table with play-money chips. No accounts, no real money,
 no backend: the whole game runs in the browser and your bankroll lives in
 `localStorage`.
 
-**Play it: https://elliotread250-source.github.io/blackjack**
+**Play it: https://elliotread250-source.github.io/Blackjack/**
+
+**Geometry Dash replica: https://elliotread250-source.github.io/Blackjack/geometry-dash/**
 
 ## Rules on the table
 
