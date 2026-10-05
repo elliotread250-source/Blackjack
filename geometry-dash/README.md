@@ -1,5 +1,7 @@
 # Geometry Dash Replica
 
+**Play it: https://elliotread250-source.github.io/Blackjack/geometry-dash/**
+
 A browser rhythm platformer built to play like Geometry Dash: all eight game
 modes, physics tuned to GD's own constants, and three levels you can beat.
 No build step, no dependencies, no assets to download. The music is
@@ -40,6 +42,10 @@ at any frame rate.
 | Pulse Circuit | Harder | cube, wave, robot, spider, ship (2x) |
 | Gravity Overdrive | Insane | mini cube, swing, upside-down cube, UFO (2x), mini wave, spider, robot, ship (3x) |
 
+There's also a short practice level for each of the eight modes (Game Mode
+Practice on the menu). Each one starts already in that mode, so you can drill
+the ship or the wave without playing through a whole level first.
+
 Every level is proven beatable by `tools/verify.js`, which searches for a
 full run using inputs held for at least 50ms at a time:
 
@@ -48,6 +54,13 @@ node tools/verify.js
 ```
 
 Run it after touching `js/levels.js` or `js/physics.js`.
+
+## Icon customisation
+
+Customize Icon on the menu: 16 primary and 16 secondary colours, 8 cube
+designs (the cube also rides inside the ship and UFO), a colour swap, and a
+glow toggle. A live preview shows all eight modes, and your choice is saved
+in the browser.
 
 ## Controls
 

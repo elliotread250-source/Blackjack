@@ -17,8 +17,6 @@
   const RESPAWN = 1.0;         // seconds between death and the next attempt
   const MAX_DPR = 2;
 
-  const COL1 = '#7dff3a';      // default icon colours
-  const COL2 = '#3af0ff';
 
   const PORTAL_COL = {
     cube: '#3bff6b', ship: '#ff4fd8', ball: '#ff4a3b', ufo: '#ff9e2b', wave: '#2bc0ff',
@@ -38,10 +36,22 @@
     set(k, v) { try { localStorage.setItem('gdr:' + k, JSON.stringify(v)); } catch (e) { /* private mode */ } },
   };
 
+  // -------------------------------------------------------------- skin
+
+  const PALETTE = [
+    '#7dff3a', '#3af0ff', '#ffe23b', '#ff9e2b', '#ff3b3b', '#ff4fd8', '#a04bff', '#3b6bff',
+    '#00c878', '#00a0ff', '#ffc0e0', '#ffffff', '#b0b0b0', '#505050', '#000000', '#8b4a1f',
+  ];
+  const CUBE_STYLES = ['Classic', 'Visor', 'Cross', 'Diamond', 'Split', 'Target', 'Smile', 'Stripes'];
+  const SKIN = Object.assign({ c1: '#7dff3a', c2: '#3af0ff', cube: 0, glow: false },
+    store.get('skin', {}));
+  function saveSkin() { store.set('skin', SKIN); }
+
   // ------------------------------------------------------------ canvas
 
   const canvas = document.getElementById('game');
-  const ctx = canvas.getContext('2d', { alpha: false });
+  const mainCtx = canvas.getContext('2d', { alpha: false });
+  let ctx = mainCtx; // swapped briefly to draw icon previews in the menu
   let W = 0, H = 0, S = 40, VIEW_W = 16, dpr = 1;
 
   function resize() {
@@ -140,6 +150,7 @@
     if (e.code === 'Escape' || e.code === 'KeyP') {
       if (G.screen === 'play') pause();
       else if (G.screen === 'pause') resume();
+      else if (G.screen === 'skin') show('menu');
     } else if (e.code === 'KeyR' && (G.screen === 'play' || G.screen === 'pause')) {
       restart(true);
     } else if (e.code === 'KeyZ' && G.screen === 'play') {
@@ -212,7 +223,7 @@
     for (let i = 0; i < 40; i++) {
       const a = Math.random() * Math.PI * 2, v = 2 + Math.random() * 9;
       spawn(s.x, s.y, Math.cos(a) * v, Math.sin(a) * v, 0.5 + Math.random() * 0.5,
-        0.1 + Math.random() * 0.22, Math.random() < 0.5 ? COL1 : COL2, true);
+        0.1 + Math.random() * 0.22, Math.random() < 0.5 ? SKIN.c1 : SKIN.c2, true);
     }
     G.shake = 0.35;
     G.flash = 1;
@@ -227,7 +238,7 @@
     for (let i = 0; i < 120; i++) {
       const a = Math.random() * Math.PI * 2, v = 3 + Math.random() * 12;
       spawn(G.s.x, G.s.y, Math.cos(a) * v, Math.sin(a) * v + 4, 1 + Math.random(),
-        0.12 + Math.random() * 0.2, ['#ffe23b', COL1, COL2, '#ff4fd8'][i % 4], i % 2 === 0);
+        0.12 + Math.random() * 0.2, ['#ffe23b', SKIN.c1, SKIN.c2, '#ff4fd8'][i % 4], i % 2 === 0);
     }
     const secs = G.time.toFixed(1);
     document.getElementById('completeStats').innerHTML =
@@ -314,7 +325,7 @@
     if (s.grounded && Math.random() < dt * 40 && s.mode !== 'wave') {
       const half = P.size(s) / 2;
       spawn(s.x - half, s.y - half * s.grav, -2 - Math.random() * 2, 1.5 * s.grav * Math.random(),
-        0.3, 0.08 + Math.random() * 0.06, COL1, true);
+        0.3, 0.08 + Math.random() * 0.06, SKIN.c1, true);
     }
     if ((s.mode === 'ship' || s.mode === 'ufo' || s.mode === 'swing') && Math.random() < dt * 60) {
       spawn(s.x - 0.5, s.y - 0.1 * s.grav, -3 - Math.random() * 2, (Math.random() - 0.5) * 2,
@@ -665,11 +676,17 @@
     ctx.translate(sx(px), sy(py));
     ctx.rotate(G.rot);
     if (s.grav === -1 && s.mode !== 'cube' && s.mode !== 'ball') ctx.scale(1, -1);
+    drawIcon(s.mode, size, s);
+    ctx.restore();
+  }
+
+  // Draws one mode's icon centred on the current origin.
+  function drawIcon(mode, size, s) {
     ctx.lineJoin = 'round';
-    const lw = Math.max(2, size * 0.08);
-    ctx.lineWidth = lw;
+    ctx.lineWidth = Math.max(2, size * 0.08);
     ctx.strokeStyle = '#000';
-    switch (s.mode) {
+    if (SKIN.glow) { ctx.shadowColor = SKIN.c2; ctx.shadowBlur = size * 0.45; }
+    switch (mode) {
       case 'cube': drawCube(size); break;
       case 'ship': drawShip(size); break;
       case 'ball': drawBall(size); break;
@@ -679,21 +696,77 @@
       case 'spider': drawSpider(size, s); break;
       case 'swing': drawSwing(size); break;
     }
-    ctx.restore();
+    ctx.shadowBlur = 0;
   }
 
   function drawCube(z, scale = 1) {
     const h = (z * scale) / 2;
-    ctx.fillStyle = COL1;
-    ctx.fillRect(-h, -h, 2 * h, 2 * h);
-    ctx.strokeRect(-h, -h, 2 * h, 2 * h);
-    ctx.fillStyle = COL2;
-    const i = h * 0.5;
-    ctx.fillRect(-i, -i, 2 * i, 2 * i);
-    ctx.strokeRect(-i, -i, 2 * i, 2 * i);
-    ctx.fillStyle = '#000';
-    ctx.fillRect(-i * 0.7, -i * 0.55, i * 0.45, i * 0.5);
-    ctx.fillRect(i * 0.25, -i * 0.55, i * 0.45, i * 0.5);
+    const c1 = SKIN.c1, c2 = SKIN.c2;
+    const lw = ctx.lineWidth;
+    const box = (x, y, w, hh, fill) => {
+      ctx.fillStyle = fill; ctx.fillRect(x, y, w, hh); ctx.strokeRect(x, y, w, hh);
+    };
+    const eyes = (y, w, hh) => {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(-h * 0.45, y, w, hh);
+      ctx.fillRect(h * 0.45 - w, y, w, hh);
+    };
+    box(-h, -h, 2 * h, 2 * h, c1);
+    switch (SKIN.cube) {
+      case 1: // Visor
+        box(-h * 0.8, -h * 0.45, h * 1.6, h * 0.6, c2);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-h * 0.6, -h * 0.25, h * 1.2, h * 0.18);
+        break;
+      case 2: // Cross
+        ctx.fillStyle = c2;
+        ctx.beginPath();
+        ctx.rect(-h * 0.25, -h * 0.75, h * 0.5, h * 1.5);
+        ctx.rect(-h * 0.75, -h * 0.25, h * 1.5, h * 0.5);
+        ctx.fill();
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-h * 0.12, -h * 0.12, h * 0.24, h * 0.24);
+        break;
+      case 3: // Diamond
+        ctx.fillStyle = c2;
+        ctx.beginPath();
+        ctx.moveTo(0, -h * 0.75); ctx.lineTo(h * 0.75, 0); ctx.lineTo(0, h * 0.75); ctx.lineTo(-h * 0.75, 0);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#000';
+        ctx.beginPath(); ctx.arc(0, 0, h * 0.18, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 4: // Split
+        ctx.fillStyle = c2;
+        ctx.beginPath();
+        ctx.moveTo(h, -h); ctx.lineTo(h, h); ctx.lineTo(-h, h);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+        eyes(-h * 0.4, h * 0.25, h * 0.35);
+        break;
+      case 5: // Target
+        box(-h * 0.65, -h * 0.65, h * 1.3, h * 1.3, c2);
+        box(-h * 0.38, -h * 0.38, h * 0.76, h * 0.76, c1);
+        box(-h * 0.14, -h * 0.14, h * 0.28, h * 0.28, c2);
+        break;
+      case 6: // Smile
+        box(-h * 0.7, -h * 0.7, h * 1.4, h * 1.4, c2);
+        eyes(-h * 0.4, h * 0.22, h * 0.32);
+        ctx.lineWidth = Math.max(1.5, h * 0.12);
+        ctx.beginPath(); ctx.arc(0, h * 0.05, h * 0.38, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+        break;
+      case 7: // Stripes
+        ctx.fillStyle = c2;
+        for (let i = 0; i < 3; i++) ctx.fillRect(-h * 0.7 + i * h * 0.55, -h * 0.75, h * 0.3, h * 1.5);
+        eyes(-h * 0.35, h * 0.22, h * 0.3);
+        break;
+      default: { // Classic
+        const i = h * 0.5;
+        box(-i, -i, 2 * i, 2 * i, c2);
+        ctx.fillStyle = '#000';
+        ctx.fillRect(-i * 0.7, -i * 0.55, i * 0.45, i * 0.5);
+        ctx.fillRect(i * 0.25, -i * 0.55, i * 0.45, i * 0.5);
+      }
+    }
+    ctx.lineWidth = lw;
   }
 
   function drawShip(z) {
@@ -701,7 +774,7 @@
     ctx.translate(-z * 0.05, -z * 0.28);
     drawCube(z, 0.5);
     ctx.restore();
-    ctx.fillStyle = COL1;
+    ctx.fillStyle = SKIN.c1;
     ctx.beginPath();
     ctx.moveTo(-z * 0.65, -z * 0.05);
     ctx.lineTo(z * 0.25, -z * 0.05);
@@ -711,7 +784,7 @@
     ctx.lineTo(-z * 0.7, z * 0.15);
     ctx.closePath();
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle = COL2;
+    ctx.fillStyle = SKIN.c2;
     ctx.beginPath();
     ctx.moveTo(-z * 0.35, z * 0.08);
     ctx.lineTo(z * 0.25, z * 0.08);
@@ -723,9 +796,9 @@
 
   function drawBall(z) {
     const r = z / 2;
-    ctx.fillStyle = COL1;
+    ctx.fillStyle = SKIN.c1;
     ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = COL2;
+    ctx.fillStyle = SKIN.c2;
     for (let i = 0; i < 4; i++) {
       ctx.beginPath();
       ctx.moveTo(0, 0);
@@ -744,15 +817,15 @@
     ctx.restore();
     ctx.fillStyle = 'rgba(160,230,255,0.45)';
     ctx.beginPath(); ctx.arc(0, -z * 0.12, z * 0.38, Math.PI, 0); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = COL1;
+    ctx.fillStyle = SKIN.c1;
     ctx.beginPath(); ctx.ellipse(0, z * 0.12, z * 0.62, z * 0.2, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = COL2;
+    ctx.fillStyle = SKIN.c2;
     ctx.beginPath(); ctx.ellipse(0, z * 0.12, z * 0.32, z * 0.08, 0, 0, Math.PI * 2); ctx.fill();
   }
 
   function drawWave(z) {
     const h = z * 0.5;
-    ctx.fillStyle = COL1;
+    ctx.fillStyle = SKIN.c1;
     ctx.beginPath();
     ctx.moveTo(h * 1.1, 0);
     ctx.lineTo(-h * 0.8, -h * 0.8);
@@ -760,7 +833,7 @@
     ctx.lineTo(-h * 0.8, h * 0.8);
     ctx.closePath();
     ctx.fill(); ctx.stroke();
-    ctx.fillStyle = COL2;
+    ctx.fillStyle = SKIN.c2;
     ctx.beginPath();
     ctx.moveTo(h * 0.5, 0);
     ctx.lineTo(-h * 0.3, -h * 0.3);
@@ -773,7 +846,7 @@
     ctx.save();
     ctx.lineJoin = 'miter';
     ctx.lineCap = 'butt';
-    ctx.strokeStyle = COL2;
+    ctx.strokeStyle = SKIN.c2;
     ctx.globalAlpha = 0.9;
     ctx.lineWidth = S * (s.mini ? 0.18 : 0.3);
     ctx.beginPath();
@@ -789,15 +862,15 @@
   function drawRobot(z, s) {
     const t = G.time * 14;
     const step = s.grounded ? Math.sin(t) * z * 0.12 : z * 0.1;
-    ctx.fillStyle = COL2;
+    ctx.fillStyle = SKIN.c2;
     ctx.fillRect(-z * 0.32 + step, z * 0.15, z * 0.2, z * 0.35);
     ctx.strokeRect(-z * 0.32 + step, z * 0.15, z * 0.2, z * 0.35);
     ctx.fillRect(z * 0.1 - step, z * 0.15, z * 0.2, z * 0.35);
     ctx.strokeRect(z * 0.1 - step, z * 0.15, z * 0.2, z * 0.35);
-    ctx.fillStyle = COL1;
+    ctx.fillStyle = SKIN.c1;
     ctx.fillRect(-z * 0.45, -z * 0.5, z * 0.9, z * 0.7);
     ctx.strokeRect(-z * 0.45, -z * 0.5, z * 0.9, z * 0.7);
-    ctx.fillStyle = COL2;
+    ctx.fillStyle = SKIN.c2;
     ctx.fillRect(-z * 0.05, -z * 0.38, z * 0.4, z * 0.22);
     ctx.fillStyle = '#000';
     ctx.fillRect(z * 0.15, -z * 0.34, z * 0.12, z * 0.14);
@@ -813,19 +886,19 @@
       ctx.strokeStyle = '#000';
       ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx + k - z * 0.06, z * 0.5); ctx.stroke();
       ctx.lineWidth = Math.max(1.5, z * 0.06);
-      ctx.strokeStyle = COL2;
+      ctx.strokeStyle = SKIN.c2;
       ctx.stroke();
     }
     ctx.lineWidth = Math.max(2, z * 0.08);
     ctx.strokeStyle = '#000';
-    ctx.fillStyle = COL1;
+    ctx.fillStyle = SKIN.c1;
     ctx.beginPath(); ctx.ellipse(0, -z * 0.1, z * 0.48, z * 0.3, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = COL2;
+    ctx.fillStyle = SKIN.c2;
     ctx.beginPath(); ctx.ellipse(z * 0.18, -z * 0.14, z * 0.16, z * 0.12, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   }
 
   function drawSwing(z) {
-    ctx.fillStyle = COL2;
+    ctx.fillStyle = SKIN.c2;
     for (const d of [-1, 1]) {
       ctx.beginPath();
       ctx.moveTo(-z * 0.2, d * z * 0.2);
@@ -834,9 +907,9 @@
       ctx.closePath();
       ctx.fill(); ctx.stroke();
     }
-    ctx.fillStyle = COL1;
+    ctx.fillStyle = SKIN.c1;
     ctx.beginPath(); ctx.arc(0, 0, z * 0.4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = COL2;
+    ctx.fillStyle = SKIN.c2;
     ctx.beginPath(); ctx.arc(z * 0.08, 0, z * 0.18, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
   }
 
@@ -893,6 +966,7 @@
     const root = $('levels');
     root.innerHTML = '';
     LEVELS.forEach((L, i) => {
+      if (L.training) return;
       const best = store.get('best:' + i, 0), prac = store.get('practice:' + i, 0);
       const card = document.createElement('div');
       card.className = 'card';
@@ -914,6 +988,19 @@
         </div>`;
       root.appendChild(card);
     });
+    const modes = $('modes');
+    modes.innerHTML = '';
+    LEVELS.forEach((L, i) => {
+      if (!L.training) return;
+      const best = store.get('best:' + i, 0);
+      const b = document.createElement('button');
+      b.className = 'mode';
+      b.innerHTML = `<canvas></canvas><div><div class="mn">${L.name.replace(' Practice', '')}</div>` +
+        `<div class="mp">${best === 100 ? 'Complete' : best + '%'}</div></div>`;
+      b.addEventListener('click', () => startLevel(i, false));
+      modes.appendChild(b);
+      iconCanvas(b.querySelector('canvas'), L.mode, 44, 0.62);
+    });
     root.querySelectorAll('[data-play]').forEach((b) =>
       b.addEventListener('click', () => startLevel(+b.dataset.play, false)));
     root.querySelectorAll('[data-practice]').forEach((b) =>
@@ -925,9 +1012,76 @@
     $('menu').classList.toggle('show', screen === 'menu');
     $('pause').classList.toggle('show', screen === 'pause');
     $('complete').classList.toggle('show', screen === 'complete');
+    $('skin').classList.toggle('show', screen === 'skin');
     $('hud').classList.toggle('show', screen === 'play');
     $('cpbtns').classList.toggle('show', screen === 'play' && G.practice);
     if (screen === 'menu') { G.s = null; buildMenu(); }
+  }
+
+  // Renders a mode icon into a small DOM canvas using the game's own drawing code.
+  function iconCanvas(cv, mode, cssSize, fill) {
+    const r = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+    cv.width = cssSize * r; cv.height = cssSize * r;
+    const c = cv.getContext('2d');
+    c.setTransform(r, 0, 0, r, 0, 0);
+    c.clearRect(0, 0, cssSize, cssSize);
+    c.translate(cssSize / 2, cssSize / 2);
+    withCtx(c, () => drawIcon(mode, cssSize * fill, { grounded: true }));
+  }
+
+  function withCtx(c, fn) {
+    ctx = c;
+    try { fn(); } finally { ctx = mainCtx; }
+  }
+
+  function renderSkinPreview() {
+    const cv = $('skinPreview');
+    const r = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+    const w = cv.clientWidth, h = cv.clientHeight;
+    cv.width = w * r; cv.height = h * r;
+    const c = cv.getContext('2d');
+    c.setTransform(r, 0, 0, r, 0, 0);
+    const cols = w < 380 ? 4 : 8, rows = cols === 4 ? 2 : 1;
+    const cell = Math.min(w / cols, h / rows);
+    const ox = (w - cell * cols) / 2, oy = (h - cell * rows) / 2;
+    P.MODES.forEach((m, i) => {
+      c.save();
+      c.translate(ox + (i % cols + 0.5) * cell, oy + (Math.floor(i / cols) + 0.5) * cell);
+      withCtx(c, () => drawIcon(m, cell * 0.55, { grounded: true }));
+      c.restore();
+    });
+  }
+
+  function buildSkin() {
+    for (const [id, key] of [['sw1', 'c1'], ['sw2', 'c2']]) {
+      const root = $(id);
+      root.innerHTML = '';
+      for (const col of PALETTE) {
+        const b = document.createElement('button');
+        b.style.background = col;
+        b.setAttribute('aria-label', `${key === 'c1' ? 'Primary' : 'Secondary'} ${col}`);
+        if (SKIN[key] === col) b.className = 'on';
+        b.addEventListener('click', () => { SKIN[key] = col; saveSkin(); buildSkin(); });
+        root.appendChild(b);
+      }
+    }
+    const styles = $('cubeStyles');
+    styles.innerHTML = '';
+    CUBE_STYLES.forEach((name, i) => {
+      const b = document.createElement('button');
+      b.title = name;
+      b.setAttribute('aria-label', `${name} cube`);
+      if (SKIN.cube === i) b.className = 'on';
+      b.innerHTML = '<canvas></canvas>';
+      b.addEventListener('click', () => { SKIN.cube = i; saveSkin(); buildSkin(); });
+      styles.appendChild(b);
+      const prev = SKIN.cube;
+      SKIN.cube = i;
+      iconCanvas(b.querySelector('canvas'), 'cube', 48, 0.7);
+      SKIN.cube = prev;
+    });
+    $('glowBtn').textContent = `Glow: ${SKIN.glow ? 'On' : 'Off'}`;
+    renderSkinPreview();
   }
 
   function pause() {
@@ -966,6 +1120,14 @@
   });
   $('menuBtn').addEventListener('click', () => { if (AUDIO.ctx) AUDIO.ctx.resume(); AUDIO.stop(); show('menu'); });
   $('menuBtn2').addEventListener('click', () => show('menu'));
+  $('skinBtn').addEventListener('click', () => { show('skin'); buildSkin(); });
+  $('skinDone').addEventListener('click', () => show('menu'));
+  $('swapBtn').addEventListener('click', () => {
+    [SKIN.c1, SKIN.c2] = [SKIN.c2, SKIN.c1];
+    saveSkin(); buildSkin();
+  });
+  $('glowBtn').addEventListener('click', () => { SKIN.glow = !SKIN.glow; saveSkin(); buildSkin(); });
+  window.addEventListener('resize', () => { if (G.screen === 'skin') renderSkinPreview(); });
   $('againBtn').addEventListener('click', () => { G.attempts = 0; G.jumps = 0; G.time = 0; restart(true); });
 
   let musicOn = store.get('music', true);
