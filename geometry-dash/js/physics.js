@@ -131,6 +131,7 @@
       grounded: true, held: false, buffer: false,
       boost: 0, bounds: boundsFor(mode, null), used: [], coins: [], dash: false,
       dead: false, won: false, t: 0,
+      lit: [], tp: {}, tpDist: 0, auto: null,
     };
   }
 
@@ -138,6 +139,8 @@
     const c = Object.assign({}, s);
     c.used = s.used.slice();
     c.coins = s.coins.slice();
+    c.lit = s.lit.slice();
+    c.tp = Object.assign({}, s.tp);
     c.bounds = s.bounds && { floor: s.bounds.floor, ceil: s.bounds.ceil };
     return c;
   }
@@ -179,6 +182,10 @@
         s.grounded = false;
       }
       s.bounds = boundsFor(k, p);
+    } else if (k === 'auto') {
+      // Scripted flight (Dash's "1" turning into a flying orb): the icon
+      // follows a set path to x1, ignoring input, then becomes p.next.
+      if (!s.auto) s.auto = { x0: p.x, x1: p.x1, y0: s.y, y1: p.y1, amp: p.amp || 0, waves: p.waves || 1, next: p.next || 'cube' };
     } else if (k === 'grav+') {
       if (s.grav !== -1) { s.grav = -1; s.vy *= 0.5; s.grounded = false; }
     } else if (k === 'grav-') {
@@ -243,6 +250,19 @@
     if (s.dead || s.won) return;
     s.t += DT;
     s.teleported = false;
+    if (s.auto) {
+      const a = s.auto;
+      s.x += SPEEDS[s.speed] * DT;
+      const k = Math.min(1, (s.x - a.x0) / (a.x1 - a.x0));
+      s.y = a.y0 + (a.y1 - a.y0) * (k * k * (3 - 2 * k)) + a.amp * Math.sin(k * Math.PI * 2 * a.waves);
+      s.vy = 0; s.held = held;
+      if (s.x >= a.x1) {
+        s.auto = null; s.mode = a.next; s.bounds = boundsFor(a.next, null); s.grounded = false; s.grav = 1;
+      }
+      triggers(s, L);
+      if (s.x >= L.length) s.won = true;
+      return;
+    }
     const press = held && !s.held;
     s.held = held;
     if (press) s.buffer = true;
@@ -390,7 +410,21 @@
       if (o.t === 'p') {
         if (overlap(s.x - half, s.y - half, s.x + half, s.y + half,
           o.x, o.y - o.h / 2, o.x + 1, o.y + o.h / 2)) applyPortal(s, o);
+      } else if (o.t === 'sw') {
+        // Switch block: touch it to light it (Dash's coin 1 puzzle).
+        if (s.lit.indexOf(o.id) === -1 && overlap(s.x - half, s.y - half, s.x + half, s.y + half, o.x, o.y, o.x + o.w, o.y + o.h)) s.lit.push(o.id);
+      } else if (o.t === 'tp') {
+        // Loop teleport: sends the icon back to tx, n times, then lets it on.
+        const used = s.tp[o.id] || 0;
+        if (used < o.n && overlap(s.x - half, s.y - half, s.x + half, s.y + half, o.x, o.y - o.h / 2, o.x + 1, o.y + o.h / 2)) {
+          s.tp[o.id] = used + 1;
+          s.tpDist += s.x - o.tx;
+          s.x = o.tx;
+          s.teleported = true;
+          return false;
+        }
       } else if (o.t === 'coin') {
+        if (o.lock && lit(s, L, o.lock) < o.lockN) return; // still sunk: switches not all lit
         if (s.coins.indexOf(o.id) === -1 &&
           overlap(s.x - half, s.y - half, s.x + half, s.y + half, o.x - 0.15, o.y - 0.15, o.x + 1.15, o.y + 1.15)) s.coins.push(o.id);
       } else if (o.t === 'pad') {
@@ -402,6 +436,13 @@
         }
       }
     });
+  }
+
+  // How many switches of a group are lit.
+  function lit(s, L, group) {
+    let n = 0;
+    for (const id of s.lit) if (L.objects[id].g === group) n++;
+    return n;
   }
 
   function hazards(s, L, half) {
@@ -425,7 +466,7 @@
 
   const api = {
     TPS, DT, G, JUMP, SPEEDS, MODES, MODE_CFG, ORB, PAD,
-    compile, create, clone, step, size, near, hazardBox,
+    compile, create, clone, step, size, near, hazardBox, lit,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.GDPhysics = api;

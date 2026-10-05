@@ -29,7 +29,8 @@ function stepOf(def) { return def.verifyStep || 12; }
 
 function key(s, i) {
   return [i, Math.round(s.y * 20), Math.round(s.vy * 2), s.grav, s.mode, s.mini,
-    s.grounded ? 1 : 0, s.held ? 1 : 0, s.used.length, s.speed, s.dash ? 1 : 0].join('|');
+    s.grounded ? 1 : 0, s.held ? 1 : 0, s.used.length, s.speed, s.dash ? 1 : 0,
+    s.lit.length, JSON.stringify(s.tp), s.auto ? 1 : 0].join('|');
 }
 
 // need: how many coins the winning run must collect. coinFront tracks how

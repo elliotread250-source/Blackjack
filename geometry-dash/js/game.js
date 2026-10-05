@@ -12,7 +12,9 @@
   const AUDIO = window.GDAudio;
   const FACES = window.GDFaces;
   const LEVELS = window.GDLevels.map(P.compile);
-  for (const L of LEVELS) L.coinIds = L.objects.filter((o) => o.t === 'coin').map((o) => o.id);
+  // Loop teleports make a level longer than its x length (Dash's 3-2-1 room).
+  const tpExtra = (L) => L.objects.reduce((n, o) => n + (o.t === 'tp' ? (o.x - o.tx) * o.n : 0), 0);
+  for (const L of LEVELS) { L.coinIds = L.objects.filter((o) => o.t === 'coin').map((o) => o.id); L.tpExtra = tpExtra(L); }
 
   const VIEW_H = 10.67;        // blocks visible vertically, same as GD's 320 units
   const PLAYER_SCREEN_X = 0.3; // fraction of screen width the player sits at (landscape)
@@ -489,7 +491,9 @@
     return k >= 0 && k + 1 < MAIN.length ? MAIN[k + 1] : null;
   }
 
-  function progress() { return Math.max(0, Math.min(100, Math.floor((G.s.x / G.L.length) * 100))); }
+  function progress() {
+    return Math.max(0, Math.min(100, Math.floor(((G.s.x + (G.s.tpDist || 0)) / (G.L.length + (G.L.tpExtra || 0))) * 100)));
+  }
 
   function saveBest(pct) {
     const k = (G.practice ? 'practice:' : 'best:') + slotOf(G.idx);
@@ -557,8 +561,14 @@
       P.step(s, G.L, held);
       G.acc -= P.DT;
       if (s.teleported) {
-        // GD-style spider streak from where it was to where it landed.
-        G.streaks.push({ x: s.x, y0: G.prevY, y1: s.y, w: P.size(s), life: 0.3 });
+        if (s.mode === 'spider' && Math.abs(s.x - G.prevX) < 1) {
+          // GD-style spider streak from where it was to where it landed.
+          G.streaks.push({ x: s.x, y0: G.prevY, y1: s.y, w: P.size(s), life: 0.3 });
+        } else {
+          // Loop teleport: flash and clear trails so nothing streaks across.
+          G.trail.length = 0; G.ptrail.length = 0; G.flash = 0.6;
+          AUDIO.tick();
+        }
         G.prevX = s.x; G.prevY = s.y;
       }
       if (s.dead) { die(); break; }
@@ -696,6 +706,16 @@
     if (G.fin) G.fin.t += dt;
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    if (L.camFx) {
+      // Camera tilts and zooms (Dash): around the screen centre, eased in
+      // over 6 blocks at each end of the section.
+      const fx = camFxAt(L, px);
+      if (fx.rot || fx.zoom !== 1) {
+        ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+        const cover = 1 + Math.abs(Math.sin(fx.rot)) * (W / H) * 0.6;
+        ctx.translate(W / 2, H / 2); ctx.rotate(fx.rot); ctx.scale(fx.zoom * cover, fx.zoom * cover); ctx.translate(-W / 2, -H / 2);
+      }
+    }
     if (G.shake > 0) {
       const k = G.shake * 14;
       ctx.translate((Math.random() - 0.5) * k, (Math.random() - 0.5) * k);
@@ -725,6 +745,17 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawFinishBanner();
     drawHud();
+  }
+
+  function camFxAt(L, x) {
+    let rot = 0, zoom = 1;
+    for (const [x0, x1, r, z] of L.camFx) {
+      if (x < x0 - 6 || x > x1 + 6) continue;
+      const k = Math.max(0, Math.min(1, (x - x0 + 6) / 6, (x1 + 6 - x) / 6));
+      const deg = r === 'sway' ? Math.sin(G.t * 0.9) * 7 : r;
+      rot += (deg * Math.PI / 180) * k; zoom += (z - 1) * k;
+    }
+    return { rot, zoom };
   }
 
   function drawBackground(bg, gr, pulse) {
@@ -804,7 +835,7 @@
   // countdown, a grey flash, neon frames and an end altar. 'back' layers go
   // behind the level, 'front' ones over the ground. Each is clipped to its
   // section, so scenery changes exactly where the section does.
-  const BACK = new Set(['ruins', 'crushers', 'mountains', 'orbChain', 'chevrons', 'countdown', 'neon']);
+  const BACK = new Set(['dark', 'ruins', 'crushers', 'mountains', 'orbChain', 'chevrons', 'countdown', 'neon']);
   function drawThemes(L, layer, pulse) {
     if (!detail() && layer === 'back') return;
     for (const th of L.themes) {
@@ -858,6 +889,15 @@
   }
   const THEME = {
     lava() { liquid('#ffd23b', '#ff5a00', 'rgba(255,90,0,0.35)'); },
+    // The opening's darkness, lifting where the red ring fires you up.
+    dark(x0) {
+      const edge = sx(x0 + 12);
+      if (edge <= 0) return;
+      const g = ctx.createLinearGradient(edge - S * 1.5, 0, edge + S * 2.5, 0);
+      g.addColorStop(0, 'rgba(8,0,0,0.88)'); g.addColorStop(1, 'rgba(8,0,0,0)');
+      ctx.fillStyle = 'rgba(8,0,0,0.88)'; ctx.fillRect(0, 0, Math.max(0, edge - S * 1.5), H);
+      ctx.fillStyle = g; ctx.fillRect(edge - S * 1.5, 0, S * 4, H);
+    },
     acid() { liquid('#d8ff5a', '#4bdc1e', 'rgba(90,255,40,0.3)'); },
     // Golden ruined pillars in the middle distance
     ruins() {
@@ -987,8 +1027,13 @@
     // The 3-2-1 countdown room: big numbers fading through the section
     countdown(x0, x1) {
       const len = x1 - x0, mid = (G.camX + VIEW_W / 2 - x0) / len;
-      const n = mid < 1 / 3 ? 3 : mid < 2 / 3 ? 2 : 1;
-      const k = (mid * 3) % 1;
+      let n = mid < 1 / 3 ? 3 : mid < 2 / 3 ? 2 : 1, k = (mid * 3) % 1;
+      if (G.s) {
+        // Which lap of the loop room you're on
+        let laps = 0;
+        for (const id in G.s.tp) laps += G.s.tp[id];
+        n = 3 - laps; k = Math.max(0, Math.min(1, mid));
+      }
       ctx.globalAlpha = 0.25 + 0.25 * Math.sin(k * Math.PI);
       ctx.font = `${Math.round(H * 0.5)}px 'Lilita One', system-ui, sans-serif`;
       ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
@@ -1057,6 +1102,17 @@
       }
       ctx.fillStyle = `rgba(255,230,120,${0.7 + pulse * 0.3})`; ctx.fillRect(x, y, w, Math.max(2, S * 0.07));
       ctx.strokeStyle = '#2a0400'; ctx.lineWidth = Math.max(1.5, S * 0.05); ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+    } else if (sk === 'gold') {
+      // Fluted golden pillar with a capital
+      const g = ctx.createLinearGradient(x, 0, x + w, 0);
+      g.addColorStop(0, '#a05a00'); g.addColorStop(0.45, '#ffe066'); g.addColorStop(1, '#a05a00');
+      ctx.fillStyle = g; ctx.fillRect(x + w * 0.08, y, w * 0.84, h);
+      ctx.fillStyle = 'rgba(120,60,0,0.45)';
+      for (let i = 1; i < 4; i++) ctx.fillRect(x + w * 0.08 + i * w * 0.21, y + S * 0.3, Math.max(2, S * 0.05), h - S * 0.3);
+      ctx.fillStyle = '#ffd23b'; ctx.fillRect(x - 2, y, w + 4, S * 0.28);
+      ctx.strokeStyle = '#3a1a00'; ctx.lineWidth = Math.max(1.5, S * 0.05);
+      ctx.strokeRect(x - 2, y, w + 4, S * 0.28); ctx.strokeRect(x + w * 0.08, y + S * 0.28, w * 0.84, h - S * 0.28);
+      ctx.fillStyle = `rgba(255,240,160,${0.3 + pulse * 0.4})`; ctx.fillRect(x - 2, y - 2, w + 4, 3);
     } else if (sk === 'brick') {
       ctx.fillStyle = '#140c34'; ctx.fillRect(x, y, w, h);
       ctx.strokeStyle = 'rgba(58,240,255,0.35)'; ctx.lineWidth = 1;
@@ -1139,7 +1195,7 @@
     const stamp = ++drawStamp;
     const x0 = Math.max(0, Math.floor(G.camX) - 1);
     const x1 = Math.min(L.buckets.length - 1, Math.ceil(G.camX + VIEW_W) + 1);
-    const blocks = [], others = [];
+    const blocks = [], others = [], glowOrbs = [];
     for (let i = x0; i <= x1; i++) {
       for (const o of L.buckets[i]) {
         if (o._d === stamp) continue;
@@ -1159,9 +1215,12 @@
       if (o.t === 's' || o.t === 'ss') drawSpike(o, top);
       else if (o.t === 'pad') drawPad(o, pulse);
       else if (o.t === 'orb') drawOrb(o, pulse);
-      else if (o.t === 'saw') drawSaw(o, col);
+      else if (o.t === 'saw') { if (o.glow) glowOrbs.push(o); else drawSaw(o, col); }
       else if (o.t === 'coin') drawCoin(o);
+      else if (o.t === 'sw') drawSwitch(o, pulse);
+      else if (o.t === 'tp') drawTeleport(o);
     }
+    if (glowOrbs.length) drawGlowOrbs(glowOrbs, pulse);
     for (const o of others) if (o.t === 'fake') drawFake(o, top, edge);
     if (detail()) drawSigns(others, pulse);
     for (const o of others) if (o.t === 'p') drawPortal(o, pulse, false);
@@ -1312,10 +1371,83 @@
     ctx.restore();
   }
 
+  // Dash's orb chains: glowing hazard orbs joined by crackling lightning.
+  function drawGlowOrbs(list, pulse) {
+    list.sort((a, b) => a.x - b.x);
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const rows = {};
+    for (const o of list) (rows[o.glow] = rows[o.glow] || []).push(o);
+    for (const key in rows) {
+      const fire = key.startsWith('fire'), row = rows[key];
+      ctx.strokeStyle = fire ? '#ffcf5a' : '#c8f4ff'; ctx.lineWidth = Math.max(1.5, S * 0.05);
+      ctx.beginPath();
+      for (let i = 1; i < row.length; i++) {
+        const a = row[i - 1], b = row[i];
+        if (b.x - a.x > 2) continue;
+        const ax = sx(a.x + a.r), ay = sy(a.y + a.r), bx = sx(b.x + b.r), by = sy(b.y + b.r);
+        ctx.moveTo(ax, ay);
+        for (let j = 1; j < 4; j++) ctx.lineTo(ax + (bx - ax) * j / 4 + (Math.random() - 0.5) * S * 0.1, ay + (by - ay) * j / 4 + (Math.random() - 0.5) * S * 0.25);
+        ctx.lineTo(bx, by);
+      }
+      ctx.stroke();
+      for (const o of row) {
+        const x = sx(o.x + o.r), y = sy(o.y + o.r), R = o.r * S * (1.25 + pulse * 0.2);
+        if (x < -R * 2 || x > W + R * 2) continue;
+        const g = ctx.createRadialGradient(x, y, 0, x, y, R * 1.7);
+        g.addColorStop(0, '#ffffff'); g.addColorStop(0.3, fire ? '#ffe066' : '#bff6ff'); g.addColorStop(0.55, fire ? '#ff7a1a' : '#3ac8ff'); g.addColorStop(1, 'rgba(0,0,0,0)');
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(x, y, R * 1.7, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  // Switch block (Dash's coin 1 puzzle): red-and-gold until you bump it, then green.
+  function drawSwitch(o, pulse) {
+    const x = sx(o.x), y = sy(o.y + o.h), w = o.w * S, h = o.h * S;
+    if (x > W || x + w < 0) return;
+    const on = G.s && G.s.lit.indexOf(o.id) !== -1;
+    ctx.strokeStyle = '#1a0a0a'; ctx.lineWidth = Math.max(2, S * 0.05);
+    ctx.beginPath(); ctx.moveTo(x + w / 2, y); ctx.lineTo(x + w / 2, y - S * 3); ctx.stroke();
+    ctx.save();
+    if (on) { ctx.shadowColor = '#5aff3b'; ctx.shadowBlur = S * (0.5 + pulse * 0.3); }
+    ctx.fillStyle = on ? '#3bdc1e' : (o.id % 2 ? '#d02020' : '#ffb000');
+    ctx.fillRect(x, y, w, h);
+    ctx.restore();
+    ctx.strokeStyle = '#000'; ctx.lineWidth = Math.max(2, S * 0.06); ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.45)'; ctx.fillRect(x + w * 0.25, y + h * 0.25, w * 0.5, h * 0.5);
+    ctx.fillStyle = on ? '#c0ff9a' : '#ffe9a0'; ctx.fillRect(x + w * 0.35, y + h * 0.35, w * 0.3, h * 0.3);
+  }
+
+  // Loop teleport: a blue ring that swirls you back to the room's start.
+  function drawTeleport(o) {
+    const x = sx(o.x + 0.5), y = sy(o.y), h = o.h * S;
+    if (x < -S * 2 || x > W + S * 2) return;
+    const left = G.s ? o.n - (G.s.tp[o.id] || 0) : o.n;
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 3; i++) {
+      ctx.strokeStyle = left > 0 ? `rgba(80,200,255,${0.8 - i * 0.2})` : 'rgba(255,170,60,0.5)';
+      ctx.lineWidth = Math.max(2, S * 0.12);
+      ctx.beginPath(); ctx.ellipse(x, y, S * (0.35 + i * 0.12), h / 2 - i * S * 0.2, 0, G.t * (3 + i), G.t * (3 + i) + Math.PI * 1.5); ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   // Secret coin: spinning gold disc with a star. Taken this run = gone;
   // collected on an earlier clear = ghostly.
   function drawCoin(o) {
     if (G.s && G.s.coins.indexOf(o.id) !== -1) return;
+    if (o.lock && G.s && P.lit(G.s, G.L, o.lock) < o.lockN) {
+      // Still sunk in the lava: just the rim showing, rising as switches light.
+      const k = P.lit(G.s, G.L, o.lock) / o.lockN;
+      ctx.save(); ctx.globalAlpha = 0.35 + k * 0.3;
+      ctx.fillStyle = '#ffc61a'; ctx.strokeStyle = '#000'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(sx(o.x + 0.5), sy(o.y - 0.4 + k * 0.5), S * 0.4, Math.PI, 0); ctx.fill(); ctx.stroke();
+      ctx.restore();
+      return;
+    }
     const x = sx(o.x + 0.5), y = sy(o.y + 0.5) + Math.sin(G.t * 3 + o.id) * S * 0.06;
     if (x < -S || x > W + S) return;
     const owned = !!(G.s && G.L.coinIds) && (G.ownedCoins || []).indexOf(G.L.coinIds.indexOf(o.id)) !== -1;
@@ -1829,6 +1961,17 @@
   // ------------------------------------------------------------ player
 
   function drawPlayer(s, px, py, scale = 1) {
+    if (s.auto) {
+      // The "1" flying as a glowing orb, with a sparkling tail.
+      const x = sx(px), y = sy(py), R = S * 0.45;
+      if (Math.random() < 0.8) spawn(px - 0.2, py + (Math.random() - 0.5) * 0.4, -3 - Math.random() * 3, (Math.random() - 0.5) * 2, 0.4, 0.1, Math.random() < 0.5 ? '#bff6ff' : '#3ac8ff', true);
+      ctx.save(); ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(x, y, 0, x, y, R * 2.4);
+      g.addColorStop(0, '#ffffff'); g.addColorStop(0.3, '#7ee8ff'); g.addColorStop(0.6, '#1e8cff'); g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, R * 2.4, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      return;
+    }
     const size = (s.mini ? 0.6 : 1) * S * scale;
     if (s.mode === 'wave' && G.trail.length >= 4) drawWaveTrail(s);
     ctx.save();
@@ -2899,6 +3042,7 @@
   function startCustom(def, from) {
     const L = P.compile(def);
     L.coinIds = L.objects.filter((o) => o.t === 'coin').map((o) => o.id);
+    L.tpExtra = tpExtra(L);
     goFullscreen();
     G.idx = -1; G.L = L; G.practice = false; G.returnTo = from;
     G.checkpoints = []; G.attempts = 1; G.jumps = 0; G.time = 0;

@@ -28,8 +28,11 @@
       orb: (x, y, c) => o.push({ t: 'orb', x, y, c }),
       p: (x, y, k, h = 3, b) => o.push({ t: 'p', x, y, k, h, b }),
       // Saw blade centred on (cx, cy); the box is its bounding square.
-      saw: (cx, cy, r, chain = false) => o.push({ t: 'saw', x: cx - r, y: cy - r, w: 2 * r, h: 2 * r, r, chain }),
-      coin: (x, y) => o.push({ t: 'coin', x, y }),
+      saw: (cx, cy, r, chain = false, glow) => o.push(Object.assign({ t: 'saw', x: cx - r, y: cy - r, w: 2 * r, h: 2 * r, r, chain }, glow ? { glow } : {})),
+      // Switch block (touch to light) and loop teleport, for Dash.
+      sw: (x, y, w, h, g) => o.push({ t: 'sw', x, y, w, h, g }),
+      tp: (x, y, h, tx, n) => o.push({ t: 'tp', x, y, h, tx, n }),
+      coin: (x, y, lock, lockN) => o.push(Object.assign({ t: 'coin', x, y }, lock ? { lock, lockN } : {})),
       // Fake wall: drawn like a block, solid to the eye only.
       fake: (x, y, w, h) => o.push({ t: 'fake', x, y, w, h }),
       color: (x, bg, gr) => colors.push({ x, bg, gr }),
@@ -454,7 +457,7 @@
   // ------------------------------------------------- upside-down cube
 
   function flipSec(B, c, r, p) {
-    const ceil = 6, L = 56 + Math.floor(r() * 20), sf = SPEED_RATIO[p.sp];
+    const ceil = 6, L0 = 56 + Math.floor(r() * 20), L = p.len || L0, sf = SPEED_RATIO[p.sp];
     B.b(c + 2, ceil, L, 1);
     // Orb sections (Dash) flip with a blue pad instead of a portal.
     if (p.orbs) B.pad(c + 6, 0, 'blue'); else B.p(c + 6, 2, 'grav+', 4);
@@ -484,7 +487,135 @@
     return c + L + 4;
   }
 
+  // ------------------------------------------------------- Dash's setups
+
+  // Swing between two chains of glowing orbs (circle hazards) riding a
+  // smooth wave. The secret coin hides above a gap in the top chain at a
+  // dip in the wave.
+  function chainSec(B, c, r, p, mode) {
+    const top = 10, sf = SPEED_RATIO[p.sp];
+    const h = tbl([6, 5.6, 5.2, 4.8, 4.4], p.d), rad = 0.45, edge = h / 2 + rad;
+    const R = 0.7 / sf, lam = (18 + r() * 8) * sf;
+    const A = Math.max(0, Math.min(top / 2 - edge - 0.7, R * lam / (2 * Math.PI) * 0.55));
+    const len = Math.round((p.n || 8) * 9 * sf), x0 = c + 8, x1 = x0 + len, ph = r() * 6;
+    const midAt = (x) => top / 2 + A * Math.sin(((x - x0) / lam) * 2 * Math.PI + ph) * Math.min(1, (x - x0) / 10);
+    B.p(c, 2, mode, 4);
+    let secret = -1;
+    if (p.secrets) {
+      const want = x0 + len * p.secrets[0];
+      secret = want;
+      for (let x = want - lam / 2; x < want + lam / 2; x += 0.5) if (midAt(x) < midAt(secret)) secret = x;
+    }
+    const glow = p.chain || 'blue';
+    for (let x = x0; x < x1; x += 1.6) {
+      const m = midAt(x);
+      if (!(secret > 0 && Math.abs(x - secret) < 3.4)) B.saw(x, m + edge, rad, false, glow + ':top');
+      B.saw(x, m - edge, rad, false, glow + ':bot');
+    }
+    if (secret > 0) B.coin(secret - 0.5, Math.min(top - 2.2, midAt(secret) + edge + 1.1));
+    for (let xx = c + 6; xx < x1 + 3; xx++) { B.sf(xx, 0, 1); B.sf(xx, top - 1, -1); }
+    B.p(x1 + 3, top / 2, 'cube', top);
+    return x1 + 10;
+  }
+
+  // The 14% puzzle: bump the hanging blocks as you jump the spikes under
+  // them. Light every one and the coin at the end rises out of the lava.
+  function switchSec(B, c, r, p) {
+    const sf = SPEED_RATIO[p.sp], g = 'sw' + c, n = p.switches || 4;
+    let x = c + 6;
+    for (let i = 0; i < n; i++) {
+      B.spikes(x, 0, 1 + (i % 2));
+      B.sw(x, 2.5, 1, 0.8, g);
+      x += Math.round(6 * sf) + int(r, 0, 2);
+    }
+    B.coin(x, 0.15, g, n);
+    return x + 8;
+  }
+
+  // The 3-2-1 room: a short run under a low ceiling that you go round three
+  // times; a teleport at the end sends you back to the start twice.
+  function loopSec(B, c, r, p) {
+    const sf = SPEED_RATIO[p.sp], len = Math.round((p.len || 24) * sf), x0 = c + 4;
+    const q = { d: p.d, sp: p.sp, mini: false, maxSp: 2 };
+    B.b(x0 - 2, 6.5, len + 4, 1.5);
+    let x = x0 + 4;
+    while (x < x0 + len - 7) {
+      x = FAM[pick(r, ['spikes', 'blockSpike', 'step', 'spikes'])](B, x, r, q);
+      x += Math.round((4 + r() * 2) * sf);
+    }
+    B.tp(x0 + len, 3, 6, x0, 2);
+    return x0 + len + 6;
+  }
+
+  // The "1" turns into a flying orb: a scripted flight, then on to the ship.
+  function autoSec(B, c, r, p) {
+    const len = Math.round(26 * SPEED_RATIO[p.sp]);
+    B.o.push({ t: 'p', x: c + 2, y: 6, k: 'auto', h: 14, x1: c + 2 + len, y1: 4, amp: 2.5, waves: 1.5, next: 'cube' });
+    return c + 2 + len + 3;
+  }
+
+  // Ship through a curving tunnel of spike-lined walls.
+  function curveSec(B, c, r, p, mode) {
+    const top = 10, sf = SPEED_RATIO[p.sp];
+    const h = tbl([5, 4.6, 4.2, 3.9, 3.6], p.d), R = 0.7 / sf, lam = (20 + r() * 10) * sf;
+    const A = Math.max(0, Math.min(top / 2 - h / 2 - 0.8, R * lam / (2 * Math.PI) * 0.5));
+    const len = Math.round((p.n || 8) * 7 * sf), x0 = c + 9, ph = r() * 6;
+    B.p(c, 2, mode, 4);
+    for (let x = x0; x < x0 + len; x++) {
+      const m = top / 2 + A * Math.sin(((x - x0) / lam) * 2 * Math.PI + ph) * Math.min(1, (x - x0) / 10);
+      const lo = Math.round((m - h / 2) * 4) / 4, hi = lo + h;
+      B.b(x, 0, 1, lo); B.b(x, hi, 1, top - hi);
+      B.s(x, lo); B.s(x, hi - 1, -1);
+    }
+    B.p(x0 + len + 3, top / 2, 'cube', top);
+    return x0 + len + 11;
+  }
+
+  // Wave through a zigzag corridor of spike teeth, 45 degrees each way.
+  function zigSec(B, c, r, p) {
+    const top = 10, h = tbl([4.2, 3.9, 3.6, 3.3, 3.1], p.d);
+    B.p(c, 2, 'wave', 4);
+    let x = c + 8, m = top / 2, dir = r() < 0.5 ? 1 : -1;
+    const end = x + Math.round((p.n || 6) * 6 * SPEED_RATIO[p.sp]);
+    while (x < end) {
+      const run = int(r, 2, 4);
+      for (let j = 0; j < run && x < end; j++, x++) {
+        if (m + dir < h / 2 + 0.8 || m + dir > top - h / 2 - 0.8) dir = -dir;
+        m += dir;
+        const lo = m - h / 2, hi = m + h / 2;
+        B.b(x, 0, 1, lo); B.b(x, hi, 1, top - hi);
+        B.s(x, lo); B.s(x, hi - 1, -1);
+      }
+      dir = -dir;
+    }
+    B.p(x + 3, top / 2, 'cube', top);
+    return x + 11;
+  }
+
+  // Dash's opening: a dark run to a red jump ring that launches you up
+  // onto golden pillars, hopping them over lava, with a pair of blue orbs
+  // (flip up, flip back) as a shortcut over the widest pit.
+  function openSec(B, c, r, p) {
+    let x = c + 12;
+    B.orb(x, 0.5, 'red');
+    B.spikes(x + 1, 0, 5);
+    x += 6;
+    const hs = [3, 4, 3, 2, 3];
+    hs.forEach((h, i) => {
+      B.b(x, 0, 2, h);
+      const gap = i === 2 ? 5 : int(r, 3, 4);
+      B.spikes(x + 2, 0, gap);
+      if (i === 2) { B.orb(x + 3, h + 2.2, 'blue'); B.orb(x + 5, h + 4.2, 'blue'); }
+      x += 2 + gap;
+    });
+    return x + 5;
+  }
+
   const GEN = {
+    open: openSec,
+    chain: (B, c, r, p) => chainSec(B, c, r, p, 'swing'),
+    switches: switchSec, loop: loopSec, auto: autoSec, zig: zigSec,
+    curve: (B, c, r, p) => curveSec(B, c, r, p, 'ship'),
     cube: cubeSec, robot: robotSec, flip: flipSec,
     ship: (B, c, r, p) => flySec(B, c, r, p, 'ship'),
     ufo: (B, c, r, p) => flySec(B, c, r, p, 'ufo'),
@@ -512,7 +643,7 @@
     const sections = [];
     const n = def.secs.length;
     // Spread the level's secret coins over its flying sections.
-    const fly = def.secs.map(([k], i) => i).filter((i) => FLY[def.secs[i][0]]);
+    const fly = def.secs.map(([k], i) => i).filter((i) => FLY[def.secs[i][0]] || def.secs[i][0] === 'chain');
     const want = def.secs.length && def.meta && def.meta.training ? 1 : 3;
     const secrets = {};
     if (def.coinSecs) {
@@ -550,6 +681,8 @@
       name: def.name, objects: B.o, colors: B.colors, length: c + 14, sections,
       // Render-only scenery per section: [x0, x1, 'theme', 'theme:arg', ...]
       themes: def.themes ? def.themes.map(([i, list]) => [sections[i][0], sections[i][1]].concat(list.split(','))) : null,
+      // Camera moves per section: [x0, x1, tilt degrees (or 'sway'), zoom]
+      camFx: def.cam ? def.cam.map(([i, rot, zoom]) => [sections[i][0], sections[i][1], rot, zoom]) : null,
       startSpeed: Math.min(cap, def.sp0 == null ? 1 : def.sp0), coinCount: B.o.filter((o) => o.t === 'coin').length,
     }, def.meta);
   }
@@ -644,46 +777,48 @@
     // walkthrough: the same modes, speeds and sizes in the same order at the
     // same percentages, no UFO, coins at 14% (cube), 37% (swing) and 68%
     // (start of the ship). Layout inside each section is generated.
-    { name: 'Dash', D: 2.95, sp0: 1, cubeCoin: 0.14,
+    { name: 'Dash', D: 2.95, sp0: 1,
       coinSecs: [[10, 0.5], [16, 0.08]],
-      meta: { difficulty: 'Insane', stars: 12, bpm: 150, key: 4, seed: 22, order: 16, levelNo: 17, cubeCoin: 0.14 },
-      // Colours and scenery per section, matched to the real level.
-      pal: [['#3a0808', '#140303'], ['#b0200c', '#5a0c04'], ['#c0185a', '#600a2c'], ['#b01450', '#580a28'], ['#a01040', '#500820'],
-        ['#9a1428', '#4a0810'], ['#3a2bd0', '#1a127a'], ['#6a1ab0', '#300a58'], ['#e06010', '#803008'], ['#262626', '#0e0e0e'],
+      meta: { difficulty: 'Insane', stars: 12, bpm: 150, key: 4, seed: 22, order: 16, levelNo: 17 },
+      // Colours, scenery and camera per section, matched to the real level.
+      pal: [['#3a0808', '#140303'], ['#b0200c', '#5a0c04'], ['#c0185a', '#600a2c'], ['#a01040', '#500820'], ['#9a1428', '#4a0810'],
+        ['#8a1020', '#420810'], ['#3a2bd0', '#1a127a'], ['#6a1ab0', '#300a58'], ['#e06010', '#803008'], ['#262626', '#0e0e0e'],
         ['#b01438', '#58081c'], ['#6a1060', '#300828'], ['#b0103c', '#58081e'], ['#3a0a4a', '#180420'], ['#2a0838', '#100318'],
-        ['#3a3a3a', '#141414'], ['#123a28', '#06180e'], ['#0e3020', '#04140a'], ['#1c0c40', '#0a0420'], ['#1c0c40', '#0a0420'],
-        ['#200a34', '#0c0418']],
+        ['#3a3a3a', '#141414'], ['#123a6a', '#061838'], ['#123a28', '#06180e'], ['#0e3020', '#04140a'], ['#1c0c40', '#0a0420'],
+        ['#1c0c40', '#0a0420'], ['#200a34', '#0c0418']],
       themes: [
-        [0, 'ruins,lava,skin:lava'], [1, 'lava,crushers,skin:lava'], [2, 'lava,crushers,skin:lava'], [3, 'lava,crushers,skin:lava'],
-        [4, 'lava,crushers,skin:lava'], [5, 'ruins,crushers,lava,skin:stone'], [6, 'mountains,orbChain,chevrons,torches,skin:brick'],
+        [0, 'dark,ruins,lava,skin:gold'], [1, 'lava,crushers,skin:lava'], [2, 'lava,crushers,skin:lava'], [3, 'lava,crushers,skin:lava'],
+        [4, 'ruins,crushers,lava,skin:stone'], [5, 'crushers,lava,skin:stone'], [6, 'mountains,chevrons,torches,skin:brick'],
         [7, 'lava,chevrons,skin:brick'], [8, 'crushers,lava,skin:lava'], [9, 'cave,skin:lava'],
-        [10, 'orbChain:fire,chevrons:yellow,torches:blue,lava,skin:stone'], [11, 'dungeon,skin:moss'],
+        [10, 'chevrons:yellow,torches:blue,lava,skin:stone'], [11, 'dungeon,skin:moss'],
         [12, 'orbChain:fire,torches:blue,lava,skin:stone'], [13, 'dungeon,skin:moss'], [14, 'countdown,acid,skin:stone'],
-        [15, 'mono,countdown,skin:stone'], [16, 'chevrons,acid,skin:stone'], [17, 'acid,crushers,skin:moss'], [18, 'neon,lava,skin:brick'],
-        [19, 'neon,skin:brick'], [20, 'torches,altar,skin:brick'],
+        [15, 'mono,skin:stone'], [16, 'chevrons,skin:brick'], [17, 'acid,skin:moss'], [18, 'acid,crushers,skin:moss'],
+        [19, 'neon,lava,skin:brick'], [20, 'neon,skin:brick'], [21, 'torches,altar,skin:brick'],
       ],
+      cam: [[7, -12, 1], [9, 'sway', 0.95], [17, 0, 0.9], [18, 8, 1], [21, 0, 1.08]],
       secs: [
-        ['cube', { n: 3 }],                              // 0-3%
-        ['spider', { n: 1 }],                            // 3-5%
-        ['cube', { n: 1 }],                              // 5-7%
-        ['spider', { n: 1 }],                            // 7-9%
-        ['ball', { n: 1 }],                              // 9-10%
-        ['cube', { n: 7, orbs: true }],                  // 10-17%, coin 1
-        ['swing', { n: 5, sp: 2, saws: true }],          // 17-23%, fast
-        ['cube', { n: 3, mini: true, sp: 0 }],           // 23-26%, mini, slow
-        ['robot', { n: 2, sp: 2 }],                      // 26-28%, fast
-        ['ball', { n: 5 }],                              // 28-34%
-        ['swing', { n: 5, secretH: 2.8 }],               // 34-40%, coin 2
-        ['spider', { n: 1 }],                            // 40-42%
-        ['cube', { n: 7, ext: true, orbs: true }],       // 42-51%, fast
-        ['flip', { orbs: true }],                        // 51-57%, blue pad, green/blue/pink-dash orbs
-        ['cube', { n: 4, mini: true, sp: 1 }],           // 57-63%, mini
-        ['cube', { n: 3 }],                              // 63-67%, the countdown
-        ['ship', { n: 6, sp: 3, saws: true }],          // 67-75%, very fast, coin 3
-        ['robot', { n: 7 }],                            // 75-83%
-        ['cube', { n: 7, ext: true, orbs: true, sp: 2 }], // 84-92%
-        ['wave', { n: 2 }],                              // 92-94%
-        ['cube', { n: 3, mini: true }],                  // 96-100%, mini
+        ['open', {}],                                     // 0-2%   dark run, red ring, golden pillars
+        ['spider', { n: 2 }],                             // 2-5%   lava blocks
+        ['flip', { orbs: true, len: 40 }],                // 5-9%   blue pad, green/blue/pink-dash orbs
+        ['ball', { n: 2, sp: 2 }],                        // 9-10%
+        ['switches', { switches: 4, sp: 1 }],             // 10-15% coin 1: light the hanging blocks
+        ['cube', { n: 2 }],                               // 15-17% crushers
+        ['chain', { n: 5, sp: 2, chain: 'blue' }],        // 17-23% swing between orb chains
+        ['cube', { n: 3, mini: true, sp: 0 }],            // 23-26% stairs down, tilted
+        ['robot', { n: 2, sp: 2 }],                       // 26-28%
+        ['ball', { n: 5 }],                               // 28-34% the cave, swaying
+        ['chain', { n: 5, chain: 'fire' }],               // 34-40% fire-orb swing, coin 2
+        ['spider', { n: 2 }],                             // 40-42% dungeon steps
+        ['cube', { n: 3, ext: true, orbs: true }],        // 42-46% dash orbs over lava
+        ['flip', { orbs: true, len: 42 }],                // 46-50% dungeon, gravity orbs
+        ['loop', { len: 46, sp: 1 }],                     // 51-63% the 3-2-1 room
+        ['auto', {}],                                     // 63-67% the "1" flies off
+        ['ship', { n: 4, sp: 3 }],                        // 67-71% coin 3 at the start
+        ['curve', { n: 5 }],                              // 71-75% curving spike tunnel
+        ['robot', { n: 7 }],                              // 75-83% acid, tilted
+        ['cube', { n: 6, ext: true, orbs: true, sp: 2 }], // 84-92% neon over lava
+        ['zig', { n: 2 }],                                // 92-94% zigzag wave
+        ['cube', { n: 3, mini: true }],                   // 94-100% up to the altar
       ] },
   ];
 
@@ -829,7 +964,6 @@
 
   // Coin positions per level, written by `node tools/verify.js --coins`.
   const COINS = {
-    'Dash': [[179.5, 4.25]],
     'Cube Easy': [[74.25, 3]],
     'Cube Normal': [[109, 6]],
     'Cube Hard': [[79.25, 3.25]],
