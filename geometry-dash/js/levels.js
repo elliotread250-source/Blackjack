@@ -4,7 +4,7 @@
  * random-walk their gates with jittered spacing and widths, and so on.
  *
  * tools/verify.js proves each level beatable with inputs held at least 50ms
- * (Impossible tiers: beatable at 1/60s, unbeatable at 50ms) and checks that
+ * (Extreme Demon: beatable at 1/60s, unbeatable at 50ms) and checks that
  * no 30-block stretch with 4+ real obstacles appears anywhere else. When a section
  * fails either check, `node tools/verify.js --fix` bumps that section's
  * seed in BUMPS and tries again, then prints the table to paste back here.
@@ -46,6 +46,7 @@
     for (let i = 0; i < str.length; i++) h = Math.imul(h ^ str.charCodeAt(i), 16777619);
     return h >>> 0;
   }
+  const lerp = (a, b, t) => a + (b - a) * t;
   const half = (v) => Math.round(v * 2) / 2;
   const pick = (r, list) => list[Math.floor(r() * list.length)];
   const int = (r, lo, hi) => lo + Math.floor(r() * (hi - lo + 1)); // inclusive
@@ -69,7 +70,7 @@
       return x + n;
     },
     step(B, x, r, q) {
-      const w = int(r, 1, 5), h = q.d >= 1.5 && r() < 0.4 ? 2 : 1;
+      const w = int(r, 1, 5), h = q.d >= 1.5 && !q.mini && r() < 0.4 ? 2 : 1;
       B.b(x, 0, w, h);
       const k = int(r, 0, Math.min(2, q.maxSp));
       B.spikes(x + w, 0, k);
@@ -93,9 +94,9 @@
       B.spikes(x, 0, t);
       return x + t;
     },
-    pad(B, x, r) {
+    pad(B, x, r, q) {
       B.pad(x, 0, 'yellow');
-      const px = x + int(r, 4, 5), w = int(r, 4, 8), h = int(r, 2, 3);
+      const px = x + int(r, 4, 5), w = int(r, 4, 8), h = q.mini ? 2 : int(r, 2, 3);
       B.b(px, 0, w, h);
       const t = int(r, 0, 2);
       B.spikes(px + w, 0, t);
@@ -116,7 +117,7 @@
     pillars(B, x, r, q) {
       const m = int(r, 2, 3);
       for (let j = 0; j < m; j++) {
-        const w = int(r, 1, 2), h = 1 + Math.min(j, q.d >= 2.5 ? 2 : 1);
+        const w = int(r, 1, 2), h = 1 + Math.min(j, q.d >= 2.5 && !q.mini ? 2 : 1);
         B.b(x, 0, w, h); x += w;
         const g = int(r, 2, 3);
         B.spikes(x, 0, g); x += g;
@@ -128,13 +129,19 @@
   function cubeSec(B, c, r, p) {
     const d = p.d, sf = SPEED_RATIO[p.sp];
     const fast = p.sp >= 2;
-    const q = { d, sp: p.sp, maxSp: fast ? (d >= 2 ? 3 : 2) : (d >= 1 ? 2 : 1) };
-    const fams = ['spikes', 'step', 'blockSpike'];
+    // Mini jumps are lower and shorter: no 3-spike runs, no tall steps.
+    const mini = !!(p.mini || p.startMini);
+    const q = { d, sp: p.sp, mini, maxSp: mini ? (fast ? 2 : 1) + (d >= 2.5 ? 1 : 0) : fast ? (d >= 2 ? 3 : 2) : (d >= 1 ? 2 : 1) };
+    let fams = ['spikes', 'step', 'blockSpike'];
     if (d >= 0.5) fams.push('pad', 'stairs');
     if (d >= 0.8 && p.sp <= 2) fams.push('pinkHop');
     if (d >= 1) fams.push('orbPit');
     if (d >= 1.5) fams.push('pillars');
-    const gapBase = p.impossible ? 2 : tbl([6, 5.5, 5, 4.5, 3.5], d);
+    if (p.impossible) { fams = ['spikes', 'pillars', 'orbPit', 'stairs', 'blockSpike']; q.maxSp = 3; }
+    // Extreme Demon: p.tight (0..1, tuned per level by verify.js --fix)
+    // squeezes the gaps until 50ms inputs can't make it but 1/60s ones can.
+    const gapBase = p.impossible ? lerp(3, 0, p.tight) : tbl([6, 5.5, 5, 4.5, 4], d);
+    const minGap = p.impossible ? lerp(3, 1, p.tight) : 3;
     if (p.mini) { B.p(c + 1, 10, 'mini', 20); c += 2; }
     const n = p.n || Math.round(8 + 2 * d);
     let x = c + 3, last = '';
@@ -142,7 +149,7 @@
       let f = pick(r, fams);
       if (f === last) f = pick(r, fams); // fewer back-to-back repeats
       last = f;
-      x += Math.max(Math.ceil(3 * sf), Math.round((gapBase + r() * 3) * sf));
+      x += Math.max(Math.ceil(minGap * sf), Math.round((gapBase + r() * 3) * sf));
       x = FAM[f](B, x, r, q);
     }
     if (p.mini) { B.p(x + 4, 10, 'big', 20); x += 4; }
@@ -164,12 +171,13 @@
   }
 
   // Gap height, gate spacing (blocks at 1x), how far the gap centre may move
-  // between gates, and gate count, each by difficulty 0..4.
+  // between gates, and gate count, each by difficulty 0..4 (4 = hardest that
+  // is still fair). Extreme Demon goes past the table: see flySec.
   const FLY = {
-    ship:  { h: [6, 5, 4, 3, 2.5],     space: [11, 10, 9, 8, 5], delta: [1, 2, 2.5, 3, 4.5],   n: [8, 10, 12, 14, 20] },
-    ufo:   { h: [6, 5, 4.5, 3.5, 3],   space: [10, 9, 8, 8, 5],  delta: [1, 1.5, 2, 2.5, 3.5], n: [8, 10, 12, 14, 20] },
-    wave:  { h: [5, 4, 3.2, 2.4, 2.2], space: [8, 7, 6, 5, 3],   delta: [1, 1.5, 2, 2.5, 3],   n: [8, 10, 12, 14, 24] },
-    swing: { h: [6, 5, 4, 3.2, 2.6],   space: [11, 10, 9, 8, 5], delta: [1, 1.5, 2, 3, 4.5],   n: [8, 10, 12, 14, 20] },
+    ship:  { h: [6, 5, 4, 3.2, 2.8],   space: [11, 10, 9, 8, 7], delta: [1, 2, 2.5, 3, 3.5],   n: [8, 10, 12, 14, 16] },
+    ufo:   { h: [6, 5, 4.5, 3.8, 3.3], space: [10, 9, 8, 8, 7],  delta: [1, 1.5, 2, 2.5, 3],   n: [8, 10, 12, 14, 16] },
+    wave:  { h: [5, 4, 3.2, 2.6, 2.3], space: [8, 7, 6, 5, 4.5], delta: [1, 1.5, 2, 2.5, 2.8], n: [8, 10, 12, 14, 16] },
+    swing: { h: [6, 5, 4, 3.4, 3],     space: [11, 10, 9, 8, 7], delta: [1, 1.5, 2, 3, 3.5],   n: [8, 10, 12, 14, 16] },
   };
 
   // Enter, a run of gates between spike-lined floor and ceiling, then a
@@ -177,8 +185,18 @@
   function flySec(B, c, r, p, mode) {
     const k = FLY[mode], top = 10, sf = SPEED_RATIO[p.sp];
     const d = p.impossible ? 4 : p.d;
-    const h = tbl(k.h, d), delta = tbl(k.delta, d), space = tbl(k.space, d) * sf;
-    const n = p.n || Math.round(tbl(k.n, d));
+    let h = tbl(k.h, d), delta = tbl(k.delta, d), space = tbl(k.space, d) * sf;
+    let n = p.n || Math.round(tbl(k.n, d));
+    if (p.impossible) {
+      // Extreme Demon: spike-tipped gates shrinking with p.tight; mini
+      // hitboxes get roomier gaps, so they shrink further.
+      // Spike tips eat a fixed slice of every gap, so mini shrinks by the
+      // hitbox difference rather than a percentage.
+      h = lerp(h * 0.95, h * 0.5, p.tight) - (p.startMini ? (mode === 'wave' ? 0.15 : 0.4) : 0);
+      space = lerp(6, 4, p.tight) * sf;
+      delta += 1;
+      n = 20;
+    }
     const tips = !!p.impossible;
     B.p(c, 2, mode, 4);
     if (p.mini) B.p(c + 1, 2, 'mini', 4);
@@ -207,10 +225,10 @@
   // ------------------------------------------------- ball and spider
 
   function clusterSec(B, c, r, p, mode) {
-    if (p.impossible) return clusterImpossible(B, c, r, mode);
+    if (p.impossible) return clusterImpossible(B, c, r, mode, !!p.startMini, p.tight);
     const top = 8, d = p.d, sf = SPEED_RATIO[p.sp];
     const maxLen = Math.max(1, Math.round(tbl([1, 2, 2, 3, 3], d)));
-    const gmin = tbl([9, 7, 6, 5, 4], d);
+    const gmin = tbl([9, 7, 6, 5, 4.5], d);
     const n = p.n || Math.round(8 + 2 * d);
     B.p(c, 2, mode, 4);
     let x = c + 8, side = 0;
@@ -222,33 +240,46 @@
         x += w1 + w2 + Math.round(gmin * sf);
         continue;
       }
-      const len = int(r, 1, maxLen);
-      if (side === 0) B.spikes(x, 0, len);
-      else B.spikes(x, top - 1, len, -1);
-      x += len + Math.round((gmin + r() * 3) * sf);
+      // Mix of spike runs, small-spike runs and 1-high bumps, on half-block
+      // spacing, so no stretch of one run turns up in another.
+      const len = int(r, 1, maxLen), kind = r();
+      const y = side === 0 ? 0 : top - 1, dir = side === 0 ? 1 : -1;
+      if (kind < 0.18 && d >= 0.5) {
+        for (let j = 0; j < len + 1; j++) B.ss(x + j, y, dir);
+        x += 1;
+      } else if (kind < 0.32 && d >= 1) {
+        B.b(x, y, len + 1, 1);
+        x += 1;
+      } else {
+        B.spikes(x, y, len, dir);
+      }
+      x += len + half((gmin + r() * 4) * sf);
       if (!(d >= 3 && r() < 0.3)) side = 1 - side;
     }
     B.p(x + 2, top / 2, 'cube', top);
     return x + 10;
   }
 
-  // Impossible ball/spider: windows narrower than a 50ms tap at 4x.
+  // Extreme Demon ball/spider: windows narrower than a 50ms tap at 4x.
   // Ball: spikes on floor AND ceiling at the same x, so you must be mid-flip
-  // exactly as you pass. Spider: floor and ceiling runs one block apart.
-  function clusterImpossible(B, c, r, mode) {
+  // exactly as you pass; tight lengthens the columns. Spider: floor and
+  // ceiling runs alternating, tight closes the gap between them.
+  function clusterImpossible(B, c, r, mode, mini, tight) {
     const top = 8;
     B.p(c, 2, mode, 4);
     let x = c + 10, side = 0;
     for (let i = 0; i < 22; i++) {
       if (mode === 'ball') {
-        const len = 4 + (r() < 0.5 ? 1 : 0);
-        B.spikes(x, 0, len); B.spikes(x, top - 1, len, -1);
-        x += len + 4 + Math.floor(r() * 5);
+        const base = lerp(3, mini ? 6.5 : 6, tight);
+        const len = Math.floor(base) + (r() < base % 1 ? 1 : 0);
+        const shift = r() < 0.5 ? 0 : 0.5; // ceiling run offset, for variety
+        B.spikes(x, 0, len); B.spikes(x + shift, top - 1, len, -1);
+        x += len + shift + (mini ? 3 : 4) + half(r() * (mini ? 3 : 5));
       } else {
         const len = 2 + Math.floor(r() * 3);
         if (side === 0) B.spikes(x, 0, len);
         else B.spikes(x, top - 1, len, -1);
-        x += len + 1;
+        x += len + half(lerp(1.5, 0, tight));
         side = 1 - side;
       }
     }
@@ -260,9 +291,10 @@
 
   function robotSec(B, c, r, p) {
     const d = p.d, sf = SPEED_RATIO[p.sp];
-    const n = p.n || Math.round(tbl([8, 10, 12, 14, 22], d));
-    const pitMax = Math.round(tbl([2, 3, 4, 5, 7], d)), wallMax = d >= 1 ? 2 : 1;
-    const gap = Math.round(tbl([8, 7, 6, 5, 2], d) * sf);
+    const n = p.n || (p.impossible ? 22 : Math.round(tbl([8, 10, 12, 14, 16], d)));
+    const pitMax = p.impossible ? 7 : Math.round(tbl([2, 3, 4, 5, 5], d) * (p.startMini ? 0.75 : 1));
+    const wallMax = d >= 1 && !p.startMini ? 2 : 1;
+    const gap = Math.round((p.impossible ? lerp(3, 0, p.tight) : tbl([8, 7, 6, 5, 3.5], d)) * sf);
     B.p(c, 2, 'robot', 4);
     c += 6;
     for (let i = 0; i < n; i++) {
@@ -325,7 +357,7 @@
   };
 
   // Builds a level from its section list. bumps[i] reseeds section i only.
-  function buildLevel(def, bumps) {
+  function buildLevel(def, bumps, tight) {
     const B = builder();
     let c = 6, cur = def.sp0 == null ? 1 : def.sp0;
     const sections = [];
@@ -335,7 +367,7 @@
       B.color(c, pal[0], pal[1]);
       const x0 = c;
       if (p.sp != null && p.sp !== cur) { B.p(c + 1, 10, 's' + p.sp, 20); c += 3; cur = p.sp; }
-      c = GEN[kind](B, c, r, Object.assign({}, p, { sp: cur }));
+      c = GEN[kind](B, c, r, Object.assign({}, p, { sp: cur, tight: tight == null ? 0.5 : tight }));
       sections.push([x0, c]);
     });
     return Object.assign({
@@ -380,42 +412,74 @@
       pal: [['#00a8ff', '#0068a0'], ['#00a8ff', '#0068a0'], ['#00e0ff', '#008aa0'], ['#ff2bd0', '#a0178a'], ['#ff8a1f', '#b0560f'], ['#00a8ff', '#0068a0']],
       secs: [['cube', { d: 2, n: 4 }], ['wave', { d: 2.3, n: 11 }], ['wave', { d: 2, n: 9, mini: true }],
         ['ship', { d: 2.5, n: 7, sp: 3 }], ['ufo', { d: 2.5, n: 6, sp: 2 }], ['cube', { d: 2.5, n: 4 }]] },
-    { name: 'Final Ascent', meta: { difficulty: 'Demon', stars: 10, bpm: 170, key: 6, seed: 8 }, sp0: 3,
+    { name: 'Final Ascent', meta: { difficulty: 'Medium Demon', stars: 10, bpm: 170, key: 6, seed: 8 }, sp0: 3,
       pal: [['#300010', '#180008'], ['#600020', '#300010'], ['#40104a', '#200828'], ['#300010', '#180008'], ['#600020', '#300010'],
         ['#40104a', '#200828'], ['#600020', '#300010'], ['#300010', '#180008'], ['#ff1f3b', '#900018']],
       secs: [['cube', { d: 3.3, n: 5 }], ['ship', { d: 3.3, n: 8 }], ['wave', { d: 3, n: 9, mini: true, sp: 2 }],
         ['spider', { d: 3.3, n: 10 }], ['swing', { d: 3.3, n: 6 }], ['robot', { d: 3.3, n: 8, sp: 1 }],
         ['ball', { d: 3.3, n: 10 }], ['ufo', { d: 3.3, n: 6, sp: 2 }], ['cube', { d: 3.5, n: 5, sp: 3 }]] },
+    { name: 'Prism Drop', meta: { difficulty: 'Normal', stars: 3, bpm: 126, key: 8, seed: 9 },
+      pal: [['#ff5fa2', '#b0306a'], ['#ffb03b', '#a8701e'], ['#5fd0ff', '#2a86b0'], ['#b06bff', '#6e38b0'], ['#ff5fa2', '#b0306a'], ['#5fffb0', '#2aa870']],
+      secs: [['cube', { d: 0.9, n: 6 }], ['swing', { d: 0.8, n: 7 }], ['cube', { d: 1, n: 4 }],
+        ['spider', { d: 0.9, n: 8 }], ['ship', { d: 1, n: 8 }], ['cube', { d: 1.1, n: 4 }]] },
+    { name: 'Solar Flux', meta: { difficulty: 'Hard', stars: 5, bpm: 138, key: 1, seed: 10 },
+      pal: [['#ff7a00', '#a04800'], ['#ff3b1f', '#a01e0a'], ['#ffb800', '#a07000'], ['#ff7a00', '#a04800'], ['#ff5a3b', '#a0301e'],
+        ['#ffd23b', '#a0841e'], ['#c8642b', '#7a3a14'], ['#ff7a00', '#a04800']],
+      secs: [['cube', { d: 1.6, n: 5 }], ['ball', { d: 1.6, n: 9 }], ['flip', { d: 1.6 }], ['cube', { d: 1.5, n: 1 }],
+        ['wave', { d: 1.6, n: 10 }], ['ufo', { d: 1.7, n: 8, sp: 2 }], ['robot', { d: 1.8, n: 7, sp: 1 }], ['cube', { d: 1.8, n: 4 }]] },
+    { name: 'Static Storm', meta: { difficulty: 'Harder', stars: 7, bpm: 152, key: 10, seed: 11 },
+      pal: [['#3b4a6b', '#1e2840'], ['#5a6b8a', '#30405a'], ['#2b8aff', '#1a50a0'], ['#3b4a6b', '#1e2840'], ['#8a5aff', '#5030a0'],
+        ['#2bd0ff', '#1a80a0'], ['#3b4a6b', '#1e2840']],
+      secs: [['cube', { d: 2.3, n: 5, sp: 2 }], ['spider', { d: 2.3, n: 9 }], ['swing', { d: 2.4, n: 8 }],
+        ['cube', { d: 2.2, n: 4, mini: true }], ['ship', { d: 2.5, n: 8, sp: 3 }], ['ball', { d: 2.5, n: 8, sp: 2 }],
+        ['cube', { d: 2.5, n: 4 }]] },
+    { name: 'Neon Abyss', meta: { difficulty: 'Insane', stars: 8, bpm: 158, key: 11, seed: 12 },
+      pal: [['#00ffa0', '#008a56'], ['#00c8ff', '#00708a'], ['#a000ff', '#5a008a'], ['#3b0070', '#1e0038'], ['#00ffa0', '#008a56'],
+        ['#ff00a0', '#8a0056'], ['#ffe000', '#8a7a00'], ['#a000ff', '#5a008a'], ['#00ffa0', '#008a56']],
+      secs: [['cube', { d: 2.8, n: 6 }], ['wave', { d: 2.8, n: 12, sp: 2 }], ['robot', { d: 2.8, n: 8 }], ['flip', { d: 2.8 }],
+        ['cube', { d: 2, n: 1 }], ['ufo', { d: 2.9, n: 7, sp: 3 }], ['swing', { d: 2.9, n: 7 }], ['spider', { d: 3, n: 8 }],
+        ['cube', { d: 3, n: 5 }]] },
+    { name: 'Chaos Theory', meta: { difficulty: 'Hard Demon', stars: 10, bpm: 175, key: 3, seed: 13 }, sp0: 2,
+      pal: [['#1a0000', '#0a0000'], ['#4a0000', '#200000'], ['#2a002a', '#140014'], ['#000a3a', '#00051e'], ['#4a1a00', '#200a00'],
+        ['#3a003a', '#1e001e'], ['#4a0000', '#200000'], ['#00203a', '#00101e'], ['#ff2020', '#800000']],
+      secs: [['cube', { d: 3.4, n: 6 }], ['ship', { d: 3.4, n: 9, sp: 3 }], ['ball', { d: 3.4, n: 10 }],
+        ['wave', { d: 3.3, n: 10, mini: true, sp: 2 }], ['robot', { d: 3.4, n: 8 }], ['swing', { d: 3.4, n: 7, sp: 3 }],
+        ['spider', { d: 3.5, n: 9 }], ['ufo', { d: 3.4, n: 7 }], ['cube', { d: 3.6, n: 6, sp: 3 }]] },
   ];
 
   // ------------------------------------------------------ mode practice
-  // Five tiers per mode, each one generated section that starts already in
-  // the mode. Impossible must pass with 1/60s inputs yet fail with 50ms ones.
+  // Every mode, normal and mini size, at GD's ten difficulties. Each is one
+  // generated section that starts already in the mode (and size). Easy to
+  // Insane Demon must pass with 50ms inputs; Extreme Demon must pass with
+  // 1/60s inputs yet be proven unbeatable with 50ms ones.
 
-  const TIERS = ['Very Easy', 'Easy', 'Medium', 'Hard', 'Impossible'];
+  const TIERS = ['Easy', 'Normal', 'Hard', 'Harder', 'Insane',
+    'Easy Demon', 'Medium Demon', 'Hard Demon', 'Insane Demon', 'Extreme Demon'];
+  const TIER_D = [0.3, 0.75, 1.2, 1.65, 2.1, 2.55, 3.0, 3.35, 3.7];
+  const TIER_SP = [1, 1, 1, 1, 2, 2, 2, 3, 3, 4]; // 0 = 0.5x ... 4 = 4x
   const MODE_NAMES = {
     cube: 'Cube', ship: 'Ship', ball: 'Ball', ufo: 'UFO', wave: 'Wave', robot: 'Robot', spider: 'Spider', swing: 'Swing',
   };
-  // Speed index per tier (0 = 0.5x ... 4 = 4x)
-  const TIER_SPEED = {
-    cube: [0, 1, 1, 2, 4], ship: [0, 1, 2, 3, 4], ball: [0, 1, 1, 2, 4], ufo: [0, 1, 1, 2, 4],
-    wave: [0, 1, 1, 2, 4], robot: [0, 1, 1, 2, 4], spider: [0, 1, 2, 2, 4], swing: [0, 1, 1, 2, 4],
-  };
 
   const PRACTICE = [];
-  for (const mode of Object.keys(MODE_NAMES)) {
-    TIERS.forEach((tier, t) => {
-      const imp = t === 4;
-      PRACTICE.push({
-        name: `${MODE_NAMES[mode]} ${tier}`, sp0: TIER_SPEED[mode][t],
-        secs: [[mode, { d: t, impossible: imp, mini: imp && mode === 'wave', n: mode === 'cube' && imp ? 20 : undefined }]],
-        meta: {
-          training: true, mode, tier: t, tierName: tier, startMode: mode,
-          slot: `t:${mode}:${t}`, verifyStep: imp ? 4 : 12,
-          difficulty: tier, stars: t + 1, bpm: 116 + t * 12, key: t * 2, seed: 20 + t,
-        },
+  for (const mini of [false, true]) {
+    for (const mode of Object.keys(MODE_NAMES)) {
+      TIERS.forEach((tier, t) => {
+        const ext = t === TIERS.length - 1;
+        PRACTICE.push({
+          name: `${mini ? 'Mini ' : ''}${MODE_NAMES[mode]} ${tier}`, sp0: TIER_SP[t],
+          secs: [[mode, {
+            d: ext ? 4 : TIER_D[t], impossible: ext, startMini: mini,
+            n: mode === 'cube' && ext ? 20 : undefined,
+          }]],
+          meta: {
+            training: true, mini, mode, tier: t, tierName: tier, startMode: mode, startMini: mini,
+            slot: `q:${mini ? 'm' : 'n'}:${mode}:${t}`, verifyStep: ext ? 4 : 12,
+            difficulty: tier, stars: t + 1, bpm: 112 + t * 7, key: (t * 5) % 12, seed: 30 + t,
+          },
+        });
       });
-    });
+    }
   }
 
   const DEFS = MAIN.concat(PRACTICE);
@@ -425,24 +489,63 @@
   const BUMPS = {
     'Gravity Overdrive': [0, 0, 0, 0, 0, 0, 0, 1],
     'Final Ascent': [0, 0, 0, 0, 0, 3],
-    'Cube Impossible': [19],
-    'Ship Impossible': [3],
-    'Robot Impossible': [4],
-    'Swing Impossible': [2],
-    'Cube Medium': [1],
-    'Ball Easy': [2],
-    'Ball Impossible': [2],
-    'Robot Easy': [1],
-    'Spider Easy': [10],
+    'Midnight Drift': [1],
+    'Cube Extreme Demon': [8],
+    'Swing Extreme Demon': [2],
+    'Mini Ship Extreme Demon': [2],
+    'Mini Robot Extreme Demon': [4],
+    'Ship Easy': [2],
+    'Ball Extreme Demon': [6],
+    'UFO Insane Demon': [1],
+    'Wave Extreme Demon': [1],
+    'Swing Hard Demon': [1],
+    'Mini Cube Normal': [1],
+    'Mini Cube Insane': [3],
+    'Mini Cube Easy Demon': [1],
+    'Mini Cube Insane Demon': [1],
+    'Mini Ship Easy Demon': [2],
+    'Mini Ship Medium Demon': [2],
+    'Mini Ball Extreme Demon': [25],
+    'Mini UFO Normal': [1],
+    'Mini UFO Insane Demon': [1],
+    'Mini Wave Extreme Demon': [5],
+    'Mini Robot Hard': [1],
+    'Mini Robot Insane': [2],
+    'Mini Robot Medium Demon': [1],
+    'Mini Robot Hard Demon': [1],
+    'Mini Spider Insane': [1],
+    'Mini Swing Easy': [1],
+    'Mini Swing Normal': [2],
+    'Mini Swing Easy Demon': [1],
   };
 
-  function buildAll(bumps) {
-    return DEFS.map((def) => buildLevel(def, bumps[def.name]));
+  // Extreme Demon tightness per level (missing = 0.5), also from --fix.
+  const TIGHT = {
+    'Cube Extreme Demon': 0.75,
+    'Ship Extreme Demon': 0.219,
+    'Ball Extreme Demon': 0.276,
+    'UFO Extreme Demon': 0.032,
+    'Wave Extreme Demon': 0.016,
+    'Robot Extreme Demon': 0.625,
+    'Swing Extreme Demon': 0.25,
+    'Mini Cube Extreme Demon': 0.625,
+    'Mini Ship Extreme Demon': 0.321,
+    'Mini Ball Extreme Demon': 0.563,
+    'Mini UFO Extreme Demon': 0.375,
+    'Mini Wave Extreme Demon': 0.004,
+    'Mini Robot Extreme Demon': 0.625,
+    'Mini Spider Extreme Demon': 0.75,
+    'Mini Swing Extreme Demon': 0.438,
+  };
+
+  function buildAll(bumps, tight) {
+    return DEFS.map((def) => buildLevel(def, bumps[def.name], tight[def.name]));
   }
 
-  const LEVELS = buildAll(BUMPS);
+  const LEVELS = buildAll(BUMPS, TIGHT);
   LEVELS.TIERS = TIERS;
   LEVELS.BUMPS = BUMPS;
+  LEVELS.TIGHT = TIGHT;
   LEVELS.buildAll = buildAll; // used by tools/verify.js --fix
   if (typeof module !== 'undefined' && module.exports) module.exports = LEVELS;
   else root.GDLevels = LEVELS;

@@ -3,7 +3,7 @@
  *
  * Beatable: depth-first search over hold/release decisions made every 50ms
  * (12 physics steps). A human can comfortably hit 50ms windows, so a level
- * that only passes with finer inputs fails. Impossible tiers (verifyStep 4)
+ * that only passes with finer inputs fails. Extreme Demons (verifyStep 4)
  * must pass at 1/60s AND be proven unbeatable at 50ms.
  *
  * Unique: no 30-block stretch of any level with at least 4 real obstacles
@@ -12,8 +12,9 @@
  *
  *   node tools/verify.js         check everything
  *   node tools/verify.js 2       just level 2 (beatability only)
- *   node tools/verify.js --fix   reseed failing sections until all pass,
- *                                then print the BUMPS table for levels.js
+ *   node tools/verify.js --fix   reseed failing sections and tune Extreme
+ *                                Demon tightness until all pass, then write
+ *                                the BUMPS and TIGHT tables into levels.js
  */
 'use strict';
 const P = require('../js/physics.js');
@@ -61,11 +62,12 @@ function solve(def, K = stepOf(def)) {
 
 // Impossible tiers must also be proven unbeatable with 50ms inputs.
 function check(def) {
-  const r = solve(def);
-  if (!r.ok || stepOf(def) >= 12) return r;
+  if (stepOf(def) >= 12) return solve(def);
+  // Cheap test first: if 50ms inputs already win, it isn't Impossible.
   const human = solve(def, 12);
   if (human.ok) return { ok: false, furthest: 0, reason: 'too easy: beatable with 50ms inputs' };
-  if (human.reason === 'budget') r.note = 'human-timing run unproven (budget)';
+  const r = solve(def);
+  if (r.ok && human.reason === 'budget') r.note = 'human-timing run unproven (budget)';
   return r;
 }
 
@@ -102,45 +104,99 @@ function sectionAt(def, x) {
   return secs.length - 1;
 }
 
+// Rewrites one `const NAME = {...};` table in levels.js.
+function writeTable(src, name, obj) {
+  const start = src.indexOf(`  const ${name} = {`);
+  if (start < 0) throw new Error(`no ${name} table in levels.js`);
+  const empty = `  const ${name} = {};`;
+  const end = src.startsWith(empty, start) ? start + empty.length : src.indexOf('\n  };', start) + 5;
+  const rows = Object.entries(obj).map(([k, v]) =>
+    `    '${k.replace(/'/g, "\\'")}': ${JSON.stringify(v).replace(/,/g, ', ')},`);
+  const body = rows.length ? `{\n${rows.join('\n')}\n  };` : '{};';
+  return src.slice(0, start) + `  const ${name} = ${body}` + src.slice(end);
+}
+
 function fix() {
+  const fs = require('fs');
+  const path = require('path').join(__dirname, '../js/levels.js');
   const bumps = JSON.parse(JSON.stringify(LEVELS.BUMPS));
+  const tight = JSON.parse(JSON.stringify(LEVELS.TIGHT));
+  const range = {}; // Extreme Demon bisection state: name -> [lo, hi]
   const cache = new Map();
+  // A section that still fails after MAX_TRIES reseeds has knobs that are
+  // wrong, not unlucky: report it and stop wasting time on it.
+  const MAX_TRIES = 25;
+  const stuck = new Set();
   const bump = (name, sec) => {
     bumps[name] = bumps[name] || [];
     bumps[name][sec] = (bumps[name][sec] || 0) + 1;
+    if (bumps[name][sec] >= MAX_TRIES) stuck.add(`${name} section ${sec}`);
   };
-  for (let round = 0; round < 400; round++) {
-    const levels = LEVELS.buildAll(bumps);
+  // Extreme Demon: bisect tightness between "too easy" and "impossible";
+  // when the bracket closes without a hit, try the next seed.
+  const tune = (def, r) => {
+    const n = def.name;
+    const [lo, hi] = range[n] || [0, 1];
+    const t = tight[n] == null ? 0.5 : tight[n];
+    const nr = r.reason.startsWith('too easy') ? [t, hi] : [lo, t];
+    if (nr[1] - nr[0] < 1 / 200) {
+      bump(n, 0);
+      range[n] = [0, 1];
+      tight[n] = 0.5;
+      console.error(`  ${n}: bracket closed -> reseed`);
+    } else {
+      range[n] = nr;
+      tight[n] = Math.round(((nr[0] + nr[1]) / 2) * 1000) / 1000;
+      console.error(`  ${n}: ${r.reason.split(':')[0]} at tight ${t} -> ${tight[n]}`);
+    }
+  };
+  // Progress is written back even when stuck, so a rerun resumes from it.
+  const save = () => {
+    const clean = {};
+    for (const [k, v] of Object.entries(bumps)) {
+      const arr = Array.from(v, (n) => n || 0);
+      if (arr.some((n) => n)) clean[k] = arr;
+    }
+    let src = fs.readFileSync(path, 'utf8');
+    src = writeTable(src, 'BUMPS', clean);
+    src = writeTable(src, 'TIGHT', tight);
+    fs.writeFileSync(path, src);
+    console.log('levels.js updated: ' + Object.keys(clean).length + ' reseeded, ' + Object.keys(tight).length + ' tuned');
+  };
+  for (let round = 0; round < 3000; round++) {
+    const levels = LEVELS.buildAll(bumps, tight);
     let changed = false;
     for (const def of levels) {
-      const ck = def.name + JSON.stringify(bumps[def.name] || []);
+      const ck = def.name + JSON.stringify(bumps[def.name] || []) + (tight[def.name] || '');
       let r = cache.get(ck);
       if (!r) { r = check(def); cache.set(ck, r); }
-      if (!r.ok) {
-        const sec = sectionAt(def, r.furthest);
-        console.error(`  ${def.name}: ${r.reason} near x=${r.furthest.toFixed(0)} -> reseed section ${sec}`);
-        bump(def.name, sec);
-        changed = true;
-      }
+      if (r.ok) continue;
+      const sec = sectionAt(def, r.furthest);
+      if (stuck.has(`${def.name} section ${sec}`)) continue;
+      changed = true;
+      if (stepOf(def) < 12) { tune(def, r); continue; }
+      console.error(`  ${def.name}: ${r.reason} near x=${r.furthest.toFixed(0)} -> reseed section ${sec}`);
+      bump(def.name, sec);
     }
     if (changed) continue;
     const rep = findRepeat(levels);
     if (rep) {
       const def = levels[rep.b.li];
       const sec = sectionAt(def, rep.b.fx);
+      if (stuck.has(`${def.name} section ${sec}`)) {
+        console.error(`stuck on a repeat: ${levels[rep.a.li].name}@${rep.a.x} = ${def.name}@${rep.b.x}`);
+        save(); return 2;
+      }
       console.error(`  repeat: ${levels[rep.a.li].name}@${rep.a.x} = ${def.name}@${rep.b.x} -> reseed section ${sec}`);
       bump(def.name, sec);
       continue;
     }
-    const clean = {};
-    for (const [k, v] of Object.entries(bumps)) {
-      const arr = Array.from(v, (n) => n || 0);
-      if (arr.some((n) => n)) clean[k] = arr;
-    }
-    console.log(JSON.stringify(clean));
+    save();
+    if (stuck.size) { console.error('STUCK: ' + [...stuck].join(', ')); return 2; }
     return 0;
   }
-  console.error('gave up after 400 rounds');
+  save();
+  console.error('gave up' + (stuck.size ? '; STUCK: ' + [...stuck].join(', ') : ''));
   return 1;
 }
 
