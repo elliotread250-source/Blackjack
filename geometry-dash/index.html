@@ -129,15 +129,20 @@
   }
   .mode {
     background: var(--panel); border: 3px solid #000; border-radius: 12px; padding: 10px;
-    box-shadow: 0 5px 0 #000; display: flex; align-items: center; gap: 10px; cursor: pointer;
-    color: #fff; font: inherit; text-align: left; flex: none;
-    transition: transform 0.06s;
+    box-shadow: 0 5px 0 #000; display: flex; flex-direction: column; gap: 8px;
   }
-  .mode:hover { border-color: #fff; }
-  .mode:active { transform: translateY(3px); box-shadow: 0 2px 0 #000; }
-  .mode canvas { position: static; width: 44px; height: 44px; flex: none; }
-  .mode .mn { font-size: 16px; -webkit-text-stroke: 0.5px #000; }
-  .mode .mp { font-size: 13px; color: var(--muted); -webkit-text-stroke: 0; }
+  .mode .mh { display: flex; align-items: center; gap: 10px; }
+  .mode canvas { position: static; width: 40px; height: 40px; flex: none; }
+  .mode .mn { font-size: 17px; -webkit-text-stroke: 0.5px #000; }
+  .mode .mp { font-size: 13px; color: var(--muted); }
+  .tiers { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+  .tier {
+    padding: 0; min-width: 0; height: 32px; font-size: 16px; border-radius: 8px;
+    box-shadow: 0 3px 0 #000; border-width: 2px;
+  }
+  .tier.done { outline: 2px solid #fff; outline-offset: -5px; }
+  .tierkey { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; color: var(--muted); font-size: 13px; margin: -4px 0 12px; }
+  .tierkey i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; border: 1px solid #000; }
   .skinpanel { max-width: 560px; width: 100%; max-height: 100%; overflow-y: auto; touch-action: pan-y; }
   #skinPreview { position: static; width: 100%; height: 150px; background: rgba(0,0,0,0.35); border-radius: 10px; }
   .label { text-align: left; color: var(--muted); font-size: 15px; margin-bottom: -4px; }
@@ -176,6 +181,11 @@
   <p class="sub">Replica &middot; 8 game modes &middot; 8 levels &middot; mode practice</p>
   <div class="levels" id="levels"></div>
   <h3 class="sect">Game Mode Practice</h3>
+  <div class="tierkey">
+    <span><i style="background:#3bc8ff"></i>1 Very Easy</span><span><i style="background:#3bff6b"></i>2 Easy</span>
+    <span><i style="background:#ffd21f"></i>3 Medium</span><span><i style="background:#ff7a1f"></i>4 Hard</span>
+    <span><i style="background:#d0182a"></i>5 Impossible</span>
+  </div>
   <div class="modes" id="modes"></div>
   <div class="toggle">
     <button class="alt" id="skinBtn">Customize Icon</button>

@@ -63,9 +63,16 @@
 
   // -------------------------------------------------------- flying parts
 
-  function gate(B, x, lo, hi, top, w = 1) {
+  function gate(B, x, lo, hi, top, w = 1, tips = false) {
     if (lo > 0) B.b(x, 0, w, lo);
     if (hi < top) B.b(x, hi, w, top - hi);
+    // Spikes on the column ends shrink the opening and punish clipping it.
+    if (tips) {
+      for (let k = 0; k < w; k++) {
+        if (lo > 0) B.s(x + k, lo);
+        if (hi < top) B.s(x + k, hi - 1, -1);
+      }
+    }
   }
 
   // skip: x positions already filled by a gate column
@@ -88,7 +95,7 @@
     const cols = new Set();
     gaps.forEach((_, i) => { for (let k = 0; k < w; k++) cols.add(first + i * sp + k); });
     spikeRows(B, c + 6, last + sp - 1, top, cols);
-    gaps.forEach(([lo, hi], i) => gate(B, first + i * sp, lo, hi, top, w));
+    gaps.forEach(([lo, hi], i) => gate(B, first + i * sp, lo, hi, top, w, opts.tips));
     const exit = last + sp;
     B.p(exit, top / 2, opts.exit || 'cube', top);
     return exit + 8;
@@ -367,41 +374,183 @@
   }
 
   // ------------------------------------------------------ mode practice
-  // One short, gentle level per game mode. They start already in the mode
-  // so there's nothing to get through before the part you want to drill.
+  // Five tiers per game mode, from Very Easy to Impossible. Each tier is
+  // generated from a seeded RNG and a row of knobs (speed, gap size, spacing,
+  // how far the path swings), so tiers differ in kind, not just length. The
+  // seeds in TRAIN_SEEDS were picked so every tier passes tools/verify.js.
+  // Impossible must pass with 1/60s inputs yet fail with 50ms ones:
+  // provably beatable, but not by human timing.
 
-  const TRAINING = [
-    ['cube', 'Cube Practice', '#2b5bff', '#1a3acc', (B, c) => cubeRun(B, c,
-      ['single', 'single', 'double', 'block', 'blockSpike', 'platform', 'stairs',
-        'padUp', 'pinkHop', 'orbGap', 'pillars', 'double', 'triple'])],
-    ['ship', 'Ship Practice', '#c22bff', '#7a17b0', (B, c) => corridor(B, c, 'ship',
-      [[1, 6], [2, 7], [3, 8], [2, 7], [1, 6], [3, 8], [4, 9], [2, 7], [1, 6], [3, 8], [2, 7], [4, 9]],
-      { spacing: 10 })],
-    ['ball', 'Ball Practice', '#ff3b5c', '#b01734', (B, c) => ball(B, c, 16, { spacing: 8 })],
-    ['ufo', 'UFO Practice', '#ff8a1f', '#b0560f', (B, c) => corridor(B, c, 'ufo',
-      [[1, 6], [2, 7], [1, 6], [3, 8], [2, 7], [4, 9], [3, 8], [2, 7], [1, 6], [2, 7]],
-      { spacing: 9 })],
-    ['wave', 'Wave Practice', '#1fb4ff', '#0f6fa0', (B, c) => corridor(B, c, 'wave',
-      [[3, 7], [4, 8], [2, 6], [3, 7], [5, 9], [4, 8], [2, 6], [1, 5], [3, 7], [5, 9], [3, 7], [2, 6]],
-      { spacing: 6, width: 2, lead: 10 })],
-    ['robot', 'Robot Practice', '#7a7ab8', '#4a4a80', (B, c) => robot(B, robot(B, c))],
-    ['spider', 'Spider Practice', '#9b30ff', '#5a1a99', (B, c) => spider(B, c, 13)],
-    ['swing', 'Swing Practice', '#ffd21f', '#a08410', (B, c) => corridor(B, c, 'swing',
-      [[1, 6], [2, 7], [3, 8], [2, 7], [1, 6], [3, 8], [4, 9], [2, 7], [1, 6], [3, 8]],
-      { spacing: 10 })],
-  ].map(([mode, name, bg, gr, run], i) => {
-    const B = builder();
-    B.color(0, bg, gr);
-    const c = run(B, 4);
-    return finish(B, c, name, {
-      training: true, mode, startMode: mode,
-      difficulty: 'Normal', stars: 1, bpm: 120 + i * 4, key: i, seed: 10 + i,
+  const TIERS = ['Very Easy', 'Easy', 'Medium', 'Hard', 'Impossible'];
+  const SPEED_RATIO = [0.806, 1, 1.243, 1.502, 1.849];
+  const MODE_COLORS = {
+    cube: ['#2b5bff', '#1a3acc'], ship: ['#c22bff', '#7a17b0'], ball: ['#ff3b5c', '#b01734'],
+    ufo: ['#ff8a1f', '#b0560f'], wave: ['#1fb4ff', '#0f6fa0'], robot: ['#7a7ab8', '#4a4a80'],
+    spider: ['#9b30ff', '#5a1a99'], swing: ['#e0b000', '#8a6c00'],
+  };
+  const MODE_NAMES = {
+    cube: 'Cube', ship: 'Ship', ball: 'Ball', ufo: 'UFO', wave: 'Wave', robot: 'Robot', spider: 'Spider', swing: 'Swing',
+  };
+  // Speed index per tier (0 = 0.5x ... 4 = 4x)
+  const TIER_SPEED = {
+    cube: [0, 1, 1, 2, 4], ship: [0, 1, 2, 3, 4], ball: [0, 1, 1, 2, 4], ufo: [0, 1, 1, 2, 4],
+    wave: [0, 1, 1, 2, 4], robot: [0, 1, 1, 2, 4], spider: [0, 1, 2, 2, 4], swing: [0, 1, 1, 2, 4],
+  };
+  // Flying modes: gap height, gate spacing (blocks at 1x), max centre swing, gate count
+  const FLY = {
+    ship:  { h: [6, 5, 4, 3, 2.5],     space: [11, 10, 9, 8, 5], delta: [1, 2, 2.5, 3, 4.5],   n: [8, 10, 12, 14, 20] },
+    ufo:   { h: [6, 5, 4.5, 3.5, 3],   space: [10, 9, 8, 8, 5],  delta: [1, 1.5, 2, 2.5, 3.5], n: [8, 10, 12, 14, 20] },
+    wave:  { h: [5, 4, 3.2, 2.4, 2.2], space: [8, 7, 6, 5, 3],   delta: [1, 1.5, 2, 2.5, 3],   n: [8, 10, 12, 14, 24], width: [2, 2, 2, 2, 1] },
+    swing: { h: [6, 5, 4, 3.2, 2.6],   space: [11, 10, 9, 8, 5], delta: [1, 1.5, 2, 3, 4.5],   n: [8, 10, 12, 14, 20] },
+  };
+  const CUBE_POOL = [
+    ['single', 'block', 'single', 'padUp'],
+    ['single', 'double', 'block', 'platform', 'stairs', 'padUp', 'orbGap'],
+    ['double', 'platform', 'stairs', 'padUp', 'orbGap', 'pillars', 'blockSpike', 'pinkHop'],
+    ['double', 'triple', 'stairs', 'orbGap', 'pillars', 'blockSpike', 'platform'],
+    ['triple', 'double', 'pillars', 'orbGap', 'stairs', 'blockSpike', 'triple'],
+  ];
+  // Seed per [mode][tier], found with `node tools/verify.js --seeds <mode>`.
+  const TRAIN_SEEDS = {
+    cube: [1, 1, 1, 1, 44], ship: [1, 1, 1, 1, 2], ball: [1, 1, 1, 1, 1], ufo: [1, 1, 1, 1, 1],
+    wave: [1, 1, 1, 1, 1], robot: [1, 1, 1, 1, 5], spider: [1, 1, 1, 1, 1], swing: [1, 1, 1, 1, 5],
+  };
+
+  function rng(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = Math.imul(a ^ (a >>> 15), a | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const half = (v) => Math.round(v * 2) / 2;
+  const pick = (r, list) => list[Math.floor(r() * list.length)];
+
+  function flyGen(B, c, mode, t, r, sf) {
+    const k = FLY[mode];
+    const h = k.h[t], top = 10;
+    let mid = top / 2;
+    const gaps = [];
+    for (let i = 0; i < k.n[t]; i++) {
+      mid += (r() * 2 - 1) * k.delta[t];
+      mid = Math.min(top - h / 2 - 0.6, Math.max(h / 2 + 0.6, mid));
+      const lo = half(mid - h / 2);
+      gaps.push([lo, lo + h]);
+    }
+    const space = Math.round(k.space[t] * sf);
+    // Impossible wave is mini: twice the climb angle through spiked gates.
+    if (mode === 'wave' && t === 4) B.p(c + 1, 2, 'mini', 4);
+    return corridor(B, c, mode, gaps, {
+      spacing: space, width: k.width ? k.width[t] : 1, lead: Math.max(9, space),
+      tips: t === 4,
     });
-  });
+  }
+
+  // Floor/ceiling spike clusters; from Hard up the side sometimes repeats.
+  function clusterGen(B, c, mode, t, r, sf) {
+    const top = 8;
+    if (t === 4) return clusterImpossible(B, c, mode, r);
+    const len = [1, 2, 2, 3][t], n = [8, 10, 12, 14][t];
+    const gap = Math.round([10, 8, 7, 6][t] * sf);
+    B.p(c, 2, mode, 4);
+    let x = c + 8, side = 0;
+    for (let i = 0; i < n; i++) {
+      if (mode === 'spider' && t >= 2 && r() < 0.25) {
+        B.b(x, 0, 3, 3); B.b(x + 3, 5, 3, 3);
+        x += 6 + gap;
+        continue;
+      }
+      if (side === 0) B.spikes(x, 0, len);
+      else B.spikes(x, top - 1, len, -1);
+      x += len + gap;
+      if (!(t >= 3 && r() < 0.3)) side = 1 - side;
+    }
+    B.p(x + 2, top / 2, 'cube', top);
+    return x + 10;
+  }
+
+  // Impossible ball/spider: windows narrower than a 50ms tap at 4x.
+  // Ball: spikes on floor AND ceiling at the same x, so you must be mid-flip
+  // exactly as you pass. Spider: floor and ceiling runs one block apart.
+  function clusterImpossible(B, c, mode, r) {
+    const top = 8;
+    B.p(c, 2, mode, 4);
+    let x = c + 10, side = 0;
+    for (let i = 0; i < 22; i++) {
+      if (mode === 'ball') {
+        const len = 4 + (r() < 0.5 ? 1 : 0);
+        B.spikes(x, 0, len); B.spikes(x, top - 1, len, -1);
+        x += len + 4 + Math.floor(r() * 5);
+      } else {
+        const len = 2 + Math.floor(r() * 3);
+        if (side === 0) B.spikes(x, 0, len);
+        else B.spikes(x, top - 1, len, -1);
+        x += len + 1;
+        side = 1 - side;
+      }
+    }
+    B.p(x + 2, top / 2, 'cube', top);
+    return x + 10;
+  }
+
+  function cubeGen(B, c, t, r) {
+    const n = [8, 10, 12, 14, 20][t], squeeze = [0, 0, 1, 2, 3][t];
+    for (let i = 0; i < n; i++) c = C[pick(r, CUBE_POOL[t])](B, c) - squeeze;
+    return c + squeeze;
+  }
+
+  function robotGen(B, c, t, r, sf) {
+    const n = [8, 10, 12, 14, 22][t];
+    const pitMax = [2, 3, 4, 5, 7][t], wallMax = [1, 2, 2, 2, 2][t];
+    const gap = Math.round([8, 7, 6, 5, 2][t] * sf);
+    c += 4;
+    for (let i = 0; i < n; i++) {
+      const kind = r();
+      if (kind < 0.4) {
+        const w = 1 + Math.floor(r() * pitMax);
+        B.spikes(c, 0, w); c += w;
+      } else if (kind < 0.7) {
+        const h = 1 + Math.floor(r() * wallMax);
+        B.b(c, 0, 1, h); c += 1;
+      } else {
+        const w = 3 + Math.floor(r() * 3), h = 1 + Math.floor(r() * wallMax);
+        B.b(c, 0, w, h); B.spikes(c + w, 0, Math.min(pitMax, 2)); c += w + 2;
+      }
+      c += gap;
+    }
+    return c;
+  }
+
+  function buildTraining(mode, t, seed) {
+    const B = builder();
+    const r = rng(seed * 7919 + t * 104729 + mode.length * 31);
+    const sp = TIER_SPEED[mode][t];
+    const sf = SPEED_RATIO[sp];
+    B.color(0, MODE_COLORS[mode][0], MODE_COLORS[mode][1]);
+    let c = 6;
+    if (mode === 'cube') c = cubeGen(B, c, t, r);
+    else if (mode === 'robot') c = robotGen(B, c, t, r, sf);
+    else if (FLY[mode]) c = flyGen(B, c, mode, t, r, sf);
+    else c = clusterGen(B, c, mode, t, r, sf);
+    return finish(B, c, `${MODE_NAMES[mode]} ${TIERS[t]}`, {
+      training: true, mode, tier: t, tierName: TIERS[t], startMode: mode, startSpeed: sp,
+      slot: `t:${mode}:${t}`, verifyStep: t === 4 ? 4 : 12,
+      difficulty: TIERS[t], stars: t + 1, bpm: 116 + t * 12, key: t * 2, seed: 20 + t,
+    });
+  }
+
+  const TRAINING = [];
+  for (const mode of Object.keys(MODE_NAMES)) {
+    for (let t = 0; t < TIERS.length; t++) TRAINING.push(buildTraining(mode, t, TRAIN_SEEDS[mode][t]));
+  }
 
   const LEVELS = [neonSteps(), pulseCircuit(), gravityOverdrive(),
     cyberHop(), midnightDrift(), bassReactor(), hyperwave(), finalAscent()].concat(TRAINING);
 
+  LEVELS.TIERS = TIERS;
+  LEVELS.buildTraining = buildTraining; // for tools/verify.js seed search
   if (typeof module !== 'undefined' && module.exports) module.exports = LEVELS;
   else root.GDLevels = LEVELS;
 })(typeof self !== 'undefined' ? self : this);
