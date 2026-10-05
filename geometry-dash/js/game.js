@@ -703,9 +703,11 @@
     const col = levelColors(L, px);
     const pulse = AUDIO.pulse();
     drawBackground(col.bg, col.gr, pulse);
+    if (L.themes) drawThemes(L, 'back', pulse);
     drawObjects(L, pulse, col);
     if (s.bounds) drawCeiling(col.gr, s.bounds.ceil);
     drawGround(col.gr, s.bounds ? s.bounds.floor : 0);
+    if (L.themes) drawThemes(L, 'front', pulse);
     if (s.bounds && detail()) { drawThorns(sy(s.bounds.floor), 1); drawThorns(sy(s.bounds.ceil), -1); }
     if (SET.hitboxes && (G.practice || L.training)) drawHitboxes(L, s);
     drawCheckpoints();
@@ -795,6 +797,293 @@
     }
   }
 
+  // ------------------------------------------------------------ themes
+  // Render-only scenery a level can ask for per section (levels.js
+  // `themes`): lava or acid floors, ruins, hanging crushers, ice mountains,
+  // chains of glowing orbs, chevrons, torches, a dark cave, a dungeon, a
+  // countdown, a grey flash, neon frames and an end altar. 'back' layers go
+  // behind the level, 'front' ones over the ground. Each is clipped to its
+  // section, so scenery changes exactly where the section does.
+  const BACK = new Set(['ruins', 'crushers', 'mountains', 'orbChain', 'chevrons', 'countdown', 'neon']);
+  function drawThemes(L, layer, pulse) {
+    if (!detail() && layer === 'back') return;
+    for (const th of L.themes) {
+      const x0 = th[0], x1 = th[1];
+      if (x1 < G.camX - 2 || x0 > G.camX + VIEW_W + 2) continue;
+      const a = Math.max(0, sx(x0)), b = Math.min(W, sx(x1));
+      if (b <= a) continue;
+      ctx.save();
+      ctx.beginPath(); ctx.rect(a, -10, b - a, H + 20); ctx.clip();
+      for (let i = 2; i < th.length; i++) {
+        const [kind, arg] = th[i].split(':');
+        if (BACK.has(kind) !== (layer === 'back')) continue;
+        const fn = THEME[kind];
+        if (fn) { ctx.save(); fn(x0, x1, arg, pulse); ctx.restore(); }
+      }
+      ctx.restore();
+    }
+  }
+  const floorY = () => sy(G.s && G.s.bounds ? G.s.bounds.floor : 0);
+  function liquid(c1, c2, glow) {
+    const y = floorY();
+    if (y > H + 4) return;
+    const g = ctx.createLinearGradient(0, y - S * 0.4, 0, H);
+    g.addColorStop(0, c1); g.addColorStop(0.25, c2); g.addColorStop(1, '#000');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(-10, H + 10);
+    for (let px = -10; px <= W + 10; px += 8) {
+      const wx = G.camX + px / S;
+      ctx.lineTo(px, y - S * 0.12 + Math.sin(wx * 1.7 + G.t * 3) * S * 0.07 + Math.sin(wx * 0.6 - G.t * 2) * S * 0.05);
+    }
+    ctx.lineTo(W + 10, H + 10); ctx.closePath(); ctx.fill();
+    ctx.globalCompositeOperation = 'lighter';
+    const gl = ctx.createLinearGradient(0, y - S * 1.6, 0, y);
+    gl.addColorStop(0, 'rgba(0,0,0,0)'); gl.addColorStop(1, glow);
+    ctx.fillStyle = gl; ctx.fillRect(0, y - S * 1.6, W, S * 1.6);
+    // Bubbles popping up from the surface
+    for (let k = Math.floor(G.camX); k < G.camX + VIEW_W; k++) {
+      const ph = (G.t * 0.8 + k * 0.37) % 1, sd = ((k * 9301 + 49297) % 233) / 233;
+      if (sd > 0.35) continue;
+      ctx.fillStyle = c1; ctx.globalAlpha = 1 - ph;
+      ctx.beginPath(); ctx.arc(sx(k + sd * 2), y - ph * S * 0.8, S * 0.08 * (1 - ph * 0.5), 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  function flame(x, y, s, blue) {
+    const f = Math.sin(G.t * 12 + x) * 0.15;
+    const g = ctx.createRadialGradient(x, y - s * 0.4, 0, x, y - s * 0.3, s * 0.7);
+    g.addColorStop(0, blue ? '#e0ffff' : '#fff6c0'); g.addColorStop(0.4, blue ? '#3bc8ff' : '#ffb000'); g.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.moveTo(x - s * 0.25, y); ctx.quadraticCurveTo(x - s * 0.3, y - s * 0.5, x + f * s, y - s * (0.9 + f));
+    ctx.quadraticCurveTo(x + s * 0.3, y - s * 0.5, x + s * 0.25, y); ctx.fill();
+  }
+  const THEME = {
+    lava() { liquid('#ffd23b', '#ff5a00', 'rgba(255,90,0,0.35)'); },
+    acid() { liquid('#d8ff5a', '#4bdc1e', 'rgba(90,255,40,0.3)'); },
+    // Golden ruined pillars in the middle distance
+    ruins() {
+      const off = G.camX * 0.45, base = floorY();
+      for (let k = Math.floor(off / 7) - 1; k < (off + VIEW_W) / 7 + 1; k++) {
+        const x = (k * 7 + 2 - off) * S, h = (2.5 + ((k * 37) % 5) * 0.6) * S, w = S * 0.9;
+        const g = ctx.createLinearGradient(x, 0, x + w, 0);
+        g.addColorStop(0, '#a05a00'); g.addColorStop(0.5, '#ffd23b'); g.addColorStop(1, '#a05a00');
+        ctx.globalAlpha = 0.55; ctx.fillStyle = g;
+        ctx.fillRect(x, base - h, w, h);
+        ctx.fillRect(x - S * 0.2, base - h - S * 0.25, w + S * 0.4, S * 0.25);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        for (let j = 1; j < 4; j++) ctx.fillRect(x + j * w / 4, base - h, 2, h);
+      }
+    },
+    // Spiked stone crushers hanging from chains along the top
+    crushers() {
+      const off = G.camX * 0.8;
+      for (let k = Math.floor(off / 4) - 1; k < (off + VIEW_W) / 4 + 1; k++) {
+        const x = (k * 4 - off) * S, len = (0.6 + ((k * 13) % 4) * 0.35 + Math.sin(G.t * 1.5 + k) * 0.1) * S;
+        ctx.globalAlpha = 0.8;
+        ctx.strokeStyle = '#1a0a0a'; ctx.lineWidth = Math.max(2, S * 0.06);
+        ctx.beginPath(); ctx.moveTo(x + S * 0.6, 0); ctx.lineTo(x + S * 0.6, len); ctx.stroke();
+        ctx.fillStyle = '#3a2a2a'; ctx.fillRect(x, len, S * 1.2, S * 0.7);
+        ctx.fillStyle = '#5a4a4a'; ctx.fillRect(x, len, S * 1.2, S * 0.12);
+        ctx.fillStyle = '#ff9e2b';
+        for (let j = 0; j < 4; j++) { const sx0 = x + j * S * 0.3; ctx.beginPath(); ctx.moveTo(sx0, len + S * 0.7); ctx.lineTo(sx0 + S * 0.15, len + S * 0.95); ctx.lineTo(sx0 + S * 0.3, len + S * 0.7); ctx.fill(); }
+      }
+    },
+    // Snowy mountains and an icy shimmer
+    mountains() {
+      const base = floorY();
+      for (const [par, h, col] of [[0.15, 3.5, 'rgba(200,220,255,0.35)'], [0.3, 2.4, 'rgba(160,190,255,0.45)']]) {
+        const off = G.camX * par;
+        ctx.fillStyle = col;
+        ctx.beginPath(); ctx.moveTo(-10, base);
+        for (let k = Math.floor(off / 3) - 1; k < (off + VIEW_W) / 3 + 2; k++) {
+          const x = (k * 3 - off) * S, pk = h * (0.6 + ((k * 7919) % 5) / 10);
+          ctx.lineTo(x, base); ctx.lineTo(x + 1.5 * S, base - pk * S); ctx.lineTo(x + 3 * S, base);
+        }
+        ctx.lineTo(W + 10, base); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.6)';
+        for (let k = Math.floor(off / 3) - 1; k < (off + VIEW_W) / 3 + 2; k++) {
+          const x = (k * 3 - off) * S, pk = h * (0.6 + ((k * 7919) % 5) / 10);
+          ctx.beginPath(); ctx.moveTo(x + 1.5 * S, base - pk * S); ctx.lineTo(x + 1.15 * S, base - (pk - 0.6) * S); ctx.lineTo(x + 1.85 * S, base - (pk - 0.6) * S); ctx.fill();
+        }
+      }
+    },
+    // Two wavy chains of glowing orbs joined by crackling lightning
+    orbChain(x0, x1, arg, pulse) {
+      const fire = arg === 'fire';
+      const core = fire ? '#fff2a0' : '#ffffff', mid = fire ? '#ffa31f' : '#7ee8ff', bolt = fire ? '#ffcf5a' : '#c8f4ff';
+      const off = G.camX * 0.6;
+      for (const [cy, amp, ph] of [[0.3, 1.4, 0], [0.72, 1.2, 2]]) {
+        const pts = [];
+        for (let k = Math.floor(off / 1.6) - 1; k < (off + VIEW_W) / 1.6 + 2; k++) {
+          pts.push([(k * 1.6 - off) * S, H * cy + Math.sin(k * 0.55 + ph) * amp * S]);
+        }
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = bolt; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.8;
+        ctx.beginPath();
+        pts.forEach(([x, y], i) => {
+          if (!i) { ctx.moveTo(x, y); return; }
+          const [px, py] = pts[i - 1];
+          for (let j = 1; j <= 3; j++) ctx.lineTo(px + (x - px) * j / 3, py + (y - py) * j / 3 + (Math.random() - 0.5) * S * 0.25);
+        });
+        ctx.stroke();
+        for (const [x, y] of pts) {
+          const r = S * (0.32 + pulse * 0.08);
+          const g = ctx.createRadialGradient(x, y, 0, x, y, r * 1.8);
+          g.addColorStop(0, core); g.addColorStop(0.35, mid); g.addColorStop(1, 'rgba(0,0,0,0)');
+          ctx.fillStyle = g; ctx.globalAlpha = 0.9;
+          ctx.beginPath(); ctx.arc(x, y, r * 1.8, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+    },
+    chevrons(x0, x1, arg) {
+      const col = arg === 'yellow' ? '#ffd21f' : '#ffb0c8';
+      const off = G.camX * 0.7;
+      ctx.strokeStyle = col; ctx.lineWidth = Math.max(3, S * 0.12); ctx.lineCap = 'square'; ctx.globalAlpha = 0.75;
+      for (let k = Math.floor(off / 3) - 1; k < (off + VIEW_W) / 3 + 1; k++) {
+        const x = (k * 3 + ((k * 31) % 3) * 0.4 - off) * S, y = H * (0.2 + ((k * 17) % 7) / 10), z = S * 0.32;
+        ctx.save(); ctx.translate(x, y + Math.sin(G.t * 2 + k) * S * 0.1); ctx.rotate(((k * 53) % 4) * Math.PI / 2 * 0.25);
+        ctx.beginPath(); ctx.moveTo(-z * 0.5, -z); ctx.lineTo(z * 0.5, 0); ctx.lineTo(-z * 0.5, z); ctx.stroke();
+        ctx.restore();
+      }
+    },
+    torches(x0, x1, arg) {
+      const base = floorY();
+      for (let k = Math.ceil(x0 / 6) * 6; k < x1; k += 6) {
+        const x = sx(k + 2);
+        if (x < -S || x > W + S) continue;
+        ctx.fillStyle = '#2a1a3a'; ctx.fillRect(x - S * 0.2, base - S * 0.9, S * 0.4, S * 0.9);
+        ctx.fillStyle = '#4a3a5a'; ctx.fillRect(x - S * 0.32, base - S * 1.0, S * 0.64, S * 0.16);
+        flame(x, base - S * 1.0, S * 0.9, arg === 'blue');
+      }
+    },
+    // Winding dark tunnel: black rock above and below with green edges
+    cave() {
+      ctx.fillStyle = 'rgba(0,0,0,0.92)';
+      const edge = (top) => {
+        ctx.beginPath(); ctx.moveTo(-10, top ? -10 : H + 10);
+        const pts = [];
+        for (let px = -10; px <= W + 10; px += 10) {
+          const wx = G.camX + px / S;
+          const c = H * (0.5 + 0.22 * Math.sin(wx * 0.11) + 0.08 * Math.sin(wx * 0.37));
+          const yy = c + (top ? -1 : 1) * H * 0.28;
+          pts.push([px, yy]); ctx.lineTo(px, yy);
+        }
+        ctx.lineTo(W + 10, top ? -10 : H + 10); ctx.closePath(); ctx.fill();
+        ctx.fillStyle = '#4bff6b';
+        for (let i = 0; i < pts.length; i += 2) ctx.fillRect(pts[i][0], pts[i][1] - 1.5, 3, 3);
+        ctx.fillStyle = 'rgba(0,0,0,0.92)';
+      };
+      edge(true); edge(false);
+    },
+    // Dark stone dungeon with grass spikes along the ceiling and floor
+    dungeon() {
+      const base = floorY();
+      ctx.fillStyle = 'rgba(10,0,20,0.45)'; ctx.fillRect(0, 0, W, H);
+      ctx.fillStyle = '#5aff3b';
+      for (let px = -(G.camX * S % 6); px < W; px += 6) {
+        const h = 4 + Math.abs(Math.sin(px * 0.7)) * 6;
+        ctx.beginPath(); ctx.moveTo(px, base); ctx.lineTo(px + 3, base - h); ctx.lineTo(px + 6, base); ctx.fill();
+      }
+    },
+    // The 3-2-1 countdown room: big numbers fading through the section
+    countdown(x0, x1) {
+      const len = x1 - x0, mid = (G.camX + VIEW_W / 2 - x0) / len;
+      const n = mid < 1 / 3 ? 3 : mid < 2 / 3 ? 2 : 1;
+      const k = (mid * 3) % 1;
+      ctx.globalAlpha = 0.25 + 0.25 * Math.sin(k * Math.PI);
+      ctx.font = `${Math.round(H * 0.5)}px 'Lilita One', system-ui, sans-serif`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#3ae0ff'; ctx.fillText(String(n), W / 2, H * 0.45);
+      ctx.font = `${Math.round(S * 0.6)}px 'Lilita One', system-ui, sans-serif`;
+      ctx.globalAlpha = 0.8;
+      for (const [num, fx, fy] of [[1, 0.25, 0.35], [2, 0.75, 0.6], [3, 0.12, 0.62]]) ctx.fillText(String(num), W * fx, H * fy);
+    },
+    // Everything turns grey for the transition
+    mono() {
+      ctx.globalCompositeOperation = 'saturation';
+      ctx.fillStyle = '#808080'; ctx.fillRect(0, 0, W, H);
+    },
+    // Neon cyan brick frames and little purple monsters in the background
+    neon() {
+      const off = G.camX * 0.6;
+      for (let k = Math.floor(off / 9) - 1; k < (off + VIEW_W) / 9 + 1; k++) {
+        const x = (k * 9 - off) * S, y = H * (0.15 + ((k * 7) % 3) * 0.12);
+        ctx.strokeStyle = '#3af0ff'; ctx.lineWidth = Math.max(2, S * 0.1); ctx.globalAlpha = 0.5;
+        ctx.shadowColor = '#3af0ff'; ctx.shadowBlur = S * 0.4;
+        ctx.strokeRect(x, y, S * 2.4, S * 1.6);
+        ctx.shadowBlur = 0;
+        const mx = x + S * 4.5, my = y + S * 2.2 + Math.sin(G.t * 3 + k) * S * 0.15;
+        ctx.globalAlpha = 0.85; ctx.fillStyle = '#8a3ad0'; ctx.fillRect(mx, my, S * 0.6, S * 0.5);
+        ctx.fillStyle = '#c0ff5a'; ctx.fillRect(mx + S * 0.1, my + S * 0.12, S * 0.12, S * 0.12); ctx.fillRect(mx + S * 0.38, my + S * 0.12, S * 0.12, S * 0.12);
+      }
+    },
+    // A candle-lit skull altar just before the end wall
+    altar(x0, x1) {
+      const L = G.L, x = sx((L ? L.length : x1) - 3), base = floorY();
+      if (x < -S * 4 || x > W + S * 4) return;
+      ctx.fillStyle = '#1a3a4a'; ctx.fillRect(x - S * 2, base - S * 0.6, S * 4, S * 0.6);
+      ctx.fillStyle = '#3af0ff'; ctx.fillRect(x - S * 2, base - S * 0.6, S * 4, S * 0.1);
+      ctx.fillStyle = '#e8d8a0';
+      ctx.beginPath(); ctx.arc(x, base - S * 1.1, S * 0.4, 0, Math.PI * 2); ctx.fill();
+      ctx.fillRect(x - S * 0.22, base - S * 0.85, S * 0.44, S * 0.25);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(x - S * 0.2, base - S * 1.2, S * 0.14, S * 0.14); ctx.fillRect(x + S * 0.06, base - S * 1.2, S * 0.14, S * 0.14);
+      for (const dx of [-1.5, 1.5]) {
+        ctx.fillStyle = '#f0e0c0'; ctx.fillRect(x + dx * S - S * 0.08, base - S * 1.1, S * 0.16, S * 0.5);
+        flame(x + dx * S, base - S * 1.1, S * 0.5, false);
+      }
+    },
+  };
+
+  // Block textures a theme can ask for with 'skin:lava|brick|stone'.
+  function skinAt(L, x) {
+    for (const th of L.themes) {
+      if (x < th[0] || x >= th[1]) continue;
+      for (let i = 2; i < th.length; i++) if (th[i].startsWith('skin:')) return th[i].slice(5);
+    }
+    return null;
+  }
+  function drawSkinBlock(o, sk, pulse) {
+    const x = sx(o.x), y = sy(o.y + o.h), w = o.w * S, h = o.h * S;
+    if (x > W || x + w < 0 || y > H || y + h < 0) return;
+    if (sk === 'lava') {
+      const g = ctx.createLinearGradient(0, y, 0, y + h);
+      g.addColorStop(0, '#ff8a1e'); g.addColorStop(Math.min(1, S / Math.max(h, 1)), '#c8340c'); g.addColorStop(1, '#5a0c04');
+      ctx.fillStyle = g; ctx.fillRect(x, y, w, h);
+      // Dark lava-rock speckles, fixed per block
+      ctx.fillStyle = 'rgba(60,8,0,0.55)';
+      for (let i = 0; i < o.w * o.h * 3; i++) {
+        const u = ((i * 7919 + o.x * 31) % 97) / 97, v = ((i * 104729 + o.y * 17) % 89) / 89;
+        ctx.beginPath(); ctx.arc(x + u * w, y + v * h, S * (0.06 + (i % 3) * 0.03), 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.fillStyle = `rgba(255,230,120,${0.7 + pulse * 0.3})`; ctx.fillRect(x, y, w, Math.max(2, S * 0.07));
+      ctx.strokeStyle = '#2a0400'; ctx.lineWidth = Math.max(1.5, S * 0.05); ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+    } else if (sk === 'brick') {
+      ctx.fillStyle = '#140c34'; ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = 'rgba(58,240,255,0.35)'; ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let j = 0; j < o.h * 2; j++) {
+        const yy = y + j * S / 2; ctx.moveTo(x, yy); ctx.lineTo(x + w, yy);
+        for (let i = (j % 2) * 0.5; i < o.w; i += 1) { ctx.moveTo(x + i * S, yy); ctx.lineTo(x + i * S, yy + S / 2); }
+      }
+      ctx.stroke();
+      ctx.save();
+      ctx.shadowColor = '#3af0ff'; ctx.shadowBlur = S * (0.3 + pulse * 0.2);
+      ctx.strokeStyle = '#5af6ff'; ctx.lineWidth = Math.max(2, S * 0.09); ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+      ctx.restore();
+    } else {
+      ctx.fillStyle = '#1e1a24'; ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = 'rgba(160,150,180,0.25)'; ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let j = 0; j < o.h * 2; j++) {
+        const yy = y + j * S / 2; ctx.moveTo(x, yy); ctx.lineTo(x + w, yy);
+        for (let i = (j % 2) * 0.5; i < o.w; i += 1) { ctx.moveTo(x + i * S, yy); ctx.lineTo(x + i * S, yy + S / 2); }
+      }
+      ctx.stroke();
+      ctx.strokeStyle = '#6a6478'; ctx.lineWidth = Math.max(1.5, S * 0.06); ctx.strokeRect(x + 1, y + 1, w - 2, h - 2);
+      if (sk === 'moss') { ctx.fillStyle = '#5aff3b'; ctx.fillRect(x, y - 2, w, Math.max(3, S * 0.08)); }
+    }
+  }
+
   function drawGround(gr, floorY) {
     const y = sy(floorY);
     if (y > H + 10) return;
@@ -861,7 +1150,10 @@
     const top = shade(col.gr, 0.55), edge = tint(col.gr, 0.55);
     if (detail()) drawDecor(L, blocks, pulse, col);
     for (const o of others) if (o.t === 'p') drawPortal(o, pulse, true);
-    for (const o of blocks) drawBlock(o, top, edge, pulse);
+    for (const o of blocks) {
+      const sk = L.themes && skinAt(L, o.x + o.w / 2);
+      if (sk) drawSkinBlock(o, sk, pulse); else drawBlock(o, top, edge, pulse);
+    }
     if (detail()) drawBlockDeco(blocks, col, pulse);
     for (const o of others) {
       if (o.t === 's' || o.t === 'ss') drawSpike(o, top);

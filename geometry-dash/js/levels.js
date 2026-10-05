@@ -548,6 +548,8 @@
     if (!fly.length || def.cubeCoin) for (const [x, y] of coins || []) B.coin(x, y);
     return Object.assign({
       name: def.name, objects: B.o, colors: B.colors, length: c + 14, sections,
+      // Render-only scenery per section: [x0, x1, 'theme', 'theme:arg', ...]
+      themes: def.themes ? def.themes.map(([i, list]) => [sections[i][0], sections[i][1]].concat(list.split(','))) : null,
       startSpeed: Math.min(cap, def.sp0 == null ? 1 : def.sp0), coinCount: B.o.filter((o) => o.t === 'coin').length,
     }, def.meta);
   }
@@ -645,11 +647,21 @@
     { name: 'Dash', D: 2.95, sp0: 1, cubeCoin: 0.14,
       coinSecs: [[10, 0.5], [16, 0.08]],
       meta: { difficulty: 'Insane', stars: 12, bpm: 150, key: 4, seed: 22, order: 16, levelNo: 17, cubeCoin: 0.14 },
-      pal: [['#1e64ff', '#0f3ca0'], ['#8a2be2', '#4b1680'], ['#1e64ff', '#0f3ca0'], ['#8a2be2', '#4b1680'], ['#ff3b8a', '#a01850'],
-        ['#ff7a1e', '#a04a0c'], ['#00c8ff', '#00708a'], ['#2bff9a', '#14a058'], ['#c0c0d8', '#6a6a88'], ['#ff3b5c', '#a01830'],
-        ['#ffb31e', '#a0700c'], ['#9b30ff', '#5a1a99'], ['#1e90ff', '#0f50a0'], ['#30d0ff', '#1880a0'], ['#ff2bd0', '#a0178a'],
-        ['#ffffff', '#8888aa'], ['#ff3b1e', '#a0200c'], ['#c0c0d8', '#6a6a88'], ['#00e0a0', '#008a60'], ['#00b4ff', '#0068a0'],
-        ['#ffe23b', '#a0901e']],
+      // Colours and scenery per section, matched to the real level.
+      pal: [['#3a0808', '#140303'], ['#b0200c', '#5a0c04'], ['#c0185a', '#600a2c'], ['#b01450', '#580a28'], ['#a01040', '#500820'],
+        ['#9a1428', '#4a0810'], ['#3a2bd0', '#1a127a'], ['#6a1ab0', '#300a58'], ['#e06010', '#803008'], ['#262626', '#0e0e0e'],
+        ['#b01438', '#58081c'], ['#6a1060', '#300828'], ['#b0103c', '#58081e'], ['#3a0a4a', '#180420'], ['#2a0838', '#100318'],
+        ['#3a3a3a', '#141414'], ['#123a28', '#06180e'], ['#0e3020', '#04140a'], ['#1c0c40', '#0a0420'], ['#1c0c40', '#0a0420'],
+        ['#200a34', '#0c0418']],
+      themes: [
+        [0, 'ruins,lava,skin:lava'], [1, 'lava,crushers,skin:lava'], [2, 'lava,crushers,skin:lava'], [3, 'lava,crushers,skin:lava'],
+        [4, 'lava,crushers,skin:lava'], [5, 'ruins,crushers,lava,skin:stone'], [6, 'mountains,orbChain,chevrons,torches,skin:brick'],
+        [7, 'lava,chevrons,skin:brick'], [8, 'crushers,lava,skin:lava'], [9, 'cave,skin:lava'],
+        [10, 'orbChain:fire,chevrons:yellow,torches:blue,lava,skin:stone'], [11, 'dungeon,skin:moss'],
+        [12, 'orbChain:fire,torches:blue,lava,skin:stone'], [13, 'dungeon,skin:moss'], [14, 'countdown,acid,skin:stone'],
+        [15, 'mono,countdown,skin:stone'], [16, 'chevrons,acid,skin:stone'], [17, 'acid,crushers,skin:moss'], [18, 'neon,lava,skin:brick'],
+        [19, 'neon,skin:brick'], [20, 'torches,altar,skin:brick'],
+      ],
       secs: [
         ['cube', { n: 3 }],                              // 0-3%
         ['spider', { n: 1 }],                            // 3-5%
