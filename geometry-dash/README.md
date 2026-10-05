@@ -3,8 +3,8 @@
 **Play it: https://elliotread250-source.github.io/Blackjack/geometry-dash/**
 
 A browser rhythm platformer built to play like Geometry Dash: all eight game
-modes, physics tuned to GD's own constants, 13 levels and 160 mode
-practices. No build step, no dependencies, no assets to download. The music
+modes, physics tuned to GD's own constants, 16 levels plus a secret one,
+160 mode practices and a level editor with share links. No build step, no dependencies, no assets to download. The music
 is synthesised live in WebAudio.
 
 ## Game modes
@@ -76,9 +76,26 @@ The last three are modelled on GD's own finales: Fingerflash on Fingerdash
 Lockdown on Deadlocked (a dark, saw-filled 15-star demon). Original layouts
 and names.
 
-Every level has secret coins (three per main level, one per practice level).
-The verifier places them on the winning run it finds, so each one is
-reachable, and the level selector and stats track which you've collected.
+Every level has secret coins (three per main level, one per practice level),
+and they're hidden. In flying sections a coin sits in a tunnel through one
+of the columns, behind a fake wall that looks like the rest of the column;
+only a faint glint gives it away, and the wall goes see-through once you're
+inside. The generator only cuts a tunnel where you can dive into it from
+the gate before and climb out to the gate after at that section's speed.
+Levels with no flying section get a coin high above the route (or, for the
+spider, on the far surface, so you have to teleport over and back). The
+verifier requires every coin on the winning run it finds, so each one is
+reachable.
+
+The secret level, Shadow Gate (Insane, 8 stars), stays out of the level
+selector until you find its door on the main menu. Beating it unlocks the
+Angel icon set.
+
+## Finishing a level
+
+Like GD: the camera stops near the end and your icon runs on into the end
+wall, gets pulled in on an arc, and the wall bursts into light rays and
+shock rings. "LEVEL COMPLETE!" drops in, then the results.
 
 ## Mode practice
 
@@ -111,6 +128,7 @@ node tools/verify.js         # every level: beatable, plus the no-repeats rule
 node tools/verify.js --fix   # reseed failing sections, tune Extreme Demons and
                              # place coins, then write BUMPS, TIGHT and COINS
                              # into levels.js
+node tools/verify.js --coins # place table coins for levels missing one
 ```
 
 `--fix` reseeds only the section that failed. Extreme Demons have a
@@ -148,6 +166,52 @@ two-tone versions. You start with the first of each, and every level you
 beat for the first time, main or practice, unlocks the next icon, spread
 across all eight modes. Your cube rides inside the ship and UFO. Colours,
 colour swap and glow are free.
+
+On top of those are 12 special sets, one icon per mode each (96 more):
+
+| Set | How to get it |
+|---|---|
+| Checker, Neon, Frost, Inferno, Galaxy | Shop, 200 to 900 orbs each |
+| Prism | Shop, 40 diamonds each |
+| Golden | Collect secret coins: 3 for the cube up to 40 for the swing |
+| Demon | A vault code |
+| Ghost, Glitch, Royal | Easter eggs on the main menu |
+| Angel | Beat the secret level |
+
+## Orbs, diamonds and the shop
+
+Mana orbs come in as you set new bests: 5% of a level's orbs for every new
+10% you reach (with a "+N" popup), the rest when you beat it. Bigger levels
+pay more (25 orbs for a 1-star level, 750 for Lockdown). Diamonds come from
+first clears (stars + 2) and 2 per new secret coin. Practice mode pays
+nothing, same as GD. Saves from before this existed get paid out once for
+the progress they already had.
+
+## The Vault
+
+A code box on the main menu. Type a code, hit Unlock. Codes are stored as
+hashes, so reading the source doesn't give them away. Current codes unlock
+the Demon set; more to come.
+
+## Secrets
+
+The main menu hides a few things. Hints are on the "Coming Soon" page at
+the end of the level selector if you keep tapping it.
+
+## Level editor
+
+Create on the main menu. Build on a grid with blocks, fake walls, coins,
+spikes, small spikes, saws, every orb and pad, all eight mode portals,
+gravity, size and speed portals. Build, Delete and Move tools (drag to paint
+or erase; on a computer, right-drag or the mouse wheel moves the view and
+the arrow keys pan), Flip for upside-down spikes and pads, and Undo. Level
+settings pick the starting mode, size, speed, colours, difficulty face and
+a generated song. Test plays it straight away.
+
+Levels save on your device. Share packs the whole level into a link
+(compressed into the URL, no server needed): anyone who opens it gets the
+level ready to play, and can save a copy to edit. Player-made levels track
+your best but pay no orbs.
 
 ## Saving
 

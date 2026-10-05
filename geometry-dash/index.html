@@ -197,6 +197,115 @@
   #completeFace { width: 96px; height: 96px; align-self: center; }
   .earn { color: var(--gold); font-size: 24px; -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
 
+  /* ---------- wallet, shop, vault, secrets */
+  .wallet { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 20px; -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
+  .wallet.corner { position: absolute; top: max(14px, env(safe-area-inset-top)); right: max(16px, env(safe-area-inset-right));
+    background: rgba(0,0,0,0.35); border: 2px solid #000; border-radius: 12px; padding: 4px 12px; }
+  .orb-i { display: inline-block; width: 18px; height: 18px; border-radius: 50%; border: 2px solid #000; vertical-align: -3px; margin: 0 3px 0 8px;
+    background: radial-gradient(circle at 35% 35%, #fff, #5ff0ff 45%, #1060e0); }
+  .orb-i:first-child { margin-left: 0; }
+  .dia-i { display: inline-block; width: 16px; height: 16px; transform: rotate(45deg) scale(0.85); border: 2px solid #000; vertical-align: -3px; margin: 0 5px 0 12px;
+    background: linear-gradient(135deg, #fff, #8ff0ff 40%, #3aa0ff); }
+  .keeper { color: #fff; background: rgba(0,0,0,0.35); border: 2px solid #000; border-radius: 12px; padding: 8px 12px; font-size: 17px; min-height: 42px; }
+  .shopgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .item { background: rgba(0,0,0,0.35); border: 2px solid #000; border-radius: 12px; padding: 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .item canvas { width: 64px; height: 64px; }
+  .item .nm { font-size: 14px; color: #e8ecff; -webkit-text-stroke: 0; }
+  .item button { font-size: 15px; padding: 5px 10px; width: 100%; }
+  .item button.poor { filter: grayscale(0.8) brightness(0.8); }
+  .vaultpanel { width: min(420px, 100%); }
+  .bigLock { width: 84px; height: 100px; align-self: center; transition: transform 0.2s; }
+  .bigLock.shake { animation: shake 0.35s; }
+  .bigLock.open { animation: pop 0.6s; }
+  @keyframes shake { 20%, 60% { transform: translateX(-8px) rotate(-6deg); } 40%, 80% { transform: translateX(8px) rotate(6deg); } }
+  @keyframes pop { 40% { transform: scale(1.3) rotate(-10deg); } 100% { transform: scale(1); } }
+  #vaultCode { font: inherit; font-size: 24px; text-align: center; letter-spacing: 3px; text-transform: uppercase; background: rgba(0,0,0,0.45);
+    color: #fff; border: 3px solid #000; border-radius: 10px; padding: 8px; user-select: text; -webkit-user-select: text; touch-action: auto; }
+  .lk { width: 15px; height: 18px; vertical-align: -3px; }
+  .unlock canvas { width: 64px; height: 64px; }
+  .unlock canvas + canvas { margin-left: -14px; }
+  .kitsep { grid-column: 1 / -1; margin: 8px 0 0; }
+  .toast { position: fixed; left: 50%; top: max(16px, env(safe-area-inset-top)); transform: translate(-50%, -160%); z-index: 9;
+    display: flex; align-items: center; gap: 10px; background: linear-gradient(#2a4bd8, #1a2f96); border: 3px solid #000; border-radius: 14px;
+    padding: 8px 16px; box-shadow: 0 5px 0 #000; transition: transform 0.35s cubic-bezier(.2,.9,.25,1.2); max-width: calc(100% - 32px);
+    font-size: 18px; -webkit-text-stroke: 1px #000; paint-order: stroke fill; pointer-events: none; }
+  .toast.show { transform: translate(-50%, 0); }
+  .toast canvas { width: 48px; height: 48px; flex: none; }
+  /* Easter eggs: a faint moon in the sky and a keyhole in the ground. */
+  .moon { position: absolute; left: 8%; top: 12%; width: 22px; height: 22px; border-radius: 50%; cursor: pointer;
+    box-shadow: 6px -4px 0 0 #fff8d0; opacity: 0.35; animation: twinkle 3.2s ease-in-out infinite; }
+  .moon::before { content: ''; position: absolute; inset: -14px; }
+  .moon.found { opacity: 1; box-shadow: 6px -4px 0 0 #fff8d0, 0 0 30px 6px rgba(255,248,200,0.6); animation: none; }
+  @keyframes twinkle { 50% { opacity: 0.15; } }
+  .keyhole { position: absolute; right: 9%; bottom: 6%; width: 12px; height: 18px; cursor: pointer; opacity: 0.16; transition: opacity 0.2s, filter 0.2s; }
+  .keyhole::before { content: ''; position: absolute; left: 1px; top: 0; width: 10px; height: 10px; border-radius: 50%; background: #000; }
+  .keyhole::after { content: ''; position: absolute; left: 3px; top: 7px; width: 6px; height: 11px; background: #000; clip-path: polygon(30% 0, 70% 0, 100% 100%, 0 100%); }
+  .keyhole.k1 { opacity: 0.4; } .keyhole.k2 { opacity: 0.7; filter: drop-shadow(0 0 6px #ffe066); }
+  .keyhole.open { opacity: 1; filter: drop-shadow(0 0 12px #ffe066); }
+  .logo { cursor: default; transition: transform 0.12s; }
+  .logo.bump { transform: scale(1.06) rotate(-2deg); }
+  .logo.spin { animation: spin 0.9s cubic-bezier(.3,.1,.3,1.3); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .lvcard.secret { --lvc: #2a0a4a; box-shadow: 0 8px 0 #000, 0 0 30px rgba(190,90,255,0.6), inset 0 3px 0 rgba(255,255,255,0.35), inset 0 -8px 0 rgba(0,0,0,0.2); }
+  .soon { width: min(620px, 100%); border: 4px dashed rgba(255,255,255,0.5); border-radius: 22px; padding: 40px 22px; text-align: center; cursor: pointer;
+    font-size: clamp(30px, 6vw, 52px); -webkit-text-stroke: 2px #000; paint-order: stroke fill; background: rgba(0,0,0,0.25); }
+  .soon small { display: block; font-size: 18px; color: var(--muted); -webkit-text-stroke: 1px #000; margin-top: 10px; min-height: 24px; }
+
+  /* ---------- create / editor */
+  .createpanel { width: min(620px, 100%); }
+  .mylist { display: flex; flex-direction: column; gap: 8px; max-height: 46vh; overflow-y: auto; touch-action: pan-y; }
+  .myrow { display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.35); border: 2px solid #000; border-radius: 12px; padding: 6px 8px; text-align: left; }
+  .myrow canvas { width: 44px; height: 44px; flex: none; }
+  .myrow .mi { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .myrow b { font-weight: normal; font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
+  .myrow span { font-size: 13px; color: var(--muted); }
+  .myrow button { font-size: 14px; padding: 5px 9px; flex: none; }
+  #crShareUrl, #edShareUrl, #esFace, #edName { font: 14px system-ui, sans-serif; background: rgba(0,0,0,0.45); color: #fff; border: 2px solid #000;
+    border-radius: 8px; padding: 7px; width: 100%; user-select: text; -webkit-user-select: text; touch-action: auto; resize: none; }
+  #editor { padding: 0; pointer-events: none; display: none; }
+  #editor.show { display: block; }
+  #editor > * { pointer-events: auto; }
+  .edtop { position: absolute; top: max(8px, env(safe-area-inset-top)); left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right));
+    display: flex; gap: 6px; align-items: center; }
+  .edtop button { font-size: 15px; padding: 7px 11px; flex: none; }
+  .edtop .back { width: 44px; height: 44px; }
+  #edName { flex: 1; min-width: 60px; max-width: 280px; font: inherit; font-size: 18px; padding: 6px 10px; }
+  .edbottom { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(4,6,24,0.82); border-top: 3px solid #000;
+    padding: 6px max(8px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    display: flex; flex-direction: column; gap: 6px; }
+  .edrow { display: flex; gap: 6px; align-items: center; overflow-x: auto; touch-action: pan-x; }
+  .edrow button { font-size: 14px; padding: 5px 10px; flex: none; }
+  .edtools button { font-size: 14px; padding: 5px 10px; }
+  .edcats { display: flex; gap: 4px; }
+  .edcats button.on, #edFlip.on { background: linear-gradient(#3ad6ff, #1180c0); }
+  .editems { display: flex; gap: 6px; overflow-x: auto; touch-action: pan-x; padding-bottom: 2px; }
+  .editems button { width: 54px; height: 54px; padding: 3px; flex: none; display: grid; place-items: center; }
+  .editems button.on { outline: 3px solid #fff; outline-offset: 1px; background: linear-gradient(#3a6a3a, #1a3a1a); }
+  .editems canvas { width: 44px; height: 44px; }
+  @media (max-width: 600px) {
+    .edtop { flex-wrap: wrap; }
+    #edName { order: 10; flex-basis: 100%; max-width: none; }
+  }
+  /* Portrait phones: the wallet sits above the logo instead of on it. */
+  @media (max-aspect-ratio: 1/1) {
+    .wallet.corner { position: static; margin: auto 0 10px; }
+    #home > .logo { margin-top: 0; }
+  }
+  .edpanel { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none; width: min(460px, calc(100% - 24px));
+    max-height: calc(100% - 24px); overflow-y: auto; touch-action: pan-y; }
+  .edpanel.show { display: flex; }
+  .edpanel h3 { margin: 0; font-size: 24px; -webkit-text-stroke: 1.5px #000; paint-order: stroke fill; }
+  .esmodes { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+  .esmodes button { padding: 2px; min-width: 0; background: linear-gradient(#2c3270, #1a1f4a); }
+  .esmodes button.on { background: linear-gradient(#3ad6ff, #1180c0); }
+  .esmodes canvas { width: 100%; aspect-ratio: 1; display: block; }
+  .esline { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .esline .seg button { padding: 5px 9px; font-size: 14px; }
+  .escols { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+  .escols button { aspect-ratio: 1; padding: 0; min-width: 0; border-radius: 8px; }
+  .escols button.on { outline: 3px solid #fff; outline-offset: 1px; }
+  #esFace { width: auto; font: inherit; font-size: 15px; }
+
   /* ---------- in-game HUD */
   .hud {
     position: fixed; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left));
@@ -220,10 +329,11 @@
     .cubes { grid-template-columns: repeat(4, 1fr); }
     .skinpanel { padding: 16px; gap: 10px; }
     .statgrid { grid-template-columns: 1fr 1fr; }
+    .wallet.corner { font-size: 16px; padding: 3px 8px; }
   }
   /* Tall content on short screens: anchor to the top instead of clipping it. */
   #home, #practice { justify-content: flex-start; }
-  #home > :first-child { margin-top: auto; }
+  #home > .logo { margin-top: auto; }
   #home > :last-child { margin-bottom: auto; }
   @media (max-height: 500px) {
     .logo { font-size: 15vh; }
@@ -253,7 +363,10 @@
 
 <!-- Home -->
 <div class="overlay show" id="home">
-  <h1 class="logo">GEOMETRY<br>DASH</h1>
+  <div class="wallet corner" id="hWallet"></div>
+  <span class="moon" id="moon" aria-hidden="true"></span>
+  <span class="keyhole" id="keyhole" aria-hidden="true"></span>
+  <h1 class="logo" id="logo">GEOMETRY<br>DASH</h1>
   <p class="tagline" id="tagline">Replica</p>
   <div class="homebtns">
     <div class="homecol">
@@ -272,6 +385,9 @@
   <div class="homerow">
     <button class="ghost" id="hSettings">Settings</button>
     <button class="ghost" id="hStats">Stats</button>
+    <button id="hCreate">Create</button>
+    <button class="gold" id="hShop">Shop</button>
+    <button class="ghost" id="hVault"><svg class="lk" viewBox="0 0 20 24" aria-hidden="true"><rect x="2" y="10" width="16" height="13" rx="3" fill="#ffd21f" stroke="#000" stroke-width="2"/><path d="M5.5 10V7a4.5 4.5 0 0 1 9 0v3" fill="none" stroke="#000" stroke-width="5"/><path d="M5.5 10V7a4.5 4.5 0 0 1 9 0v3" fill="none" stroke="#d8deff" stroke-width="2.4"/></svg> Vault</button>
   </div>
   <div class="help touchhelp">Tap or hold anywhere to jump. Plays best in landscape.<br>Tip: Share &rarr; Add to Home Screen for full screen on iPhone.</div>
   <div class="help keyhelp">
@@ -347,6 +463,98 @@
   </div>
 </div>
 
+<!-- Shop -->
+<div class="overlay shade" id="shop">
+  <div class="panel skinpanel">
+    <h2>Shop</h2>
+    <div class="keeper" id="shopSay"></div>
+    <div class="wallet" id="shopWallet"></div>
+    <div class="kittabs" id="shopTabs"></div>
+    <div class="shopgrid" id="shopGrid"></div>
+    <div class="label">Orbs: 5% of a level's orbs for every new 10% you reach, the rest when you beat it. Diamonds: first clears and secret coins.</div>
+    <button id="shopDone">Done</button>
+  </div>
+</div>
+
+<!-- Vault: codes -->
+<div class="overlay shade" id="vault">
+  <div class="panel vaultpanel">
+    <h2>The Vault</h2>
+    <svg class="bigLock" id="vaultLock" viewBox="0 0 60 72" aria-hidden="true">
+      <path d="M14 32V21a16 16 0 0 1 32 0v11" fill="none" stroke="#000" stroke-width="12"/>
+      <path d="M14 32V21a16 16 0 0 1 32 0v11" fill="none" stroke="#c9d0ff" stroke-width="6"/>
+      <rect x="4" y="30" width="52" height="38" rx="8" fill="#ffd21f" stroke="#000" stroke-width="4"/>
+      <circle cx="30" cy="45" r="6" fill="#000"/><rect x="27" y="47" width="6" height="12" rx="2" fill="#000"/>
+    </svg>
+    <div class="keeper" id="vaultSay"></div>
+    <input id="vaultCode" maxlength="24" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="Enter a code" aria-label="Vault code">
+    <button class="gold" id="vaultGo">Unlock</button>
+    <div class="unlock" id="vaultBox" style="display:none"></div>
+    <button class="ghost" id="vaultDone">Back</button>
+  </div>
+</div>
+
+<!-- Create: your levels -->
+<div class="overlay shade" id="create">
+  <div class="panel createpanel">
+    <h2>Create</h2>
+    <div class="label">Build your own levels, test them, then share a link. Anyone who opens the link can play your level.</div>
+    <button class="gold" id="crNew">+ New level</button>
+    <div class="mylist" id="crList"></div>
+    <div class="row" id="crShareRow" style="display:none"><input id="crShareUrl" aria-label="Level link" placeholder="Paste a level link here"></div>
+    <div class="row"><button class="ghost" id="crOpen">Open a level link</button><button id="crDone">Done</button></div>
+  </div>
+</div>
+
+<!-- Level editor -->
+<div class="overlay" id="editor">
+  <div class="edtop">
+    <button class="ghost back" id="edBack" aria-label="Save and exit">&lsaquo;</button>
+    <input id="edName" maxlength="28" aria-label="Level name">
+    <button class="ghost" id="edUndo">Undo</button>
+    <button class="ghost" id="edSetBtn">Settings</button>
+    <button class="gold" id="edShare">Share</button>
+    <button id="edTest">&#9654; Test</button>
+  </div>
+  <div class="edbottom" id="edBottom">
+    <div class="edrow">
+      <div class="seg edtools"><button id="edBuild" class="on">Build</button><button id="edErase">Delete</button><button id="edMove">Move</button></div>
+      <button class="ghost" id="edFlip" title="Hang spikes and pads upside down">Flip</button>
+      <div class="edcats" id="edCats"></div>
+    </div>
+    <div class="editems" id="edItems"></div>
+  </div>
+  <div class="panel edpanel" id="edSet">
+    <h3>Level settings</h3>
+    <div class="label">Start as</div><div class="esmodes" id="esModes"></div>
+    <div class="esline"><div class="seg" id="esSize"></div><div class="seg" id="esSpeed"></div></div>
+    <div class="label">Colours</div><div class="escols" id="esCols"></div>
+    <div class="esline"><span class="label">Difficulty</span><select id="esFace" aria-label="Difficulty"></select></div>
+    <div class="esline"><span class="label" id="esSong"></span><button class="ghost" id="esNewSong">New song</button></div>
+    <div class="row"><button class="ghost" id="esClear">Clear level</button><button id="esDone">Done</button></div>
+  </div>
+  <div class="panel edpanel" id="edShareBox">
+    <h3>Share your level</h3>
+    <div class="label" id="edShareInfo"></div>
+    <textarea id="edShareUrl" rows="3" readonly aria-label="Share link"></textarea>
+    <div class="row"><button class="gold" id="edShareCopy">Copy link</button><button class="alt" id="edShareNative">Share&hellip;</button></div>
+    <button class="ghost" id="edShareClose">Close</button>
+  </div>
+</div>
+
+<!-- A level opened from a share link -->
+<div class="overlay shade" id="shared">
+  <div class="panel">
+    <h2 id="shName"></h2>
+    <canvas id="shFace" style="width:96px;height:96px;align-self:center"></canvas>
+    <div class="stats" id="shInfo"></div>
+    <button id="shPlay">Play</button>
+    <div class="row"><button class="ghost" id="shSave">Save a copy</button><button class="ghost" id="shBack">Main menu</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><canvas id="toastCv"></canvas><span id="toastText"></span></div>
+
 <div class="overlay" id="rotate">
   <div class="phone"></div>
   <p>Turn your phone sideways to play</p>
@@ -374,7 +582,7 @@
     <h2>Level Complete!</h2>
     <canvas id="completeFace"></canvas>
     <div class="earn" id="completeEarn"></div>
-    <div class="unlock" id="unlockBox" style="display:none"><canvas id="unlockCv"></canvas><span id="unlockName"></span></div>
+    <div class="unlock" id="unlockBox" style="display:none"></div>
     <div class="stats" id="completeStats"></div>
     <button class="gold" id="nextBtn">Next Level</button>
     <div class="row">
