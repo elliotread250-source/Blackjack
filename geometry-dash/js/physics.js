@@ -103,12 +103,13 @@
   // ----------------------------------------------------------------- state
 
   function create(L) {
+    const mode = L.startMode || 'cube';
     return {
       x: 0, y: 0.5, vy: 0,
-      mode: L.startMode || 'cube',
+      mode,
       grav: 1, mini: false, speed: L.startSpeed == null ? 1 : L.startSpeed,
       grounded: true, held: false, buffer: false,
-      boost: 0, bounds: null, used: [],
+      boost: 0, bounds: boundsFor(mode, null), used: [],
       dead: false, won: false, t: 0,
     };
   }

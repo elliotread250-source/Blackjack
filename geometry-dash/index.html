@@ -93,10 +93,44 @@
   #cpbtns.show { display: flex; }
   .toggle { display: flex; justify-content: center; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
   .toggle button { flex: none; font-size: 15px; padding: 6px 14px; }
+  #menu { justify-content: flex-start; overflow-y: auto; touch-action: pan-y; }
+  #menu > :first-child { margin-top: auto; }
+  #menu > :last-child { margin-bottom: auto; }
+  .sect { margin: 26px 0 12px; font-size: 24px; -webkit-text-stroke: 1px #000; text-align: center; }
+  .modes {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 190px)); gap: 12px;
+    width: 100%; justify-content: center;
+  }
+  .mode {
+    background: var(--panel); border: 3px solid #000; border-radius: 12px; padding: 10px;
+    box-shadow: 0 5px 0 #000; display: flex; align-items: center; gap: 10px; cursor: pointer;
+    color: #fff; font: inherit; text-align: left; flex: none;
+    transition: transform 0.06s;
+  }
+  .mode:hover { border-color: #fff; }
+  .mode:active { transform: translateY(3px); box-shadow: 0 2px 0 #000; }
+  .mode canvas { position: static; width: 44px; height: 44px; flex: none; }
+  .mode .mn { font-size: 16px; -webkit-text-stroke: 0.5px #000; }
+  .mode .mp { font-size: 13px; color: var(--muted); -webkit-text-stroke: 0; }
+  .skinpanel { max-width: 560px; width: 100%; max-height: 100%; overflow-y: auto; touch-action: pan-y; }
+  #skinPreview { position: static; width: 100%; height: 150px; background: rgba(0,0,0,0.35); border-radius: 10px; }
+  .label { text-align: left; color: var(--muted); font-size: 15px; margin-bottom: -4px; }
+  .swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+  .swatches button {
+    aspect-ratio: 1; padding: 0; border-radius: 8px; box-shadow: 0 3px 0 #000; min-width: 0;
+  }
+  .swatches button.on, .cubes button.on { outline: 3px solid #fff; outline-offset: 1px; }
+  .cubes { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+  .cubes button { padding: 3px; background: #1a1f4a; min-width: 0; box-shadow: 0 3px 0 #000; }
+  .cubes canvas { position: static; width: 100%; height: auto; aspect-ratio: 1; display: block; }
   @media (max-width: 760px) {
+    .modes { grid-template-columns: repeat(2, minmax(0, 175px)); gap: 8px; }
+    .cubes { grid-template-columns: repeat(4, 1fr); }
+    .swatches { gap: 4px; }
+    .skinpanel { padding: 16px; gap: 10px; }
+    #skinPreview { height: 130px; }
     .levels { grid-template-columns: minmax(0, 360px); gap: 10px; }
     .card { padding: 12px; gap: 8px; }
-    .overlay#menu { justify-content: flex-start; overflow-y: auto; touch-action: pan-y; }
     .help { display: none; }
   }
 </style>
@@ -114,9 +148,12 @@
 
 <div class="overlay show shade" id="menu">
   <h1>GEOMETRY DASH</h1>
-  <p class="sub">Replica &middot; 8 game modes &middot; 3 levels</p>
+  <p class="sub">Replica &middot; 8 game modes &middot; 3 levels &middot; mode practice</p>
   <div class="levels" id="levels"></div>
+  <h3 class="sect">Game Mode Practice</h3>
+  <div class="modes" id="modes"></div>
   <div class="toggle">
+    <button class="alt" id="skinBtn">Customize Icon</button>
     <button class="ghost" id="musicBtn">Music: On</button>
     <button class="ghost" id="fpsBtn">FPS: Off</button>
   </div>
@@ -134,6 +171,24 @@
     <button class="alt" id="practiceBtn">Practice Mode</button>
     <button class="ghost" id="restartBtn">Restart</button>
     <button class="ghost" id="menuBtn">Menu</button>
+  </div>
+</div>
+
+<div class="overlay shade" id="skin">
+  <div class="panel skinpanel">
+    <h2>Customize</h2>
+    <canvas id="skinPreview"></canvas>
+    <div class="label">Primary colour</div>
+    <div class="swatches" id="sw1"></div>
+    <div class="label">Secondary colour</div>
+    <div class="swatches" id="sw2"></div>
+    <div class="label">Cube design</div>
+    <div class="cubes" id="cubeStyles"></div>
+    <div class="btns">
+      <button class="ghost" id="swapBtn">Swap colours</button>
+      <button class="ghost" id="glowBtn">Glow: Off</button>
+    </div>
+    <button id="skinDone">Done</button>
   </div>
 </div>
 

@@ -242,7 +242,40 @@
     });
   }
 
-  const LEVELS = [neonSteps(), pulseCircuit(), gravityOverdrive()];
+  // ------------------------------------------------------ mode practice
+  // One short, gentle level per game mode. They start already in the mode
+  // so there's nothing to get through before the part you want to drill.
+
+  const TRAINING = [
+    ['cube', 'Cube Practice', '#2b5bff', '#1a3acc', (B, c) => cubeRun(B, c,
+      ['single', 'single', 'double', 'block', 'blockSpike', 'platform', 'stairs',
+        'padUp', 'pinkHop', 'orbGap', 'pillars', 'double', 'triple'])],
+    ['ship', 'Ship Practice', '#c22bff', '#7a17b0', (B, c) => corridor(B, c, 'ship',
+      [[1, 6], [2, 7], [3, 8], [2, 7], [1, 6], [3, 8], [4, 9], [2, 7], [1, 6], [3, 8], [2, 7], [4, 9]],
+      { spacing: 10 })],
+    ['ball', 'Ball Practice', '#ff3b5c', '#b01734', (B, c) => ball(B, c, 16, { spacing: 8 })],
+    ['ufo', 'UFO Practice', '#ff8a1f', '#b0560f', (B, c) => corridor(B, c, 'ufo',
+      [[1, 6], [2, 7], [1, 6], [3, 8], [2, 7], [4, 9], [3, 8], [2, 7], [1, 6], [2, 7]],
+      { spacing: 9 })],
+    ['wave', 'Wave Practice', '#1fb4ff', '#0f6fa0', (B, c) => corridor(B, c, 'wave',
+      [[3, 7], [4, 8], [2, 6], [3, 7], [5, 9], [4, 8], [2, 6], [1, 5], [3, 7], [5, 9], [3, 7], [2, 6]],
+      { spacing: 6, width: 2, lead: 10 })],
+    ['robot', 'Robot Practice', '#7a7ab8', '#4a4a80', (B, c) => robot(B, robot(B, c))],
+    ['spider', 'Spider Practice', '#9b30ff', '#5a1a99', (B, c) => spider(B, c, 13)],
+    ['swing', 'Swing Practice', '#ffd21f', '#a08410', (B, c) => corridor(B, c, 'swing',
+      [[1, 6], [2, 7], [3, 8], [2, 7], [1, 6], [3, 8], [4, 9], [2, 7], [1, 6], [3, 8]],
+      { spacing: 10 })],
+  ].map(([mode, name, bg, gr, run], i) => {
+    const B = builder();
+    B.color(0, bg, gr);
+    const c = run(B, 4);
+    return finish(B, c, name, {
+      training: true, mode, startMode: mode,
+      difficulty: 'Normal', stars: 1, bpm: 120 + i * 4, key: i, seed: 10 + i,
+    });
+  });
+
+  const LEVELS = [neonSteps(), pulseCircuit(), gravityOverdrive()].concat(TRAINING);
 
   if (typeof module !== 'undefined' && module.exports) module.exports = LEVELS;
   else root.GDLevels = LEVELS;
