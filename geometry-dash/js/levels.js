@@ -620,7 +620,8 @@
   // shrinking with difficulty. Some blocks are short, for quick double flips.
   function spiderWallSec(B, c, r, p) {
     const top = 8, sf = SPEED_RATIO[p.sp];
-    const ov = tbl([2.6, 2.1, 1.7, 1.4, 1.2], p.d) * sf;
+    // Overlap window: as tight as human timing allows (p.ov overrides).
+    const ov = (p.ov || tbl([2.6, 2.1, 1.7, 1.4, 1.2], p.d)) * sf;
     const n = p.n || 10;
     // The way in: blue orbs off the last tower, then the spider portal.
     B.orb(c - 4, 4.6, 'blue'); B.orb(c - 1.5, 6.2, 'blue');
@@ -636,8 +637,8 @@
     put(c, 0, 10, fh, false);
     let end = c + 10, onFloor = true;
     for (let i = 0; i < n; i++) {
-      const short = r() < 0.3;
-      let w = half(Math.max(ov + 1, (short ? 2 + r() : 3 + r() * 2.5) * sf));
+      const short = r() < (p.shortP || 0.3);
+      let w = half(Math.max(ov + 0.5, (short ? 1.5 + r() * 0.5 : 2.5 + r() * 2) * sf));
       const x = half(end - ov);
       if (onFloor) {
         const bot = half(Math.max(fh + 2.5, 4 + r() * 1.2)), hh = Math.min(2.5, top - 0.6 - bot);
@@ -835,7 +836,7 @@
         ['#3a3a3a', '#141414'], ['#123a6a', '#061838'], ['#123a28', '#06180e'], ['#0e3020', '#04140a'], ['#1c0c40', '#0a0420'],
         ['#1c0c40', '#0a0420'], ['#200a34', '#0c0418']],
       themes: [
-        [0, 'dark,ruins,lava,skin:gold'], [1, 'lava,skin:skull'], [2, 'lava,crushers,skin:lava'], [3, 'lava,crushers,skin:lava'],
+        [0, 'dark,ruins,lava,skin:gold'], [1, 'embers,lava,rockCeil,skin:skull'], [2, 'lava,crushers,skin:lava'], [3, 'lava,crushers,skin:lava'],
         [4, 'ruins,crushers,lava,skin:stone'], [5, 'crushers,lava,skin:stone'], [6, 'mountains,chevrons,torches,skin:brick'],
         [7, 'lava,chevrons,skin:brick'], [8, 'crushers,lava,skin:lava'], [9, 'cave,skin:lava'],
         [10, 'chevrons:yellow,torches:blue,lava,skin:stone'], [11, 'dungeon,skin:moss'],
@@ -846,7 +847,7 @@
       cam: [[1, -6, 1.04], [7, -12, 1], [9, 'sway', 0.95], [17, 0, 0.9], [18, 8, 1], [21, 0, 1.08]],
       secs: [
         ['open', {}],                                     // 0-2%   dark run, red ring, golden pillars
-        ['spiderWalls', { n: 7 }],                        // 2-5%   spider between floor and hanging lava blocks
+        ['spiderWalls', { n: 12, ov: 0.9, shortP: 0.55 }],                        // 2-5%   spider between floor and hanging lava blocks
         ['flip', { orbs: true, len: 40 }],                // 5-9%   blue pad, green/blue/pink-dash orbs
         ['ball', { n: 2, sp: 2 }],                        // 9-10%
         ['switches', { switches: 4, sp: 1 }],             // 10-15% coin 1: light the hanging blocks
