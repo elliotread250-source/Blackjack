@@ -33,7 +33,8 @@ falling, 1.2 while still rising after you let go (so climbs bleed off fast),
 and reversed while holding, with a 0.5 boost when holding against a fall.
 Speed caps are GD's 8 u/tick up and 6.4 u/tick down. The swing runs on the
 same curve, flipping gravity on each click with momentum carried over. Mini
-wave climbs at 1.5x instead of GD's 2x, a deliberate nerf. Spike hitboxes are the same forgiving slim boxes GD
+wave climbs at 1.1x instead of GD's 2x, a deliberate nerf. The spider leaves
+a GD-style streak when it teleports. Spike hitboxes are the same forgiving slim boxes GD
 uses, and block deaths use a small inner hitbox, so clipping a corner on a
 landing doesn't kill you.
 
@@ -54,16 +55,18 @@ at any frame rate.
 | Gravity Overdrive | Insane | mini cube, swing, upside-down cube, UFO (2x), mini wave, spider, robot, ship (3x) |
 | Final Ascent | Demon | every mode, at 2x and 3x |
 
-Game Mode Practice has five tiers for each of the eight modes, 40 levels in
-all. Each starts already in its mode:
+Practice comes in two sets: Game Mode Practice (normal size) and Mini Mode
+Practice (all eight modes in mini size). Each mode has five tiers with three
+different levels per tier, 240 practice levels in all. Each starts already in
+its mode and size:
 
 | Tier | What changes |
 |---|---|
-| 1 Very Easy | 0.5x speed, wide gaps, single spikes |
-| 2 Easy | 1x, doubles, gentle swings |
-| 3 Medium | tighter gaps, more patterns, ship at 2x |
-| 4 Hard | 2x-3x, triples, gaps down to 3 blocks |
-| 5 Impossible | 4x, spike-tipped gates, mini wave, timing windows under 50ms |
+| 1 Very Easy | 1x, short runs, wide gaps |
+| 2 Easy | doubles, stairs, pads, orbs; ship at 2x |
+| 3 Medium | 2x, triples, pillars, tighter gaps |
+| 4 Hard | 3x, gaps under 3 blocks, big swings |
+| 5 Impossible | 4x, spike-tipped gates, timing windows under 50ms |
 
 ## No repeated parts
 

@@ -25,6 +25,8 @@
       this.enabled = true;
       this.playing = false;
       this.timer = null;
+      this.musicVol = 1;
+      this.sfxVol = 1;
     }
 
     ensure() {
@@ -46,6 +48,9 @@
       this.master.connect(comp).connect(this.ctx.destination);
       this.music = this.ctx.createGain();
       this.music.connect(this.master);
+      this.fx = this.ctx.createGain();
+      this.fx.gain.value = this.sfxVol;
+      this.fx.connect(this.master);
       const len = this.ctx.sampleRate;
       this.noise = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
       const d = this.noise.getChannelData(0);
@@ -55,7 +60,16 @@
 
     setEnabled(on) {
       this.enabled = on;
-      if (this.music) this.music.gain.value = on ? 1 : 0;
+      if (this.music) this.music.gain.value = on ? this.musicVol : 0;
+    }
+
+    // 0..1 volumes from the settings screen.
+    setVolumes(music, sfx) {
+      this.musicVol = music;
+      this.sfxVol = sfx;
+      this.enabled = music > 0;
+      if (this.music) this.music.gain.value = music;
+      if (this.fx) this.fx.gain.value = sfx;
     }
 
     // Starts the level's track from the top, like GD does on every attempt.
@@ -74,7 +88,7 @@
       this.n = 0;
       this.playing = true;
       this.music.gain.cancelScheduledValues(this.ctx.currentTime);
-      this.music.gain.setValueAtTime(this.enabled ? 1 : 0, this.ctx.currentTime);
+      this.music.gain.setValueAtTime(this.enabled ? this.musicVol : 0, this.ctx.currentTime);
       this.timer = setInterval(() => this.schedule(), 25);
       this.schedule();
     }
@@ -199,7 +213,7 @@
       }
     }
 
-    // Death crunch. Plays on the master bus so it's audible with music off.
+    // Death crunch. Plays on the effects bus so it's audible with music off.
     crash() {
       if (!this.ensure()) return;
       const t = this.ctx.currentTime;
@@ -211,7 +225,7 @@
       f.frequency.exponentialRampToValueAtTime(200, t + 0.4);
       const g = this.ctx.createGain();
       this.env(g, t, 0.002, 0.7, 0.45);
-      src.connect(f).connect(g).connect(this.master);
+      src.connect(f).connect(g).connect(this.fx);
       src.start(t, 0, 0.5);
     }
 
@@ -224,7 +238,7 @@
         o.frequency.value = 440 * Math.pow(2, semi / 12);
         const g = this.ctx.createGain();
         this.env(g, t + i * 0.09, 0.005, 0.12, 0.35);
-        o.connect(g).connect(this.master);
+        o.connect(g).connect(this.fx);
         o.start(t + i * 0.09); o.stop(t + i * 0.09 + 0.45);
       });
     }

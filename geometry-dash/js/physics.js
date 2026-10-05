@@ -40,8 +40,11 @@
   // released (so climbs bleed off fast), and -1 while holding, boosted to
   // 0.5 when holding against a fall (quick recovery). Speed caps are GD's
   // 8 u/tick up and 6.4 u/tick down.
-  const SHIP_MAX_UP = 8 * TICK / UNIT;    // 16 blocks/s
+  // GD's ship caps are 8 up / 6.4 down u/tick; the climb cap is trimmed to
+  // 7.2 here for a flatter steepest climb.
+  const SHIP_MAX_UP = 7.2 * TICK / UNIT;   // 14.4 blocks/s
   const SHIP_MAX_DOWN = 6.4 * TICK / UNIT; // 12.8 blocks/s
+  const SWING_MAX = 7.2 * TICK / UNIT;     // 14.4 blocks/s: a steeper swing than the ship's fall
   const MINI_FLY = 1.2;                    // mini ship/swing: snappier caps
 
   // Acceleration in the gravity frame (+ = away from the floor).
@@ -50,7 +53,7 @@
     if (holding) return G * (falling ? 0.5 : 0.4);
     return -G * 0.4 * (falling ? 0.8 : 1.2);
   }
-  const MINI_WAVE = 1.5; // GD's mini wave climbs at 2x; softened here
+  const MINI_WAVE = 1.0; // GD's mini wave climbs at 2x; here it keeps the normal 45 degrees
   const UFO_JUMP = 14;
   const BALL_KICK = 0.3 * JUMP;
   const ROBOT_V = 12;
@@ -121,7 +124,7 @@
     return {
       x: 0, y: 0.5, vy: 0,
       mode,
-      grav: 1, mini: false, speed: L.startSpeed == null ? 1 : L.startSpeed,
+      grav: 1, mini: !!L.startMini, speed: L.startSpeed == null ? 1 : L.startSpeed,
       grounded: true, held: false, buffer: false,
       boost: 0, bounds: boundsFor(mode, null), used: [],
       dead: false, won: false, t: 0,
@@ -306,7 +309,7 @@
         if (s.buffer) { s.grav = -s.grav; vf = -vf; s.buffer = false; s.grounded = false; }
         const k = s.mini ? MINI_FLY : 1;
         vf += shipAccel(vf, false) * k * DT;
-        vf = Math.min(Math.max(vf, -SHIP_MAX_DOWN * k), SHIP_MAX_DOWN * k);
+        vf = Math.min(Math.max(vf, -SWING_MAX * k), SWING_MAX * k);
         break;
       }
     }
