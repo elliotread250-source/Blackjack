@@ -47,15 +47,29 @@ at any frame rate.
 | Gravity Overdrive | Insane | mini cube, swing, upside-down cube, UFO (2x), mini wave, spider, robot, ship (3x) |
 | Final Ascent | Demon | every mode, at 2x and 3x |
 
-There's also a short practice level for each of the eight modes (Game Mode
-Practice on the menu). Each one starts already in that mode, so you can drill
-the ship or the wave without playing through a whole level first.
+Game Mode Practice has five tiers for each of the eight modes, 40 levels in
+all. Each starts already in its mode:
+
+| Tier | What changes |
+|---|---|
+| 1 Very Easy | 0.5x speed, wide gaps, single spikes |
+| 2 Easy | 1x, doubles, gentle swings |
+| 3 Medium | tighter gaps, more patterns, ship at 2x |
+| 4 Hard | 2x-3x, triples, gaps down to 3 blocks |
+| 5 Impossible | 4x, spike-tipped gates, mini wave, timing windows under 50ms |
+
+The tiers are generated from a seeded RNG and a table of knobs in
+`js/levels.js` (speed, gap height, spacing, path swing, cluster length).
 
 Every level is proven beatable by `tools/verify.js`, which searches for a
-full run using inputs held for at least 50ms at a time:
+full run using inputs held for at least 50ms at a time. Impossible tiers are
+held to a stricter rule: they must be beatable with frame-perfect (1/60s)
+inputs and proven unbeatable with 50ms ones, so they're possible on paper
+but not by human timing.
 
 ```bash
-node tools/verify.js
+node tools/verify.js                # check every level
+node tools/verify.js --seeds wave   # find passing seeds for a mode's tiers
 ```
 
 Run it after touching `js/levels.js` or `js/physics.js`.

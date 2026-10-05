@@ -312,7 +312,7 @@
   }
 
   function saveBest(pct) {
-    const k = (G.practice ? 'practice:' : 'best:') + G.idx;
+    const k = (G.practice ? 'practice:' : 'best:') + slotOf(G.idx);
     if (pct > store.get(k, 0)) store.set(k, pct);
   }
 
@@ -1073,7 +1073,12 @@
   // ---------------------------------------------------------------- UI
 
   const $ = (id) => document.getElementById(id);
+  const TIER_COL = ['#3bc8ff', '#3bff6b', '#ffd21f', '#ff7a1f', '#d0182a'];
+  const MODE_LABEL = { cube: 'Cube', ship: 'Ship', ball: 'Ball', ufo: 'UFO', wave: 'Wave', robot: 'Robot', spider: 'Spider', swing: 'Swing' };
   const FACE = { Easy: '#3bc8ff', Normal: '#3bff6b', Hard: '#ffd21f', Harder: '#ff7a1f', Insane: '#ff3bd0', Demon: '#d0182a' };
+  // Save-slot for a level: main levels keep their index (so old saves still
+  // line up), practice tiers use their mode/tier id.
+  function slotOf(i) { return LEVELS[i].slot || String(i); }
 
   function buildMenu() {
     const root = $('levels');
@@ -1104,19 +1109,35 @@
         </div>`;
       root.appendChild(card);
     });
+    // One card per mode with a button per difficulty tier.
     const modes = $('modes');
     modes.innerHTML = '';
-    LEVELS.forEach((L, i) => {
-      if (!L.training) return;
-      const best = store.get('best:' + i, 0);
-      const b = document.createElement('button');
-      b.className = 'mode';
-      b.innerHTML = `<canvas></canvas><div><div class="mn">${L.name.replace(' Practice', '')}</div>` +
-        `<div class="mp">${best === 100 ? 'Complete' : best + '%'}</div></div>`;
-      b.addEventListener('click', () => startLevel(i, false));
-      modes.appendChild(b);
-      iconCanvas(b.querySelector('canvas'), L.mode, 44, 0.62);
-    });
+    const byMode = {};
+    LEVELS.forEach((L, i) => { if (L.training) (byMode[L.mode] = byMode[L.mode] || [])[L.tier] = i; });
+    for (const mode of P.MODES) {
+      const tiers = byMode[mode];
+      if (!tiers) continue;
+      const card = document.createElement('div');
+      card.className = 'mode';
+      const done = tiers.filter((i) => store.get('best:' + slotOf(i), 0) === 100).length;
+      card.innerHTML = `<div class="mh"><canvas></canvas><div><div class="mn">${MODE_LABEL[mode]}</div>` +
+        `<div class="mp">${done}/${tiers.length} beaten</div></div></div><div class="tiers"></div>`;
+      const row = card.querySelector('.tiers');
+      tiers.forEach((i, t) => {
+        const L = LEVELS[i];
+        const best = store.get('best:' + slotOf(i), 0);
+        const b = document.createElement('button');
+        b.className = 'tier' + (best === 100 ? ' done' : '');
+        b.style.background = TIER_COL[t];
+        b.textContent = best === 100 ? '\u2713' : String(t + 1);
+        b.title = `${L.tierName}: ${best}%`;
+        b.setAttribute('aria-label', `${L.name}, best ${best}%`);
+        b.addEventListener('click', () => startLevel(i, false));
+        row.appendChild(b);
+      });
+      modes.appendChild(card);
+      iconCanvas(card.querySelector('canvas'), mode, 40, 0.62);
+    }
     root.querySelectorAll('[data-play]').forEach((b) =>
       b.addEventListener('click', () => startLevel(+b.dataset.play, false)));
     root.querySelectorAll('[data-practice]').forEach((b) =>
@@ -1206,7 +1227,7 @@
     show('pause');
     if (AUDIO.ctx) AUDIO.ctx.suspend();
     $('pauseTitle').textContent = G.L.name;
-    $('pauseStats').innerHTML = `${progress()}% &middot; Attempt ${G.attempts}<br>Best: ${store.get('best:' + G.idx, 0)}%`;
+    $('pauseStats').innerHTML = `${progress()}% &middot; Attempt ${G.attempts}<br>Best: ${store.get('best:' + slotOf(G.idx), 0)}%`;
     $('practiceBtn').textContent = G.practice ? 'Normal Mode' : 'Practice Mode';
   }
 
