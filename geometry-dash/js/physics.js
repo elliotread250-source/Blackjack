@@ -68,7 +68,7 @@
     pink:   { v: 0.72 },
     red:    { v: 1.38 },
     blue:   { flip: true, v: -0.36 },
-    green:  { flip: true, v: 1.0 },
+    green:  { flip: true, v: -1.0 }, // GD: flip and launch hard toward the new floor
     black:  { v: -1.34 },
   };
   const PAD = {
