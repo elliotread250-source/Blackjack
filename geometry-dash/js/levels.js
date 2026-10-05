@@ -622,34 +622,38 @@
     const top = 8, sf = SPEED_RATIO[p.sp];
     const ov = tbl([2.6, 2.1, 1.7, 1.4, 1.2], p.d) * sf;
     const n = p.n || 10;
+    // The way in: blue orbs off the last tower, then the spider portal.
+    B.orb(c - 4, 4.6, 'blue'); B.orb(c - 1.5, 6.2, 'blue');
     B.p(c, 2, 'spider', 4);
     const floorCols = new Set(), ceilCols = new Set();
-    const put = (x, y, w, h, ceil) => {
-      B.b(x, y, w, h);
-      for (let k = Math.floor(x); k < Math.ceil(x + w); k++) (ceil ? ceilCols : floorCols).add(k);
+    // Floor blocks: big skull-faced lava blocks or low slabs. Hanging
+    // blocks float on chains (hang: true), 2 to 2.5 tall.
+    const put = (x, y, w, h, hang) => {
+      B.o.push(Object.assign({ t: 'b', x, y, w, h }, hang ? { hang: true } : {}));
+      if (!hang) for (let k = Math.floor(x); k < Math.ceil(x + w); k++) floorCols.add(k);
     };
     let fh = 2;
     put(c, 0, 10, fh, false);
     let end = c + 10, onFloor = true;
     for (let i = 0; i < n; i++) {
       const short = r() < 0.3;
-      const w = half(Math.max(ov + 1, (short ? 2 + r() : 3.5 + r() * 3) * sf));
+      let w = half(Math.max(ov + 1, (short ? 2 + r() : 3 + r() * 2.5) * sf));
       const x = half(end - ov);
       if (onFloor) {
-        // Hanging block: its underside at least 2.5 above the floor block
-        const bot = half(Math.max(fh + 2.5, 4 + r() * 1.5));
-        put(x, bot, w, top - bot, true);
+        const bot = half(Math.max(fh + 2.5, 4 + r() * 1.2)), hh = Math.min(2.5, top - 0.6 - bot);
+        put(x, bot, w, hh, true);
       } else {
-        fh = half(1 + r() * 2);
+        const big = r() < 0.5;
+        fh = big ? half(2 + r()) : half(1 + r() * 0.5);
+        if (big) w = Math.max(w, 2.5);
         put(x, 0, w, fh, false);
       }
       end = x + w; onFloor = !onFloor;
     }
-    // Land back on the floor for the exit
     if (!onFloor) { put(half(end - ov), 0, 8, 1, false); end = half(end - ov) + 8; }
     for (let xx = c + 1; xx < end; xx++) {
       if (!floorCols.has(xx)) B.sf(xx, 0, 1);
-      if (!ceilCols.has(xx)) B.sf(xx, top - 1, -1);
+      B.sf(xx, top - 1, -1);
     }
     B.p(end + 1, top / 2, 'cube', top);
     return end + 8;
@@ -825,13 +829,13 @@
       coinSecs: [[10, 0.5], [16, 0.08]],
       meta: { difficulty: 'Insane', stars: 12, bpm: 150, key: 4, seed: 22, order: 16, levelNo: 17 },
       // Colours, scenery and camera per section, matched to the real level.
-      pal: [['#3a0808', '#140303'], ['#b0200c', '#5a0c04'], ['#c0185a', '#600a2c'], ['#a01040', '#500820'], ['#9a1428', '#4a0810'],
+      pal: [['#3a0808', '#140303'], ['#9a1050', '#480828'], ['#c0185a', '#600a2c'], ['#a01040', '#500820'], ['#9a1428', '#4a0810'],
         ['#8a1020', '#420810'], ['#3a2bd0', '#1a127a'], ['#6a1ab0', '#300a58'], ['#e06010', '#803008'], ['#262626', '#0e0e0e'],
         ['#b01438', '#58081c'], ['#6a1060', '#300828'], ['#b0103c', '#58081e'], ['#3a0a4a', '#180420'], ['#2a0838', '#100318'],
         ['#3a3a3a', '#141414'], ['#123a6a', '#061838'], ['#123a28', '#06180e'], ['#0e3020', '#04140a'], ['#1c0c40', '#0a0420'],
         ['#1c0c40', '#0a0420'], ['#200a34', '#0c0418']],
       themes: [
-        [0, 'dark,ruins,lava,skin:gold'], [1, 'lava,crushers,skin:lava'], [2, 'lava,crushers,skin:lava'], [3, 'lava,crushers,skin:lava'],
+        [0, 'dark,ruins,lava,skin:gold'], [1, 'lava,skin:skull'], [2, 'lava,crushers,skin:lava'], [3, 'lava,crushers,skin:lava'],
         [4, 'ruins,crushers,lava,skin:stone'], [5, 'crushers,lava,skin:stone'], [6, 'mountains,chevrons,torches,skin:brick'],
         [7, 'lava,chevrons,skin:brick'], [8, 'crushers,lava,skin:lava'], [9, 'cave,skin:lava'],
         [10, 'chevrons:yellow,torches:blue,lava,skin:stone'], [11, 'dungeon,skin:moss'],
@@ -839,7 +843,7 @@
         [15, 'mono,skin:stone'], [16, 'chevrons,skin:brick'], [17, 'acid,skin:moss'], [18, 'acid,crushers,skin:moss'],
         [19, 'neon,lava,skin:brick'], [20, 'neon,skin:brick'], [21, 'torches,altar,skin:brick'],
       ],
-      cam: [[7, -12, 1], [9, 'sway', 0.95], [17, 0, 0.9], [18, 8, 1], [21, 0, 1.08]],
+      cam: [[1, -6, 1.04], [7, -12, 1], [9, 'sway', 0.95], [17, 0, 0.9], [18, 8, 1], [21, 0, 1.08]],
       secs: [
         ['open', {}],                                     // 0-2%   dark run, red ring, golden pillars
         ['spiderWalls', { n: 7 }],                        // 2-5%   spider between floor and hanging lava blocks
@@ -985,6 +989,7 @@
     'Mini Robot Easy Demon': [1],
     'Shadow Gate': [0, 0, 0, 0, 1],
     'Dash': [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 1],
+    'Mini Swing Extreme Demon': [1],
   };
 
   // Extreme Demon tightness per level (missing = 0.5), also from --fix.
@@ -1003,7 +1008,7 @@
     'Mini Wave Extreme Demon': 0.004,
     'Mini Robot Extreme Demon': 0.625,
     'Mini Spider Extreme Demon': 0.75,
-    'Mini Swing Extreme Demon': 0.438,
+    'Mini Swing Extreme Demon': 0.384,
   };
 
   // Coin positions per level, written by `node tools/verify.js --coins`.
