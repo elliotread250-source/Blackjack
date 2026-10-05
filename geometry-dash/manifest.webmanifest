@@ -1,0 +1,13 @@
+{
+  "name": "Geometry Dash Replica",
+  "short_name": "GD Replica",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#0a0f2c",
+  "theme_color": "#0a0f2c",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

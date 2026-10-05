@@ -13,6 +13,12 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 
 
 class Handler(SimpleHTTPRequestHandler):
+    extensions_map = {
+        **SimpleHTTPRequestHandler.extensions_map,
+        ".webmanifest": "application/manifest+json",
+        ".svg": "image/svg+xml",
+        ".js": "text/javascript",
+    }
     def end_headers(self):
         # The page is the app; if it gets cached hard, a fix never reaches
         # anyone who already played. Cheap file, so just don't cache it.

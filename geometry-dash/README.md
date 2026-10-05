@@ -68,6 +68,16 @@ Space, Up, W, click or tap to jump/fly. Esc pauses, R restarts. In practice
 mode, Z places a checkpoint and X removes the last one. F toggles an FPS
 counter.
 
+## On phones
+
+Tap or hold anywhere to jump and fly; holding with two fingers works, so
+shifting your grip mid-ship doesn't drop you. Starting a level goes full
+screen and locks landscape where the browser allows it (Android Chrome).
+iPhone Safari can't do either, so the game asks you to turn the phone and
+offers to play in portrait anyway, with a zoomed-out view. For true full
+screen on iPhone, use Share, then Add to Home Screen. If a device can't hold
+frame rate, the game drops to 1x pixel density on its own.
+
 ## Running it
 
 ```bash

@@ -13,7 +13,7 @@
   const LEVELS = window.GDLevels.map(P.compile);
 
   const VIEW_H = 10.67;        // blocks visible vertically, same as GD's 320 units
-  const PLAYER_SCREEN_X = 0.3; // fraction of screen width the player sits at
+  const PLAYER_SCREEN_X = 0.3; // fraction of screen width the player sits at (landscape)
   const RESPAWN = 1.0;         // seconds between death and the next attempt
   const MAX_DPR = 2;
 
@@ -52,15 +52,24 @@
   const canvas = document.getElementById('game');
   const mainCtx = canvas.getContext('2d', { alpha: false });
   let ctx = mainCtx; // swapped briefly to draw icon previews in the menu
-  let W = 0, H = 0, S = 40, VIEW_W = 16, dpr = 1;
+  let W = 0, H = 0, S = 40, VIEW_W = 16, dpr = 1, viewH = VIEW_H;
+  // How far below the screen bottom the ground sits; portrait lifts it to mid-screen.
+  const groundLift = () => (W < H ? viewH * 0.38 : 2.2);
+
+  const TOUCH = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+  let lowQuality = false; // set when the device can't hold frame rate
+
+  function playerX() { return W < H ? 0.18 : PLAYER_SCREEN_X; }
 
   function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+    dpr = Math.min(window.devicePixelRatio || 1, lowQuality ? 1 : MAX_DPR);
     W = window.innerWidth; H = window.innerHeight;
     canvas.width = Math.round(W * dpr);
     canvas.height = Math.round(H * dpr);
     // Portrait phones: keep at least ~11 blocks of lookahead horizontally.
-    S = Math.min(H / VIEW_H, W / 11);
+    // Portrait: fit ~15 blocks across so there's room to see what's coming.
+    S = W < H ? W / 15 : Math.min(H / VIEW_H, W / 11);
+    viewH = H / S;
     VIEW_W = W / S;
   }
   window.addEventListener('resize', resize);
@@ -74,7 +83,7 @@
     prevX: 0, prevY: 0, acc: 0,
     attempts: 1, jumps: 0, time: 0,
     practice: false, checkpoints: [],
-    deadTimer: 0, camX: 0, camY: -2.2,
+    deadTimer: 0, camX: 0, camY: -2.2, // reset on spawn
     rot: 0, trail: [], lastMode: 'cube',
     showFps: store.get('fps', false), fps: 60, fpsAcc: 0, fpsN: 0,
     shake: 0, flash: 0,
@@ -139,6 +148,7 @@
     held = true;
   }
   function release() { held = false; }
+  function releaseAll() { pointers.clear(); held = false; }
 
   const JUMP_KEYS = new Set(['Space', 'ArrowUp', 'KeyW', 'Enter']);
   window.addEventListener('keydown', (e) => {
@@ -163,15 +173,47 @@
   });
   window.addEventListener('keyup', (e) => { if (JUMP_KEYS.has(e.code)) release(); });
 
-  canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); press(); });
-  window.addEventListener('pointerup', release);
-  window.addEventListener('pointercancel', release);
-  window.addEventListener('blur', () => { release(); if (G.screen === 'play') pause(); });
+  // Track every finger so lifting one while another is down doesn't drop the hold.
+  const pointers = new Set();
+  canvas.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    pointers.add(e.pointerId);
+    press();
+  });
+  const lift = (e) => {
+    pointers.delete(e.pointerId);
+    if (pointers.size === 0) release();
+  };
+  window.addEventListener('pointerup', lift);
+  window.addEventListener('pointercancel', lift);
+  // Long-press menus and iOS text-selection loupes fire mid-hold otherwise.
+  window.addEventListener('contextmenu', (e) => { if (G.screen === 'play') e.preventDefault(); });
+  canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+  canvas.addEventListener('touchend', (e) => e.preventDefault(), { passive: false });
+  window.addEventListener('blur', () => { releaseAll(); if (G.screen === 'play') pause(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden && G.screen === 'play') pause(); });
 
   // ---------------------------------------------------------- gameplay
 
+  // Phones: go fullscreen and try to lock landscape. Both are best-effort;
+  // iPhone Safari supports neither, which is what the rotate prompt is for.
+  function goFullscreen() {
+    if (!TOUCH) return;
+    const el = document.documentElement;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (!req || document.fullscreenElement || document.webkitFullscreenElement) return;
+    try {
+      const pr = req.call(el, { navigationUI: 'hide' });
+      if (pr && pr.then) {
+        pr.then(() => {
+          if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(() => {});
+        }).catch(() => {});
+      }
+    } catch (e) { /* not allowed here */ }
+  }
+
   function startLevel(idx, practice) {
+    goFullscreen();
     G.idx = idx;
     G.L = LEVELS[idx];
     G.practice = practice;
@@ -195,8 +237,8 @@
     G.trail.length = 0;
     G.lastMode = G.s.mode;
     G.rot = cp ? cp.rot : 0;
-    G.camX = G.s.x - VIEW_W * PLAYER_SCREEN_X;
-    G.camY = cp ? cp.camY : -2.2;
+    G.camX = G.s.x - VIEW_W * playerX();
+    G.camY = cp ? cp.camY : -groundLift();
     G.flash = 0;
   }
 
@@ -258,15 +300,34 @@
   // --------------------------------------------------------------- loop
 
   let last = performance.now();
+  let portraitOk = false;
+  function needsRotate() { return TOUCH && !portraitOk && H > W; }
+
   function frame(now) {
     let dt = (now - last) / 1000;
     last = now;
     if (dt > 0.1) dt = 0.1; // tab was asleep; don't fast-forward the run
 
     G.fpsAcc += dt; G.fpsN++;
-    if (G.fpsAcc >= 0.5) { G.fps = Math.round(G.fpsN / G.fpsAcc); G.fpsAcc = 0; G.fpsN = 0; }
+    if (G.fpsAcc >= 0.5) {
+      G.fps = Math.round(G.fpsN / G.fpsAcc); G.fpsAcc = 0; G.fpsN = 0;
+      // Three slow windows in a row while playing: render at 1x pixel density.
+      if (G.screen === 'play' && !lowQuality) {
+        G.slow = G.fps < 45 ? (G.slow || 0) + 1 : 0;
+        if (G.slow >= 3) { lowQuality = true; resize(); }
+      }
+    }
 
-    if (G.screen === 'play') update(dt);
+    if (G.screen === 'play' && needsRotate()) {
+      if (!$('rotate').classList.contains('show')) { releaseAll(); $('rotate').classList.add('show'); }
+      if (AUDIO.ctx && AUDIO.ctx.state === 'running') AUDIO.ctx.suspend();
+    } else {
+      if ($('rotate').classList.contains('show')) {
+        $('rotate').classList.remove('show');
+        if (G.screen === 'play' && AUDIO.ctx) AUDIO.ctx.resume();
+      }
+      if (G.screen === 'play') update(dt);
+    }
     if (G.s) render(dt);
     else renderMenuBg(dt);
     requestAnimationFrame(frame);
@@ -344,7 +405,7 @@
 
   function renderMenuBg(dt) {
     G.camX += dt * 4;
-    G.camY = -2.2;
+    G.camY = -groundLift();
     drawBackground('#2b5bff', '#1a3acc', 0);
     drawGround('#1a3acc', 0, null);
   }
@@ -356,16 +417,16 @@
     const py = G.prevY + (s.y - G.prevY) * alpha;
 
     // Camera
-    G.camX = px - VIEW_W * PLAYER_SCREEN_X;
+    G.camX = px - VIEW_W * playerX();
     let targetY;
     if (s.bounds) {
-      targetY = (s.bounds.floor + s.bounds.ceil) / 2 - VIEW_H / 2;
+      targetY = (s.bounds.floor + s.bounds.ceil) / 2 - viewH / 2;
     } else {
       targetY = G.camY;
-      const top = VIEW_H - 3.5, bot = 2.6;
+      const top = viewH - 3.5, bot = groundLift() + 0.4;
       if (py - targetY > top) targetY = py - top;
       if (py - targetY < bot) targetY = py - bot;
-      targetY = Math.max(-2.2, targetY);
+      targetY = Math.max(-groundLift(), targetY);
     }
     if (!s.dead) G.camY += (targetY - G.camY) * Math.min(1, dt * 5);
 
@@ -436,7 +497,7 @@
     const start = Math.floor(G.camX / step) * step;
     ctx.beginPath();
     for (let gx = start; gx < G.camX + VIEW_W + step; gx += step) {
-      ctx.moveTo(sx(gx), y); ctx.lineTo(sx(gx), y + S * 4);
+      ctx.moveTo(sx(gx), y); ctx.lineTo(sx(gx), H + 20);
     }
     ctx.stroke();
     glowLine(y);
@@ -685,7 +746,7 @@
     ctx.lineJoin = 'round';
     ctx.lineWidth = Math.max(2, size * 0.08);
     ctx.strokeStyle = '#000';
-    if (SKIN.glow) { ctx.shadowColor = SKIN.c2; ctx.shadowBlur = size * 0.45; }
+    if (SKIN.glow && !(lowQuality && ctx === mainCtx)) { ctx.shadowColor = SKIN.c2; ctx.shadowBlur = size * 0.45; }
     switch (mode) {
       case 'cube': drawCube(size); break;
       case 'ship': drawShip(size); break;
@@ -1086,7 +1147,7 @@
 
   function pause() {
     if (G.s && G.s.won) return;
-    release();
+    releaseAll();
     show('pause');
     if (AUDIO.ctx) AUDIO.ctx.suspend();
     $('pauseTitle').textContent = G.L.name;
@@ -1120,6 +1181,7 @@
   });
   $('menuBtn').addEventListener('click', () => { if (AUDIO.ctx) AUDIO.ctx.resume(); AUDIO.stop(); show('menu'); });
   $('menuBtn2').addEventListener('click', () => show('menu'));
+  $('rotateOk').addEventListener('click', () => { portraitOk = true; });
   $('skinBtn').addEventListener('click', () => { show('skin'); buildSkin(); });
   $('skinDone').addEventListener('click', () => show('menu'));
   $('swapBtn').addEventListener('click', () => {
