@@ -1,5 +1,7 @@
 // Unit tests for the browser-side logic. Run: node tools/test.mjs
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
+import { readdirSync } from 'node:fs';
 import { analyze, scrub, sentences } from '../js/tells.js';
 import { parseJudgement, rewritePrompt } from '../js/prompts.js';
 import { rankModels } from '../js/engines.js';
@@ -29,6 +31,13 @@ const HUMAN = `I got the email at 6am, which is never good. My manager wanted th
 So I opened the spreadsheet. It's a mess. Half the formulas reference a tab someone deleted in March, and the other half are hardcoded because, I'm guessing, somebody gave up. I fixed what I could by nine and sent it over with a note saying the Europe figures were probably still off by a few percent, but I'd need the raw exports from the billing system to know for sure.
 
 He replied with a thumbs up. That's it.`;
+
+await test('every browser file parses (app.js and the worker aren\'t imported below)', () => {
+  const dir = new URL('../js/', import.meta.url);
+  for (const f of readdirSync(dir).filter((n) => n.endsWith('.js'))) {
+    execFileSync(process.execPath, ['--check', new URL(f, dir).pathname], { stdio: 'pipe' });
+  }
+});
 
 await test('tells: chatbot prose scores high, human prose scores low', () => {
   const a = analyze(AI);
