@@ -2,10 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Blackjack</title>
-<meta http-equiv="refresh" content="0; url=/Blackjack/">
+<title>Mini games</title>
+<script>
+  // Project Pages live under /<repo>/, so send strays back to that repo's game list.
+  location.replace("/" + (location.pathname.split("/")[1] || "") + "/");
+</script>
 </head>
 <body style="background:#0a3325;color:#e7c565;font-family:system-ui;text-align:center;padding:60px">
-<p>Wrong table. <a href="/Blackjack/" style="color:#e7c565">Take me to the game</a>.</p>
+<p>Wrong table. <a href="/" style="color:#e7c565" onclick="this.href='/'+location.pathname.split('/')[1]+'/'">Take me to the games</a>.</p>
 </body>
 </html>

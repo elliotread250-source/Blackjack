@@ -1,6 +1,6 @@
 # Geometry Dash Replica
 
-**Play it: https://elliotread250-source.github.io/Blackjack/geometry-dash/**
+**Play it: https://elliotread250-source.github.io/mini-games/geometry-dash/**
 
 A browser rhythm platformer built to play like Geometry Dash: all eight game
 modes, physics tuned to GD's own constants, 17 levels plus a secret one,

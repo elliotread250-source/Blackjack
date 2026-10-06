@@ -1,36 +1,26 @@
-# Blackjack
+# Mini games
 
-A single-page blackjack table with play-money chips. No accounts, no real money,
-no backend: the whole game runs in the browser and your bankroll lives in
-`localStorage`.
+Small browser games, one folder each. No accounts, no backend state, no build
+step: every game is static files you can open straight from disk.
 
-**Play it: https://elliotread250-source.github.io/Blackjack/**
+Every push to `main` publishes the repo to GitHub Pages, so each folder is live at
+`https://elliotread250-source.github.io/mini-games/<folder>/`.
 
-**Geometry Dash replica: https://elliotread250-source.github.io/Blackjack/geometry-dash/**
+## Games
 
-**Humanizer (AI text to human text, free, no API keys): https://elliotread250-source.github.io/Blackjack/humanizer/**
+1. [Blackjack](blackjack/): six-deck play-money table, 3:2 blackjack, splits and doubles.
+   [Play it](https://elliotread250-source.github.io/mini-games/blackjack/)
+2. [Geometry Dash replica](geometry-dash/): the Dash level, with practice difficulties and a shop.
+   [Play it](https://elliotread250-source.github.io/mini-games/geometry-dash/)
 
-## Rules on the table
+## Also in here
 
-Six-deck shoe, reshuffled at the cut card (~25% penetration) so counting it down
-gets you nowhere. Blackjack pays 3:2. Dealer stands on all 17s, soft ones
-included. Double on any two cards. Split up to four hands; split aces get one
-card each and no blackjack bonus.
+[Humanizer](humanizer/): AI text to human text, free, no API keys.
+[Use it](https://elliotread250-source.github.io/mini-games/humanizer/)
 
-Keyboard: `H` hit, `S` stand, `D` double, `P` split, `Enter` deal, `R` rebet,
-`C` clear.
+## Adding a game
 
-## Running it locally
-
-```bash
-python server.py          # http://localhost:8080
-```
-
-Or just open `index.html` in a browser. The server is only there for hosts that
-need something listening on `$PORT`.
-
-## Deploying
-
-Every push to `main` publishes to GitHub Pages via `.github/workflows/pages.yml`.
-The Dockerfile and `railway.json` are here too, so the same repo deploys to
-Railway (or anything that takes a container) without changes.
+Make a new folder with an `index.html` and add it to the list above and to the
+root `index.html`. If it needs its own Railway service, copy a `Dockerfile`,
+`server.py` and `railway.json` from `blackjack/` and set the service's root
+directory to the new folder.

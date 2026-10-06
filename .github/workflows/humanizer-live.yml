@@ -73,7 +73,7 @@ jobs:
         if: always()
         env:
           OUT_DIR: out/live
-        run: node humanizer/tools/live-check.mjs https://elliotread250-source.github.io/Blackjack/humanizer/
+        run: node humanizer/tools/live-check.mjs https://elliotread250-source.github.io/mini-games/humanizer/
 
       - name: Server log
         if: always()

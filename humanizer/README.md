@@ -63,7 +63,7 @@ If you're using this on schoolwork, check your school's rules. Getting caught fo
 
 ## Running it
 
-**Use it here: https://elliotread250-source.github.io/Blackjack/humanizer/**
+**Use it here: https://elliotread250-source.github.io/mini-games/humanizer/**
 
 That's GitHub Pages, free, published automatically on every push to `main`. Everything the free version does happens in your browser, so it doesn't need a server at all.
 
