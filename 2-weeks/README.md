@@ -6,13 +6,14 @@ You drop in with a pickaxe, 100 health and 100 shield against 24 bots. Farm mate
 
 ## Run it
 
+From the root of the repo:
+
 ```bash
-npm install
-npm start
-# open http://localhost:3000
+python server.py
+# open http://localhost:8080/2-weeks/
 ```
 
-No build step. `server.js` is a zero-dependency static server that also serves three.js from `node_modules`, so the game never relies on a CDN. `/health` returns `ok` for Railway's health check.
+No build step and no install. three.js comes from jsDelivr through the import map in `index.html`, and every path is relative, so the folder runs from any static host.
 
 ## Controls
 
@@ -55,7 +56,7 @@ Every key is rebindable from **Settings & Keybinds** in the lobby or pause menu,
 
 ## Research notes
 
-Numbers in `public/js/config.js` are based on:
+Numbers in `js/config.js` are based on:
 
 - Fortnite build health and build times: wood/brick/metal walls 90-150 / 90-300 / 110-500, floors, ramps and roofs 84-140 / 93-280 / 101-460, build times 4 / 11.5 / 24.5 seconds ([GameRevolution](https://www.gamerevolution.com/?p=410337)).
 - Fortnite rarity colours and Assault Rifle damage of 30 / 31 / 33 / 35 / 36 by rarity, Pump Shotgun scaling from 90 ([Dot Esports](https://dotesports.com/news/full-stats-of-all-fortnite-battle-royale-weapons), [Pocket Gamer](https://www.pocketgamer.com/articles/077032/r/)).
@@ -64,11 +65,9 @@ Numbers in `public/js/config.js` are based on:
 ## Project layout
 
 ```
-server.js            static server + /health
-railway.json         Railway build/deploy config
-public/index.html    HUD, lobby, menus
-public/css/style.css
-public/js/
+index.html           HUD, lobby, menus
+css/style.css
+js/
   config.js          every tunable number
   terrain.js         island heightmap, POI list, minimap painter
   world.js           buildings, props, harvestables, loot spots
