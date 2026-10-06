@@ -87,6 +87,22 @@ await test('rankModels: Sonnet first for Claude, flagship first for GPT', () => 
   assert.deepEqual(rankModels(ids, 'gpt').slice(0, 3), ['gpt-5.5', 'openai/gpt-5.1', 'gpt-4o']);
 });
 
+await test('rankModels: real Puter list (Oct 2026) picks first-party flagships, not gpt-35-turbo', () => {
+  const live = ['claude-sonnet-5-5', 'infron:anthropic/claude-sonnet-5.5', 'openrouter:anthropic/claude-sonnet-5.5',
+    'openrouter:anthropic/claude-sonnet-5.5:batch', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-opus-5-5',
+    'infron:openai/gpt-35-turbo', 'gpt-6.1-sol', 'infron:openai/gpt-6.1-sol', 'openrouter:openai/gpt-6.1-sol',
+    'infron:openai/gpt-6.1-sol:flex', 'openrouter:openai/gpt-6.1-sol-pro', 'infron:openai/gpt-6.1-sol:priority',
+    'gpt-6-sol', 'gpt-6-luna', 'gpt-6-astra', 'gpt-6.1-sol-mini'];
+  const claude = rankModels(live, 'claude');
+  const gpt = rankModels(live, 'gpt');
+  assert.equal(claude[0], 'claude-sonnet-5-5');
+  assert.ok(!claude.some((id) => id.endsWith(':batch')));
+  assert.equal(gpt[0], 'gpt-6.1-sol');
+  assert.ok(!gpt.includes('infron:openai/gpt-35-turbo'));
+  assert.ok(!gpt.some((id) => /:flex|:priority|-pro|mini/.test(id)));
+  assert.ok(gpt.indexOf('gpt-6.1-sol') < gpt.indexOf('gpt-6-sol'));
+});
+
 await test('aiProbability: label conventions', () => {
   assert.equal(aiProbability([{ label: 'Fake', score: 0.8 }, { label: 'Real', score: 0.2 }]), 0.8);
   assert.equal(aiProbability([{ label: 'Human', score: 0.7 }, { label: 'AI', score: 0.3 }]), 0.3);

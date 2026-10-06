@@ -1,0 +1,5 @@
+I got the email at 6am, which is never good. My manager wanted the Q3 numbers redone because finance had changed the revenue recognition rules again. Third time this year.
+
+So I opened the spreadsheet. It's a mess. Half the formulas reference a tab someone deleted in March, and the other half are hardcoded because, I'm guessing, somebody gave up. I fixed what I could by nine and sent it over with a note saying the Europe figures were probably still off by a few percent, but I'd need the raw exports from the billing system to know for sure.
+
+He replied with a thumbs up. That's it.

@@ -15,21 +15,6 @@ export const PAID_DETECTORS = [
   { id: 'huggingface', name: 'Hugging Face Inference', keys: ['HF_TOKEN'], link: 'https://huggingface.co/settings/tokens' },
 ];
 
-// ZeroGPT's public checker. It answers without a key; it's the same endpoint
-// zerogpt.com's own page uses, so it can be rate limited or blocked at any time.
-async function zeroGptDirect(text, signal) {
-  const res = await fetch('https://api.zerogpt.com/api/detect/detectText', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ input_text: text }),
-    signal,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || data.success === false) throw new Error(data.message || `ZeroGPT returned ${res.status}`);
-  const d = data.data || {};
-  return { ai: Number(d.fakePercentage ?? d.fake_percentage ?? 0), flagged: Array.isArray(d.h) ? d.h : [] };
-}
-
 export function serverHas(server, id) {
   return !!server?.detectors?.find((d) => d.id === id)?.server_ready;
 }
@@ -43,26 +28,13 @@ export function buildDetectors({ settings, server, password }) {
     }
   }
 
-  if (settings.zerogpt) {
+  // ZeroGPT's free checker answers servers but not browsers (no CORS headers,
+  // confirmed against the live API), so it only runs when this app's server does.
+  if (settings.zerogpt && serverHas(server, 'zerogpt')) {
     list.push({
       id: 'zerogpt',
       name: 'ZeroGPT',
-      run: async (text, signal) => {
-        if (server) {
-          try {
-            return await runDetector('zerogpt', text, settings.keys, password, signal);
-          } catch (e) {
-            if (e?.name === 'AbortError') throw e;
-            // Fall through to calling ZeroGPT from the browser.
-          }
-        }
-        try {
-          return await zeroGptDirect(text, signal);
-        } catch (e) {
-          if (e?.name === 'AbortError') throw e;
-          throw new Error(`ZeroGPT's free checker didn't answer (${e.message}). It's an unofficial free endpoint and comes and goes.`);
-        }
-      },
+      run: (text, signal) => runDetector('zerogpt', text, settings.keys, password, signal),
     });
   }
 

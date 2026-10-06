@@ -10,7 +10,7 @@
 // Opus is one click away in Settings.
 const PUTER_FALLBACKS = {
   claude: ['claude-sonnet-5-5', 'claude-sonnet-5', 'claude-sonnet-4-6', 'claude-sonnet-4-5', 'claude-sonnet-4', 'claude-opus-5-5', 'claude-opus-4-6'],
-  gpt: ['gpt-5.5', 'gpt-5.1', 'gpt-5', 'gpt-4.1', 'gpt-4o'],
+  gpt: ['gpt-6.1-sol', 'gpt-6-sol', 'gpt-5.5', 'gpt-5.1', 'gpt-5', 'gpt-4.1', 'gpt-4o'],
 };
 
 export const VENDORS = {
@@ -18,10 +18,22 @@ export const VENDORS = {
   gpt: 'ChatGPT',
 };
 
-function versionOf(id) {
+function versionOf(id, vendor) {
+  if (vendor === 'gpt') {
+    const m = String(id).match(/gpt-(\d+)(?:\.(\d+))?/i);
+    if (!m) return [];
+    let [major, minor] = [Number(m[1]), Number(m[2] || 0)];
+    // "gpt-35-turbo" is 3.5, not version 35.
+    if (major >= 10 && !m[2]) [major, minor] = [Math.floor(major / 10), major % 10];
+    return [major, minor];
+  }
   const nums = String(id).replace(/\d{8}/g, '').match(/\d+/g) || [];
   return nums.slice(0, 2).map(Number).filter((n) => n < 100);
 }
+
+// Puter also lists the same models routed through third parties
+// ("openrouter:anthropic/claude-sonnet-5.5"); prefer its own ids.
+const native = (id) => !/[:/]/.test(id);
 
 function cmpVersion(a, b) {
   for (let i = 0; i < Math.max(a.length, b.length); i++) {
@@ -34,17 +46,18 @@ function cmpVersion(a, b) {
 // Newest Sonnet first, then Opus; for GPT the newest plain flagship (no mini/nano/audio...).
 export function rankModels(ids, vendor) {
   const seen = new Set();
-  const list = ids.filter((id) => id && !seen.has(id) && seen.add(id));
+  // Batch/flex/priority routes are slow or pricier variants of the same model.
+  const list = ids.filter((id) => id && !seen.has(id) && seen.add(id) && !/:(?:batch|flex|priority)\b/i.test(id));
+  const order = (a, b) => cmpVersion(versionOf(b, vendor), versionOf(a, vendor)) || Number(native(b)) - Number(native(a)) || a.length - b.length;
   if (vendor === 'claude') {
     const tier = (id) => (/sonnet/i.test(id) ? 0 : /opus/i.test(id) ? 1 : /haiku/i.test(id) ? 3 : 2);
     return list
       .filter((id) => /claude/i.test(id) && !/thinking|instant|-v\d|bedrock|vertex/i.test(id))
-      .sort((a, b) => tier(a) - tier(b) || cmpVersion(versionOf(b), versionOf(a)) || a.length - b.length);
+      .sort((a, b) => tier(a) - tier(b) || order(a, b));
   }
-  const plain = (id) => /^(?:openai\/)?gpt-\d+(?:[.-]\d+)?$/i.test(id);
   return list
-    .filter((id) => /gpt-\d/i.test(id) && !/mini|nano|audio|realtime|image|search|transcribe|tts|codex|oss|instruct|vision|embedding/i.test(id))
-    .sort((a, b) => cmpVersion(versionOf(b), versionOf(a)) || Number(plain(b)) - Number(plain(a)) || a.length - b.length);
+    .filter((id) => /gpt-\d/i.test(id) && !/mini|nano|audio|realtime|image|search|transcribe|tts|codex|oss|instruct|vision|embedding|turbo|-pro\b/i.test(id))
+    .sort(order);
 }
 
 function errMessage(e) {

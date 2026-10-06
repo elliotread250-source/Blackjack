@@ -145,9 +145,11 @@ function renderSettings() {
     : '<p class="hint">This browser can\'t run the in-browser detectors (no Web Workers or WebAssembly).</p>';
   $('free-detectors').innerHTML = `${local}
     <label class="det">
-      <input type="checkbox" data-zerogpt${S.settings.zerogpt ? ' checked' : ''}>
-      <span class="name">ZeroGPT <span class="badge">free public checker</span></span>
-      <span class="desc">Uses ZeroGPT's own free web checker. Unofficial, so it can be rate limited or switched off on their end; if it fails the run carries on without it.</span>
+      <input type="checkbox" data-zerogpt${S.settings.zerogpt ? ' checked' : ''}${S.server ? '' : ' disabled'}>
+      <span class="name">ZeroGPT <span class="badge">${S.server ? 'free, through this app\'s server' : 'needs the optional server'}</span></span>
+      <span class="desc">${S.server
+        ? "Uses ZeroGPT's free public checker, no key. It's unofficial, so if ZeroGPT blocks it the run carries on without it."
+        : "ZeroGPT's free checker refuses calls straight from a browser, so it only works when this app's optional Python server is running. The free GitHub Pages version skips it."}</span>
     </label>`;
 
   $('paid-detectors').innerHTML = PAID_DETECTORS.map((d) => {
@@ -303,7 +305,7 @@ async function start() {
       try {
         await ensurePuterSignIn();
       } catch {
-        banner('Claude and ChatGPT run free through Puter, which needs a quick free sign-in. Click Humanize again and finish the sign-in window.', 'error');
+        banner('Claude and ChatGPT run free through Puter, which needs a free account (one click with Google). Allow pop-ups for this page, click Humanize again and finish the Puter window.', 'error');
         return;
       }
     }
