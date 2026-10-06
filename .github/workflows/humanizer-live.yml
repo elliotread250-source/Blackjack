@@ -2,8 +2,9 @@ name: Humanizer live check
 
 # Runs the humanizer against the real services (Puter's Claude and GPT, the
 # Hugging Face detector models, ZeroGPT). Needs open internet, which Actions
-# runners have. Uses a throwaway Puter guest account, so it spends nobody's
-# credits but Puter's free allowance for that guest.
+# runners have. Claude and ChatGPT need a free Puter account: add its token
+# (puter.com/dashboard#account) as the PUTER_AUTH_TOKEN repository secret.
+# Without it those steps are skipped and everything else still runs.
 
 on:
   push:
@@ -65,6 +66,7 @@ jobs:
       - name: Full run against this branch
         env:
           OUT_DIR: out/branch
+          PUTER_AUTH_TOKEN: ${{ secrets.PUTER_AUTH_TOKEN }}
         run: node humanizer/tools/live-check.mjs http://127.0.0.1:8080/ --full
 
       - name: Check the live GitHub Pages site

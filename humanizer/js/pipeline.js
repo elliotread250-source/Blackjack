@@ -100,7 +100,7 @@ function better(a, b) {
 export async function humanize({ text, style = 'natural', maxRounds = 5, engines, detectors = [], passMark = 35, onEvent = () => {}, signal }) {
   const vendors = engines.available();
   if (!vendors.length) {
-    throw new Error('No model to rewrite with. Allow the Puter window when it opens (free, no sign-up), or turn Claude/ChatGPT back on in Settings.');
+    throw new Error('No model to rewrite with. Sign in to Puter when its window opens (free account, no API key), or turn Claude/ChatGPT back on in Settings.');
   }
   const dropped = new Map();
   const rounds = [];

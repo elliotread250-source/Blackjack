@@ -32,8 +32,8 @@ export const LOCAL_DETECTORS = {
     model: 'onnx-community/roberta-base-openai-detector-ONNX',
     kind: 'classifier',
     size: '~125 MB',
-    on: false,
-    blurb: "OpenAI's classic GPT-2 output detector. Easy to pass with modern text, so it's off by default.",
+    on: true,
+    blurb: "OpenAI's classic GPT-2 output detector. Older, but it still flags typical chatbot prose.",
   },
 };
 

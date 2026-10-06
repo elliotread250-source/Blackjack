@@ -52,20 +52,24 @@ try {
     return { claude: m.claude.slice(0, 10), gpt: m.gpt.slice(0, 10), pickClaude: e.puterCandidates('claude')[0], pickGpt: e.puterCandidates('gpt')[0] };
   });
   step('Puter lists Claude and GPT models', models.claude.length > 0 && models.gpt.length > 0, models);
+  step('app picks first-party flagship models', /^claude-sonnet-\d/.test(models.pickClaude) && /^gpt-\d/.test(models.pickGpt) && !/turbo|mini|nano/.test(models.pickGpt),
+    { claude: models.pickClaude, gpt: models.pickGpt });
 
-  // 3. ZeroGPT straight from the browser (CORS from this origin).
-  const zg = await page.evaluate(async (text) => {
-    try {
-      const r = await fetch('https://api.zerogpt.com/api/detect/detectText', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ input_text: text }),
-      });
-      const body = await r.text();
-      return { status: r.status, body: body.slice(0, 500) };
-    } catch (e) {
-      return { error: String(e) };
-    }
-  }, AI);
-  step('ZeroGPT callable from the browser', !zg.error && zg.status === 200 && /fakePercentage/.test(zg.body), zg);
+  // 3. ZeroGPT through the app's server (browsers can't call it directly: no CORS).
+  const hasServer = await page.evaluate(async () => (await fetch('api/config')).ok);
+  if (hasServer) {
+    const zg = await page.evaluate(async ({ ai, human }) => {
+      const eng = await import('./js/engines.js');
+      const out = {};
+      for (const [k, t] of [['ai', ai], ['human', human]]) {
+        try { out[k] = await eng.runDetector('zerogpt', t, {}, ''); } catch (e) { out[k] = { error: e.message }; }
+      }
+      return out;
+    }, { ai: AI, human: HUMAN });
+    step(`ZeroGPT through the app's server${zg.ai.error ? '' : ` (AI sample ${zg.ai.ai}%, human sample ${zg.human.ai}%)`}`, !zg.ai.error && !zg.human.error, zg);
+  } else {
+    console.log('SKIP ZeroGPT (no server behind this URL, as on GitHub Pages)');
+  }
 
   // 4. Each in-browser detector on an AI sample and a human sample.
   for (const id of ['raid-roberta', 'modernbert', 'perplexity', 'openai-roberta']) {
@@ -88,40 +92,34 @@ try {
     step(`in-browser detector ${id} runs${ok ? ` (AI sample ${res.ai.ai}%, human sample ${res.human.ai}%)` : ''}`, ok, res);
   }
 
-  // 5. Puter guest account, the same way the app does it (from a click).
-  await page.evaluate(async () => {
-    const eng = await import('./js/engines.js');
-    const b = document.createElement('button');
-    b.id = '__signin';
-    b.textContent = 'sign in';
-    b.onclick = async () => {
-      try {
-        await eng.ensurePuterSignIn();
-        window.__auth = 'ok';
-      } catch (e) {
-        window.__auth = `error: ${e?.message || JSON.stringify(e)}`;
-      }
-    };
-    document.body.prepend(b);
-  });
-  const popupP = page.waitForEvent('popup', { timeout: 15000 }).catch(() => null);
-  await page.click('#__signin');
-  const popup = await popupP;
-  if (popup) {
-    await popup.waitForLoadState('load', { timeout: 30000 }).catch(() => {});
-    console.log(`    popup: ${popup.url()}`);
+  // 5. Puter account. A real person signs in through Puter's window; CI uses
+  // a token from a free Puter account (repository secret PUTER_AUTH_TOKEN).
+  const token = process.env.PUTER_AUTH_TOKEN;
+  let auth = { signedIn: false };
+  if (token) {
+    auth = await page.evaluate(async (t) => {
+      window.puter.setAuthToken(t);
+      const signedIn = window.puter.auth.isSignedIn();
+      const user = signedIn ? await window.puter.auth.getUser().then((u) => u.username).catch((e) => String(e)) : null;
+      return { signedIn, user };
+    }, token);
+    step('signed in to Puter with PUTER_AUTH_TOKEN', auth.signedIn, auth);
+  } else {
+    const popupP = page.waitForEvent('popup', { timeout: 15000 }).catch(() => null);
+    await page.evaluate(async () => {
+      const eng = await import('./js/engines.js');
+      const b = document.createElement('button');
+      b.id = '__signin';
+      b.onclick = () => { eng.ensurePuterSignIn().catch(() => {}); };
+      document.body.prepend(b);
+    });
+    await page.click('#__signin');
+    const popup = await popupP;
+    const opened = popup ? popup.url() : null;
+    if (popup) await popup.close().catch(() => {});
+    step("Humanize opens Puter's sign-in window", !!opened && /puter\.com/.test(opened), opened);
+    console.log('SKIP Claude, ChatGPT and the full run: set the PUTER_AUTH_TOKEN repository secret to test them');
   }
-  await page.waitForFunction(() => window.__auth, null, { timeout: 90000 }).catch(() => {});
-  const auth = await page.evaluate(async () => ({
-    result: window.__auth || 'still waiting',
-    signedIn: window.puter.auth.isSignedIn(),
-    user: window.puter.auth.isSignedIn() ? await window.puter.auth.getUser().then((u) => ({ username: u.username, temp: u.is_temp })).catch((e) => String(e)) : null,
-  }));
-  if (popup && !popup.isClosed() && auth.result !== 'ok') {
-    await popup.screenshot({ path: path.join(outDir, 'puter-popup.png') }).catch(() => {});
-    auth.popupText = (await popup.evaluate(() => document.body.innerText).catch(() => '')).slice(0, 600);
-  }
-  step('Puter guest account created without a sign-up form', auth.result === 'ok' && auth.signedIn, auth);
 
   // 6. One real call to each model through the app's own engine code.
   if (auth.signedIn) {
@@ -143,7 +141,6 @@ try {
 
   // 7. The whole loop through the UI.
   if (full && auth.signedIn) {
-    await page.evaluate(() => document.getElementById('__signin')?.remove());
     await page.selectOption('#rounds', '3');
     await page.fill('#input', AI);
     const t0 = Date.now();
@@ -168,6 +165,7 @@ try {
   step('unexpected error', false, e.stack);
   await page.screenshot({ path: path.join(outDir, 'crash.png'), fullPage: true }).catch(() => {});
 } finally {
+  // Pages has no /api/config, so that one 404 is expected.
   const real = pageErrors.filter((e) => !/Failed to load resource/.test(e));
   step('no page errors', real.length === 0, real.slice(0, 15));
   save();

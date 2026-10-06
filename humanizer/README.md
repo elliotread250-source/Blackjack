@@ -6,11 +6,11 @@ It costs nothing to use and you don't need a single API key.
 
 ## How it's free
 
-Claude and ChatGPT run through [Puter](https://puter.com). Puter gives every visitor free access to Claude and GPT models on their own free Puter account, so the first time you hit Humanize a small Puter window opens and sets you up with a free guest account automatically. No sign-up form, no API key, no card. (If you'd rather keep your usage on a real Puter account, sign in there instead.)
+Claude and ChatGPT run through [Puter](https://puter.com). Puter gives every visitor free access to Claude and GPT models on their own free Puter account, so the first time you hit Humanize a Puter window opens. Sign up free (one click with Google, Microsoft or Apple) and you're done. No API key, no card.
 
 The open-source detectors run on your machine with [Transformers.js](https://huggingface.co/docs/transformers.js). The model files download once from Hugging Face's free CDN and the browser caches them, so the first run is slow (a few hundred MB) and every run after is quick.
 
-ZeroGPT is called through its free public checker, the same request zerogpt.com's own page sends.
+ZeroGPT is called through its free public checker, the same request zerogpt.com's own page sends. ZeroGPT refuses that call when it comes straight from a browser, so it only runs when the optional Python server is up; the GitHub Pages version skips it.
 
 The yeah-but: Puter's free allowance isn't infinite. Heavy use in one month can run it dry, and then Puter asks the account to top up. The app defaults to Claude Sonnet (half the price of Opus on Puter, nearly as good at this job) so the free allowance stretches further. Switch to Opus under Settings if you want.
 
@@ -23,8 +23,8 @@ The yeah-but: Puter's free allowance isn't infinite. Heavy use in one month can 
 | RAID RoBERTa (trained on the RAID benchmark: GPT-4, ChatGPT, Llama, Mistral and more) | your browser | free |
 | ModernBERT AI detector | your browser | free |
 | Perplexity + burstiness on GPT-2 (GPTZero's original method) | your browser | free |
-| OpenAI RoBERTa detector (off by default, easy to fool) | your browser | free |
-| ZeroGPT | free public endpoint | free |
+| OpenAI RoBERTa detector (the classic GPT-2 era one) | your browser | free |
+| ZeroGPT | the optional server (browsers are blocked) | free |
 | Built-in style check (em dashes, stock AI words, even rhythm, triads, "not only... but also"...) | your browser | free |
 | GPTZero, Originality.ai, Copyleaks, Winston AI, Sapling | the server | only if you already pay for one |
 
@@ -44,6 +44,20 @@ The results table shows every check for every round. Click View on any round to 
 No tool can promise that every detector on earth will pass a text forever. Detectors retrain, disagree with each other, and some flag plenty of genuinely human writing. What this does is keep rewriting until everything it can check passes, then tell you plainly which ones did. If it runs out of rounds, it says which checks still complain, and "Run again on this output" picks up from there.
 
 ZeroGPT's free endpoint is unofficial. If they block it, that check gets skipped and the run carries on.
+
+## Tested against the real services
+
+`tools/live-check.mjs` drives the page in a real browser against Puter, Hugging Face and ZeroGPT, and `.github/workflows/humanizer-live.yml` runs it on GitHub Actions (this sandbox can't reach those services, Actions can). On a ChatGPT-style paragraph versus a human-written one, the in-browser detectors scored:
+
+| Detector | ChatGPT-style text | Human text |
+| --- | --- | --- |
+| RAID RoBERTa | 99% AI | 3% AI |
+| ModernBERT | 100% AI | 0% AI |
+| Perplexity + burstiness | 77% AI (perplexity 15.3) | 0% AI (perplexity 61.8) |
+| OpenAI RoBERTa | 81% AI | 0% AI |
+| ZeroGPT (from a server) | 100% AI | 0% AI |
+
+Add a `PUTER_AUTH_TOKEN` repository secret (copy it from puter.com/dashboard#account) and the same workflow also runs Claude, ChatGPT and a full humanize loop for real.
 
 If you're using this on schoolwork, check your school's rules. Getting caught for AI use has nothing to do with detectors half the time; teachers notice when the voice doesn't match your other work.
 
