@@ -19,7 +19,7 @@ master-client/
 ├── package.json               scripts: dev, build, typecheck, test, dist
 ├── electron.vite.config.ts    main / preload / renderer (two pages: app + overlay)
 ├── electron-builder.yml       NSIS installer, GitHub publish, extra resources
-├── build/                     icon.ico, icon.png, installer.nsh
+├── build/                     icon.ico, icon.png (drawn by scripts/make-icons.mjs)
 ├── resources/                 tray icon; bin/PresentMon.exe is fetched in CI
 ├── addons/                    starter Add-Ons shipped with the app
 │   ├── master_clean_ui/         resource pack

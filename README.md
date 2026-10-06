@@ -10,6 +10,8 @@ no backend: the whole game runs in the browser and your bankroll lives in
 
 **Humanizer (AI text to human text, free, no API keys): https://elliotread250-source.github.io/Blackjack/humanizer/**
 
+**Master Client (Minecraft Bedrock companion launcher for Windows): [master-client/](master-client/README.md).** Installers come from GitHub Releases tagged `master-client-v*`.
+
 ## Rules on the table
 
 Six-deck shoe, reshuffled at the cut card (~25% penetration) so counting it down

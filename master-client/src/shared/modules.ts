@@ -97,7 +97,7 @@ export const MODULES: ModuleDef[] = [
       onHud: true,
       movable: true,
       resizable: true,
-      base: { w: 200, h: 36 },
+      base: { w: 200, h: 48 },
       defaultPos: { x: 0.006, y: 0.205, scale: 1 },
       minScale: 0.5,
       maxScale: 3,

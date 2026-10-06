@@ -48,6 +48,17 @@ jobs:
           cache: npm
           cache-dependency-path: master-client/package-lock.json
       - run: npm ci
+      - name: Fetch PresentMon (MIT, GameTechDev) for the FPS module
+        shell: pwsh
+        run: |
+          $url = 'https://github.com/GameTechDev/PresentMon/releases/download/v2.3.0/PresentMon-2.3.0-x64.exe'
+          $out = 'resources/bin/PresentMon.exe'
+          New-Item -ItemType Directory -Force -Path resources/bin | Out-Null
+          Invoke-WebRequest -Uri $url -OutFile $out
+          $hash = (Get-FileHash $out -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne '690533cf5c2591ef571a3037aa4c205c8e75860ef3f56927bf3a98acf7198485') {
+            throw "PresentMon checksum mismatch: $hash"
+          }
       - run: npm run dist
       - uses: actions/upload-artifact@v4
         with:
