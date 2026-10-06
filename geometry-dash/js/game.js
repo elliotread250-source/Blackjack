@@ -67,7 +67,7 @@
     '#00c878', '#00a0ff', '#ffc0e0', '#ffffff', '#b0b0b0', '#505050', '#000000', '#8b4a1f',
   ];
   const ICONS = window.GDIcons;
-  const SKIN = Object.assign({ c1: '#7dff3a', c2: '#3af0ff', glow: false, icons: {} }, store.get('skin', {}));
+  const SKIN = Object.assign({ c1: '#7dff3a', c2: '#3af0ff', glow: false, icons: {}, trail: 'classic', death: 'classic' }, store.get('skin', {}));
   SKIN.icons = SKIN.icons || {};
   const saveSkin = () => store.set('skin', SKIN);
 
@@ -94,7 +94,7 @@
   // come from first clears and secret coins and buy the Prism set.
   // Practice mode (checkpoints) pays nothing, same as GD.
   const ORB_BY_STARS = { 1: 25, 2: 50, 3: 75, 4: 125, 5: 175, 6: 225, 7: 275, 8: 350, 9: 425, 10: 500, 12: 600, 15: 750 };
-  const ORB_BY_TIER = [25, 50, 75, 125, 175, 225, 275, 350, 425, 500];
+  const ORB_BY_TIER = [25, 40, 50, 75, 100, 125, 175, 200, 225, 275, 325, 350, 425, 475, 500];
   const orbsOf = (L) => (L.training ? ORB_BY_TIER[L.tier] : ORB_BY_STARS[L.stars] || L.stars * 50);
   const diamondsOf = (L) => (L.training ? L.tier + 1 : L.stars + 2);
   const COIN_DIAMONDS = 2;
@@ -110,8 +110,38 @@
   // Each special set (icons.js) is earned one way: bought per mode in the
   // shop, Golden per mode for total secret coins, Demon from a vault code,
   // three from main-menu easter eggs, Angel from beating the secret level.
-  const SHOP_ORBS = { checker: 200, neon: 350, ice: 500, flame: 700, galaxy: 900 };
-  const SHOP_DIAMONDS = { prism: 40 };
+  // Icon set prices (cube price; other modes cost a little more each).
+  const SHOP_ORBS = {
+    candy: 80, checker: 150, zebra: 250, neon: 400, sunset: 600, ice: 750, ocean: 1000, flame: 1200,
+    retro: 1800, galaxy: 2500, party: 3500, toxic: 5000, magma: 8000, shadow: 12000, cyber: 20000, cosmic: 35000,
+  };
+  const SHOP_DIAMONDS = { prism: 25, emerald: 60, ruby: 120, sapphire: 250, emperor: 500 };
+  const MODE_MULT = { cube: 1, ship: 1.1, ball: 1.2, ufo: 1.3, wave: 1.45, robot: 1.6, spider: 1.75, swing: 1.9 };
+  const setPrice = (set, mode) => {
+    const base = SHOP_ORBS[set] || SHOP_DIAMONDS[set];
+    const v = base * MODE_MULT[mode];
+    return base >= 100 ? Math.round(v / 10) * 10 : Math.round(v);
+  };
+  // Colours, trails and death effects: [id, name, price, 'orbs' | 'diamonds']
+  const SHOP_COLORS = [
+    ['#ff7f50', 'Coral', 40], ['#7fffd4', 'Aqua', 60], ['#dda0dd', 'Plum', 90], ['#f0e68c', 'Khaki', 120],
+    ['#40e0d0', 'Turquoise', 180], ['#ff1493', 'Hot Pink', 250], ['#9acd32', 'Lime', 320], ['#4682b4', 'Steel', 400],
+    ['#d2691e', 'Copper', 520], ['#00ced1', 'Teal', 650], ['#8a2be2', 'Violet', 800], ['#ff4500', 'Blaze', 1000],
+    ['#2e8b57', 'Forest', 1300], ['#b22222', 'Crimson', 1700], ['#ffd700', 'Gold', 2200], ['#c0c0c0', 'Silver', 2800],
+    ['#191970', 'Midnight', 3600], ['#e6e6fa', 'Lavender', 4500], ['#00ff7f', 'Spring', 6000], ['#ff00ff', 'Magenta', 8000],
+    ['#0ff0f0', 'Electric', 15, 'diamonds'], ['#ffe4b5', 'Champagne', 35, 'diamonds'], ['#ff6ec7', 'Neon Rose', 70, 'diamonds'], ['#39ff14', 'Radioactive', 150, 'diamonds'],
+  ];
+  const SHOP_TRAILS = [
+    ['classic', 'Classic', 0], ['smoke', 'Smoke', 120], ['ice', 'Frost', 300], ['fire', 'Fire', 700], ['neon', 'Neon', 1500],
+    ['gold', 'Gold Dust', 3000], ['hearts', 'Hearts', 5500], ['rainbow', 'Rainbow', 9000], ['lightning', 'Lightning', 16000],
+    ['ghost', 'Afterimage', 30000], ['galaxy', 'Stardust', 45, 'diamonds'], ['void', 'Void', 200, 'diamonds'],
+  ];
+  const SHOP_DEATHS = [
+    ['classic', 'Classic', 0], ['pixels', 'Pixels', 100], ['shatter', 'Shatter', 350], ['confetti', 'Confetti', 900],
+    ['fireworks', 'Fireworks', 2000], ['ghost', 'Ghost', 4000], ['vaporize', 'Vaporize', 8000], ['blackhole', 'Black Hole', 18000],
+    ['nova', 'Supernova', 40000], ['lightning', 'Thunder', 60, 'diamonds'], ['glitch', 'Glitch', 180, 'diamonds'],
+  ];
+  const ownedItem = (key) => store.get('owned', []).indexOf(key) !== -1;
   const GOLD_COINS = { cube: 3, ship: 6, ball: 10, ufo: 14, wave: 20, robot: 26, spider: 33, swing: 40 };
   const EGG_SET = { moon: 'ghost', logo: 'glitch', corners: 'royal' };
   const hasEgg = (k) => store.get('eggs', []).indexOf(k) !== -1;
@@ -129,8 +159,8 @@
     return false;
   }
   function setHint(mode, key) {
-    if (SHOP_ORBS[key]) return `Shop: ${SHOP_ORBS[key]} orbs`;
-    if (SHOP_DIAMONDS[key]) return `Shop: ${SHOP_DIAMONDS[key]} diamonds`;
+    if (SHOP_ORBS[key]) return `Shop: ${setPrice(key, mode).toLocaleString()} orbs`;
+    if (SHOP_DIAMONDS[key]) return `Shop: ${setPrice(key, mode).toLocaleString()} diamonds`;
     if (key === 'gold') return `Collect ${GOLD_COINS[mode]} secret coins (you have ${coinTotal()})`;
     if (key === 'demon') return 'Unlocked by a vault code';
     if (key === 'angel') return 'Beat the secret level';
@@ -388,15 +418,40 @@
 
   function flushJumps() { if (pendingJumps) { bump('jumps', pendingJumps); pendingJumps = 0; } }
 
+  // Death effects from the shop.
+  function deathFx(s) {
+    const id = SKIN.death || 'classic', cols = deathColors(id);
+    const col = () => cols[Math.floor(Math.random() * cols.length)];
+    const burst = (n, vmin, vmax, life, size, square, fire) => {
+      for (let i = 0; i < n; i++) {
+        const a = Math.random() * Math.PI * 2, v = vmin + Math.random() * (vmax - vmin);
+        spawn(s.x, s.y, Math.cos(a) * v, Math.sin(a) * v, life * (0.6 + Math.random() * 0.6), size * (0.5 + Math.random()), col(), square, fire);
+      }
+    };
+    switch (id) {
+      case 'pixels': burst(70, 1, 6, 0.9, 0.12, true); break;
+      case 'shatter': burst(14, 4, 12, 1.0, 0.35, true); break;
+      case 'confetti': burst(90, 4, 14, 1.4, 0.12, true); break;
+      case 'fireworks': burst(60, 8, 16, 1.0, 0.1, false); burst(40, 2, 6, 1.2, 0.15, false); break;
+      case 'ghost': for (let i = 0; i < 30; i++) spawn(s.x + (Math.random() - 0.5), s.y, (Math.random() - 0.5) * 2, 3 + Math.random() * 4, 1.2, 0.2, col(), false); break;
+      case 'vaporize': burst(120, 0.5, 4, 0.6, 0.06, false); G.flash = 1.5; break;
+      case 'blackhole':
+        for (let i = 0; i < 60; i++) { const a = Math.random() * Math.PI * 2, r = 2 + Math.random() * 2; spawn(s.x + Math.cos(a) * r, s.y + Math.sin(a) * r, -Math.cos(a) * r * 3, -Math.sin(a) * r * 3, 0.33, 0.12, col(), true); }
+        break;
+      case 'nova': burst(150, 10, 24, 0.8, 0.14, false, true); if (SET.shake) G.shake = 0.6; break;
+      case 'lightning':
+        for (let k = 0; k < 6; k++) { let x = s.x, y = s.y; const a = Math.random() * Math.PI * 2; for (let j = 0; j < 8; j++) { x += Math.cos(a) * 0.5 + (Math.random() - 0.5) * 0.5; y += Math.sin(a) * 0.5 + (Math.random() - 0.5) * 0.5; spawn(x, y, 0, 0, 0.35, 0.1, col(), true); } }
+        break;
+      case 'glitch': for (let i = 0; i < 40; i++) spawn(s.x + (Math.random() - 0.5) * 3, s.y + (Math.random() - 0.5) * 2, (Math.random() - 0.5) * 20, 0, 0.3, 0.1 + Math.random() * 0.3, col(), true); break;
+      default: burst(46, 2, 12, 0.8, 0.17, true);
+    }
+  }
+
   function die() {
     const s = G.s;
     AUDIO.crash();
     if (!G.practice) AUDIO.stop();
-    for (let i = 0; i < 46; i++) {
-      const a = Math.random() * Math.PI * 2, v = 2 + Math.random() * 10;
-      spawn(s.x, s.y, Math.cos(a) * v, Math.sin(a) * v, 0.5 + Math.random() * 0.6,
-        0.1 + Math.random() * 0.24, Math.random() < 0.5 ? SKIN.c1 : SKIN.c2, true);
-    }
+    deathFx(s);
     if (SET.shake) G.shake = 0.35;
     G.flash = 1;
     G.deadTimer = SET.fastRespawn ? 0.5 : 1.0;
@@ -632,6 +687,7 @@
       G.ptrail.push(s.x, s.y, G.t);
     }
     while (G.ptrail.length && G.t - G.ptrail[2] > 0.3) G.ptrail.splice(0, 3);
+    trailParticles(s, dt);
     if (s.dash && Math.random() < dt * 80) {
       spawn(s.x - 0.4, s.y + (Math.random() - 0.5) * 0.8, -8 - Math.random() * 6, 0, 0.2, 0.06 + Math.random() * 0.05, '#fff', true);
     }
@@ -1985,17 +2041,72 @@
     outlinedText(`Attempt ${G.attempts}`, x, sy(5), S * 0.9);
   }
 
+  // Trail colour for a style at segment k (shop trails).
+  function trailColor(id, k, t) {
+    switch (id) {
+      case 'rainbow': return `hsl(${(k * 25 + t * 200) % 360},95%,60%)`;
+      case 'fire': return ['#fff0a0', '#ffd21f', '#ff8a1e', '#ff3a14'][k % 4];
+      case 'ice': return k % 2 ? '#bff6ff' : '#ffffff';
+      case 'neon': return SKIN.c1;
+      case 'gold': return k % 3 ? '#ffd21f' : '#fff3a0';
+      case 'hearts': return k % 2 ? '#ff4f8a' : '#ffb0c8';
+      case 'lightning': return k % 2 ? '#c8f4ff' : '#ffffff';
+      case 'ghost': return SKIN.c2;
+      case 'galaxy': return ['#c08aff', '#ffffff', '#5a8aff', '#ffe0ff'][k % 4];
+      case 'void': return k % 2 ? '#2a0040' : '#8a2be2';
+      case 'smoke': return '#9a9aaa';
+      default: return '#ffffff';
+    }
+  }
+  function deathColors(id) {
+    switch (id) {
+      case 'confetti': case 'fireworks': return ['#ff3b5c', '#ffe23b', '#3bff6b', '#3ac8ff', '#ff4fd8'];
+      case 'ghost': return ['#ffffff', '#c8d8ff'];
+      case 'vaporize': return ['#ffffff', '#bff6ff'];
+      case 'blackhole': return ['#8a2be2', '#2a0040', '#ffffff'];
+      case 'nova': return ['#ffffff', '#ffe066', '#ff8a1e'];
+      case 'lightning': return ['#ffffff', '#c8f4ff', '#3ac8ff'];
+      case 'glitch': return ['#00f0ff', '#ff00e0', '#ffffff'];
+      default: return [SKIN.c1, SKIN.c2];
+    }
+  }
+
   function drawTrail(s) {
-    const tr = G.ptrail;
+    const tr = G.ptrail, id = SKIN.trail || 'classic';
     if (tr.length < 6) return;
     ctx.lineCap = 'round';
+    if (id === 'neon' || id === 'void' || id === 'galaxy') { ctx.shadowColor = trailColor(id, 0, G.t); ctx.shadowBlur = S * 0.4; }
     for (let i = 3; i < tr.length; i += 3) {
-      const k = 1 - (G.t - tr[i + 2]) / 0.3;
-      ctx.strokeStyle = s.dash ? `rgba(255,255,255,${k * 0.9})` : `rgba(255,255,255,${k * 0.55})`;
-      ctx.lineWidth = S * (s.mini ? 0.18 : 0.3) * k;
-      ctx.beginPath(); ctx.moveTo(sx(tr[i - 3]), sy(tr[i - 2])); ctx.lineTo(sx(tr[i]), sy(tr[i + 1])); ctx.stroke();
+      const k = 1 - (G.t - tr[i + 2]) / 0.3, seg = i / 3;
+      const col = id === 'classic' ? '#ffffff' : trailColor(id, seg, G.t);
+      ctx.strokeStyle = col;
+      ctx.globalAlpha = s.dash ? k * 0.9 : k * (id === 'classic' ? 0.55 : 0.8);
+      ctx.lineWidth = S * (s.mini ? 0.18 : 0.3) * k * (id === 'lightning' ? 0.6 : 1);
+      ctx.beginPath();
+      const jx = id === 'lightning' ? (Math.random() - 0.5) * S * 0.3 : 0;
+      ctx.moveTo(sx(tr[i - 3]), sy(tr[i - 2])); ctx.lineTo(sx(tr[i]) + jx, sy(tr[i + 1]) + jx); ctx.stroke();
     }
+    ctx.globalAlpha = 1; ctx.shadowBlur = 0;
     ctx.lineCap = 'butt';
+    if (id === 'ghost' && tr.length > 12) {
+      // Afterimages of the icon along the trail
+      for (let i = tr.length - 12; i > 0; i -= 9) {
+        ctx.save(); ctx.globalAlpha = 0.18 * i / tr.length;
+        ctx.translate(sx(tr[i]), sy(tr[i + 1]));
+        drawIcon(s.mode, (s.mini ? 0.6 : 1) * S, s);
+        ctx.restore();
+      }
+    }
+  }
+  // Particles some trails leave behind wherever you go.
+  function trailParticles(s, dt) {
+    const id = SKIN.trail || 'classic';
+    const rate = { fire: 50, smoke: 25, gold: 30, hearts: 10, galaxy: 30, ice: 20, void: 25 }[id];
+    if (!rate || Math.random() > dt * rate) return;
+    const y = s.y + (Math.random() - 0.5) * 0.5;
+    if (id === 'fire') spawn(s.x - 0.4, y, -2, 1 + Math.random() * 2, 0.35, 0.1 + Math.random() * 0.1, trailColor('fire', Math.floor(Math.random() * 4)), false, true);
+    else if (id === 'smoke') spawn(s.x - 0.4, y, -1, 1.5, 0.6, 0.2 + Math.random() * 0.15, 'rgba(150,150,170,0.6)', false);
+    else spawn(s.x - 0.4, y, -1 - Math.random() * 2, (Math.random() - 0.5) * 2, 0.5, 0.06 + Math.random() * 0.08, trailColor(id, Math.floor(Math.random() * 4), G.t), id !== 'hearts');
   }
 
   function drawStreaks() {
@@ -2073,7 +2184,7 @@
   function drawWaveTrail(s) {
     ctx.save();
     ctx.lineJoin = 'miter'; ctx.lineCap = 'butt';
-    ctx.strokeStyle = SKIN.c2; ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = SKIN.trail && SKIN.trail !== 'classic' ? trailColor(SKIN.trail, 0, G.t) : SKIN.c2; ctx.globalAlpha = 0.9;
     ctx.lineWidth = S * (s.mini ? 0.18 : 0.3);
     ctx.beginPath();
     ctx.moveTo(sx(G.trail[0]), sy(G.trail[1]));
@@ -2159,6 +2270,7 @@
   // Practice levels: PRACTICE[mini][mode][tier] -> LEVELS index.
   const PRACTICE = { false: {}, true: {} };
   LEVELS.forEach((L, i) => { if (L.training) (PRACTICE[!!L.mini][L.mode] = PRACTICE[!!L.mini][L.mode] || [])[L.tier] = i; });
+  const PRAC_TOTAL = LEVELS.filter((L) => L.training).length;
 
   const auraOf = (L) => (L.training ? null : L.stars >= 9 ? 'epic' : 'featured');
 
@@ -2214,7 +2326,7 @@
   function buildHome() {
     G.menuBg = ['#2b5bff', '#1a3acc'];
     const beaten = MAIN.filter((i) => bestOf(i, false) === 100).length;
-    $('tagline').textContent = `${MAIN.length} levels · 160 mode practices · ${beaten}/${MAIN.length} beaten`;
+    $('tagline').textContent = `${MAIN.length} levels · ${PRAC_TOTAL} mode practices · ${beaten}/${MAIN.length} beaten`;
     iconCanvas($('hIconCv'), 'cube', 64, 0.7);
     iconCanvas($('hPracCv'), 'ship', 64, 0.8);
     $('hWallet').innerHTML = walletHtml();
@@ -2459,7 +2571,7 @@
     const demons = beaten.filter((i) => /Demon/.test(LEVELS[i].difficulty)).length;
     const cells = [
       ['Stars', `${stars} ★`], ['Levels beaten', `${beaten.length}/${MAIN.length}`],
-      ['Demons beaten', demons], ['Mode practices', `${prac}/160`],
+      ['Demons beaten', demons], ['Mode practices', `${prac}/${PRAC_TOTAL}`],
       ['Coins', `${LEVELS.reduce((n, L, i) => n + store.get('coins:' + slotOf(i), []).length, 0)}/${LEVELS.reduce((n, L) => n + (L.coinCount || 0), 0)}`],
       ['Icons', `${iconsOwned()}/${ICONS.TOTAL * 8}`],
       ['Orbs', store.get('orbs', 0)], ['Diamonds', store.get('diamonds', 0)],
@@ -2514,7 +2626,7 @@
     for (const [id, key] of [['sw1', 'c1'], ['sw2', 'c2']]) {
       const root = $(id);
       root.innerHTML = '';
-      for (const col of PALETTE) {
+      for (const col of PALETTE.concat(SHOP_COLORS.map((c) => c[0]).filter((c) => ownedItem('col:' + c)))) {
         const b = document.createElement('button');
         b.style.background = col;
         b.setAttribute('aria-label', `${key === 'c1' ? 'Primary' : 'Secondary'} ${col}`);
@@ -2576,45 +2688,118 @@
   ];
   function buildShop(say) {
     G.menuBg = ['#6a3300', '#3a1a00'];
-    const m = G.shopMode || 'cube';
+    const cat = G.shopCat || 'icons', m = G.shopMode || 'cube';
     $('shopSay').textContent = say || KEEPER[Math.floor(Math.random() * KEEPER.length)];
     $('shopWallet').innerHTML = walletHtml();
+    const cats = $('shopCats');
+    cats.innerHTML = '';
+    for (const [k, label] of [['icons', 'Icons'], ['colors', 'Colours'], ['trails', 'Trails'], ['deaths', 'Death FX']]) {
+      const b = document.createElement('button');
+      b.textContent = label; b.className = k === cat ? 'on' : '';
+      b.addEventListener('click', () => { G.shopCat = k; buildShop($('shopSay').textContent); });
+      cats.appendChild(b);
+    }
     const tabs = $('shopTabs');
     tabs.innerHTML = '';
-    for (const mm of P.MODES) {
-      const b = document.createElement('button');
-      b.className = mm === m ? 'on' : '';
-      b.setAttribute('aria-label', MODE_LABEL[mm]); b.title = MODE_LABEL[mm];
-      b.innerHTML = '<canvas></canvas>';
-      b.addEventListener('click', () => { G.shopMode = mm; buildShop($('shopSay').textContent); });
-      tabs.appendChild(b);
-      iconCanvasV(b.querySelector('canvas'), mm, 40, 0.7, ICONS.special(SHOP_SETS[P.MODES.indexOf(mm) % SHOP_SETS.length]));
+    tabs.style.display = cat === 'icons' ? '' : 'none';
+    if (cat === 'icons') {
+      for (const mm of P.MODES) {
+        const b = document.createElement('button');
+        b.className = mm === m ? 'on' : '';
+        b.setAttribute('aria-label', MODE_LABEL[mm]); b.title = MODE_LABEL[mm];
+        b.innerHTML = '<canvas></canvas>';
+        b.addEventListener('click', () => { G.shopMode = mm; buildShop($('shopSay').textContent); });
+        tabs.appendChild(b);
+        iconCanvasV(b.querySelector('canvas'), mm, 40, 0.7, ICONS.special(SHOP_SETS[P.MODES.indexOf(mm) % SHOP_SETS.length]));
+      }
     }
     const grid = $('shopGrid');
     grid.innerHTML = '';
     const w = wallet();
-    for (const set of SHOP_SETS) {
-      const v = ICONS.special(set);
-      const own = setOwned(m, set);
-      const orbs = SHOP_ORBS[set], price = orbs || SHOP_DIAMONDS[set];
-      const can = orbs ? w.orbs >= price : w.diamonds >= price;
+    // One shop card: preview, name, and a buy / equip button.
+    const card = (name, price, cur, own, isOn, onEquip, ownKey, preview) => {
+      const can = cur === 'diamonds' ? w.diamonds >= price : w.orbs >= price;
       const it = document.createElement('div');
       it.className = 'item';
-      const btn = own ? (equipped(m) === v ? 'Equipped' : 'Equip') : `<span class="${orbs ? 'orb-i' : 'dia-i'}"></span>${price}`;
-      it.innerHTML = `<canvas></canvas><span class="nm">${ICONS.name(m, v)}</span><button class="${own ? 'ghost' : 'gold'}${own || can ? '' : ' poor'}">${btn}</button>`;
+      const btn = own ? (isOn ? 'Equipped' : 'Equip') : `<span class="${cur === 'diamonds' ? 'dia-i' : 'orb-i'}"></span>${price.toLocaleString()}`;
+      it.innerHTML = `<canvas></canvas><span class="nm"></span><button class="${own ? 'ghost' : 'gold'}${own || can ? '' : ' poor'}">${btn}</button>`;
+      it.querySelector('.nm').textContent = name;
       it.querySelector('button').addEventListener('click', () => {
-        if (own) { SKIN.icons[m] = v; saveSkin(); buildShop('Looking sharp.'); return; }
-        if (!can) { AUDIO.nope(); buildShop(`You need ${price - (orbs ? w.orbs : w.diamonds)} more ${orbs ? 'orbs' : 'diamonds'} for that one.`); return; }
-        bump(orbs ? 'orbs' : 'diamonds', -price);
-        store.set('owned', store.get('owned', []).concat(m + ':' + set));
-        SKIN.icons[m] = v; saveSkin();
+        if (own) { onEquip(); saveSkin(); buildShop('Looking sharp.'); return; }
+        if (!can) { AUDIO.nope(); buildShop(`You need ${(price - (cur === 'diamonds' ? w.diamonds : w.orbs)).toLocaleString()} more ${cur} for that one.`); return; }
+        bump(cur === 'diamonds' ? 'diamonds' : 'orbs', -price);
+        store.set('owned', store.get('owned', []).concat(ownKey));
+        onEquip(); saveSkin();
         AUDIO.buy();
-        buildShop(`Thanks! The ${ICONS.name(m, v)} is yours, and equipped.`);
+        buildShop(`Thanks! ${name} is yours, and equipped.`);
       });
       grid.appendChild(it);
-      iconCanvasV(it.querySelector('canvas'), m, 64, 0.68, v);
+      preview(it.querySelector('canvas'));
+    };
+    if (cat === 'icons') {
+      const sets = SHOP_SETS.slice().sort((x, y) => (SHOP_DIAMONDS[x] ? 1e6 : 0) + setPrice(x, m) - (SHOP_DIAMONDS[y] ? 1e6 : 0) - setPrice(y, m));
+      for (const set of sets) {
+        const v = ICONS.special(set);
+        card(ICONS.name(m, v), setPrice(set, m), SHOP_DIAMONDS[set] ? 'diamonds' : 'orbs', setOwned(m, set), equipped(m) === v,
+          () => { SKIN.icons[m] = v; }, m + ':' + set, (cv) => iconCanvasV(cv, m, 64, 0.68, v));
+      }
+    } else if (cat === 'colors') {
+      for (const [col, name, price, cur] of SHOP_COLORS) {
+        card(name, price, cur || 'orbs', ownedItem('col:' + col), SKIN.c1 === col,
+          () => { SKIN.c1 = col; }, 'col:' + col, (cv) => {
+            cv.width = cv.height = 64; const c = cv.getContext('2d');
+            c.fillStyle = col; c.strokeStyle = '#000'; c.lineWidth = 4;
+            c.beginPath(); c.arc(32, 32, 24, 0, Math.PI * 2); c.fill(); c.stroke();
+          });
+      }
+    } else {
+      const list = cat === 'trails' ? SHOP_TRAILS : SHOP_DEATHS, key = cat === 'trails' ? 'trail' : 'death';
+      for (const [id, name, price, cur] of list) {
+        const own = price === 0 || ownedItem(key + ':' + id);
+        card(name, price, cur || 'orbs', own, SKIN[key] === id, () => { SKIN[key] = id; }, key + ':' + id,
+          (cv) => fxPreview(cv, key, id));
+      }
     }
   }
+
+  // Little looping previews of trails and death effects in shop cards.
+  const fxCards = [];
+  function fxPreview(cv, kind, id) {
+    cv.width = cv.height = 64;
+    fxCards.push({ cv, kind, id });
+  }
+  setInterval(() => {
+    if (G.screen !== 'shop') { fxCards.length = 0; return; }
+    for (let i = fxCards.length - 1; i >= 0; i--) {
+      const f = fxCards[i];
+      if (!f.cv.isConnected) { fxCards.splice(i, 1); continue; }
+      const c = f.cv.getContext('2d'), t = performance.now() / 1000;
+      c.clearRect(0, 0, 64, 64);
+      if (f.kind === 'trail') {
+        for (let k = 0; k < 14; k++) {
+          const x = 8 + k * 3.4, y = 32 + Math.sin(t * 4 - k * 0.4) * 12;
+          c.fillStyle = trailColor(f.id, k, t);
+          c.globalAlpha = (k + 1) / 14;
+          c.beginPath(); c.arc(x, y, 2 + k * 0.35, 0, Math.PI * 2); c.fill();
+        }
+        c.globalAlpha = 1;
+        c.fillStyle = SKIN.c1; c.strokeStyle = '#000'; c.lineWidth = 2;
+        c.fillRect(54, 26 + Math.sin(t * 4 - 14 * 0.4) * 12, 10, 10);
+      } else {
+        const ph = (t * 0.8) % 1;
+        const cols = deathColors(f.id);
+        for (let k = 0; k < 18; k++) {
+          const a = k / 18 * Math.PI * 2 + (f.id === 'blackhole' ? ph * 3 : 0);
+          const r = f.id === 'blackhole' ? 28 * (1 - ph) : 6 + ph * 26;
+          c.globalAlpha = 1 - ph;
+          c.fillStyle = cols[k % cols.length];
+          const z = f.id === 'pixels' || f.id === 'shatter' ? 5 : 3.5;
+          c.fillRect(32 + Math.cos(a) * r - z / 2, 32 + Math.sin(a) * r - z / 2 + (f.id === 'ghost' ? -ph * 16 : 0), z, z);
+        }
+        c.globalAlpha = 1;
+      }
+    }
+  }, 50);
 
   // ------------------------------------------------------------ vault
   // Codes are kept as FNV-1a hashes of the upper-cased code, so reading

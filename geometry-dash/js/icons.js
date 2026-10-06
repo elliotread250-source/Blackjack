@@ -43,6 +43,22 @@
     { key: 'glitch', name: 'Glitch', c1: null, c2: null, decal: 9, jitter: true },
     { key: 'royal', name: 'Royal', c1: '#7b2bff', c2: '#ffd21f', decal: 0, over: 'crown' },
     { key: 'angel', name: 'Angel', c1: '#ffffff', c2: '#ffe28a', decal: 0, over: 'halo', glow: '#fff3b0' },
+    // Shop expansion
+    { key: 'ocean', name: 'Ocean', c1: '#1e6cff', c2: '#7ef0ff', decal: 6, glow: '#3ac8ff' },
+    { key: 'sunset', name: 'Sunset', c1: '#ff5a8a', c2: '#ffb03b', decal: 1 },
+    { key: 'shadow', name: 'Shadow', c1: '#121218', c2: '#6a5aff', decal: 3, glow: '#6a5aff' },
+    { key: 'candy', name: 'Candy', c1: '#ff8ad8', c2: '#ffffff', decal: 1 },
+    { key: 'zebra', name: 'Zebra', c1: '#ffffff', c2: '#000000', decal: 1 },
+    { key: 'toxic', name: 'Toxic', c1: '#7dff3a', c2: '#1a4000', decal: 10, glow: '#7dff3a' },
+    { key: 'magma', name: 'Magma', c1: '#3a0a00', c2: '#ff8a1e', decal: 10, glow: '#ff6a1e' },
+    { key: 'cyber', name: 'Cyber', c1: '#05050f', c2: '#00ffd0', decal: 0, neon: true },
+    { key: 'cosmic', name: 'Cosmic', c1: '#0a0a30', c2: '#ffe0ff', decal: 4, glow: '#c08aff' },
+    { key: 'retro', name: 'Retro', c1: null, c2: null, decal: 7, jitter: true },
+    { key: 'party', name: 'Party', c1: null, c2: null, decal: 2, over: 'party' },
+    { key: 'emerald', name: 'Emerald', c1: '#00c878', c2: '#bfffe0', decal: 11, glow: '#00ff9a' },
+    { key: 'ruby', name: 'Ruby', c1: '#e0103c', c2: '#ffb0c0', decal: 11, glow: '#ff2a5a' },
+    { key: 'sapphire', name: 'Sapphire', c1: '#1040e0', c2: '#a0c0ff', decal: 11, glow: '#3a7aff' },
+    { key: 'emperor', name: 'Emperor', c1: '#ffd21f', c2: '#e00030', decal: 11, over: 'crown', glow: '#ffd21f' },
   ];
   // Body shape each set uses, per mode (index into that mode's shapes).
   const SP_SHAPE = {
@@ -62,8 +78,10 @@
 
   function split(mode, v) {
     if (v >= COUNT) {
-      const sp = SPECIAL[v - COUNT];
-      return { shape: SP_SHAPE[sp.key][mode], decal: sp.decal };
+      const k = v - COUNT, sp = SPECIAL[k];
+      // Sets without a hand-picked shape table rotate through the shapes.
+      const shape = SP_SHAPE[sp.key] ? SP_SHAPE[sp.key][mode] : (k * 3 + MODES.indexOf(mode) * 5) % SHAPES[mode];
+      return { shape, decal: sp.decal };
     }
     const n = SHAPES[mode];
     return { shape: v % n, decal: Math.floor(v / n) % (mode === 'cube' ? 3 : 4) };
@@ -209,6 +227,16 @@
     c.fillStyle = '#ff3b6b'; c.beginPath(); c.arc(X, Y - S * 0.06, S * 0.05, 0, Math.PI * 2); c.fill();
     c.fillStyle = '#3bc8ff';
     for (const k of [-1, 1]) { c.beginPath(); c.arc(X + k * S * 0.19, Y - S * 0.04, S * 0.035, 0, Math.PI * 2); c.fill(); }
+  }
+  function partyHat(c, X, Y, S, t) {
+    const p = new Path2D();
+    p.moveTo(X - S * 0.26, Y + S * 0.02); p.lineTo(X + S * 0.04, Y - S * 0.5); p.lineTo(X + S * 0.3, Y + S * 0.02); p.closePath();
+    c.fillStyle = '#ff3bd0'; c.fill(p);
+    c.save(); c.clip(p); c.fillStyle = '#ffe23b';
+    for (let i = 0; i < 4; i++) c.fillRect(X - S * 0.4, Y - S * 0.42 + i * S * 0.13, S * 0.8, S * 0.05);
+    c.restore(); c.stroke(p);
+    c.fillStyle = `hsl(${(t * 120) % 360},90%,60%)`;
+    c.beginPath(); c.arc(X + S * 0.04, Y - S * 0.52, S * 0.08, 0, Math.PI * 2); c.fill(); c.stroke();
   }
   function halo(c, X, Y, S, t) {
     const y = Y - S * 0.22 + Math.sin(t * 3) * S * 0.03;
@@ -861,6 +889,7 @@
     const hd = HEAD[mode];
     const X = hd[0] * z, Y = hd[1] * z, S = hd[2] * z;
     if (sp.over === 'halo') halo(c, X, Y, S, t);
+    else if (sp.over === 'party') partyHat(c, X, Y, S, t);
     else if (sp.over && mode !== 'ship' && mode !== 'ufo') (sp.over === 'horns' ? horns : crown)(c, X, Y, S);
   }
 

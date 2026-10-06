@@ -211,6 +211,9 @@
     background: linear-gradient(135deg, #fff, #8ff0ff 40%, #3aa0ff); }
   .keeper { color: #fff; background: rgba(0,0,0,0.35); border: 2px solid #000; border-radius: 12px; padding: 8px 12px; font-size: 17px; min-height: 42px; }
   .shopgrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .shopcats { align-self: center; }
+  .shopcats button { padding: 6px 12px; font-size: 15px; }
+  .shopcats button.on { background: linear-gradient(#59e01c, #2f9a0c); }
   .item { background: rgba(0,0,0,0.35); border: 2px solid #000; border-radius: 12px; padding: 8px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .item canvas { width: 64px; height: 64px; }
   .item .nm { font-size: 14px; color: #e8ecff; -webkit-text-stroke: 0; }
@@ -472,6 +475,7 @@
     <h2>Shop</h2>
     <div class="keeper" id="shopSay"></div>
     <div class="wallet" id="shopWallet"></div>
+    <div class="seg shopcats" id="shopCats"></div>
     <div class="kittabs" id="shopTabs"></div>
     <div class="shopgrid" id="shopGrid"></div>
     <div class="label">Orbs: 5% of a level's orbs for every new 10% you reach, the rest when you beat it. Diamonds: first clears and secret coins.</div>
