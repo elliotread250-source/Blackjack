@@ -32,7 +32,11 @@ function PinTip({ onClose }: { onClose: () => void }) {
 }
 
 export function App() {
-  const { ready, user, settings, page, openModule } = useApp()
+  const ready = useApp((s) => s.ready)
+  const user = useApp((s) => s.user)
+  const settings = useApp((s) => s.settings)
+  const page = useApp((s) => s.page)
+  const openModule = useApp((s) => s.openModule)
   const setPage = useApp((s) => s.setPage)
   const setOpenModule = useApp((s) => s.setOpenModule)
   const update = useApp((s) => s.update)

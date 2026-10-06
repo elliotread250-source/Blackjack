@@ -9,6 +9,24 @@ import type { Settings } from '@shared/types'
 let stream: MediaStream | null = null
 let stopTimer: ReturnType<typeof setTimeout> | null = null
 
+// Electron's desktop capture by source id works from a hotkey. getDisplayMedia can
+// insist on a click first, so it's only the fallback.
+async function openCapture(): Promise<MediaStream> {
+  const id = await window.mc.overlay.captureSourceId()
+  if (id) {
+    try {
+      const constraints = {
+        audio: false,
+        video: { mandatory: { chromeMediaSource: 'desktop', chromeMediaSourceId: id, maxFrameRate: 60 } }
+      } as unknown as MediaStreamConstraints
+      return await navigator.mediaDevices.getUserMedia(constraints)
+    } catch {
+      // fall through
+    }
+  }
+  return navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 60 }, audio: false })
+}
+
 async function ensureStream(video: HTMLVideoElement): Promise<boolean> {
   if (stopTimer) clearTimeout(stopTimer)
   stopTimer = null
@@ -18,7 +36,7 @@ async function ensureStream(video: HTMLVideoElement): Promise<boolean> {
   }
   try {
     window.mc.overlay.setCaptureActive(true)
-    stream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 60 }, audio: false })
+    stream = await openCapture()
     video.srcObject = stream
     await video.play()
     return true

@@ -313,6 +313,8 @@ function registerIpc(): void {
     }))
   })
   ipcMain.on(CH.overlaySetCaptureActive, (_e, active: boolean) => overlay.setCaptureActive(active === true))
+  // Only the overlay window may ask for a screen to capture.
+  ipcMain.handle(CH.overlayCaptureSource, (e) => (overlay.win && e.sender === overlay.win.webContents ? overlay.captureSourceId() : null))
 
   handle(CH.appVersion, () => app.getVersion())
   ipcMain.on(CH.appMinimize, (e) => BrowserWindow.fromWebContents(e.sender)?.minimize())

@@ -134,6 +134,12 @@ export class OverlayWindow {
     return this.menuOpen
   }
 
+  async captureSourceId(): Promise<string | null> {
+    const sources = await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 0, height: 0 } })
+    const id = String(this.display?.id ?? '')
+    return (sources.find((s) => s.display_id === id) ?? sources[0])?.id ?? null
+  }
+
   /** While zoom's capture runs, hide the overlay from screen capture so it doesn't zoom into itself. */
   setCaptureActive(active: boolean): void {
     if (!this.win || active === this.capture) return

@@ -24,7 +24,8 @@ export class FrameStats {
 
   start(): void {
     this.wanted = true
-    if (this.proc) return
+    // Already running, or a retry is scheduled (e.g. waiting on permission).
+    if (this.proc || this.restartTimer) return
     if (process.platform !== 'win32') {
       this.status = 'unsupported'
       this.message = 'FPS needs Windows.'

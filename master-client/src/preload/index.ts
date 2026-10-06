@@ -53,6 +53,7 @@ const api: MasterApi = {
     displays: () => invoke(CH.overlayDisplays),
     grantFrameAccess: () => invoke(CH.overlayGrantFrameAccess),
     setCaptureActive: (active) => ipcRenderer.send(CH.overlaySetCaptureActive, active),
+    captureSourceId: () => invoke(CH.overlayCaptureSource),
     onMetrics: (cb) => listen(CH.overlayMetrics, cb),
     onInput: (cb) => listen(CH.overlayInput, cb),
     onMenu: (cb) => listen(CH.overlayMenu, cb),
