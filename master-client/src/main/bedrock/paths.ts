@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, statSync } from 'node:fs'
-import { join, win32 } from 'node:path'
+import { join, posix, win32 } from 'node:path'
 import type { BedrockStatus, FolderCandidate, GameLayout } from '@shared/ipc'
 
 // Where Bedrock keeps its data on Windows.
@@ -91,8 +91,10 @@ export function resolveFolders(
 
 /** Folders where global_resource_packs.json should list Master Client. */
 export function globalPackFiles(f: Pick<BedrockStatus, 'sharedRoot' | 'userRoots'>, fs: FsLike = realFs): string[] {
+  // Paths built from %APPDATA% are Windows paths; a manual override or a test may not be.
+  const pj = (root: string, ...parts: string[]) => (root.includes('\\') ? win32 : posix).join(root, ...parts)
   const roots = f.userRoots.length > 0 ? [...f.userRoots] : f.sharedRoot ? [f.sharedRoot] : []
   // Some GDK installs keep a minecraftpe folder in Shared as well; keep it in sync if it's there.
-  if (f.sharedRoot && !roots.includes(f.sharedRoot) && fs.exists(win32.join(f.sharedRoot, 'minecraftpe'))) roots.push(f.sharedRoot)
-  return roots.map((r) => win32.join(r, 'minecraftpe', 'global_resource_packs.json'))
+  if (f.sharedRoot && !roots.includes(f.sharedRoot) && fs.exists(pj(f.sharedRoot, 'minecraftpe'))) roots.push(f.sharedRoot)
+  return roots.map((r) => pj(r, 'minecraftpe', 'global_resource_packs.json'))
 }
