@@ -312,6 +312,18 @@
   .escols button.on { outline: 3px solid #fff; outline-offset: 1px; }
   #esFace { width: auto; font: inherit; font-size: 15px; }
 
+  /* ---------- online */
+  .onlinepanel { width: min(640px, 100%); }
+  .onltabs { align-self: center; }
+  .seg button.on { background: linear-gradient(#59e01c, #2f9a0c); }
+  .onrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+  #onSearch, #acName, #acCode, #acLogin, #acRename { font: 14px system-ui, sans-serif; background: rgba(0,0,0,0.45); color: #fff; border: 2px solid #000;
+    border-radius: 8px; padding: 7px; flex: 1; min-width: 120px; user-select: text; -webkit-user-select: text; touch-action: auto; }
+  #acNew { display: flex; gap: 8px; }
+  .rank { font-size: 20px; width: 34px; text-align: center; flex: none; -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
+  .myrow .val { font-size: 18px; flex: none; color: var(--gold); -webkit-text-stroke: 1px #000; paint-order: stroke fill; }
+  .myrow.me { outline: 2px solid var(--gold); }
+
   /* ---------- in-game HUD */
   .hud {
     position: fixed; top: max(10px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left));
@@ -393,6 +405,7 @@
     <button class="ghost" id="hStats">Stats</button>
     <button id="hCreate">Create</button>
     <button class="gold" id="hShop">Shop</button>
+    <button class="alt" id="hOnline">Online</button>
     <button class="ghost" id="hVault"><svg class="lk" viewBox="0 0 20 24" aria-hidden="true"><rect x="2" y="10" width="16" height="13" rx="3" fill="#ffd21f" stroke="#000" stroke-width="2"/><path d="M5.5 10V7a4.5 4.5 0 0 1 9 0v3" fill="none" stroke="#000" stroke-width="5"/><path d="M5.5 10V7a4.5 4.5 0 0 1 9 0v3" fill="none" stroke="#d8deff" stroke-width="2.4"/></svg> Vault</button>
   </div>
   <div class="help touchhelp">Tap or hold anywhere to jump. Plays best in landscape.<br>Tip: Share &rarr; Add to Home Screen for full screen on iPhone.</div>
@@ -571,6 +584,38 @@
     <div class="row"><button class="alt" id="songPlay">&#9654; Preview</button><button class="ghost" id="songReset">Built-in song</button></div>
     <div class="label">Your file stays on this device. Shared level links use the built-in song.</div>
     <button id="songDone">Done</button>
+  </div>
+</div>
+
+<!-- Online: everyone's levels, leaderboard, account and cloud save -->
+<div class="overlay shade" id="online">
+  <div class="panel onlinepanel">
+    <h2>Online</h2>
+    <div class="seg onltabs" id="onTabs"><button data-t="levels" class="on">Levels</button><button data-t="board">Leaderboard</button><button data-t="acct">Account</button></div>
+    <div id="onLevels">
+      <div class="onrow"><div class="seg" id="onSort"><button data-s="new" class="on">New</button><button data-s="top">Most played</button><button data-s="liked">Most liked</button></div>
+        <input id="onSearch" placeholder="Search levels or players" aria-label="Search"></div>
+      <div class="mylist" id="onList"></div>
+      <button class="ghost" id="onMore" style="display:none">More</button>
+    </div>
+    <div id="onBoard" style="display:none">
+      <div class="seg" id="onBy"><button data-b="stars" class="on">Stars</button><button data-b="demons">Demons</button><button data-b="coins">Coins</button><button data-b="levels">Levels</button></div>
+      <div class="mylist" id="onRanks"></div>
+    </div>
+    <div id="onAcct" style="display:none">
+      <div class="keeper" id="acStatus"></div>
+      <div id="acNew"><input id="acName" maxlength="20" placeholder="Pick a player name" aria-label="Player name"><button class="gold" id="acCreate">Create account</button></div>
+      <div id="acHave">
+        <div class="row"><button class="gold" id="acSave">Save to cloud</button><button class="alt" id="acLoad">Load from cloud</button></div>
+        <div class="label">Account code: use it to log in on another device. Keep it secret, it's your password.</div>
+        <div class="row"><input id="acCode" readonly aria-label="Account code"><button class="ghost" id="acCopy">Copy</button></div>
+        <div class="row"><input id="acRename" maxlength="20" placeholder="New name" aria-label="New name"><button class="ghost" id="acRenameBtn">Rename</button></div>
+      </div>
+      <div class="label">Already have an account on another device? Paste its code:</div>
+      <div class="row"><input id="acLogin" placeholder="Account code" aria-label="Account code to log in"><button class="ghost" id="acLoginBtn">Log in</button></div>
+      <div class="label">Progress saves to the cloud by itself after each level you beat.</div>
+    </div>
+    <button id="onDone">Done</button>
   </div>
 </div>
 
