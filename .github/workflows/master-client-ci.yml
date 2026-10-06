@@ -1,0 +1,56 @@
+name: Master Client CI
+
+on:
+  push:
+    paths: ['master-client/**', '.github/workflows/master-client-*.yml']
+  pull_request:
+    paths: ['master-client/**', '.github/workflows/master-client-*.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: master-client-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: master-client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: master-client/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  windows-installer:
+    # Proves the NSIS installer still builds. Doesn't publish anything.
+    runs-on: windows-latest
+    timeout-minutes: 30
+    needs: check
+    defaults:
+      run:
+        working-directory: master-client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: master-client/package-lock.json
+      - run: npm ci
+      - run: npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: master-client-installer-preview
+          path: master-client/dist/*.exe
+          retention-days: 7

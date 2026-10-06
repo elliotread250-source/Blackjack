@@ -1,0 +1,44 @@
+appId: com.masterclient.launcher
+productName: Master Client
+copyright: Copyright 2026 Master Client. Not affiliated with Mojang or Microsoft.
+directories:
+  buildResources: build
+  output: dist
+files:
+  - out/**/*
+  - package.json
+asarUnpack:
+  - "**/node_modules/uiohook-napi/**"
+extraResources:
+  - from: addons
+    to: addons
+  - from: resources
+    to: resources
+# uiohook-napi is N-API with prebuilt Windows binaries and nothing else is native,
+# so there's nothing to rebuild against Electron's ABI.
+npmRebuild: false
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+  executableName: MasterClient
+  artifactName: Master-Client-Setup-${version}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Master Client
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  runAfterFinish: true
+  deleteAppDataOnUninstall: false
+publish:
+  provider: github
+  owner: elliotread250-source
+  repo: Blackjack
+  releaseType: release
+  tagNamePrefix: master-client-v

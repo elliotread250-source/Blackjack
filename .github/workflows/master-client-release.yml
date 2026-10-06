@@ -1,0 +1,72 @@
+name: Master Client release
+
+# Push a tag like master-client-v0.1.0 (matching master-client/package.json) and
+# this builds the Windows installer and publishes it as a GitHub Release. The
+# installed launcher reads that release's latest.yml to auto-update.
+
+on:
+  push:
+    tags: ['master-client-v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: master-client-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: master-client
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: master-client/package-lock.json
+
+      - name: Tag matches package.json version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          want="master-client-v$(node -p "require('./package.json').version")"
+          if [ "$want" != "${GITHUB_REF_NAME}" ]; then
+            echo "Tag ${GITHUB_REF_NAME} doesn't match package.json ($want). Bump the version or retag." >&2
+            exit 1
+          fi
+
+      - run: npm ci
+
+      - name: Fetch PresentMon (MIT, GameTechDev) for the FPS module
+        shell: pwsh
+        run: |
+          $url = 'https://github.com/GameTechDev/PresentMon/releases/download/v2.3.0/PresentMon-2.3.0-x64.exe'
+          $out = 'resources/bin/PresentMon.exe'
+          Invoke-WebRequest -Uri $url -OutFile $out
+          $hash = (Get-FileHash $out -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne '690533cf5c2591ef571a3037aa4c205c8e75860ef3f56927bf3a98acf7198485') {
+            throw "PresentMon checksum mismatch: $hash"
+          }
+
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Build and publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: master-client-installer
+          path: |
+            master-client/dist/*.exe
+            master-client/dist/latest.yml
+          if-no-files-found: error
