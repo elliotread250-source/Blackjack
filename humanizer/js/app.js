@@ -97,7 +97,8 @@ function renderEngineLine() {
   const parts = Object.keys(VENDORS).map((v) => {
     const via = eng.route(v);
     if (!via) return `${VENDORS[v]}: off`;
-    const how = via === 'server' ? 'server key' : 'free via Puter';
+    const how = via === 'puter' ? 'free via Puter'
+      : S.server.llm[v].via === 'puter' ? "free via this app's Puter account, no sign-in" : 'server API key';
     return `${VENDORS[v]}: ${how} (${eng.modelLabel(v)})`;
   });
   const n = buildDetectors({ settings: S.settings, server: S.server, password: S.settings.password }).length;
@@ -111,9 +112,9 @@ function routeSelect(vendor) {
   const val = S.settings[vendor];
   const serverReady = !!S.server?.llm?.[vendor]?.ready;
   const opts = [
-    ['auto', serverReady ? 'Auto (server key)' : 'Auto (free via Puter)'],
-    ['puter', 'Free via Puter'],
-    ...(serverReady ? [['server', 'Server API key']] : []),
+    ['auto', !serverReady ? 'Auto (free via Puter)' : S.server.llm[vendor].via === 'puter' ? "Auto (this app's Puter account)" : 'Auto (server API key)'],
+    ['puter', 'Free via your own Puter account'],
+    ...(serverReady ? [['server', S.server.llm[vendor].via === 'puter' ? "This app's Puter account" : 'Server API key']] : []),
     ['off', 'Off'],
   ];
   return `<select data-set="${vendor}">${opts.map(([v, l]) => `<option value="${v}"${v === val ? ' selected' : ''}>${l}</option>`).join('')}</select>`;

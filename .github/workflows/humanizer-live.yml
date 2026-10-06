@@ -75,6 +75,12 @@ jobs:
           OUT_DIR: out/live
         run: node humanizer/tools/live-check.mjs https://elliotread250-source.github.io/Blackjack/humanizer/
 
+      - name: Check the Railway deployment
+        if: always()
+        env:
+          OUT_DIR: out/railway
+        run: node humanizer/tools/live-check.mjs https://humanizer-production-e796.up.railway.app/ --full
+
       - name: Server log
         if: always()
         run: tail -n 60 server.log || true
