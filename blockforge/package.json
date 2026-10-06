@@ -1,0 +1,25 @@
+{
+  "name": "blockforge",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BlockForge: a browser voxel sandbox in creative mode",
+  "license": "MIT",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "start": "node server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "compression": "^1.7.4",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@types/three": "0.162.0",
+    "esbuild": "^0.24.0",
+    "three": "0.162.0",
+    "typescript": "^5.6.3"
+  }
+}
