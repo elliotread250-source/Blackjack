@@ -1,0 +1,60 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Master Tools",
+    "description": "Item magnet, recall charm and glow wand. For your own worlds.",
+    "uuid": "fa400bda-7fbe-444c-9f8a-fc48c2fb4cab",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      21,
+      90
+    ]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "0b5a9d44-a85a-4f39-af1e-a9f99712bd2c",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "9d4a4886-56fb-498a-b621-dfd2567595db",
+      "version": [
+        1,
+        0,
+        0
+      ],
+      "entry": "scripts/main.js"
+    }
+  ],
+  "dependencies": [
+    {
+      "uuid": "89d1ceee-ce8c-4f81-89a5-2ec03fd791ca",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "module_name": "@minecraft/server",
+      "version": "2.0.0"
+    }
+  ],
+  "metadata": {
+    "authors": [
+      "Master Client"
+    ],
+    "license": "MIT"
+  }
+}

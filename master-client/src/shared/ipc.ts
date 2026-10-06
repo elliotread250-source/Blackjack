@@ -184,6 +184,8 @@ export interface MasterApi {
     openEditor(): Promise<void>
     displays(): Promise<DisplayInfo[]>
     grantFrameAccess(): Promise<{ ok: boolean; error?: string }>
+    /** The overlay tells main when its zoom screen capture is running, so the overlay can hide itself from capture. */
+    setCaptureActive(active: boolean): void
     onMetrics(cb: (m: Metrics) => void): Unsubscribe
     onInput(cb: (e: InputEvent) => void): Unsubscribe
     onMenu(cb: (s: MenuState) => void): Unsubscribe
@@ -234,6 +236,7 @@ export const CH = {
   overlayOpenEditor: 'overlay:openEditor',
   overlayDisplays: 'overlay:displays',
   overlayGrantFrameAccess: 'overlay:grantFrameAccess',
+  overlaySetCaptureActive: 'overlay:setCaptureActive',
   overlayMetrics: 'overlay:metrics',
   overlayInput: 'overlay:input',
   overlayMenu: 'overlay:menu',

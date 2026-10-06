@@ -1,0 +1,23 @@
+{
+  "id": "visuals",
+  "name": "Master Visuals",
+  "description": "Clear glass: thin-framed glass and panes you can actually see through, in every colour.",
+  "kind": "resources",
+  "packs": [
+    {
+      "folder": "pack",
+      "type": "resources",
+      "uuid": "7af629e9-d049-404b-9087-665870e02554",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "details": [
+    "Clear glass and glass panes",
+    "All 16 stained glass colours",
+    "Vanilla compatible: only replaces glass textures"
+  ]
+}

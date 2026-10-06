@@ -1,0 +1,23 @@
+{
+  "format_version": "1.21.40",
+  "minecraft:item": {
+    "description": {
+      "identifier": "masterclient:recall_charm",
+      "menu_category": {
+        "category": "equipment"
+      }
+    },
+    "components": {
+      "minecraft:icon": "mc_recall_charm",
+      "minecraft:display_name": {
+        "value": "Recall Charm"
+      },
+      "minecraft:max_stack_size": 1,
+      "minecraft:hand_equipped": true,
+      "minecraft:cooldown": {
+        "category": "masterclient_recall",
+        "duration": 10
+      }
+    }
+  }
+}

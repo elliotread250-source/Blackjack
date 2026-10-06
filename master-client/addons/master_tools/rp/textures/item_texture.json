@@ -1,0 +1,15 @@
+{
+  "resource_pack_name": "master_tools",
+  "texture_name": "atlas.items",
+  "texture_data": {
+    "mc_magnet": {
+      "textures": "textures/items/mc_magnet"
+    },
+    "mc_recall_charm": {
+      "textures": "textures/items/mc_recall_charm"
+    },
+    "mc_glow_wand": {
+      "textures": "textures/items/mc_glow_wand"
+    }
+  }
+}

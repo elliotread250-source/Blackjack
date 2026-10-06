@@ -1,0 +1,28 @@
+{
+  "format_version": "1.20.10",
+  "minecraft:recipe_shaped": {
+    "description": {
+      "identifier": "masterclient:glow_wand_recipe"
+    },
+    "tags": [
+      "crafting_table"
+    ],
+    "pattern": [
+      "  L",
+      " S ",
+      "S  "
+    ],
+    "key": {
+      "L": "minecraft:glowstone",
+      "S": "minecraft:stick"
+    },
+    "unlock": [
+      {
+        "item": "minecraft:glowstone"
+      }
+    ],
+    "result": {
+      "item": "masterclient:glow_wand"
+    }
+  }
+}

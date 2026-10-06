@@ -1,0 +1,34 @@
+{
+  "id": "master_tools",
+  "name": "Master Tools",
+  "description": "Three handy items for your own worlds: an item magnet, a recall charm and a glow wand.",
+  "kind": "addon",
+  "packs": [
+    {
+      "folder": "rp",
+      "type": "resources",
+      "uuid": "89d1ceee-ce8c-4f81-89a5-2ec03fd791ca",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    },
+    {
+      "folder": "bp",
+      "type": "data",
+      "uuid": "fa400bda-7fbe-444c-9f8a-fc48c2fb4cab",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "details": [
+    "Item Magnet: hold it to pull dropped items to you (iron + redstone)",
+    "Recall Charm: use it to go back to your spawn point (ender pearl + gold)",
+    "Glow Wand: places invisible light where you point (glowstone + stick)",
+    "Turn on \"Master Tools\" in a world's Behavior Packs. Adding one turns off achievements for that world."
+  ]
+}

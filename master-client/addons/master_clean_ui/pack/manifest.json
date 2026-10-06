@@ -1,0 +1,35 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Master Clean UI",
+    "description": "Clean, see-through hotbar. From Master Client.",
+    "uuid": "3af51956-c8ba-42ff-9e33-969a15e3bf13",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      21,
+      90
+    ]
+  },
+  "modules": [
+    {
+      "type": "resources",
+      "uuid": "5bca794b-be7f-4a59-bca1-752144ea6fcf",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "metadata": {
+    "authors": [
+      "Master Client"
+    ],
+    "license": "MIT"
+  }
+}

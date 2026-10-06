@@ -1,0 +1,35 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Master Visuals",
+    "description": "Clear glass. From Master Client.",
+    "uuid": "7af629e9-d049-404b-9087-665870e02554",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      21,
+      90
+    ]
+  },
+  "modules": [
+    {
+      "type": "resources",
+      "uuid": "2c1dc71a-dd72-4b39-ad2d-159e9d1d9d9d",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "metadata": {
+    "authors": [
+      "Master Client"
+    ],
+    "license": "MIT"
+  }
+}

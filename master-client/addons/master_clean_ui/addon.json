@@ -1,0 +1,23 @@
+{
+  "id": "clean_ui",
+  "name": "Master Clean UI",
+  "description": "A see-through hotbar with thin borders and a crisp selection outline.",
+  "kind": "resources",
+  "packs": [
+    {
+      "folder": "pack",
+      "type": "resources",
+      "uuid": "3af51956-c8ba-42ff-9e33-969a15e3bf13",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "details": [
+    "Translucent hotbar slots",
+    "Bright selection outline",
+    "Works with Master Client HUD modules"
+  ]
+}
