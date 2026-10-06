@@ -9,7 +9,8 @@ Every push to `main` publishes the repo to GitHub Pages, so each folder is live 
 ## Games
 
 1. [Blackjack](blackjack/): six-deck play-money table, 3:2 blackjack, splits and doubles.
-   [Play it](https://elliotread250-source.github.io/mini-games/blackjack/)
+   [Play it](https://elliotread250-source.github.io/mini-games/blackjack/), or on Railway:
+   https://blackjack-production-0312.up.railway.app
 2. [Geometry Dash replica](geometry-dash/): the Dash level, with practice difficulties and a shop.
    [Play it](https://elliotread250-source.github.io/mini-games/geometry-dash/)
 
