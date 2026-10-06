@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>APEX GP</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#07070b">
+<meta name="description" content="A first-person Formula-style racing sim that runs in your browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Titillium+Web:ital,wght@0,400;0,600;0,700;0,900;1,900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<script>
+// On-screen error reporting (plain script, so it works even if the game's modules fail to load)
+(function () {
+  function show(msg) {
+    var b = document.getElementById('errBox');
+    if (!b) { b = document.createElement('div'); b.id = 'errBox'; (document.body || document.documentElement).appendChild(b); }
+    b.innerHTML = '<b>Something went wrong starting the game.</b><br>Please send a screenshot of this box.<pre></pre><button onclick="location.reload()">Reload</button>';
+    b.querySelector('pre').textContent = String(msg).slice(0, 600) + '\n\n' + navigator.userAgent;
+  }
+  window.__showError = show;
+  addEventListener('error', function (e) { show((e.message || 'Error') + (e.filename ? '\n' + e.filename.split('/').pop() + ':' + e.lineno : '')); });
+  addEventListener('unhandledrejection', function (e) { show('Promise: ' + (e.reason && (e.reason.stack || e.reason.message) || e.reason)); });
+  setTimeout(function () { if (!window.__apex) show('The game did not finish loading after 30 seconds (slow connection, or this browser is too old).'); }, 30000);
+})();
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/es-module-shims@1.10.0/dist/es-module-shims.js"></script>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+"three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div id="loading">LOADING…</div>
+<div id="gpuWarn" class="hidden"><b>⚠ Chrome isn't using your graphics card</b> — the game is being drawn by the CPU, so it will be very slow.<br>Fix: Chrome <b>Settings → System →</b> turn on <b>“Use graphics acceleration when available”</b>, then <b>Relaunch</b>. Still slow? Open <b>chrome://gpu</b> to see why, and update your graphics driver.<button onclick="this.parentElement.classList.add('hidden')">✕</button></div>
+
+<div id="menu" class="hidden">
+  <div class="panel">
+    <div class="logo">APEX<span>GP</span></div>
+    <div class="tag">Formula racing simulator</div>
+
+    <h3>Mode</h3>
+    <div class="seg" id="modeSeg">
+      <button data-v="race" class="on">Grand Prix</button>
+      <button data-v="tt">Time Trial</button>
+      <button data-v="mp">Multiplayer</button>
+    </div>
+
+    <div id="mpPanel" class="hidden">
+      <h3>Multiplayer</h3>
+      <div class="mpRow"><label>Your name</label><input id="mpName" maxlength="14" autocomplete="off" spellcheck="false"></div>
+      <div id="mpIdle">
+        <div class="mpRow"><button id="mpCreate" class="mpBtn pri">Create room</button><span class="mpOr">or</span><input id="mpCode" maxlength="5" placeholder="CODE" autocomplete="off" spellcheck="false"><button id="mpJoin" class="mpBtn">Join</button></div>
+        <div class="mpNote">Play with friends: one person creates a room and shares the code (or invite link). Everyone picks their own car below.</div>
+      </div>
+      <div id="mpRoom" class="hidden">
+        <div class="mpRow mpCodeRow">Room code <b id="mpCodeShow"></b><button id="mpCopy" class="mpBtn">Copy invite link</button><button id="mpLeave" class="mpBtn">Leave</button></div>
+        <div id="mpPlayers"></div>
+      </div>
+      <label class="mpCheck"><input type="checkbox" id="mpComm" checked> Race commentary &amp; crowd sounds</label>
+      <div class="mpNote" id="mpStatus"></div>
+    </div>
+
+    <h3>Choose your car</h3>
+    <div class="teams" id="teams"></div>
+
+    <h3>Circuit</h3>
+    <div class="tracks" id="tracks"></div>
+
+    <div id="raceOpts">
+      <div class="opts">
+        <div><h3>Laps</h3><div class="seg" id="lapSeg"><button data-v="1">1</button><button data-v="3" class="on">3</button><button data-v="5">5</button><button data-v="10">10</button></div></div>
+        <div><h3>Rivals</h3><div class="seg" id="aiSeg"><button data-v="0.9">Easy</button><button data-v="0.95" class="on">Medium</button><button data-v="1">Hard</button></div></div>
+        <div><h3>Grid size</h3><div class="seg" id="oppSeg"><button data-v="0" title="Just you: private practice">1</button><button data-v="3">4</button><button data-v="7">8</button><button data-v="9" class="on">10</button></div></div>
+      </div>
+      <h3>Start from</h3>
+      <div class="seg" id="gridSeg"><button data-v="back" class="on">Back of grid</button><button data-v="mid">Midfield</button><button data-v="pole">Pole</button></div>
+    </div>
+
+    <div class="opts">
+      <div><h3>Tyres</h3><div class="seg" id="tyreSeg"><button data-v="soft">Soft</button><button data-v="medium" class="on">Medium</button><button data-v="hard">Hard</button></div></div>
+      <div><h3>Assists</h3><div class="seg" id="assistSeg"><button data-v="full" class="on">Full</button><button data-v="some">TC only</button><button data-v="off">Off</button></div></div>
+      <div><h3>Graphics</h3><div class="seg" id="gfxSeg"><button data-v="high">High</button><button data-v="medium" class="on">Medium</button><button data-v="low">Low</button></div></div>
+    </div>
+
+    <h3>Controls</h3>
+    <div class="seg" id="inputSeg"><button data-v="kbm">⌨ Keyboard &amp; mouse</button><button data-v="mobile">📱 Mobile (touch)</button></div>
+
+    <button class="go" id="startBtn">LIGHTS OUT &nbsp;›</button>
+
+    <h3 id="keysTitle">Keyboard controls</h3>
+    <div class="keys" id="kbmKeys">
+      <span><kbd>W</kbd> <kbd>↑</kbd></span><span>Throttle</span>
+      <span><kbd>S</kbd> <kbd>↓</kbd></span><span>Brake / reverse when stopped</span>
+      <span><kbd>A</kbd> <kbd>D</kbd> <kbd>←</kbd> <kbd>→</kbd></span><span>Steer</span>
+      <span><kbd>Shift</kbd></span><span>DRS — open rear wing in DRS zones (green)</span>
+      <span><kbd>E</kbd></span><span>ERS overtake boost (hold, drains battery)</span>
+      <span><kbd>G</kbd></span><span>Toggle auto / manual gearbox</span>
+      <span><kbd>X</kbd> <kbd>Z</kbd></span><span>Shift up / down (manual)</span>
+      <span><kbd>C</kbd></span><span>Camera: cockpit → T-cam → chase</span>
+      <span><kbd>Space</kbd></span><span>Hide / show the halo's centre pillar (cockpit view)</span>
+      <span><kbd>B</kbd></span><span>Look behind</span>
+      <span><kbd>[</kbd> <kbd>]</kbd></span><span>Field of view narrower / wider</span>
+      <span><kbd>R</kbd></span><span>Reset car to track</span>
+      <span><kbd>M</kbd></span><span>Mute sound</span>
+      <span><kbd>Esc</kbd> <kbd>P</kbd></span><span>Pause</span>
+      <span>🎮</span><span>Gamepad: RT/LT pedals, left stick steer, A = DRS, B = ERS, Y = camera, bumpers shift</span>
+    </div>
+    <p class="note" style="border-color:#444">Car model: "Scuderia Ferrari F1 SF23 2023" by <a href="https://sketchfab.com/redgrund" target="_blank" style="color:#bbb">Redgrund</a>, <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" style="color:#bbb">CC BY 4.0</a> (modified). Fan project, not affiliated with F1 or any team.</p>
+    <div class="keys" id="mobileKeys">
+      <span><b>Left thumb</b></span><span>Touch anywhere on the left half and slide left/right to steer (or tap <b>TILT</b> to steer by tilting the phone)</span>
+      <span><b>Right thumb</b></span><span>Big <b>GO</b> pedal = throttle, <b>BRAKE</b> pedal = brake / reverse when stopped</span>
+      <span><b>DRS / ERS</b></span><span>Hold for DRS (in green zones) and the ERS boost</span>
+      <span><b>Top buttons</b></span><span>Pause, camera, halo pillar, reset car</span>
+      <span>📱</span><span>Turn your phone sideways. Graphics <b>Low</b> is best on phones.</span>
+    </div>
+    <p class="note">Tip: brake in a straight line at the 300/200/100 boards, and feed the throttle in gently out of slow corners. Cold tyres and too much throttle in a low gear will spin you, especially with assists off.</p>
+  </div>
+  <div id="carInfo"></div>
+</div>
+
+<div id="hud" class="hidden">
+  <div id="vig"></div>
+  <div id="posBox" class="box">
+    <div><div class="lbl">POS</div><div class="big" id="posTxt">1/1</div></div>
+    <div><div class="lbl">LAP</div><div class="big" id="lapTxt">1/3</div></div>
+  </div>
+  <div id="tower"></div>
+  <canvas id="minimap" width="440" height="440"></canvas>
+  <div id="timing" class="box">
+    <div class="row"><span>CURRENT</span><b id="delta"></b></div>
+    <div class="cur" id="tCur">0:00.000</div>
+    <div id="sectors"><i></i><i></i><i></i></div>
+    <div class="row"><span>LAST</span><b id="tLast">—</b></div>
+    <div class="row"><span>BEST</span><b id="tBest" style="color:var(--purple)">—</b></div>
+  </div>
+  <div id="tyres" class="box">
+    <div class="tyreHead"><span id="cmp">M</span><span>TYRES</span><span id="assistTxt"></span></div>
+    <div class="tgrid"><i></i><i></i><i></i><i></i></div>
+    <div class="unit" id="tyreTxt">—</div>
+  </div>
+  <div id="lights" class="hidden"></div>
+  <div id="msg"></div>
+  <div id="sub"></div>
+  <div id="dash">
+    <div id="leds"></div>
+    <div id="dashMain">
+      <div><div id="speed">0</div><div class="unit">KM/H</div></div>
+      <div id="gear">N</div>
+      <div>
+        <div class="pill" id="drsPill">DRS</div>
+        <div class="pill" id="ersPill">ERS</div>
+        <div id="ersBar"><b></b></div>
+        <div class="unit" id="gbTxt" style="margin-top:3px">AUTO</div>
+      </div>
+    </div>
+  </div>
+  <div id="touch" class="hidden">
+    <div id="steerPad"><div id="steerBase"><i id="steerKnob"></i></div><span class="padLabel">◀ SLIDE TO STEER ▶</span></div>
+    <div id="topBtns">
+      <button data-k="Escape" aria-label="Pause">❚❚</button>
+      <button data-k="KeyC" aria-label="Camera">CAM</button>
+      <button data-k="Space" aria-label="Halo pillar">HALO</button>
+      <button data-k="KeyR" aria-label="Reset">RESET</button>
+      <button id="tiltBtn" aria-label="Tilt steering">TILT</button>
+    </div>
+    <div id="auxBtns"><button id="drsBtn">DRS</button><button id="ersBtn">ERS</button></div>
+    <div id="pedals"><button id="brkBtn">BRAKE</button><button id="thrBtn">GO</button></div>
+  </div>
+  <div id="rotate" class="hidden"><div>⟳</div>Turn your phone sideways</div>
+  <div id="hint"><kbd>C</kbd> camera · <kbd>R</kbd> reset · <kbd>Shift</kbd> DRS · <kbd>E</kbd> ERS · <kbd>Space</kbd> pillar · <kbd>[ ]</kbd> FOV · <kbd>Esc</kbd> pause</div>
+</div>
+
+<div id="pause" class="overlay hidden">
+  <div class="card">
+    <h2>PAUSED</h2>
+    <div class="btns">
+      <button class="pri" id="resumeBtn">Resume</button>
+      <button id="restartBtn">Restart</button>
+      <button id="quitBtn">Main menu</button>
+    </div>
+  </div>
+</div>
+
+<div id="results" class="overlay hidden">
+  <div class="card">
+    <h2 id="resTitle">RESULTS</h2>
+    <div id="resBody"></div>
+    <div class="btns">
+      <button class="pri" id="againBtn">Race again</button>
+      <button id="menuBtn">Main menu</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
