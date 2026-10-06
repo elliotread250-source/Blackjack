@@ -20,6 +20,12 @@
     'Hard Demon':    { col: '#ec2424', kind: 'demon', rank: 2 },
     'Insane Demon':  { col: '#ff1f6b', kind: 'demon', rank: 3 },
     'Extreme Demon': { col: '#9a0012', kind: 'demon', rank: 4 },
+    // Practice-only steps between GD's ten
+    'Casual':        { col: '#3be8c8', kind: 'easy' },
+    'Tricky':        { col: '#ffd21f', kind: 'hard' },
+    'Brutal':        { col: '#c43bff', kind: 'insane' },
+    'Nightmare':     { col: '#3b4bff', kind: 'demon', rank: 1 },
+    'Mythic':        { col: '#00e0a0', kind: 'demon', rank: 3 },
   };
   const ORDER = Object.keys(FACES);
 

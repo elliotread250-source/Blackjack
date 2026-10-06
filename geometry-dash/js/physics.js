@@ -175,10 +175,12 @@
   function applyPortal(s, p) {
     const k = p.k;
     if (MODE_CFG[k]) {
-      // Every mode portal puts gravity back to normal, so a flip from the
-      // section before can't carry over into the next mode.
-      if (s.grav !== 1) { s.grav = 1; s.vy *= 0.5; s.grounded = false; }
+      // A portal that changes your mode puts gravity back to normal, so a
+      // flip from the section before can't carry over. A portal for the
+      // mode you're already in leaves gravity alone (it used to reset it
+      // every frame you were inside, eating swing clicks).
       if (s.mode !== k) {
+        if (s.grav !== 1) { s.grav = 1; s.vy *= 0.5; }
         s.mode = k;
         s.vy *= 0.5;
         s.boost = 0;

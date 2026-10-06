@@ -4,7 +4,7 @@
 
 A browser rhythm platformer built to play like Geometry Dash: all eight game
 modes, physics tuned to GD's own constants, 17 levels plus a secret one,
-160 mode practices and a level editor with share links. No build step, no dependencies, no assets to download. The music
+240 mode practices and a level editor with share links. No build step, no dependencies, no assets to download. The music
 is synthesised live in WebAudio, and every level can also use your own
 music file.
 
@@ -114,12 +114,15 @@ shock rings. "LEVEL COMPLETE!" drops in, then the results.
 
 ## Mode practice
 
-Every mode has ten practice levels on GD's difficulty scale: Easy, Normal,
-Hard, Harder, Insane, then Easy, Medium, Hard, Insane and Extreme Demon.
-A Normal/Mini switch gives the same ten for the mini version of each mode,
-160 practice levels in all. Each starts already in its mode and size.
+Every mode has fifteen practice levels: GD's ten (Easy, Normal, Hard,
+Harder, Insane, then Easy, Medium, Hard, Insane and Extreme Demon) with
+five extra steps slotted between them: Casual, Tricky, Brutal, Nightmare
+and Mythic, each with its own face. A Normal/Mini switch gives the same
+fifteen for the mini version of each mode, 240 practice levels in all,
+every one generated from its own seed. Each starts already in its mode and
+size.
 
-Easy to Insane Demon must be beatable with inputs held at least 50ms.
+Everything up to Mythic must be beatable with inputs held at least 50ms.
 Extreme Demon is the exception by design: it must be beatable with
 frame-perfect (1/60s) inputs and proven unbeatable with 50ms ones, so it's
 possible on paper but beyond human timing.
@@ -186,8 +189,8 @@ On top of those are 12 special sets, one icon per mode each (96 more):
 
 | Set | How to get it |
 |---|---|
-| Checker, Neon, Frost, Inferno, Galaxy | Shop, 200 to 900 orbs each |
-| Prism | Shop, 40 diamonds each |
+| 16 orb sets (Candy, Checker, Zebra, Neon, Sunset, Frost, Ocean, Inferno, Retro, Galaxy, Party, Toxic, Magma, Shadow, Cyber, Cosmic) | Shop, 80 to 35,000 orbs |
+| 5 diamond sets (Prism, Emerald, Ruby, Sapphire, Emperor) | Shop, 25 to 500 diamonds |
 | Golden | Collect secret coins: 3 for the cube up to 40 for the swing |
 | Demon | A vault code |
 | Ghost, Glitch, Royal | Easter eggs on the main menu |
@@ -201,6 +204,14 @@ pay more (25 orbs for a 1-star level, 750 for Lockdown). Diamonds come from
 first clears (stars + 2) and 2 per new secret coin. Practice mode pays
 nothing, same as GD. Saves from before this existed get paid out once for
 the progress they already had.
+
+The shop has four tabs, every item priced on its own, from tens of orbs to
+tens of thousands (icon sets also cost more for the later characters):
+21 icon sets for each of the eight characters, 24 extra colours, 12 trails
+(Smoke, Frost, Fire, Neon, Gold Dust, Hearts, Rainbow, Lightning,
+Afterimage, Stardust, Void) and 11 death effects (Pixels, Shatter,
+Confetti, Fireworks, Ghost, Vaporize, Black Hole, Supernova, Thunder,
+Glitch). Bought colours also show up in the Icon Kit.
 
 ## The Vault
 
