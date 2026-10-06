@@ -8,6 +8,10 @@ no backend: the whole game runs in the browser and your bankroll lives in
 
 **Geometry Dash replica: https://elliotread250-source.github.io/Blackjack/geometry-dash/**
 
+**Apex GP (first-person F1 racing, solo or peer-to-peer multiplayer): https://elliotread250-source.github.io/Blackjack/apex-gp/**
+
+**2 Weeks (build-and-shoot battle royale against 24 bots): https://elliotread250-source.github.io/Blackjack/2-weeks/**
+
 **Humanizer (AI text to human text, free, no API keys): https://elliotread250-source.github.io/Blackjack/humanizer/**
 
 ## Rules on the table
@@ -26,8 +30,10 @@ Keyboard: `H` hit, `S` stand, `D` double, `P` split, `Enter` deal, `R` rebet,
 python server.py          # http://localhost:8080
 ```
 
-Or just open `index.html` in a browser. The server is only there for hosts that
-need something listening on `$PORT`.
+Apex GP is at `/apex-gp/` and 2 Weeks at `/2-weeks/`. Both load three.js from
+jsDelivr and use ES modules, so they need the server (opening the file directly
+won't work). Blackjack is fine opened straight from `index.html`. The server is
+only there for hosts that need something listening on `$PORT`.
 
 ## Deploying
 
