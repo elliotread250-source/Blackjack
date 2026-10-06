@@ -2,7 +2,7 @@
 
 A first-person Formula-style racing game that runs in the browser. No install, no build step: it's one HTML file using Three.js.
 
-**Play:** https://elliotread250-source.github.io/apex-gp/
+**Play:** https://elliotread250-source.github.io/Blackjack/apex-gp/
 
 ## Features
 - 10 teams with different top speed, acceleration, grip and braking
