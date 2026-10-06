@@ -303,7 +303,7 @@ async function start() {
       try {
         await ensurePuterSignIn();
       } catch {
-        banner('Claude and ChatGPT run free through Puter, which needs a quick free sign-in. Click Humanize again and finish the sign-in window.', 'error');
+        banner('Claude and ChatGPT run free through Puter, which opens a small window to set up a free guest account. Allow pop-ups for this page, then click Humanize again.', 'error');
         return;
       }
     }

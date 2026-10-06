@@ -6,7 +6,7 @@ It costs nothing to use and you don't need a single API key.
 
 ## How it's free
 
-Claude and ChatGPT run through [Puter](https://puter.com). Puter gives every visitor free access to Claude and GPT models on their own free Puter account, so the first time you hit Humanize a sign-in window pops up. Sign in (or make an account, it's free) and you're done. No API key, no card.
+Claude and ChatGPT run through [Puter](https://puter.com). Puter gives every visitor free access to Claude and GPT models on their own free Puter account, so the first time you hit Humanize a small Puter window opens and sets you up with a free guest account automatically. No sign-up form, no API key, no card. (If you'd rather keep your usage on a real Puter account, sign in there instead.)
 
 The open-source detectors run on your machine with [Transformers.js](https://huggingface.co/docs/transformers.js). The model files download once from Hugging Face's free CDN and the browser caches them, so the first run is slow (a few hundred MB) and every run after is quick.
 

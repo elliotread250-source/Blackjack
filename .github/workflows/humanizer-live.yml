@@ -1,0 +1,84 @@
+name: Humanizer live check
+
+# Runs the humanizer against the real services (Puter's Claude and GPT, the
+# Hugging Face detector models, ZeroGPT). Needs open internet, which Actions
+# runners have. Uses a throwaway Puter guest account, so it spends nobody's
+# credits but Puter's free allowance for that guest.
+
+on:
+  push:
+    branches: ['claude/**']
+    paths: ['humanizer/**', '.github/workflows/humanizer-live.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: humanizer-live-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Unit and server tests
+        working-directory: humanizer
+        run: |
+          pip install -q -r requirements.txt
+          node tools/test.mjs
+          python tools/test_server.py
+
+      - name: ZeroGPT from a server, no key
+        working-directory: humanizer
+        run: |
+          python - <<'PY'
+          import json, detectors
+          for name in ("ai", "human"):
+              text = open(f"tools/samples/{name}.txt").read()
+              try:
+                  print(name, json.dumps(detectors.run("zerogpt", text)))
+              except Exception as e:
+                  print(name, "ERROR", type(e).__name__, e)
+          PY
+
+      - name: Install Playwright
+        run: |
+          npm install --no-save --no-package-lock playwright@1.56.1
+          npx playwright install --with-deps chromium
+
+      - name: Start the app (this branch's code)
+        working-directory: humanizer
+        run: |
+          nohup python server.py > ../server.log 2>&1 &
+          for i in 1 2 3 4 5 6 7 8 9 10; do curl -sf http://127.0.0.1:8080/healthz && break; sleep 1; done
+
+      - name: Full run against this branch
+        env:
+          OUT_DIR: out/branch
+        run: node humanizer/tools/live-check.mjs http://127.0.0.1:8080/ --full
+
+      - name: Check the live GitHub Pages site
+        if: always()
+        env:
+          OUT_DIR: out/live
+        run: node humanizer/tools/live-check.mjs https://elliotread250-source.github.io/Blackjack/humanizer/
+
+      - name: Server log
+        if: always()
+        run: tail -n 60 server.log || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: humanizer-live-check
+          path: out/

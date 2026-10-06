@@ -208,7 +208,8 @@ export async function ensurePuterSignIn() {
   const auth = window.puter?.auth;
   if (!auth || typeof auth.isSignedIn !== 'function') return;
   if (auth.isSignedIn()) return;
-  await auth.signIn();
+  // A temporary guest account: free usage straight away, no sign-up form.
+  await auth.signIn({ attempt_temp_user_creation: true });
 }
 
 export async function runDetector(id, text, keys, password, signal) {
