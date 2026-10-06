@@ -273,11 +273,28 @@ true full screen on iPhone, use Share, then Add to Home Screen. If a device
 can't hold frame rate, the game drops to 1x pixel density and skips
 decoration on its own.
 
+## Online
+
+The Online button on the main menu talks to the game's server on Railway
+(`server.py`, stdlib Python with SQLite on a persistent volume):
+
+- Levels: everyone's uploaded editor levels, sorted by newest, most played
+  or most liked, with search. Upload from Create; like levels you enjoy.
+  Five reports hide a level.
+- Leaderboard: stars, demons, coins and levels beaten.
+- Account: pick a name and you get an account code (it works like a
+  password, keep it secret). Progress backs itself up to the cloud after
+  every level you beat; Load from cloud brings it to another device after
+  logging in there with the code.
+
+The GitHub Pages copy uses the same server, so both share one online world.
+Scores are reported by the game, so the leaderboard trusts players.
+
 ## Running it
 
 ```bash
-python server.py    # http://localhost:8080
+python server.py    # http://localhost:8080 (data in ./data)
 ```
 
-Deploys to Railway as-is: `Dockerfile` plus `railway.json`, with a `/healthz`
-check.
+Deploys to Railway from this folder: `Dockerfile` plus `railway.json`, a
+`/healthz` check, and a volume mounted at `/data` for the database.
