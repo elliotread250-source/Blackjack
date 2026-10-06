@@ -49,7 +49,11 @@ If you're using this on schoolwork, check your school's rules. Getting caught fo
 
 ## Running it
 
-It's live on Railway (see the main README for the link) and runs anywhere that serves static files plus one small Python process:
+**Use it here: https://elliotread250-source.github.io/Blackjack/humanizer/**
+
+That's GitHub Pages, free, published automatically on every push to `main`. Everything the free version does happens in your browser, so it doesn't need a server at all.
+
+There's also a small optional Python server, for two things Pages can't do: holding paid API keys so they never touch the browser, and calling ZeroGPT from a server when your browser isn't allowed to call it directly. The Dockerfile and `railway.json` are ready for Railway (set the service's root directory to `humanizer`), but Railway costs $5/month after the trial, so it's off for now. To run it locally:
 
 ```bash
 cd humanizer
@@ -61,7 +65,7 @@ Add `?mock=1` to the URL to run the whole loop offline with stand-in models, han
 
 ### Optional server settings (Railway variables)
 
-None of these are needed. They're for anyone who'd rather pay for API calls than use Puter.
+None of these are needed, and they only apply when the Python server is running. They're for anyone who'd rather pay for API calls than use Puter.
 
 | Variable | What it does |
 | --- | --- |

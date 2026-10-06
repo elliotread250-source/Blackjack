@@ -159,7 +159,7 @@ function renderSettings() {
       <label class="det">
         <input type="checkbox" data-paid="${d.id}"${S.settings.paid[d.id] !== false ? ' checked' : ''}${S.server ? '' : ' disabled'}>
         <span class="name">${esc(d.name)} ${status}</span>
-        <span class="desc">${S.server ? `Paid API. <a href="${d.link}" target="_blank" rel="noopener">Get a key</a>.` : 'Needs the Railway version of this app (the server forwards the request).'}</span>
+        <span class="desc">${S.server ? `Paid API. <a href="${d.link}" target="_blank" rel="noopener">Get a key</a>.` : 'Needs this app's optional Python server, which isn't running on the free GitHub Pages version.'}</span>
         ${S.server ? inputs : ''}
       </label>`;
   }).join('');

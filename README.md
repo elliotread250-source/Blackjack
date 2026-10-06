@@ -8,7 +8,7 @@ no backend: the whole game runs in the browser and your bankroll lives in
 
 **Geometry Dash replica: https://elliotread250-source.github.io/Blackjack/geometry-dash/**
 
-**Humanizer (AI text to human text, free, no API keys): see [`humanizer/`](humanizer/README.md)**
+**Humanizer (AI text to human text, free, no API keys): https://elliotread250-source.github.io/Blackjack/humanizer/**
 
 ## Rules on the table
 
