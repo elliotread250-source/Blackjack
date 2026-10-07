@@ -12,7 +12,7 @@ no backend: the whole game runs in the browser and your bankroll lives in
 
 **2 Weeks (build-and-shoot battle royale against 24 bots): https://elliotread250-source.github.io/Blackjack/2-weeks/**
 
-**Humanizer (AI text to human text, free, no API keys): https://elliotread250-source.github.io/Blackjack/humanizer/**
+**Humanizer (AI text to human text, free, no API keys): https://humanizer-production-e796.up.railway.app**
 
 ## Rules on the table
 

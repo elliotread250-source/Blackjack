@@ -491,6 +491,7 @@
     for (const k of specialsOwned()) if (ownedBefore.indexOf(k) === -1) { const [m, set] = k.split(':'); unlocks.push([m, ICONS.special(set)]); }
     flushJumps();
     if (first && !L.custom) bump('cleared');
+    if (!L.custom && !G.practice) cloudSync();
     // GD-style finish: the icon is pulled into the end wall, light bursts
     // out of it and the banner drops in; the results follow (see finish()).
     G.fin = { t: 0, x: G.s.x, y: G.s.y, hit: false };
@@ -2252,7 +2253,7 @@
   // ---------------------------------------------------------------- UI
 
   const $ = (id) => document.getElementById(id);
-  const SCREENS = ['home', 'select', 'practice', 'settings', 'statsScr', 'skin', 'shop', 'vault', 'create', 'editor', 'shared', 'pause', 'complete'];
+  const SCREENS = ['home', 'select', 'practice', 'settings', 'statsScr', 'skin', 'shop', 'vault', 'create', 'editor', 'shared', 'online', 'pause', 'complete'];
 
   // Main levels, easiest first (indexes stay stable so saves don't move).
   // The secret level joins the end once its door has been found.
@@ -2308,7 +2309,7 @@
     for (const id of SCREENS) $(id).classList.toggle('show', screen === id);
     $('hud').classList.toggle('show', screen === 'play');
     $('cpbtns').classList.toggle('show', screen === 'play' && G.practice);
-    if (['home', 'select', 'practice', 'statsScr', 'skin', 'shop', 'vault', 'create', 'editor', 'shared'].indexOf(screen) !== -1 || (screen === 'settings' && !G.s)) {
+    if (['home', 'select', 'practice', 'statsScr', 'skin', 'shop', 'vault', 'create', 'editor', 'shared', 'online'].indexOf(screen) !== -1 || (screen === 'settings' && !G.s)) {
       if (G.s && screen !== 'settings') { AUDIO.stop(); G.s = null; }
     }
     if (screen === 'home') buildHome();
@@ -2320,6 +2321,7 @@
     if (screen === 'vault') buildVault();
     if (screen === 'create') buildCreate();
     if (screen === 'editor') buildEditor();
+    if (screen === 'online') buildOnline();
   }
 
   // ---------------------------------------------------------- home
@@ -3328,10 +3330,11 @@
       const row = document.createElement('div');
       row.className = 'myrow';
       row.innerHTML = '<canvas></canvas><div class="mi"><b></b><span></span></div>' +
-        '<button class="alt">Edit</button><button>Play</button><button class="gold">Share</button><button class="ghost" aria-label="Delete">✕</button>';
+        '<button class="alt">Edit</button><button>Play</button><button class="gold">Share</button><button class="alt">Upload</button><button class="ghost" aria-label="Delete">✕</button>';
       row.querySelector('b').textContent = lv.name;
       row.querySelector('span').textContent = `${lv.o.length} objects · best ${store.get('best:my:' + lv.id, 0)}%`;
-      const [edit, play, share, del] = row.querySelectorAll('button');
+      const [edit, play, share, up, del] = row.querySelectorAll('button');
+      up.addEventListener('click', () => uploadLevel(lv));
       edit.addEventListener('click', () => openEditor(lv));
       play.addEventListener('click', () => startCustom(edToDef(lv, 'my:' + lv.id), 'create'));
       share.addEventListener('click', async () => {
@@ -3521,6 +3524,191 @@
   $('songDone').addEventListener('click', closeSong);
   $('pauseSong').addEventListener('click', () => openSong(G.L, G.L.slot || slotOf(G.idx), null));
   $('esOwnSong').addEventListener('click', () => openSong(edToDef(ED.lv, 'my:' + ED.lv.id), 'my:' + ED.lv.id, () => buildEdSettings()));
+
+  // ----------------------------------------------------------- online
+  // The Railway server (server.py) holds everyone's uploaded levels, the
+  // leaderboard and cloud saves. Served from Railway the API is same-origin;
+  // the GitHub Pages copy talks to the Railway one.
+  const API = /github\.io$/.test(location.hostname) ? 'https://game-production-8782.up.railway.app' : '';
+  const acct = () => store.get('acct', null);
+  async function api(path, body) {
+    const r = await fetch(API + '/api' + path, body ? {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    } : undefined);
+    const out = await r.json().catch(() => ({ error: 'server error' }));
+    if (!r.ok) throw new Error(out.error || 'server error');
+    return out;
+  }
+  function summary() {
+    const beaten = MAIN.filter((i) => bestOf(i, false) === 100 && !LEVELS[i].secret);
+    return {
+      stars: beaten.reduce((n, i) => n + LEVELS[i].stars, 0),
+      demons: beaten.filter((i) => /Demon/.test(LEVELS[i].difficulty)).length,
+      coins: LEVELS.reduce((n, L, i) => n + store.get('coins:' + slotOf(i), []).length, 0),
+      levels: beaten.length,
+      practice: LEVELS.filter((L, i) => L.training && bestOf(i, false) === 100).length,
+    };
+  }
+  function saveBlob() {
+    const data = {};
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k.startsWith('gdr:') && k !== 'gdr:acct') data[k] = localStorage.getItem(k);
+      }
+    } catch (e) { /* storage blocked */ }
+    return data;
+  }
+  // After a clear: post the score and back the save up (quietly; offline is fine).
+  let syncTimer = 0;
+  function cloudSync() {
+    const a = acct();
+    if (!a) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => {
+      api('/score', Object.assign({ token: a.token }, summary())).catch(() => {});
+      api('/save', { token: a.token, data: saveBlob() }).then(() => store.set('cloudAt', Date.now())).catch(() => {});
+    }, 1500);
+  }
+
+  let onTab = 'levels', onSort = 'new', onBy = 'stars', onPage = 0, onQuery = '';
+  function buildOnline() {
+    G.menuBg = ['#0a4a6a', '#052a3a'];
+    for (const b of $('onTabs').children) b.classList.toggle('on', b.dataset.t === onTab);
+    $('onLevels').style.display = onTab === 'levels' ? '' : 'none';
+    $('onBoard').style.display = onTab === 'board' ? '' : 'none';
+    $('onAcct').style.display = onTab === 'acct' ? '' : 'none';
+    if (onTab === 'levels') { onPage = 0; loadLevels(false); }
+    if (onTab === 'board') loadBoard();
+    if (onTab === 'acct') buildAcct();
+  }
+  function rowEl(cls) { const d = document.createElement('div'); d.className = 'myrow' + (cls ? ' ' + cls : ''); return d; }
+  async function loadLevels(more) {
+    const list = $('onList');
+    if (!more) list.innerHTML = '<div class="label">Loading…</div>';
+    for (const b of $('onSort').children) b.classList.toggle('on', b.dataset.s === onSort);
+    try {
+      const r = await api(`/levels?sort=${onSort}&page=${onPage}&q=${encodeURIComponent(onQuery)}`);
+      if (!more) list.innerHTML = '';
+      if (!r.levels.length && !more) list.innerHTML = '<div class="label">No levels yet. Upload one from Create!</div>';
+      for (const lv of r.levels) {
+        const row = rowEl();
+        row.innerHTML = '<canvas></canvas><div class="mi"><b></b><span></span></div><button>Play</button><button class="ghost">♥</button>';
+        row.querySelector('b').textContent = lv.name;
+        row.querySelector('span').textContent = `by ${lv.author} · ${lv.plays} plays · ${lv.likes} likes`;
+        const [play, like] = row.querySelectorAll('button');
+        play.addEventListener('click', () => playOnline(lv.id));
+        like.addEventListener('click', async () => {
+          const a = acct();
+          if (!a) { toast('Make an account first (Account tab)'); return; }
+          try { await api(`/levels/${lv.id}/like`, { token: a.token }); like.classList.remove('ghost'); like.classList.add('gold'); } catch (e) { toast(e.message); }
+        });
+        list.appendChild(row);
+        faceCanvas(row.querySelector('canvas'), lv.face || 'Normal', 44, null);
+      }
+      $('onMore').style.display = r.more ? '' : 'none';
+    } catch (e) {
+      list.innerHTML = '<div class="label">Can’t reach the online server right now.</div>';
+    }
+  }
+  async function playOnline(id) {
+    try {
+      const r = await api('/levels/' + id);
+      const lv = await unpackLevel(r.code);
+      lv.name = r.name;
+      startCustom(edToDef(lv, 'on:' + id), 'online');
+    } catch (e) { toast('Couldn’t load that level'); }
+  }
+  async function loadBoard() {
+    const list = $('onRanks');
+    list.innerHTML = '<div class="label">Loading…</div>';
+    for (const b of $('onBy').children) b.classList.toggle('on', b.dataset.b === onBy);
+    const a = acct();
+    if (a) await api('/score', Object.assign({ token: a.token }, summary())).catch(() => {});
+    try {
+      const r = await api('/leaderboard?by=' + onBy);
+      list.innerHTML = r.players.length ? '' : '<div class="label">Nobody on the board yet. Be first!</div>';
+      r.players.forEach((p, k) => {
+        const row = rowEl(a && a.id === p.id ? 'me' : '');
+        row.innerHTML = '<span class="rank"></span><div class="mi"><b></b><span></span></div><span class="val"></span>';
+        row.querySelector('.rank').textContent = k + 1;
+        row.querySelector('b').textContent = p.name;
+        row.querySelector('.mi span').textContent = `${p.stars} ★ · ${p.demons} demons · ${p.coins} coins · ${p.levels} levels`;
+        row.querySelector('.val').textContent = onBy === 'stars' ? p.stars + ' ★' : p[onBy];
+        list.appendChild(row);
+      });
+    } catch (e) { list.innerHTML = '<div class="label">Can’t reach the online server right now.</div>'; }
+  }
+  function buildAcct() {
+    const a = acct();
+    $('acNew').style.display = a ? 'none' : '';
+    $('acHave').style.display = a ? '' : 'none';
+    $('acStatus').textContent = a ? `Logged in as ${a.name}` + (store.get('cloudAt', 0) ? ` · last cloud save ${new Date(store.get('cloudAt', 0)).toLocaleString()}` : '')
+      : 'Make an account to upload levels, get on the leaderboard and keep your progress in the cloud.';
+    if (a) $('acCode').value = a.token;
+  }
+  $('onTabs').addEventListener('click', (e) => { if (e.target.dataset.t) { onTab = e.target.dataset.t; buildOnline(); } });
+  $('onSort').addEventListener('click', (e) => { if (e.target.dataset.s) { onSort = e.target.dataset.s; onPage = 0; loadLevels(false); } });
+  $('onBy').addEventListener('click', (e) => { if (e.target.dataset.b) { onBy = e.target.dataset.b; loadBoard(); } });
+  $('onMore').addEventListener('click', () => { onPage++; loadLevels(true); });
+  let searchT = 0;
+  $('onSearch').addEventListener('input', () => { clearTimeout(searchT); searchT = setTimeout(() => { onQuery = $('onSearch').value.trim(); onPage = 0; loadLevels(false); }, 300); });
+  $('acCreate').addEventListener('click', async () => {
+    const name = $('acName').value.trim();
+    if (name.length < 2) { toast('Pick a name of at least 2 characters'); return; }
+    try {
+      const r = await api('/register', { name });
+      store.set('acct', r);
+      toast(`Welcome, ${r.name}!`);
+      cloudSync();
+      buildAcct();
+    } catch (e) { toast(e.message); }
+  });
+  $('acSave').addEventListener('click', async () => {
+    try { await api('/save', { token: acct().token, data: saveBlob() }); store.set('cloudAt', Date.now()); toast('Saved to the cloud'); buildAcct(); } catch (e) { toast(e.message); }
+  });
+  $('acLoad').addEventListener('click', async () => {
+    try {
+      const r = await api('/load', { token: acct().token });
+      if (!r.data) { toast('Nothing saved in the cloud yet'); return; }
+      if (!confirm('Replace this device’s progress with your cloud save?')) return;
+      const keep = localStorage.getItem('gdr:acct');
+      for (const k of Object.keys(r.data)) if (k.startsWith('gdr:')) localStorage.setItem(k, r.data[k]);
+      localStorage.setItem('gdr:acct', keep);
+      location.reload();
+    } catch (e) { toast(e.message); }
+  });
+  $('acCopy').addEventListener('click', () => { $('acCode').select(); if (navigator.clipboard) navigator.clipboard.writeText($('acCode').value).then(() => toast('Account code copied'), () => {}); });
+  $('acLoginBtn').addEventListener('click', async () => {
+    const token = $('acLogin').value.trim();
+    try {
+      const r = await api('/whoami', { token });
+      store.set('acct', { token, id: r.id, name: r.name });
+      toast(`Logged in as ${r.name}. Load from cloud to bring your progress over.`);
+      $('acLogin').value = '';
+      buildAcct();
+    } catch (e) { toast('That account code didn’t work'); }
+  });
+  $('acRenameBtn').addEventListener('click', async () => {
+    try {
+      const r = await api('/rename', { token: acct().token, name: $('acRename').value.trim() });
+      store.set('acct', Object.assign(acct(), { name: r.name }));
+      $('acRename').value = '';
+      buildAcct();
+    } catch (e) { toast(e.message); }
+  });
+  for (const id of ['onSearch', 'acName', 'acLogin', 'acRename', 'acCode']) $(id).addEventListener('keydown', (e) => e.stopPropagation());
+  $('onDone').addEventListener('click', () => show('home'));
+  $('hOnline').addEventListener('click', () => show('online'));
+
+  async function uploadLevel(lv) {
+    const a = acct();
+    if (!a) { onTab = 'acct'; show('online'); toast('Make an account first, then upload'); return; }
+    try {
+      const r = await api('/levels', { token: a.token, name: lv.name, code: await packLevel(lv), face: lv.face, objects: lv.o.length });
+      toast(r.existing ? 'Already uploaded: it’s in Online → Levels' : 'Uploaded! Everyone can play it in Online → Levels');
+    } catch (e) { toast(e.message); }
+  }
 
   // ------------------------------------------------------ pause / end
   function pause() {
