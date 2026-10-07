@@ -523,7 +523,7 @@ void main() {
   float sd2 = sd * sd; float sd4 = sd2 * sd2; float sd8 = sd4 * sd4; float sd16 = sd8 * sd8;
   float sd64 = sd16 * sd16; sd64 *= sd64;
   float spark = sd64 * sd64 * sd16 * (0.6 + 0.4 * h) * detail;   // ~ pow(sd, 144)
-  vec3 spec = uSunColor * (spark * 2.5 + sd16 * 0.12) * vSkyVis * lit;
+  vec3 spec = uSunColor * (spark * 1.1 + sd16 * 0.08) * vSkyVis * lit;
   col += spec;
   alpha = min(1.0, alpha + dot(spec, vec3(0.333)));
 #endif
@@ -659,7 +659,7 @@ export function createSharedUniforms(atlas: Atlas): SharedUniforms {
     uWaterTile: { value: new Vector2(wx, wy) },
     uLavaTile: { value: new Vector2(lx, ly) },
     uEmissive: { value: null as Texture | null },
-    uEmissiveBoost: { value: 2.6 },
+    uEmissiveBoost: { value: 1.7 },
     uGlintBoost: { value: 3.5 },
     uClipY: { value: WATER_PLANE_Y },
     uReflection: { value: null as Texture | null },

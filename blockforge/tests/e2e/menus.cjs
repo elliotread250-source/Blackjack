@@ -194,12 +194,12 @@ async function tour(browser, tag, opts, full) {
     await page.waitForTimeout(1500);
     await page.screenshot({ path: path.join(outDir, 'c-world-default.png') });
     await page.evaluate(() => window.blockforge.game.pause());
-    await btn(page, 'Shaders: Off').click();
+    await btn(page, /^\s*Shaders: Off\s*$/).click();
     s = await S();
     check('pause menu cycles shaders Off -> Fancy', s.shaderPack === 'fancy' && s.shadows, s.shaderPack);
-    check('pause button label follows', await btn(page, 'Shaders: Fancy').isVisible());
-    await btn(page, 'Shaders: Fancy').click();
-    await btn(page, 'Shaders: Ultra').click();
+    check('pause button label follows', await btn(page, /^\s*Shaders: Fancy\s*$/).isVisible());
+    await btn(page, /^\s*Shaders: Fancy\s*$/).click();
+    await btn(page, /^\s*Shaders: Ultra\s*$/).click();
     check('and back to Off', (await S()).shaderPack === 'off');
     await btn(page, 'Options...').click();
     await btn(page, 'Resource Packs...').click();

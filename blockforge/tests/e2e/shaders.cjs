@@ -154,11 +154,13 @@ function check(name, ok, detail = '') {
     fs.writeFileSync(path.join(outDir, file), Buffer.from(b64, 'base64'));
     return Buffer.from(b64, 'base64').length;
   };
-  const sample = () => page.evaluate(() => {
-    // average brightness of the canvas: catches black screens
-    const c = document.getElementById('game');
+  const sample = () => page.evaluate(async () => {
+    // average brightness of a rendered frame (through the screenshot path, since the canvas
+    // buffer is not preserved between frames): catches black screens
+    const blob = await window.blockforge.renderer.screenshot();
+    const bmp = await createImageBitmap(blob);
     const t = document.createElement('canvas'); t.width = 64; t.height = 36;
-    const x = t.getContext('2d'); x.drawImage(c, 0, 0, 64, 36);
+    const x = t.getContext('2d'); x.drawImage(bmp, 0, 0, 64, 36);
     const d = x.getImageData(0, 0, 64, 36).data; let s = 0;
     for (let i = 0; i < d.length; i += 4) s += d[i] + d[i + 1] + d[i + 2];
     return s / (d.length / 4) / 3;
@@ -173,7 +175,7 @@ function check(name, ok, detail = '') {
       await setPack(p);
       await frames(4);
       await shot(`${vname}-${p}-${tag}.png`);
-      const lum = await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r(0)))).then(sample);
+      const lum = await sample();
       check(`${vname} ${p}: not black`, lum > (vname === 'night' ? 3 : 25), `mean ${lum.toFixed(1)}`);
     }
   }

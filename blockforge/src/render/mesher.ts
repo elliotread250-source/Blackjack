@@ -351,7 +351,7 @@ function meshFluid(x: number, y: number, z: number, pi: number, v: number, F: nu
       const c = (k + rot) & 3;
       vtx(b, X + TOP_PX[k], Y + Math.round(FH[TOP_H[k]] * 256), Z + TOP_PZ[k], tx + CU[c], ty + CV[c], sky, blk, 255, fl);
     }
-    quad(b, base, false, water);
+    quad(b, base, false, false);   // one-sided geometry: the water material is double-sided
   }
   // sides
   for (let f = 0; f < 6; f++) {
@@ -372,7 +372,7 @@ function meshFluid(x: number, y: number, z: number, pi: number, v: number, F: nu
       const t = Math.round(16 * (1 - h));
       vtx(b, X + (cx << 8), Y + Math.round(h * 256), Z + (cz << 8), tx + CU[k], ty + t, sky, blk, shade, f);
     }
-    quad(b, base, false, water);
+    quad(b, base, false, false);   // one-sided geometry: the water material is double-sided
   }
   // bottom
   {
@@ -388,7 +388,7 @@ function meshFluid(x: number, y: number, z: number, pi: number, v: number, F: nu
       for (let k = 0; k < 4; k++) {
         vtx(b, X + (FV[o + k * 3] << 8), Y, Z + (FV[o + k * 3 + 2] << 8), tx + CU[k], ty + CV[k], sky, blk, shade, 3);
       }
-      quad(b, base, false, water);
+      quad(b, base, false, false);   // one-sided geometry: the water material is double-sided
     }
   }
 }

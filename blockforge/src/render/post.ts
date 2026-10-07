@@ -97,9 +97,12 @@ uniform mat4 uInvView;
 uniform float uUnderwater;
 varying vec2 vUv;
 vec3 rolloff(vec3 c) {
-  // linear up to 0.8, then a soft shoulder towards 1 (HDR glow from torches, lava, the sun)
-  vec3 x = max(c - 0.8, 0.0);
-  return min(c, vec3(0.8)) + 0.2 * (1.0 - exp(-x * 2.2));
+  // hue-preserving shoulder from 0.9 towards 1 (so a bright blue sky stays blue), and only
+  // real HDR light (torch flames, lava, glints) above 1 burns slightly towards white
+  float m = max(c.r, max(c.g, c.b));
+  if (m <= 0.9) return c;
+  float f = 0.9 + 0.1 * (1.0 - exp(-(m - 0.9) * 10.0));
+  return c * (f / m) + vec3(1.0 - exp(-max(m - 1.0, 0.0) * 0.6)) * 0.35;
 }
 void main() {
   vec3 col = texture2D(tColor, vUv).rgb;
@@ -129,7 +132,7 @@ void main() {
   col = mix(vec3(l), col, 1.1);
   col = (col - 0.5) * 1.04 + 0.5;
   vec2 q = vUv - 0.5;
-  col *= 1.0 - dot(q, q) * 0.35;
+  col *= 1.0 - dot(q, q) * 0.2;
   gl_FragColor = vec4(clamp(col, 0.0, 1.0), 1.0);
 }
 `;
@@ -191,7 +194,7 @@ export class PostFX {
     this.gl = gl;
     const ext = gl.extensions;
     this.hdr = gl.capabilities.isWebGL2 ? ext.has('EXT_color_buffer_float') || ext.has('EXT_color_buffer_half_float')
-      : ext.has('OES_texture_half_float') && ext.has('EXT_color_buffer_half_float');
+      : ext.has('OES_texture_half_float') && ext.has('OES_texture_half_float_linear') && ext.has('EXT_color_buffer_half_float');
     this.depth = gl.capabilities.isWebGL2 || ext.has('WEBGL_depth_texture');
     const type = this.hdr ? HalfFloatType : UnsignedByteType;
     this.scene = new WebGLRenderTarget(1, 1, {
@@ -296,11 +299,11 @@ export class PostFX {
     c.tRays.value = this.rays.texture;
     c.tDepth.value = depthTex;
     (c.uRayColor.value as Color).copy(f.rayColor);
-    c.uRayStrength.value = rayStrength * 0.55;
+    c.uRayStrength.value = rayStrength * 0.45;
     (c.uFogColor.value as Color).copy(f.fogColor);
     (c.uSunColor.value as Color).copy(f.sunColor);
     (c.uLightDir.value as Vector3).copy(f.lightDir);
-    c.uFogDensity.value = 0.0035 + f.dawnDusk * 0.006;
+    c.uFogDensity.value = 0.0022 + f.dawnDusk * 0.005;
     c.uFogFar.value = f.fogFar;
     (c.uCamPos.value as Vector3).copy(cam.position);
     this.invProj.copy(cam.projectionMatrixInverse);

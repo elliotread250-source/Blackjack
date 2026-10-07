@@ -31,7 +31,8 @@ for (const p of RESOURCE_PACKS) {
     check(greyOk, `${p.id} ${TEXTURE_NAMES[t]} tinted grey pixels stay grey`);
     if (diff > 0) changed++;
   }
-  if (p.id === 'default') check(changed === 0, 'default pack is unchanged');
+  // the imported pack falls back to the built-in textures until a zip is imported
+  if (p.id === 'default' || p.id === 'custom') check(changed === 0, `${p.id} pack is unchanged`);
   else check(changed > TEXTURE_NAMES.length * 0.8, `${p.id} changes most textures (${changed}/${TEXTURE_NAMES.length})`);
   console.log(`${p.id}: ${TEXTURE_NAMES.length} tiles in ${Date.now() - ts} ms, ${changed} changed`);
 }

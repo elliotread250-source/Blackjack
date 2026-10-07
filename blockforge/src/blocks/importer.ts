@@ -303,6 +303,8 @@ export async function saveCustomPack(p: CustomPack): Promise<void> {
     tx.onerror = () => reject(tx.error);
   });
   db.close();
+  // ask the browser not to clear the pack when the disk runs low (it stays on at every start)
+  try { void navigator.storage?.persist?.().catch(() => undefined); } catch { /* ignore */ }
 }
 
 export async function loadCustomPack(): Promise<CustomPack | null> {

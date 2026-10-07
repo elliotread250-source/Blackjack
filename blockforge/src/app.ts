@@ -81,11 +81,15 @@ async function boot() {
   await nextFrame();
 
   const fontReady = loadPixelFont().catch(() => undefined);
-  // A pack the player imported earlier lives in this browser's IndexedDB.
-  const imported = await Promise.race([loadCustomPack(), sleep(2000).then(() => null)]);
+  // A pack the player imported earlier lives in this browser's IndexedDB and is switched on
+  // again at every start. A slow disk never drops it: after a few seconds the game starts with
+  // the built-in look and swaps the imported textures in as soon as they arrive.
+  const customLoad = loadCustomPack();
+  const imported = await Promise.race([customLoad, sleep(6000).then(() => undefined)]);
+  const customLate = imported === undefined && settings.resourcePack === 'custom';
   if (imported) setCustomPack(imported);
-  else if (settings.resourcePack === 'custom') settings.resourcePack = 'default';
-  const atlas = buildAtlas(settings.mipmaps, settings.resourcePack);
+  else if (imported === null && settings.resourcePack === 'custom') settings.resourcePack = 'default';
+  const atlas = buildAtlas(settings.mipmaps, customLate ? 'default' : settings.resourcePack);
   bootText('Carving block icons…');
   await nextFrame();
   const icons = buildIcons(atlas);
@@ -194,6 +198,17 @@ async function boot() {
 
   const menus = new Menus(uiRoot, handlers, settings);
   game.menus = menus;
+  if (customLate) {
+    void customLoad.then((p) => {
+      if (p) {
+        setCustomPack(p);
+        if (settings.resourcePack === 'custom') applyResourcePack('custom');
+      } else if (settings.resourcePack === 'custom') {
+        settings.resourcePack = 'default';
+        handlers.settingsChanged(settings);
+      }
+    });
+  }
 
   // Click on the game view to grab the mouse again.
   canvas.addEventListener('mousedown', () => {
