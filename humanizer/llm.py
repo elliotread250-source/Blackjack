@@ -1,13 +1,16 @@
-"""Server-side Claude and ChatGPT calls, used when the Railway service has API keys.
+"""Server-side Claude and ChatGPT calls.
 
-Without keys the browser talks to both models through Puter instead (free for
-you, billed to the visitor's own free Puter allowance), so none of this runs.
+In order of preference: the vendor's own API key (ANTHROPIC_API_KEY,
+OPENAI_API_KEY), then one shared Puter account (PUTER_AUTH_TOKEN, free; see
+puter.py). With neither, the browser talks to Puter directly and each visitor
+signs in to their own free Puter account.
 """
 
 import os
 import re
 import threading
 
+import puter
 from net import UpstreamError, get_json, post_json
 
 
@@ -137,19 +140,31 @@ def gpt(system, prompt, kind):
 
 
 def describe():
-    return {
-        "claude": {"ready": claude_ready(), "model": CLAUDE_MODEL},
-        "gpt": {"ready": gpt_ready(), "model": os.environ.get("OPENAI_MODEL") or _openai_model or "newest gpt"},
-    }
+    out = {}
+    for vendor, direct_ready, model in (
+        ("claude", claude_ready(), lambda: CLAUDE_MODEL),
+        ("gpt", gpt_ready(), lambda: os.environ.get("OPENAI_MODEL") or _openai_model or "newest gpt"),
+    ):
+        if direct_ready:
+            out[vendor] = {"ready": True, "via": "api", "model": model()}
+        elif puter.ready():
+            out[vendor] = {"ready": True, "via": "puter", "model": puter.model_label(vendor)}
+        else:
+            out[vendor] = {"ready": False}
+    return out
 
 
 def ask(vendor, system, prompt, kind):
-    if vendor == "claude":
-        if not claude_ready():
-            raise LLMError("no ANTHROPIC_API_KEY on the server")
+    """Vendor's own API key if the server has one, else the server's Puter account."""
+    if vendor not in ("claude", "gpt"):
+        raise LLMError(f"unknown model vendor {vendor!r}")
+    if vendor == "claude" and claude_ready():
         return claude(system, prompt, kind)
-    if vendor == "gpt":
-        if not gpt_ready():
-            raise LLMError("no OPENAI_API_KEY on the server")
+    if vendor == "gpt" and gpt_ready():
         return gpt(system, prompt, kind)
-    raise LLMError(f"unknown model vendor {vendor!r}")
+    if puter.ready():
+        try:
+            return puter.chat(vendor, system, prompt, kind)
+        except puter.PuterError as e:
+            raise LLMError(str(e)) from None
+    raise LLMError(f"no {'ANTHROPIC_API_KEY' if vendor == 'claude' else 'OPENAI_API_KEY'} or PUTER_AUTH_TOKEN on the server")

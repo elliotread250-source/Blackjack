@@ -7,13 +7,16 @@ and so detector APIs that don't allow browser calls (CORS) still work.
 Routes:
   GET  /healthz       Railway health check
   GET  /api/config    which models/detectors the server has keys for
-  POST /api/llm       {vendor: "claude"|"gpt", system, prompt, kind}
+  POST /api/llm       {vendor: "claude"|"gpt", system, prompt, kind}  (vendor key or shared Puter account)
   POST /api/detect    {id, text, keys?}
 """
 
 import hmac
 import json
 import os
+import threading
+import time
+from collections import deque
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
@@ -22,6 +25,27 @@ import llm
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 MAX_BODY = 512 * 1024
+# Per-visitor cap on model and detector calls. A 5-round run makes about 15
+# model calls and 25 detector calls, so this allows several runs an hour while
+# stopping one visitor from draining a shared Puter allowance.
+RATE_PER_HOUR = int(os.environ.get("RATE_PER_HOUR", "200"))
+_hits = {}
+_hits_lock = threading.Lock()
+
+
+def _rate_limited(ip):
+    now = time.time()
+    with _hits_lock:
+        q = _hits.setdefault(ip, deque())
+        while q and now - q[0] > 3600:
+            q.popleft()
+        if len(q) >= RATE_PER_HOUR:
+            return True
+        q.append(now)
+        if len(_hits) > 5000:
+            for key in [k for k, v in _hits.items() if not v]:
+                del _hits[key]
+        return False
 MAX_TEXT = 30000
 # Only the page and its assets are public; the Python files and deploy config aren't.
 PUBLIC_EXT = {".html", ".js", ".css", ".svg", ".png", ".ico", ".webmanifest", ".txt"}
@@ -101,6 +125,11 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if not self._authorized():
             self._json(401, {"error": "wrong or missing app password"})
+            return
+        # Railway's proxy puts the visitor's address first in X-Forwarded-For.
+        ip = (self.headers.get("X-Forwarded-For") or self.client_address[0]).split(",")[0].strip()
+        if _rate_limited(ip):
+            self._json(429, {"error": f"slow down: this server allows {RATE_PER_HOUR} checks an hour per visitor"})
             return
         try:
             length = int(self.headers.get("Content-Length") or 0)

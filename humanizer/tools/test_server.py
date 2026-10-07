@@ -18,9 +18,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import detectors  # noqa: E402
 import llm  # noqa: E402
+import puter  # noqa: E402
 import server  # noqa: E402
 
-KEY_VARS = detectors.ALL_KEYS + ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "OPENAI_API_KEY", "APP_PASSWORD"]
+KEY_VARS = detectors.ALL_KEYS + ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "OPENAI_API_KEY", "APP_PASSWORD",
+                                 "PUTER_AUTH_TOKEN", "PUTER_CLAUDE_MODEL", "PUTER_GPT_MODEL"]
 
 
 class ServerTest(unittest.TestCase):
@@ -197,6 +199,98 @@ class LLMTest(unittest.TestCase):
         self.assertEqual(seen["body"]["reasoning_effort"], "low")
         self.assertNotIn("temperature", seen["body"])
         self.assertEqual(seen["headers"]["Authorization"], "Bearer k")
+
+
+# Model ids as Puter listed them on 2026-10-06 (from the live CI run).
+LIVE_IDS = ["claude-sonnet-5-5", "infron:anthropic/claude-sonnet-5.5", "openrouter:anthropic/claude-sonnet-5.5",
+            "openrouter:anthropic/claude-sonnet-5.5:batch", "claude-sonnet-5", "claude-opus-5-5",
+            "infron:openai/gpt-35-turbo", "gpt-6.1-sol", "infron:openai/gpt-6.1-sol", "infron:openai/gpt-6.1-sol:flex",
+            "openrouter:openai/gpt-6.1-sol-pro", "gpt-6-sol", "gpt-6-luna", "gpt-6.1-sol-mini"]
+
+
+class PuterTest(unittest.TestCase):
+    def setUp(self):
+        self.env = mock.patch.dict(os.environ, {"PUTER_AUTH_TOKEN": "tok", "PUTER_CLAUDE_MODEL": "", "PUTER_GPT_MODEL": "",
+                                                "ANTHROPIC_API_KEY": "", "ANTHROPIC_AUTH_TOKEN": "", "OPENAI_API_KEY": ""})
+        self.env.start()
+        puter._bad.clear()
+        puter._models.update(at=puter.time.time(), ids=LIVE_IDS)
+
+    def tearDown(self):
+        self.env.stop()
+        puter._models.update(at=0.0, ids=[])
+        puter._bad.clear()
+
+    def test_rank_matches_the_browser(self):
+        self.assertEqual(puter.rank_models(LIVE_IDS, "claude")[0], "claude-sonnet-5-5")
+        gpt = puter.rank_models(LIVE_IDS, "gpt")
+        self.assertEqual(gpt[0], "gpt-6.1-sol")
+        self.assertNotIn("infron:openai/gpt-35-turbo", gpt)
+        self.assertFalse(any(re_ in m for m in gpt for re_ in (":flex", "-pro", "mini")))
+
+    def test_request_shape_and_text(self):
+        seen = {}
+
+        def fake(url, body, headers=None, timeout=90):
+            seen.update(url=url, body=body, headers=headers)
+            return {"success": True, "result": {"message": {"role": "assistant", "content": [{"type": "text", "text": "Hi there."}]}}}
+
+        with mock.patch.object(puter, "post_json", fake):
+            self.assertEqual(llm.ask("claude", "sys", "prompt", "judge"), ("Hi there.", "claude-sonnet-5-5"))
+        self.assertEqual(seen["url"], "https://api.puter.com/drivers/call")
+        self.assertEqual(seen["headers"]["Content-Type"], "text/plain;actually=json")
+        body = seen["body"]
+        self.assertEqual((body["interface"], body["driver"], body["method"], body["auth_token"]),
+                         ("puter-chat-completion", "ai-chat", "complete", "tok"))
+        self.assertEqual(body["args"]["messages"][0], {"role": "system", "content": "sys"})
+        self.assertEqual(body["args"]["model"], "claude-sonnet-5-5")
+
+    def test_string_content_and_model_fallback(self):
+        calls = []
+
+        def fake(url, body, headers=None, timeout=90):
+            calls.append(body["args"]["model"])
+            if len(calls) == 1:
+                return {"success": False, "error": {"message": "Model not found", "code": "model_not_found"}}
+            return {"success": True, "result": {"message": {"content": "Plain string."}}}
+
+        with mock.patch.object(puter, "post_json", fake):
+            text, model = llm.ask("gpt", "s", "p", "rewrite")
+        self.assertEqual(text, "Plain string.")
+        self.assertEqual(calls[0], "gpt-6.1-sol")
+        self.assertNotEqual(model, "gpt-6.1-sol")
+
+    def test_errors_are_clear(self):
+        for status, body, needle in ((401, "Unauthorized", "PUTER_AUTH_TOKEN"), (402, "payment required", "free allowance")):
+            def boom(*a, **k):
+                raise puter.UpstreamError(f"api.puter.com returned {status}: {body}", status)
+
+            with mock.patch.object(puter, "post_json", boom), self.assertRaises(llm.LLMError) as cm:
+                llm.ask("claude", "s", "p", "judge")
+            self.assertIn(needle, str(cm.exception))
+        with mock.patch.object(puter, "post_json", return_value={"success": False, "error": {"message": "Insufficient funds"}}), \
+                self.assertRaises(llm.LLMError) as cm:
+            llm.ask("gpt", "s", "p", "judge")
+        self.assertIn("free allowance", str(cm.exception))
+
+    def test_describe_and_precedence(self):
+        d = llm.describe()
+        self.assertEqual((d["claude"]["via"], d["claude"]["model"]), ("puter", "claude-sonnet-5-5"))
+        self.assertEqual((d["gpt"]["via"], d["gpt"]["model"]), ("puter", "gpt-6.1-sol"))
+        with mock.patch.dict(os.environ, {"OPENAI_API_KEY": "k", "OPENAI_MODEL": "gpt-x"}):
+            self.assertEqual(llm.describe()["gpt"]["via"], "api")
+        with mock.patch.dict(os.environ, {"PUTER_AUTH_TOKEN": ""}):
+            self.assertFalse(llm.describe()["claude"]["ready"])
+
+
+class RateLimitTest(unittest.TestCase):
+    def test_per_visitor_cap(self):
+        server._hits.clear()
+        with mock.patch.object(server, "RATE_PER_HOUR", 3):
+            results = [server._rate_limited("1.2.3.4") for _ in range(4)]
+            self.assertEqual(results, [False, False, False, True])
+            self.assertFalse(server._rate_limited("5.6.7.8"))
+        server._hits.clear()
 
 
 if __name__ == "__main__":

@@ -56,7 +56,11 @@ try {
     { claude: models.pickClaude, gpt: models.pickGpt });
 
   // 3. ZeroGPT through the app's server (browsers can't call it directly: no CORS).
-  const hasServer = await page.evaluate(async () => (await fetch('api/config')).ok);
+  const cfg = await page.evaluate(async () => {
+    const r = await fetch('api/config').catch(() => null);
+    return r && r.ok ? r.json() : null;
+  });
+  const hasServer = !!cfg;
   if (hasServer) {
     const zg = await page.evaluate(async ({ ai, human }) => {
       const eng = await import('./js/engines.js');
@@ -95,8 +99,13 @@ try {
   // 5. Puter account. A real person signs in through Puter's window; CI uses
   // a token from a free Puter account (repository secret PUTER_AUTH_TOKEN).
   const token = process.env.PUTER_AUTH_TOKEN;
+  const serverModels = !!(cfg?.llm?.claude?.ready && cfg?.llm?.gpt?.ready);
   let auth = { signedIn: false };
-  if (token) {
+  if (serverModels) {
+    // The server answers for both models itself (its own Puter account or API keys): no sign-in at all.
+    auth = { signedIn: true, via: 'server' };
+    step('server handles Claude and ChatGPT, so visitors never sign in', true, cfg.llm);
+  } else if (token) {
     auth = await page.evaluate(async (t) => {
       window.puter.setAuthToken(t);
       const signedIn = window.puter.auth.isSignedIn();
@@ -125,15 +134,16 @@ try {
   if (auth.signedIn) {
     for (const vendor of ['claude', 'gpt']) {
       const t0 = Date.now();
-      const r = await page.evaluate(async (vendor) => {
+      const r = await page.evaluate(async ({ vendor, cfg }) => {
         const eng = await import('./js/engines.js');
-        const e = new eng.Engines({ server: null, prefs: { [vendor]: 'puter' }, puterModels: await eng.loadPuterModels() });
+        const e = new eng.Engines({ server: cfg, prefs: { [vendor]: cfg?.llm?.[vendor]?.ready ? 'server' : 'puter' }, puterModels: await eng.loadPuterModels() });
         try {
           return await e.ask(vendor, 'You answer in one short sentence.', 'In one sentence: what is a haiku?', 'judge');
         } catch (err) {
           return { error: err.message };
         }
-      }, vendor);
+      }, { vendor, cfg });
+      r.via = cfg?.llm?.[vendor]?.ready ? 'server' : 'browser';
       r.seconds = Math.round((Date.now() - t0) / 1000);
       step(`${vendor === 'claude' ? 'Claude' : 'ChatGPT'} answers through Puter`, !r.error && r.text?.length > 5, r);
     }
