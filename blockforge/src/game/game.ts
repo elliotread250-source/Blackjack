@@ -276,6 +276,8 @@ export class Game {
     if (this.state !== 'playing') return;
     this.state = 'paused';
     this.d.input.enabled = false;
+    // free the cursor so the menu can be clicked (Esc already does this, other pauses may not)
+    this.d.input.exitLock();
     this.setTouchActive(false);
     if (this.d.inventory.isOpen) this.d.inventory.close();
     this.menus?.showPause();

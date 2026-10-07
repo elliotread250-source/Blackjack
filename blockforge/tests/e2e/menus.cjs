@@ -194,6 +194,7 @@ async function tour(browser, tag, opts, full) {
     await page.waitForTimeout(1500);
     await page.screenshot({ path: path.join(outDir, 'c-world-default.png') });
     await page.evaluate(() => window.blockforge.game.pause());
+    await page.waitForTimeout(400);   // let the pause screen settle before clicking
     await btn(page, /^\s*Shaders: Off\s*$/).click();
     s = await S();
     check('pause menu cycles shaders Off -> Fancy', s.shaderPack === 'fancy' && s.shadows, s.shaderPack);
@@ -212,7 +213,9 @@ async function tour(browser, tag, opts, full) {
       await page.evaluate(() => { const bf = window.blockforge; bf.game.state = 'paused'; bf.menus.showPacks(); });
     }
     await page.screenshot({ path: path.join(outDir, 'c-packs-over-game.png') });
-    check('behaviour: no console errors', errors.length === 0, errors.slice(0, 4).join(' | '));
+    // (the released-sheet check fetches a revoked blob URL on purpose; Chrome logs that load)
+    const real = errors.filter((e) => !/ERR_FILE_NOT_FOUND/.test(e));
+    check('behaviour: no console errors', real.length === 0, real.slice(0, 4).join(' | '));
     await context.close();
   }
 
