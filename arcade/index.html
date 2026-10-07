@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0b10">
+<meta name="description" content="Every game Elliot has built, in one place. Free, in your browser, no installs.">
+<meta property="og:title" content="Elliot's Arcade">
+<meta property="og:description" content="Blackjack, Geometry Dash, Getting Over It, BlockForge, Apex GP, 2 Weeks and more. Free, in your browser.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Elliot's Arcade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0b10; --bg2: #11131b; --card: #14161f; --line: rgba(255,255,255,.08);
+    --ink: #f3f4f8; --muted: #9aa0b4; --dim: #6b7086; --accent: #8b7bff;
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; min-height: 100vh; color: var(--ink); background: var(--bg);
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  body::before {
+    content: ""; position: fixed; inset: -20vh -20vw auto; height: 90vh; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(40% 50% at 20% 30%, rgba(139,123,255,.20), transparent 70%),
+      radial-gradient(35% 45% at 80% 20%, rgba(255,120,80,.13), transparent 70%),
+      radial-gradient(30% 40% at 55% 60%, rgba(60,200,255,.10), transparent 70%);
+    filter: blur(10px);
+  }
+  .wrap { position: relative; z-index: 1; max-width: 1180px; margin: 0 auto; padding: 0 16px; }
+
+  header { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; }
+  .logo { display: flex; align-items: center; gap: 10px; font: 700 16px "Space Grotesk", sans-serif; letter-spacing: -.01em; color: var(--ink); text-decoration: none; }
+  .logo img { width: 30px; height: 30px; }
+  header nav a { color: var(--muted); text-decoration: none; font-size: 14px; margin-left: 20px; }
+  header nav a:hover { color: var(--ink); }
+
+  .hero { padding: clamp(36px, 8vw, 92px) 0 clamp(28px, 5vw, 52px); }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); border: 1px solid var(--line);
+    background: rgba(255,255,255,.03); padding: 6px 12px; border-radius: 999px; }
+  .eyebrow i { width: 7px; height: 7px; border-radius: 50%; background: #3ddc84; box-shadow: 0 0 10px #3ddc84; }
+  h1 { font: 700 clamp(44px, 9vw, 104px)/.95 "Space Grotesk", sans-serif; letter-spacing: -.045em; margin: 22px 0 18px; }
+  h1 span { background: linear-gradient(100deg, #b3a8ff 0%, #ff9a76 55%, #ffd36e 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .lede { max-width: 560px; color: var(--muted); font-size: clamp(16px, 2vw, 19px); line-height: 1.55; margin: 0; }
+
+  .bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 18px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { font: 500 14px Inter, sans-serif; color: var(--muted); background: transparent; border: 1px solid var(--line);
+    border-radius: 999px; padding: 8px 14px; cursor: pointer; transition: all .15s; }
+  .chip:hover { color: var(--ink); border-color: rgba(255,255,255,.2); }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .count { color: var(--dim); font-size: 14px; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; padding-bottom: 40px; }
+  @media (max-width: 380px) { .grid { grid-template-columns: 1fr; } }
+
+  .card { --c1: #333; --c2: #111; --glow: rgba(255,255,255,.2);
+    position: relative; display: flex; flex-direction: column; text-decoration: none; color: inherit; background: var(--card);
+    border: 1px solid var(--line); border-radius: 20px; overflow: hidden; transition: transform .25s cubic-bezier(.2,.8,.2,1), border-color .25s, box-shadow .25s; }
+  .card:hover, .card:focus-visible { transform: translateY(-4px); border-color: rgba(255,255,255,.18); box-shadow: 0 24px 60px -20px var(--glow); outline: none; }
+  .art { position: relative; aspect-ratio: 16 / 9; background: radial-gradient(120% 120% at 20% 0%, var(--c1), var(--c2)); overflow: hidden; }
+  .art svg { position: absolute; inset: 0; width: 100%; height: 100%; transition: transform .5s cubic-bezier(.2,.8,.2,1); }
+  .card:hover .art svg { transform: scale(1.05); }
+  .art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 55%, rgba(20,22,31,.85)); }
+  .badge { position: absolute; z-index: 2; top: 12px; left: 12px; font: 600 11px Inter, sans-serif; letter-spacing: .06em; text-transform: uppercase;
+    color: #fff; background: rgba(0,0,0,.38); backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,.14); padding: 5px 9px; border-radius: 999px; }
+  .status { position: absolute; z-index: 2; top: 12px; right: 12px; display: flex; align-items: center; gap: 6px; font-size: 11px; color: rgba(255,255,255,.85);
+    background: rgba(0,0,0,.38); backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,.14); padding: 5px 9px; border-radius: 999px; }
+  .status i { width: 6px; height: 6px; border-radius: 50%; background: #9aa0b4; }
+  .status.up i { background: #3ddc84; box-shadow: 0 0 8px #3ddc84; }
+  .status.down i { background: #ffb547; }
+  .body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+  .title { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .title h2 { font: 600 21px "Space Grotesk", sans-serif; letter-spacing: -.02em; margin: 0; }
+  .go { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; border: 1px solid var(--line); color: var(--muted); transition: all .2s; }
+  .card:hover .go { background: var(--ink); color: var(--bg); border-color: var(--ink); transform: rotate(-45deg); }
+  .body p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.5; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 6px; }
+  .tags span { font-size: 12px; color: var(--dim); border: 1px solid var(--line); padding: 3px 8px; border-radius: 6px; }
+
+  footer { border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--dim); font-size: 13px; display: flex; flex-wrap: wrap; gap: 10px 22px; justify-content: space-between; }
+  footer a { color: var(--muted); text-decoration: none; }
+  footer a:hover { color: var(--ink); }
+  [hidden] { display: none !important; }
+  @media (prefers-reduced-motion: reduce) { .card, .art svg, .go { transition: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="logo" href="/"><img src="icon.svg" alt="">Elliot's Arcade</a>
+    <nav><a href="https://github.com/elliotread250-source" rel="noopener">GitHub</a></nav>
+  </header>
+
+  <section class="hero">
+    <span class="eyebrow"><i></i> Everything's free and runs in your browser</span>
+    <h1>Elliot's <span>Arcade.</span></h1>
+    <p class="lede">Every game I've built, in one place. Card tables, rage climbers, a block world, an F1 grid and a battle royale. Pick one and you're playing in a second.</p>
+  </section>
+
+  <div class="bar">
+    <div class="chips" role="group" aria-label="Filter">
+      <button class="chip" data-f="all" aria-pressed="true">All</button>
+      <button class="chip" data-f="game" aria-pressed="false">Games</button>
+      <button class="chip" data-f="tool" aria-pressed="false">Tools</button>
+    </div>
+    <span class="count" id="count"></span>
+  </div>
+
+  <main class="grid" id="grid"></main>
+
+  <footer>
+    <span>Hosted on Railway. Built with Claude Code.</span>
+    <span><a href="https://github.com/elliotread250-source/Blackjack" rel="noopener">Source on GitHub</a></span>
+  </footer>
+</div>
+
+<script>
+// One entry per thing on the shelf. `ping` false skips the online check (non-web downloads).
+const ITEMS = [
+  { name: 'Blackjack', kind: 'game', url: 'https://blackjack-production-0312.up.railway.app',
+    blurb: 'A six-deck table with play-money chips. Blackjack pays 3:2, dealer stands on soft 17, split up to four hands.',
+    tags: ['Cards', 'Casino', 'Keyboard shortcuts'], c1: '#1a7a52', c2: '#062018', glow: 'rgba(40,200,120,.35)', art: 'blackjack' },
+  { name: 'Geometry Dash Replica', kind: 'game', url: 'https://game-production-8782.up.railway.app',
+    blurb: 'Jump, fly and flip to the beat. Practice modes, a shop, a level editor and an online leaderboard.',
+    tags: ['Rhythm', 'Platformer', 'Online levels'], c1: '#2f5bff', c2: '#0a0f2c', glow: 'rgba(80,120,255,.4)', art: 'gd' },
+  { name: 'Getting Over It', kind: 'game', url: 'https://getting-over-it-production.up.railway.app',
+    blurb: 'A man in a pot, a sledgehammer and a 100 metre mountain. No checkpoints. Falling is part of the deal.',
+    tags: ['Rage climber', 'Physics', 'Mouse or touch'], c1: '#e2895a', c2: '#2a2440', glow: 'rgba(255,150,90,.35)', art: 'goi' },
+  { name: 'BlockForge', kind: 'game', url: 'https://blockforge-web-production.up.railway.app',
+    blurb: 'An endless voxel world to mine and build in, with day and night, water, caves, shaders and touch controls.',
+    tags: ['Sandbox', '3D', 'Survival'], c1: '#5fae4a', c2: '#14301c', glow: 'rgba(110,200,90,.35)', art: 'blockforge' },
+  { name: 'Apex GP', kind: 'game', url: 'https://apex-gp-production.up.railway.app',
+    blurb: 'First-person Formula racing. Ten teams, three circuits, DRS and ERS, pit stops, and multiplayer with friends.',
+    tags: ['Racing', 'F1', 'Multiplayer'], c1: '#e8313a', c2: '#1a0a0e', glow: 'rgba(240,60,60,.35)', art: 'apex' },
+  { name: '2 Weeks', kind: 'game', url: 'https://two-weeks-production.up.railway.app',
+    blurb: 'Build-and-shoot battle royale on an island. Drop from the bus, farm, build, loot and outlast 24 bots and the storm.',
+    tags: ['Battle royale', 'Building', 'Third person'], c1: '#3cc3ff', c2: '#0b2a4a', glow: 'rgba(60,190,255,.35)', art: 'twoweeks' },
+  { name: 'The Humanizer', kind: 'tool', url: 'https://humanizer-production-e796.up.railway.app',
+    blurb: 'Paste AI-written text, get back something that reads like a person wrote it. Checks itself against AI detectors.',
+    tags: ['Writing', 'AI', 'No sign-in'], c1: '#8b7bff', c2: '#16112e', glow: 'rgba(140,120,255,.4)', art: 'humanizer' },
+  { name: 'Master Client', kind: 'tool', url: 'https://github.com/elliotread250-source/Blackjack/tree/claude/great-tesla-luw1c8/master-client', ping: false,
+    blurb: 'A launcher for Minecraft Bedrock on Windows: HUD editor, overlay, keystrokes and FPS. Source and build steps on GitHub.',
+    tags: ['Windows app', 'Minecraft', 'Source'], c1: '#4a5568', c2: '#12151c', glow: 'rgba(160,170,190,.3)', art: 'master' },
+];
+
+const ART = {
+  blackjack: `<svg viewBox="0 0 320 180"><g transform="translate(118 30) rotate(-10)"><rect width="78" height="110" rx="9" fill="#fbf8f2"/><text x="12" y="30" font-size="24" font-weight="700" fill="#17191c" font-family="Georgia">A</text><text x="39" y="72" font-size="40" text-anchor="middle" fill="#17191c">&#9824;</text></g><g transform="translate(150 36) rotate(9)"><rect width="78" height="110" rx="9" fill="#fbf8f2"/><text x="12" y="30" font-size="24" font-weight="700" fill="#c0202c" font-family="Georgia">K</text><text x="39" y="72" font-size="40" text-anchor="middle" fill="#c0202c">&#9829;</text></g><g fill="none" stroke-width="6"><circle cx="70" cy="132" r="20" fill="#c0202c" stroke="#fff" stroke-dasharray="6 6"/><circle cx="262" cy="128" r="20" fill="#e7c565" stroke="#fff" stroke-dasharray="6 6"/></g></svg>`,
+  gd: `<svg viewBox="0 0 320 180"><rect y="138" width="320" height="42" fill="#0a1a6a"/><rect y="136" width="320" height="3" fill="#7dff3a"/><g transform="translate(92 92) rotate(18 22 22)"><rect width="44" height="44" rx="4" fill="#ffd21f" stroke="#000" stroke-width="3"/><rect x="9" y="10" width="10" height="10" fill="#3af0ff" stroke="#000" stroke-width="2"/><rect x="25" y="10" width="10" height="10" fill="#3af0ff" stroke="#000" stroke-width="2"/><rect x="10" y="27" width="24" height="7" fill="#000"/></g><path d="M190 136 L210 104 L230 136Z M232 136 L252 104 L272 136Z" fill="#000" stroke="#fff" stroke-width="2.5"/><g fill="#7dff3a" opacity=".5"><rect x="40" y="128" width="12" height="4"/><rect x="62" y="120" width="10" height="4"/></g></svg>`,
+  goi: `<svg viewBox="0 0 320 180"><path d="M0 180 L0 120 L70 96 L110 112 L170 50 L210 78 L250 40 L320 92 L320 180Z" fill="#3a3f52"/><path d="M250 40 L238 58 L262 58Z" fill="#fff"/><path d="M0 180 L0 148 L120 140 L200 150 L320 136 L320 180Z" fill="#2a2d3c"/><circle cx="150" cy="128" r="17" fill="#1d1c1b"/><rect x="129" y="116" width="42" height="6" rx="3" fill="#33312e"/><circle cx="150" cy="100" r="8" fill="#c99b74"/><ellipse cx="150" cy="113" rx="8" ry="9" fill="#c99b74"/><path d="M156 112 L200 82" stroke="#7a5532" stroke-width="4" stroke-linecap="round"/><rect x="194" y="70" width="14" height="22" rx="2" fill="#3b3f46" transform="rotate(-34 201 81)"/></svg>`,
+  blockforge: `<svg viewBox="0 0 320 180"><g transform="translate(160 96)"><path d="M0 -60 L52 -30 L0 0 L-52 -30Z" fill="#6fbf4a"/><path d="M-52 -30 L0 0 L0 60 L-52 30Z" fill="#7a5532"/><path d="M52 -30 L0 0 L0 60 L52 30Z" fill="#5e4329"/><path d="M-52 -30 L0 0 L0 12 L-52 -18Z" fill="#5ba33a"/><path d="M52 -30 L0 0 L0 12 L52 -18Z" fill="#4c8f2f"/></g><g transform="translate(70 128) scale(.45)"><path d="M0 -60 L52 -30 L0 0 L-52 -30Z" fill="#9aa3ad"/><path d="M-52 -30 L0 0 L0 60 L-52 30Z" fill="#7d858f"/><path d="M52 -30 L0 0 L0 60 L52 30Z" fill="#646b74"/></g><g transform="translate(252 122) scale(.5)"><path d="M0 -60 L52 -30 L0 0 L-52 -30Z" fill="#e8d28a"/><path d="M-52 -30 L0 0 L0 60 L-52 30Z" fill="#cdb46b"/><path d="M52 -30 L0 0 L0 60 L52 30Z" fill="#b39b55"/></g></svg>`,
+  apex: `<svg viewBox="0 0 320 180"><path d="M-10 180 C60 120 140 110 330 120 L330 180Z" fill="#20232b"/><path d="M-10 180 C60 120 140 110 330 120" stroke="#fff" stroke-width="3" stroke-dasharray="14 10" fill="none" opacity=".5"/><g transform="translate(70 92)"><path d="M10 34 L40 22 L120 18 L170 26 L178 34 L10 40Z" fill="#e8313a"/><path d="M60 18 Q84 4 104 18Z" fill="#111"/><rect x="0" y="30" width="22" height="6" fill="#111"/><rect x="164" y="16" width="12" height="20" fill="#111"/><circle cx="40" cy="42" r="14" fill="#111"/><circle cx="40" cy="42" r="6" fill="#444"/><circle cx="140" cy="42" r="14" fill="#111"/><circle cx="140" cy="42" r="6" fill="#444"/><path d="M76 14 L96 14" stroke="#ffd21f" stroke-width="3"/></g><g fill="#fff" opacity=".7"><rect x="20" y="70" width="40" height="2"/><rect x="8" y="84" width="54" height="2"/><rect x="26" y="98" width="36" height="2"/></g></svg>`,
+  twoweeks: `<svg viewBox="0 0 320 180"><ellipse cx="160" cy="150" rx="150" ry="34" fill="#e8d28a"/><ellipse cx="160" cy="146" rx="128" ry="26" fill="#5fbf4a"/><rect x="118" y="104" width="34" height="34" fill="#c98a4a"/><path d="M114 106 L135 88 L156 106Z" fill="#d94a3a"/><rect x="176" y="96" width="30" height="42" fill="#9aa3ad"/><g transform="translate(218 34)"><path d="M0 20 Q30 -6 60 20Z" fill="#3cc3ff"/><path d="M14 18 L30 44 L46 18" stroke="#fff" stroke-width="1.5" fill="none"/><rect x="25" y="42" width="10" height="12" rx="3" fill="#ffd21f"/></g><g transform="translate(60 26)"><rect width="66" height="26" rx="7" fill="#3c6dff"/><rect x="6" y="6" width="10" height="8" fill="#bfe6ff"/><rect x="20" y="6" width="10" height="8" fill="#bfe6ff"/><rect x="34" y="6" width="10" height="8" fill="#bfe6ff"/><path d="M14 -6 Q40 -18 60 -4" stroke="#bfe6ff" stroke-width="3" fill="none"/></g></svg>`,
+  humanizer: `<svg viewBox="0 0 320 180"><g font-family="Space Grotesk, sans-serif" font-weight="600"><rect x="40" y="52" width="104" height="76" rx="12" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.25)"/><g fill="#8f86c9"><rect x="54" y="68" width="76" height="6" rx="3"/><rect x="54" y="82" width="62" height="6" rx="3"/><rect x="54" y="96" width="70" height="6" rx="3"/><rect x="54" y="110" width="44" height="6" rx="3"/></g><path d="M156 90 L184 90 M176 80 L188 90 L176 100" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="198" y="52" width="104" height="76" rx="12" fill="#fff"/><g fill="#2a2440"><rect x="212" y="68" width="66" height="6" rx="3"/><rect x="212" y="82" width="78" height="6" rx="3"/><rect x="212" y="96" width="50" height="6" rx="3"/><rect x="212" y="110" width="70" height="6" rx="3"/></g></g></svg>`,
+  master: `<svg viewBox="0 0 320 180"><rect x="70" y="34" width="180" height="112" rx="10" fill="#1c212b" stroke="rgba(255,255,255,.18)"/><rect x="70" y="34" width="180" height="20" rx="10" fill="#262c38"/><circle cx="84" cy="44" r="4" fill="#ff5f57"/><circle cx="98" cy="44" r="4" fill="#febc2e"/><circle cx="112" cy="44" r="4" fill="#28c840"/><rect x="88" y="70" width="64" height="58" rx="6" fill="#5fae4a"/><rect x="88" y="70" width="64" height="14" rx="6" fill="#6fbf4a"/><rect x="166" y="70" width="66" height="12" rx="4" fill="#3d4656"/><rect x="166" y="90" width="50" height="12" rx="4" fill="#3d4656"/><rect x="166" y="112" width="66" height="16" rx="5" fill="#3ddc84"/></svg>`,
+};
+
+const grid = document.getElementById('grid');
+const arrow = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+for (const it of ITEMS) {
+  const a = document.createElement('a');
+  a.className = 'card'; a.href = it.url; a.dataset.kind = it.kind;
+  if (it.ping === false) { a.target = '_blank'; a.rel = 'noopener'; }
+  a.style.setProperty('--c1', it.c1); a.style.setProperty('--c2', it.c2); a.style.setProperty('--glow', it.glow);
+  a.innerHTML = `
+    <div class="art">${ART[it.art]}
+      <span class="badge">${it.kind === 'tool' ? 'Tool' : 'Game'}</span>
+      ${it.ping === false ? '<span class="status"><i></i>GitHub</span>' : '<span class="status"><i></i>Checking</span>'}
+    </div>
+    <div class="body">
+      <div class="title"><h2>${esc(it.name)}</h2><span class="go">${arrow}</span></div>
+      <p>${esc(it.blurb)}</p>
+      <div class="tags">${it.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>
+    </div>`;
+  a.setAttribute('aria-label', `${it.name}: ${it.blurb}`);
+  grid.appendChild(a);
+  if (it.ping !== false) ping(it.url, a.querySelector('.status'));
+}
+
+// An opaque no-cors request still tells us the server answered. Some games
+// sleep when idle, so this also wakes them up before you click.
+function ping(url, el) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 12000);
+  fetch(url + '/', { mode: 'no-cors', cache: 'no-store', signal: ctl.signal })
+    .then(() => { el.classList.add('up'); el.lastChild.textContent = 'Online'; })
+    .catch(() => { el.classList.add('down'); el.lastChild.textContent = 'Waking up'; })
+    .finally(() => clearTimeout(t));
+}
+
+const chips = document.querySelectorAll('.chip');
+function filter(f) {
+  let n = 0;
+  for (const c of grid.children) { const show = f === 'all' || c.dataset.kind === f; c.hidden = !show; n += show; }
+  for (const c of chips) c.setAttribute('aria-pressed', String(c.dataset.f === f));
+  document.getElementById('count').textContent = `${n} ${n === 1 ? 'thing' : 'things'} to play with`;
+  try { localStorage.setItem('arcade.filter', f); } catch {}
+}
+chips.forEach(c => c.addEventListener('click', () => filter(c.dataset.f)));
+let saved = 'all'; try { saved = localStorage.getItem('arcade.filter') || 'all'; } catch {}
+filter(saved);
+</script>
+</body>
+</html>

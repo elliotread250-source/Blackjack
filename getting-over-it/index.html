@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1b2233">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Getting Over It</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;1,9..144,400&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --ink:#f4efe4; --muted:#b9b2a4; --gold:#e8b04a; --panel:rgba(14,16,24,.86); }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { margin:0; height:100%; overflow:hidden; background:#1b2233; color:var(--ink);
+    font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  canvas { display:block; width:100vw; height:100vh; height:100dvh; touch-action:none; cursor:none; }
+  #hud { position:fixed; top:0; left:0; right:0; display:flex; justify-content:space-between; align-items:flex-start;
+    padding:max(12px, env(safe-area-inset-top)) 16px 0; pointer-events:none; font-variant-numeric:tabular-nums; }
+  #hud .alt { font-family:Fraunces, Georgia, serif; font-size:30px; line-height:1; text-shadow:0 2px 8px rgba(0,0,0,.5); }
+  #hud .alt small { font-size:13px; color:var(--muted); font-family:Inter, sans-serif; margin-left:4px; }
+  #hud .sub { font-size:12px; color:var(--muted); margin-top:4px; letter-spacing:.04em; text-shadow:0 1px 4px rgba(0,0,0,.6); }
+  #hud .right { text-align:right; }
+  #hud button { pointer-events:auto; background:rgba(0,0,0,.35); color:var(--ink); border:1px solid rgba(255,255,255,.18);
+    border-radius:10px; padding:7px 12px; font:600 13px Inter, sans-serif; cursor:pointer; }
+  #title { position:fixed; left:0; right:0; top:18%; text-align:center; pointer-events:none; opacity:0;
+    transition:opacity .9s; font-family:Fraunces, Georgia, serif; font-size:clamp(26px, 5vw, 46px);
+    text-shadow:0 3px 16px rgba(0,0,0,.55); }
+  #quote { position:fixed; left:50%; bottom:max(28px, env(safe-area-inset-bottom)); transform:translateX(-50%);
+    width:min(640px, calc(100% - 32px)); text-align:center; pointer-events:none; opacity:0; transition:opacity .8s;
+    font-family:Fraunces, Georgia, serif; font-style:italic; font-size:clamp(16px, 2.4vw, 21px); line-height:1.4;
+    text-shadow:0 2px 10px rgba(0,0,0,.8); }
+  .show { opacity:1 !important; }
+  #menu { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; padding:16px;
+    background:radial-gradient(120% 90% at 50% 20%, rgba(20,24,38,.55), rgba(6,8,14,.88)); }
+  #menu.hidden { display:none; }
+  .card { width:min(440px, 100%); background:var(--panel); border:1px solid rgba(255,255,255,.1); border-radius:18px;
+    padding:28px 24px 22px; box-shadow:0 30px 80px rgba(0,0,0,.5); backdrop-filter:blur(8px); }
+  .card h1 { font-family:Fraunces, Georgia, serif; font-weight:600; font-size:40px; margin:0; line-height:1.05; }
+  .card .tag { color:var(--gold); font-family:Fraunces, Georgia, serif; font-style:italic; margin:6px 0 18px; }
+  .card p { color:var(--muted); font-size:14px; line-height:1.55; margin:0 0 18px; }
+  .card .btn { display:block; width:100%; padding:13px 16px; margin:0 0 10px; border-radius:12px; border:0; cursor:pointer;
+    font:600 15px Inter, sans-serif; background:var(--gold); color:#1b1408; }
+  .card .btn.ghost { background:rgba(255,255,255,.07); color:var(--ink); border:1px solid rgba(255,255,255,.14); }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:12px; font-size:13px; color:var(--muted); margin:14px 0 0; }
+  .row input[type=range] { flex:1; accent-color:var(--gold); }
+  .stats { display:flex; gap:10px; margin:0 0 18px; }
+  .stats div { flex:1; background:rgba(255,255,255,.05); border-radius:10px; padding:8px 10px; }
+  .stats span { display:block; font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); }
+  .stats b { font-size:17px; font-variant-numeric:tabular-nums; }
+  .back { display:inline-block; margin-top:16px; color:var(--muted); font-size:13px; text-decoration:none; }
+  .back:hover { color:var(--ink); }
+  .fine { font-size:11px; color:#7d776b; margin-top:10px; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud">
+  <div>
+    <div class="alt"><span id="alt">0</span><small>m</small></div>
+    <div class="sub" id="sub">best 0 m</div>
+  </div>
+  <div class="right">
+    <button id="pauseBtn" type="button">Menu</button>
+    <div class="sub" id="clock">0:00</div>
+  </div>
+</div>
+<div id="title"></div>
+<div id="quote"></div>
+
+<div id="menu">
+  <div class="card">
+    <h1>Getting Over It</h1>
+    <div class="tag">a pot, a hammer and a mountain</div>
+    <p id="how">Move the mouse to swing the hammer. On a phone, drag anywhere. Hook it on things and pull yourself up. There's no jump, no checkpoint and nobody watching. The summit is about 100 metres up.</p>
+    <div class="stats" id="stats" hidden>
+      <div><span>Height</span><b id="sHeight">0 m</b></div>
+      <div><span>Best</span><b id="sBest">0 m</b></div>
+      <div><span>Time</span><b id="sTime">0:00</b></div>
+    </div>
+    <button class="btn" id="playBtn" type="button">Start climbing</button>
+    <button class="btn ghost" id="newBtn" type="button" hidden>Start over from the bottom</button>
+    <div class="row"><span>Sensitivity</span><input id="sens" type="range" min="0.4" max="2.2" step="0.05" value="1"></div>
+    <div class="row"><span>Sound</span><input id="snd" type="checkbox" checked></div>
+    <a class="back" href="https://elliots-arcade.up.railway.app">&larr; All games</a>
+    <div class="fine">Fan-made tribute. Progress saves in this browser.</div>
+  </div>
+</div>
+<script src="game.js"></script>
+</body>
+</html>
