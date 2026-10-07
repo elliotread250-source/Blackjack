@@ -1,6 +1,6 @@
 # Flappy Bird Replica
 
-**Play it: https://elliotread250-source.github.io/Blackjack/flappy-bird/**
+**Play it: https://game-production-2b7d2.up.railway.app** (GitHub Pages copy: https://elliotread250-source.github.io/Blackjack/flappy-bird/)
 
 A pixel-faithful remake of the 2013 original. It runs at the original
 288x512 resolution with the same 2x2 art pixels and scales up crisp to

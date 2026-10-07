@@ -1,6 +1,6 @@
 # Bloons TD 6 Replica
 
-**Play it: https://elliotread250-source.github.io/Blackjack/bloons-td-6/**
+**Play it: https://game-production-6f5d.up.railway.app** (GitHub Pages copy: https://elliotread250-source.github.io/Blackjack/bloons-td-6/)
 
 A browser tower defence built to play like Bloons TD 6. Plain JavaScript and
 canvas, no build step, no assets to download: every monkey, bloon, map and
