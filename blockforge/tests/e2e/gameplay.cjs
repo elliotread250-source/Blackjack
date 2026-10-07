@@ -166,7 +166,13 @@ function check(name, ok, detail = '') {
 
   // Double-tap space toggles flying.
   await frames(20);
-  await page.keyboard.press('Space'); await page.waitForTimeout(250); await page.keyboard.press('Space');
+  // Both taps are sent from inside the page two frames apart: Playwright round trips under
+  // software rendering can stretch a scripted 250 ms gap past the 0.35 s double-tap window.
+  await page.evaluate(async () => {
+    const raf = () => new Promise((r) => requestAnimationFrame(r));
+    const tap = async () => { window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space' })); await raf(); window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space' })); };
+    await tap(); await raf(); await tap();
+  });
   await frames(6);
   check('double-tap Space toggles flying', await page.evaluate(() => window.blockforge.game.player.flying));
 

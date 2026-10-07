@@ -3,7 +3,7 @@
 export type Preset = 'low' | 'medium' | 'high' | 'custom';
 export type ControlScheme = 'keyboard' | 'touch';
 export type ShaderPack = 'off' | 'fancy' | 'ultra';
-export type ResourcePackId = 'default' | 'smooth' | 'retro' | 'vivid' | 'pastel';
+export type ResourcePackId = 'default' | 'smooth' | 'retro' | 'vivid' | 'pastel' | 'custom';
 
 export interface Settings {
   controls: ControlScheme;  // 'keyboard' = keyboard + mouse (default), 'touch' = on-screen touch controls
@@ -32,6 +32,7 @@ export interface Settings {
   volume: number;           // 0..1
   showFps: boolean;
   maxFps: number;           // 0 = unlimited (vsync)
+  keybinds: Partial<Record<string, string>>; // action -> key/mouse code, only where it differs from the default
 }
 
 export const PRESETS: Record<Exclude<Preset, 'custom'>, Partial<Settings>> = {
@@ -66,6 +67,7 @@ export const DEFAULT_SETTINGS: Settings = {
   volume: 0.6,
   showFps: false,
   maxFps: 0,
+  keybinds: {},
 };
 
 const KEY = 'blockforge.settings.v1';
@@ -83,19 +85,21 @@ export function loadSettings(): Settings {
     if (raw) {
       const saved = JSON.parse(raw) as Partial<Settings>;
       const s = { ...DEFAULT_SETTINGS, ...saved };
+      s.keybinds = { ...(saved.keybinds && typeof saved.keybinds === 'object' ? saved.keybinds : {}) };
       // Settings saved before shader packs existed: map the old toggles onto a pack.
       // Saved shadows/waving are kept as they are (the menus sync them when the pack changes).
       if (!saved.shaderPack) s.shaderPack = saved.shadows ? 'fancy' : saved.waving ? 'fancy' : 'off';
       return s;
     }
   } catch { /* storage blocked: use defaults */ }
-  return syncShaderFlags({ ...DEFAULT_SETTINGS });
+  return syncShaderFlags({ ...DEFAULT_SETTINGS, keybinds: {} });
 }
 
 /** Reset every option to its default, in place (the same object is shared by the whole game). */
 export function restoreDefaults(s: Settings): Settings {
   for (const k of Object.keys(s) as (keyof Settings)[]) delete (s as unknown as Record<string, unknown>)[k];
   Object.assign(s, DEFAULT_SETTINGS);
+  s.keybinds = {};
   return syncShaderFlags(s);
 }
 

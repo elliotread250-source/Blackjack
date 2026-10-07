@@ -1,20 +1,23 @@
 // Boot: textures -> atlas -> icons -> font -> renderer -> UI -> title screen -> frame loop.
 import { loadSettings, saveSettings, applyPreset } from './settings';
 import type { Settings } from './settings';
-import { injectStyles } from './ui/style';
+import { injectStyles, setUiPack } from './ui/style';
 import { loadPixelFont } from './ui/font';
-import { buildIcons } from './ui/icons';
+import { buildIcons, rebuildIcons } from './ui/icons';
 import { Menus } from './ui/screens';
 import type { MenuHandlers } from './ui/screens';
 import { Hud } from './ui/hud';
 import { InventoryScreen } from './ui/inventory';
 import { TouchControls } from './ui/touch';
-import { buildAtlas } from './render/atlas';
+import { buildAtlas, rebuildAtlas } from './render/atlas';
+import { isResourcePack, setCustomPack } from './blocks/packs';
+import { loadCustomPack } from './blocks/importer';
 import { Renderer } from './render/renderer';
 import { Input } from './game/input';
 import { Sounds } from './game/audio';
 import { Hotbar, DEFAULT_HOTBAR } from './game/hotbar';
 import { Game } from './game/game';
+import { useKeybindSettings } from './game/keybinds';
 import { storage } from './world/storage';
 import { BLOCKS, ID } from './blocks/registry';
 import type { WorldMeta } from './types';
@@ -70,12 +73,23 @@ function newWorldId(): string {
 
 async function boot() {
   const settings: Settings = loadSettings();
+  useKeybindSettings(settings);
+  if (!isResourcePack(settings.resourcePack)) settings.resourcePack = 'default';
   injectStyles(settings.guiScale);
+  setUiPack(settings.resourcePack);
   bootText('Painting textures…');
   await nextFrame();
 
   const fontReady = loadPixelFont().catch(() => undefined);
-  const atlas = buildAtlas(settings.mipmaps);
+  // A pack the player imported earlier lives in this browser's IndexedDB and is switched on
+  // again at every start. A slow disk never drops it: after a few seconds the game starts with
+  // the built-in look and swaps the imported textures in as soon as they arrive.
+  const customLoad = loadCustomPack();
+  const imported = await Promise.race([customLoad, sleep(6000).then(() => undefined)]);
+  const customLate = imported === undefined && settings.resourcePack === 'custom';
+  if (imported) setCustomPack(imported);
+  else if (imported === null && settings.resourcePack === 'custom') settings.resourcePack = 'default';
+  const atlas = buildAtlas(settings.mipmaps, customLate ? 'default' : settings.resourcePack);
   bootText('Carving block icons…');
   await nextFrame();
   const icons = buildIcons(atlas);
@@ -157,17 +171,44 @@ async function boot() {
     resume: () => game.resume(),
     saveAndQuit: () => game.saveAndQuit(),
     settingsChanged(s: Settings) {
+      if (!isResourcePack(s.resourcePack)) s.resourcePack = 'default';
       saveSettings(s);
       injectStyles(s.guiScale);
+      if (atlas.pack !== s.resourcePack) applyResourcePack(s.resourcePack);
       game.applySettings(s);
     },
     getTimeMode: () => game.timeMode,
     setTimeMode: (m) => game.setTimeMode(m),
     offlineDownloadUrl: /^https?:$/.test(location.protocol) ? 'download' : null,
     version: VERSION,
+    reapplyResourcePack: () => applyResourcePack(settings.resourcePack),
   };
+  /** Redraw the atlas (in place: materials, hand and particles follow), the icons and the menu art. */
+  function applyResourcePack(pack: Settings['resourcePack']) {
+    const t0 = performance.now();
+    try {
+      rebuildAtlas(atlas, pack);
+      rebuildIcons(icons, atlas);
+      setUiPack(pack);
+    } catch (e) {
+      console.warn('[packs] could not apply resource pack', pack, e);
+    }
+    console.info(`[packs] ${pack} applied in ${Math.round(performance.now() - t0)} ms`);
+  }
+
   const menus = new Menus(uiRoot, handlers, settings);
   game.menus = menus;
+  if (customLate) {
+    void customLoad.then((p) => {
+      if (p) {
+        setCustomPack(p);
+        if (settings.resourcePack === 'custom') applyResourcePack('custom');
+      } else if (settings.resourcePack === 'custom') {
+        settings.resourcePack = 'default';
+        handlers.settingsChanged(settings);
+      }
+    });
+  }
 
   // Click on the game view to grab the mouse again.
   canvas.addEventListener('mousedown', () => {
@@ -175,16 +216,20 @@ async function boot() {
   });
   window.addEventListener('resize', () => renderer.resize());
   // Closing the tab mid-game (Ctrl+W is next to the sprint key) asks first, and we save.
+  // Every way a page goes away gets a synchronous emergency save first (see storage.ts),
+  // then small IndexedDB writes that usually finish before the tab is gone.
   window.addEventListener('beforeunload', (e) => {
     if (game.state === 'playing' || game.state === 'paused') {
-      void game.saveAll();
+      void game.flushOnExit();
       e.preventDefault();
       e.returnValue = '';
     }
   });
+  window.addEventListener('pagehide', () => { void game.flushOnExit(); });
+  document.addEventListener('freeze', () => { void game.flushOnExit(); });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && (game.state === 'playing' || game.state === 'paused')) {
-      void game.saveAll();
+      void game.flushOnExit();
       if (game.state === 'playing') game.pause();
     }
   });
@@ -205,7 +250,7 @@ async function boot() {
 
   // Handle for the e2e tests and for curious players poking at the console.
   (window as unknown as { blockforge: unknown }).blockforge = {
-    game, renderer, settings, storage, handlers, hud, inventory, menus, hotbar, touch, input, ID, BLOCKS,
+    game, renderer, settings, storage, handlers, hud, inventory, menus, hotbar, touch, input, ID, BLOCKS, atlas, icons,
     applyPreset(p: 'low' | 'medium' | 'high') { applyPreset(settings, p); handlers.settingsChanged(settings); },
     debug: {
       /** Enter play state without pointer lock (headless tests). */

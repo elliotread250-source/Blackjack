@@ -19,6 +19,7 @@ import type { Hud } from '../ui/hud';
 import type { Menus } from '../ui/screens';
 import type { InventoryScreen } from '../ui/inventory';
 import type { TouchControls } from '../ui/touch';
+import { matches, HOTBAR_ACTIONS } from './keybinds';
 import type { Settings } from '../settings';
 import { DAY_LENGTH, xzIndex, SEA_LEVEL } from '../world/constants';
 import type { RayHit, TimeMode, WorldMeta } from '../types';
@@ -27,6 +28,10 @@ const SOUND: SoundName[] = BLOCKS.map((b) => b.sound ?? 'stone');
 const FIXED_TIME: Record<Exclude<TimeMode, 'cycle'>, number> = { sunrise: 0.02, noon: 0.25, sunset: 0.48, midnight: 0.75 };
 const FACING = ['north', 'east', 'south', 'west'];
 const FACING_AXIS = ['Towards negative Z', 'Towards positive X', 'Towards positive Z', 'Towards negative X'];
+/** Seconds between world record saves (player, hotbar, time) while playing. */
+const META_SAVE_EVERY = 5;
+/** Seconds between synchronous session snapshots (survive a tab closing at any moment). */
+const SESSION_EVERY = 1;
 
 export interface GameDeps {
   renderer: Renderer;
@@ -56,7 +61,8 @@ export class Game {
   private last = 0;
   private hit: RayHit | null = null;
   private hudHidden = false;
-  private autosaveAt = 0;
+  private autosaveAt = 0;   // performance.now() of the next world record save
+  private sessionAt = 0;    // performance.now() of the next session snapshot
   private stepDist = 0;
   private wasInWater = false;
   private fps = { frames: 0, acc: 0, value: 0, min: 999, max: 0, frameMs: 0 };
@@ -170,7 +176,8 @@ export class Game {
     meta.lastPlayed = Date.now();
     void this.saveMeta();
     this.time = 0;
-    this.autosaveAt = 30;
+    this.autosaveAt = performance.now() + META_SAVE_EVERY * 1000;
+    this.sessionAt = performance.now() + SESSION_EVERY * 1000;
     this.onHotbarChange();
     this.d.hud.setVisible(true);
     this.hudHidden = false;
@@ -190,6 +197,38 @@ export class Game {
       if (!SOLID[idOf(w.get(x, y + 1, z))] && !SOLID[idOf(w.get(x, y + 2, z))]) return y + 1;
     }
     return Math.max(SEA_LEVEL + 1, w.topY(x, z) + 1);
+  }
+
+  /** Copy the live state (player, hotbar, time) into the world record. */
+  private updateMeta(): WorldMeta | null {
+    const meta = this.meta;
+    if (!meta) return null;
+    meta.player = this.player.serialize();
+    meta.hotbar = this.d.hotbar.slots.slice();
+    meta.hotbarNames = this.d.hotbar.slots.map((id) => (id ? BLOCKS[id].name : ''));
+    meta.selected = this.d.hotbar.selected;
+    meta.dayTime = this.dayTime;
+    meta.timeMode = this.timeMode;
+    return meta;
+  }
+
+  /** Synchronous snapshot of the player's state (cheap; localStorage). */
+  private saveSession() {
+    if (this.state !== 'playing' && this.state !== 'paused') return;
+    const meta = this.updateMeta();
+    if (meta) storage.saveSession(meta);
+  }
+
+  /**
+   * The page is being hidden or closed (visibilitychange, pagehide, beforeunload, freeze):
+   * write everything that is not saved yet into the synchronous emergency store first, then
+   * start the IndexedDB writes. Safe to call any number of times.
+   */
+  flushOnExit(): Promise<void> {
+    if (!this.meta || !this.chunks || (this.state !== 'playing' && this.state !== 'paused')) return Promise.resolve();
+    this.saveSession();
+    const chunks = this.chunks.flushOnExit();
+    return Promise.all([chunks, this.saveMeta()]).then(() => undefined, (e) => console.warn('[game] save on exit failed', e));
   }
 
   async saveMeta() {
@@ -237,9 +276,12 @@ export class Game {
     if (this.state !== 'playing') return;
     this.state = 'paused';
     this.d.input.enabled = false;
+    // free the cursor so the menu can be clicked (Esc already does this, other pauses may not)
+    this.d.input.exitLock();
     this.setTouchActive(false);
     if (this.d.inventory.isOpen) this.d.inventory.close();
     this.menus?.showPause();
+    this.saveSession();
     void this.saveAll();
   }
 
@@ -295,7 +337,7 @@ export class Game {
     if (!locked && this.state === 'playing' && !this.d.inventory.isOpen && !this.menus?.isOpen()) this.pause();
   }
 
-  private onKey(code: string, e: KeyboardEvent) {
+  private onKey(code: string, e: Event) {
     const inv = this.d.inventory;
     if (inv.isOpen) {
       if (inv.handleKey(code)) { e.preventDefault(); return; }
@@ -306,33 +348,28 @@ export class Game {
       return;
     }
     if (this.state !== 'playing') return;
-    switch (code) {
-      case 'KeyE':
-        this.openInventory();
-        e.preventDefault();
-        break;
-      case 'Escape':
-        // Normally the browser releases pointer lock (and we pause from onLockChange).
-        if (!this.d.input.locked) this.pause();
-        break;
-      case 'F1':
-        this.hudHidden = !this.hudHidden;
-        this.d.hud.setVisible(!this.hudHidden);
-        e.preventDefault();
-        break;
-      case 'F2':
-        void this.screenshot();
-        e.preventDefault();
-        break;
-      case 'F3':
-        this.d.hud.setDebugVisible(!this.d.hud.debugVisible);
-        this.debugAcc = 1;
-        e.preventDefault();
-        break;
-      default:
-        if (/^Digit[1-9]$/.test(code)) this.d.hotbar.select(Number(code.slice(5)) - 1);
-        else if (/^Numpad[1-9]$/.test(code)) this.d.hotbar.select(Number(code.slice(6)) - 1);
+    if (code === 'Escape') {
+      // Normally the browser releases pointer lock (and we pause from onLockChange).
+      if (!this.d.input.locked) this.pause();
+      return;
     }
+    if (matches('inventory', code)) { this.openInventory(); e.preventDefault(); return; }
+    if (matches('hideHud', code)) {
+      this.hudHidden = !this.hudHidden;
+      this.d.hud.setVisible(!this.hudHidden);
+      e.preventDefault();
+      return;
+    }
+    if (matches('screenshot', code)) { void this.screenshot(); e.preventDefault(); return; }
+    if (matches('debug', code)) {
+      this.d.hud.setDebugVisible(!this.d.hud.debugVisible);
+      this.debugAcc = 1;
+      e.preventDefault();
+      return;
+    }
+    const slot = HOTBAR_ACTIONS.findIndex((a) => matches(a, code));
+    if (slot >= 0) this.d.hotbar.select(slot);
+    else if (/^Numpad[1-9]$/.test(code)) this.d.hotbar.select(Number(code.slice(6)) - 1);
   }
 
   private onHotbarChange() {
@@ -393,8 +430,11 @@ export class Game {
       if (input.enabled && input.locked) this.interaction?.update(dt, input, this.hit);
       this.updateHighlight();
 
-      this.autosaveAt -= dt;
-      if (this.autosaveAt <= 0) { this.autosaveAt = 30; void this.saveAll(); }
+      // Autosave: the world record every few seconds (edited columns are saved by the chunk
+      // manager shortly after each edit), and a tiny synchronous snapshot every second.
+      // Wall-clock timers: frames can be slow (software rendering) and dt is capped.
+      if (now >= this.autosaveAt) { this.autosaveAt = now + META_SAVE_EVERY * 1000; void this.saveAll(); }
+      if (now >= this.sessionAt) { this.sessionAt = now + SESSION_EVERY * 1000; this.saveSession(); }
     }
     chunks.update(p.x, p.z, this.state === 'playing' ? 6 : 10);
     this.d.hud.update(dt);

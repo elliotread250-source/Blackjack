@@ -343,33 +343,34 @@ function encodeBMP(data: Uint8ClampedArray, w: number, h: number): ArrayBuffer {
   return buf;
 }
 
-/** Build the icon sprite sheet from the atlas tiles. */
-export function buildIcons(atlas: Pick<Atlas, 'tiles'>): IconSheet {
+/** Blob URL of the sheet currently in use, so a rebuilt sheet can release the old one. */
+let liveURL: string | null = null;
+let sheetGen = 0;
+
+function tileSource(atlas: Pick<Atlas, 'tiles'>): TileFn {
   const missing = new Uint8ClampedArray(1024);
-  const tiles: TileFn = (t) => atlas.tiles[t] ?? atlas.tiles[0] ?? missing;
+  return (t) => atlas.tiles[t] ?? atlas.tiles[0] ?? missing;
+}
+
+/** Render the sheet pixels and publish them as the --bf-icons CSS image. */
+function paintSheet(sheet: IconSheet, tiles: TileFn): void {
+  const gen = ++sheetGen;
   const { data, width, height, cols, rows } = renderIconPixels(tiles);
-
-  const sheet: IconSheet = {
-    url: '',
-    size: ICON_SIZE,
-    cols,
-    apply(el: HTMLElement, id: number) {
-      if (!(id > 0 && id < TOTAL)) {
-        el.classList.remove('bf-icon');
-        el.style.backgroundPosition = '';
-        el.removeAttribute('data-icon');
-        return;
-      }
-      el.classList.add('bf-icon');
-      const c = id % cols, r = Math.floor(id / cols);
-      el.style.backgroundPosition = `${cols > 1 ? (c * 100) / (cols - 1) : 0}% ${rows > 1 ? (r * 100) / (rows - 1) : 0}%`;
-      el.setAttribute('data-icon', String(id));
-    },
-  };
-
+  sheet.cols = cols;
   const setURL = (url: string) => {
+    if (gen !== sheetGen) { if (url.startsWith('blob:')) URL.revokeObjectURL(url); return; }
+    const old = liveURL;
+    liveURL = url.startsWith('blob:') ? url : null;
     sheet.url = url;
     document.documentElement.style.setProperty('--bf-icons', `url("${url}")`);
+    // Release the previous sheet once the new one is decoded (the old image stays on screen until then).
+    if (old && old !== url) {
+      const img = new Image();
+      const drop = () => URL.revokeObjectURL(old);
+      img.onload = drop; img.onerror = drop;
+      img.src = url;
+      setTimeout(drop, 3000);
+    }
   };
   document.documentElement.style.setProperty('--bf-icons-size', `${cols * 100}% ${rows * 100}%`);
   let canvasFallback = () => {
@@ -394,5 +395,38 @@ export function buildIcons(atlas: Pick<Atlas, 'tiles'>): IconSheet {
   } catch {
     canvasFallback();
   }
+}
+
+/** Build the icon sprite sheet from the atlas tiles. */
+export function buildIcons(atlas: Pick<Atlas, 'tiles'>): IconSheet {
+  const rows = Math.ceil(TOTAL / COLS);
+  const sheet: IconSheet = {
+    url: '',
+    size: ICON_SIZE,
+    cols: COLS,
+    apply(el: HTMLElement, id: number) {
+      if (!(id > 0 && id < TOTAL)) {
+        el.classList.remove('bf-icon');
+        el.style.backgroundPosition = '';
+        el.removeAttribute('data-icon');
+        return;
+      }
+      el.classList.add('bf-icon');
+      const cols = sheet.cols;
+      const c = id % cols, r = Math.floor(id / cols);
+      el.style.backgroundPosition = `${cols > 1 ? (c * 100) / (cols - 1) : 0}% ${rows > 1 ? (r * 100) / (rows - 1) : 0}%`;
+      el.setAttribute('data-icon', String(id));
+    },
+  };
+  paintSheet(sheet, tileSource(atlas));
   return sheet;
+}
+
+/**
+ * Redraw every icon from the atlas' current tiles (after a resource pack change). The sheet
+ * object stays the same, so the HUD and inventory keep working; the CSS image is swapped and
+ * the old blob URL released.
+ */
+export function rebuildIcons(sheet: IconSheet, atlas: Pick<Atlas, 'tiles'>): void {
+  paintSheet(sheet, tileSource(atlas));
 }

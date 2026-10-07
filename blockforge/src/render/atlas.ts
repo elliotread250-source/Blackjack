@@ -11,14 +11,16 @@ import {
   DataTexture, RGBAFormat, UnsignedByteType, NearestFilter, NearestMipmapLinearFilter, ClampToEdgeWrapping,
 } from 'three';
 import { TEXTURE_NAMES, TEX_KIND } from '../blocks/registry';
-import { generateTexture } from '../blocks/textures';
+import { packTile } from '../blocks/packs';
+import type { ResourcePackId } from '../settings';
 
 export const ATLAS_SIZE = 512;
 export const TILE_SIZE = 16;
 export const ATLAS_COLS = ATLAS_SIZE / TILE_SIZE; // 32
 export const MAX_TILES = ATLAS_COLS * ATLAS_COLS; // 1024
 
-export interface Atlas { texture: DataTexture; tiles: Uint8ClampedArray[]; } // tiles[t] = level-0 16x16 RGBA
+/** tiles[t] = level-0 16x16 RGBA (owned by the atlas, rewritten in place by rebuildAtlas); pack = resource pack drawn. */
+export interface Atlas { texture: DataTexture; tiles: Uint8ClampedArray[]; pack?: ResourcePackId }
 
 interface MipLevel { data: Uint8Array; width: number; height: number }
 
@@ -30,25 +32,35 @@ export function tileOrigin(t: number): [number, number] {
   return [(t % ATLAS_COLS) * TILE_SIZE, Math.floor(t / ATLAS_COLS) * TILE_SIZE];
 }
 
-export function buildAtlas(mipmaps: boolean): Atlas {
+/** Tile `t` drawn with `pack` (a fresh copy; a broken generator gives the magenta check). */
+function makeTile(t: number, pack: ResourcePackId): Uint8ClampedArray {
+  let px: Uint8ClampedArray;
+  try {
+    px = packTile(t, pack);
+  } catch (e) {
+    console.warn('[atlas] texture failed', TEXTURE_NAMES[t], e);
+    px = missingTile();
+  }
+  if (px.length !== TILE_SIZE * TILE_SIZE * 4) px = missingTile();
+  return px.slice();
+}
+
+function blitTile(level0: Uint8Array, t: number, px: Uint8ClampedArray) {
+  const [ox, oy] = tileOrigin(t);
+  for (let y = 0; y < TILE_SIZE; y++) {
+    level0.set(px.subarray(y * TILE_SIZE * 4, (y + 1) * TILE_SIZE * 4), ((oy + y) * ATLAS_SIZE + ox) * 4);
+  }
+}
+
+export function buildAtlas(mipmaps: boolean, packId: ResourcePackId = 'default'): Atlas {
   const n = TEXTURE_NAMES.length;
   if (n > MAX_TILES) console.warn(`[atlas] ${n} textures do not fit in ${MAX_TILES} tiles`);
   const tiles: Uint8ClampedArray[] = [];
   const level0 = new Uint8Array(ATLAS_SIZE * ATLAS_SIZE * 4);
   for (let t = 0; t < n && t < MAX_TILES; t++) {
-    let px: Uint8ClampedArray;
-    try {
-      px = generateTexture(TEXTURE_NAMES[t]);
-    } catch (e) {
-      console.warn('[atlas] texture failed', TEXTURE_NAMES[t], e);
-      px = missingTile();
-    }
-    if (px.length !== TILE_SIZE * TILE_SIZE * 4) px = missingTile();
+    const px = makeTile(t, packId);
     tiles.push(px);
-    const [ox, oy] = tileOrigin(t);
-    for (let y = 0; y < TILE_SIZE; y++) {
-      level0.set(px.subarray(y * TILE_SIZE * 4, (y + 1) * TILE_SIZE * 4), ((oy + y) * ATLAS_SIZE + ox) * 4);
-    }
+    blitTile(level0, t, px);
   }
   const texture = new DataTexture(level0, ATLAS_SIZE, ATLAS_SIZE, RGBAFormat, UnsignedByteType);
   texture.name = 'atlas';
@@ -58,9 +70,36 @@ export function buildAtlas(mipmaps: boolean): Atlas {
   texture.flipY = false;
   texture.generateMipmaps = false;
   texture.unpackAlignment = 4;
-  const atlas: Atlas = { texture, tiles };
+  const atlas: Atlas = { texture, tiles, pack: packId };
   setAtlasMipmaps(atlas, mipmaps);
   return atlas;
+}
+
+/**
+ * Redraw every tile with another resource pack, in place: the same DataTexture (and the same
+ * tile arrays) get new pixels and a new mip chain, so every material, the held block and the
+ * particles pick it up on the next frame without being rebuilt.
+ */
+export function rebuildAtlas(atlas: Atlas, packId: ResourcePackId): void {
+  const tex = atlas.texture;
+  const level0 = tex.image.data as unknown as Uint8Array;
+  for (let t = 0; t < atlas.tiles.length; t++) {
+    const px = makeTile(t, packId);
+    atlas.tiles[t].set(px);
+    blitTile(level0, t, px);
+  }
+  atlas.pack = packId;
+  if (chains.has(atlas)) {
+    if (tex.mipmaps.length > 0) {
+      // Rewrite the uploaded levels in place (level 0 is the image itself).
+      const chain = buildMipChain(level0);
+      const cur = chains.get(atlas)!;
+      for (let k = 1; k < chain.length && k < cur.length; k++) cur[k].data.set(chain[k].data);
+    } else {
+      chains.delete(atlas); // rebuilt the next time mipmaps are switched on
+    }
+  }
+  tex.needsUpdate = true;
 }
 
 /** Switch mipmapping on/off (builds the chain the first time it is needed). */

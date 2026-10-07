@@ -73,6 +73,13 @@ export class ChunkManager {
   private padded: PaddedSection = newPadded();
   private urgent = new Set<number>();            // sections to mesh synchronously this frame
   private saving = new Set<number>();
+  // Debounced saving: edited columns are written ~1.5 s after the last edit (at most 5 s
+  // after the first one, so a long build or flowing water still gets saved).
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private firstEditAt = 0;
+  private lastEditAt = 0;
+  static readonly SAVE_QUIET_MS = 1500;
+  static readonly SAVE_MAX_WAIT_MS = 5000;
   disposed = false;
 
   stats = { loaded: 0, genQueue: 0, meshQueue: 0, genMs: 0, meshMs: 0, lightMs: 0 };
@@ -99,6 +106,7 @@ export class ChunkManager {
     }
     // When a block is edited, mesh the sections around it in the same frame.
     world.onBlockChange = (x, y, z) => {
+      this.noteEdit();
       const cx = Math.floor(x / 16), cz = Math.floor(z / 16), sy = y >> 4;
       for (let dx = -1; dx <= 1; dx++) for (let dz = -1; dz <= 1; dz++) for (let dy = -1; dy <= 1; dy++) {
         const s = sy + dy;
@@ -107,6 +115,43 @@ export class ChunkManager {
         if (this.world.dirtySections.has(k)) this.urgent.add(k);
       }
     };
+  }
+
+  /** A block changed: (re)arm the debounced save. Cheap enough to call for every block. */
+  private noteEdit() {
+    const now = performance.now();
+    this.lastEditAt = now;
+    if (this.saveTimer !== null) return;
+    this.firstEditAt = now;
+    this.saveTimer = setTimeout(() => this.onSaveTimer(), ChunkManager.SAVE_QUIET_MS);
+  }
+
+  private onSaveTimer() {
+    this.saveTimer = null;
+    if (this.disposed) return;
+    const now = performance.now();
+    const quiet = now - this.lastEditAt, waited = now - this.firstEditAt;
+    if (quiet < ChunkManager.SAVE_QUIET_MS - 5 && waited < ChunkManager.SAVE_MAX_WAIT_MS) {
+      this.saveTimer = setTimeout(() => this.onSaveTimer(),
+        Math.max(10, Math.min(ChunkManager.SAVE_QUIET_MS - quiet, ChunkManager.SAVE_MAX_WAIT_MS - waited)));
+      return;
+    }
+    void this.saveAll();
+  }
+
+  /** True while edits are waiting for the debounced save. */
+  get savePending(): boolean { return this.saveTimer !== null; }
+
+  /**
+   * The page is being hidden or closed: put every unsaved column into the synchronous
+   * emergency store, then start the (small, immediately committed) IndexedDB writes.
+   */
+  flushOnExit(): Promise<void> {
+    if (this.disposed) return Promise.resolve();
+    if (this.saveTimer !== null) { clearTimeout(this.saveTimer); this.saveTimer = null; }
+    storage.journalPending(this.opts.worldId);
+    for (const c of this.world.chunks.values()) if (c.modified) storage.journalChunk(this.opts.worldId, c);
+    return this.saveAll();
   }
 
   private mainGen(): Generator {
@@ -441,6 +486,7 @@ export class ChunkManager {
 
   dispose() {
     this.disposed = true;
+    if (this.saveTimer !== null) { clearTimeout(this.saveTimer); this.saveTimer = null; }
     this.genPool?.terminate();
     this.meshPool?.terminate();
     this.world.onBlockChange = null;

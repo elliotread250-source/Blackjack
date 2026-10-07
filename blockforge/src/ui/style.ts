@@ -8,7 +8,8 @@
 // Layout code positions things with whole GUI pixels relative to these CSS variables:
 //   --u   CSS px per GUI pixel      --gw/--gh  GUI size (even numbers)
 //   --cx/--cy  centre (gw/2, gh/2)  --qh  floor(gh/4)
-import { generateTexture } from '../blocks/textures';
+import { packTexture } from '../blocks/packs';
+import type { ResourcePackId } from '../settings';
 
 export interface GuiLayout { u: number; uDev: number; gw: number; gh: number; cx: number; cy: number; qh: number; dpr: number }
 
@@ -62,9 +63,11 @@ function canvasURL(w: number, h: number, draw: (d: Uint8ClampedArray) => void): 
   return c.toDataURL('image/png');
 }
 
+let uiPack: ResourcePackId = 'default';
+
 /** Darkened dirt tile for menu backgrounds (factor 0.25 like a dim cellar wall). */
 function dirtURL(f: number): string {
-  const t = generateTexture('dirt');
+  const t = packTexture('dirt', uiPack);
   return canvasURL(16, 16, (d) => {
     for (let i = 0; i < 256; i++) {
       d[i * 4] = t[i * 4] * f; d[i * 4 + 1] = t[i * 4 + 1] * f; d[i * 4 + 2] = t[i * 4 + 2] * f; d[i * 4 + 3] = 255;
@@ -214,6 +217,8 @@ function css(): string {
 .bf-c-gold{color:#ffaa00;--sh:#2a1c00}
 .bf-c-green{color:#55ff55;--sh:#153f15}
 .bf-c-red{color:#ff5555;--sh:#3f1515}
+.bf-btn.bf-c-red,.bf-btn.bf-c-red:hover{color:#ff5555}
+.bf-btn.bf-c-yellow,.bf-btn.bf-c-yellow:hover{color:#ffff55}
 .bf-c-dark{color:#404040;text-shadow:none}
 .bf-noshadow{text-shadow:none}
 .bf-center{text-align:center}
@@ -294,6 +299,24 @@ a.bf-btn{color:#fff}
   background:#3a3a3a var(--bf-btn-off) repeat;background-size:${u(16)} ${u(16)};box-shadow:inset ${u(1)} ${u(1)} 0 rgba(255,255,255,.14),inset ${u(-1)} ${u(-2)} 0 rgba(0,0,0,.35)}
 .bf-progress{position:absolute;height:${u(10)};border:${u(1)} solid #000;background:#262626;box-shadow:inset ${u(1)} ${u(1)} 0 #111,inset ${u(-1)} ${u(-1)} 0 #4a4a4a}
 .bf-progress .bf-fill{position:absolute;left:${u(1)};top:${u(1)};bottom:${u(1)};width:0;background:#5bbf3a;box-shadow:inset 0 ${u(2)} 0 #8ee060,inset 0 ${u(-2)} 0 #3a8a22}
+/* feature / warning buttons (Shaders..., Resource Packs..., Restore Defaults armed) */
+.bf-btn.bf-feature:not(:hover):not(:focus-visible):not(:disabled){color:#ffe36e;--sh:#3f3410}
+.bf-btn.bf-warn,.bf-btn.bf-warn:hover,.bf-btn.bf-warn:focus-visible{color:#ff6b6b;--sh:#3f1515}
+/* shader choice cards */
+.bf-card{position:absolute;display:block;margin:0;padding:0;text-align:left;border:${u(1)} solid #000;border-radius:0;outline:none;cursor:default;
+  background:rgba(0,0,0,.5);box-shadow:inset 0 0 0 ${u(1)} #4a4a4a;color:#fff;-webkit-appearance:none;appearance:none;overflow:hidden}
+.bf-card:hover,.bf-card:focus-visible{box-shadow:inset 0 0 0 ${u(1)} #a0a0a0;background:rgba(30,30,30,.62)}
+.bf-card.bf-on{box-shadow:inset 0 0 0 ${u(1)} #fff;background:rgba(0,0,0,.68)}
+.bf-card .bf-card-name{color:#fff;--sh:#3f3f3f}
+.bf-card:hover .bf-card-name,.bf-card:focus-visible .bf-card-name{color:#ffffa0;--sh:#3f3f28}
+.bf-card.bf-on .bf-card-name{color:#ffff55;--sh:#3f3f15}
+.bf-card .bf-card-desc{color:#b8b8b8;--sh:#282828}
+.bf-radio{position:absolute;background:#8b8b8b;box-shadow:inset ${u(1)} ${u(1)} 0 #373737,inset ${u(-1)} ${u(-1)} 0 #fff}
+.bf-card.bf-on .bf-radio::after{content:"";position:absolute;left:${u(3)};top:${u(3)};width:${u(4)};height:${u(4)};background:#55ff55;box-shadow:inset ${u(-1)} ${u(-1)} 0 #2a9a2a}
+/* resource pack rows */
+.bf-packrow{cursor:default}
+.bf-packrow .bf-strip{pointer-events:none}
+.bf-stripimg{position:absolute;image-rendering:pixelated;image-rendering:crisp-edges}
 .bf-blink{animation:bf-blink 1s steps(1) infinite}
 @keyframes bf-blink{50%{opacity:0}}
 
@@ -367,6 +390,20 @@ a.bf-btn{color:#fff}
 .bf-held{position:absolute;z-index:6;width:${u(16)};height:${u(16)};pointer-events:none;display:none}
 .bf-held.bf-on{display:block}
 `;
+}
+
+/** Redraw the menu backgrounds that come from block textures with a resource pack. */
+export function setUiPack(pack: ResourcePackId): void {
+  if (pack === uiPack && installed) return;
+  uiPack = pack;
+  if (typeof document === 'undefined' || !installed) return;
+  try {
+    const st = document.documentElement.style;
+    st.setProperty('--bf-dirt', `url(${dirtURL(0.27)})`);
+    st.setProperty('--bf-dirt-dark', `url(${dirtURL(0.14)})`);
+  } catch (e) {
+    console.warn('[ui] could not repaint menu backgrounds', e);
+  }
 }
 
 /** Inject (or refresh) all UI CSS and apply a GUI scale. Safe to call repeatedly. */

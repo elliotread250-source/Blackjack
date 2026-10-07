@@ -32,7 +32,7 @@ const WALK = 0.1;                         // movement speed attribute
 const SPRINT_MUL = 1.3;
 const SNEAK_MUL = 0.3;
 const FLY = 0.05;                         // creative flying speed
-const DOUBLE_TAP_SPACE = 0.3;             // seconds
+const DOUBLE_TAP_SPACE = 0.35;            // 7 ticks, like the reference game
 const DOUBLE_TAP_W = 0.35;                // 7 ticks
 const EPS = 1e-7;
 const DEG = Math.PI / 180;
@@ -158,22 +158,22 @@ export class Player {
         const p = this.pitch - input.mouseDY * k * (settings.invertY ? -1 : 1);
         this.pitch = p > PITCH_LIMIT ? PITCH_LIMIT : p < -PITCH_LIMIT ? -PITCH_LIMIT : p;
       }
-      if (input.pressed('Space')) {
+      if (input.actionPressed('jump')) {
         this.jumpLatch = true;
         if (this.clock - this.lastSpaceTap < DOUBLE_TAP_SPACE) { this.flyToggle = !this.flyToggle; this.lastSpaceTap = -1e9; }
         else this.lastSpaceTap = this.clock;
       }
-      if (input.pressed('KeyW')) {
+      if (input.actionPressed('forward')) {
         if (this.clock - this.lastWTap < DOUBLE_TAP_W) { this.sprintTap = true; this.lastWTap = -1e9; }
         else this.lastWTap = this.clock;
       }
-      this.kF = input.down('KeyW');
-      this.kB = input.down('KeyS');
-      this.kL = input.down('KeyA');
-      this.kR = input.down('KeyD');
-      this.kJump = input.down('Space');
-      this.kShift = input.down('ShiftLeft') || input.down('ShiftRight');
-      this.kSprint = input.down('ControlLeft') || input.down('ControlRight');
+      this.kF = input.actionDown('forward');
+      this.kB = input.actionDown('back');
+      this.kL = input.actionDown('left');
+      this.kR = input.actionDown('right');
+      this.kJump = input.actionDown('jump');
+      this.kShift = input.actionDown('sneak');
+      this.kSprint = input.actionDown('sprint');
     } else {
       this.kF = this.kB = this.kL = this.kR = this.kJump = this.kShift = this.kSprint = false;
     }

@@ -3,16 +3,19 @@
 // matched to the sky, sun/moon shadow map on the High preset, underwater/lava fog, view
 // bobbing, held item, selection outline and break particles.
 //
-// Frame: [shadow pass (High only)] -> main pass (sky first, then terrain by layer) -> hand
-// pass (depth cleared). Low preset: one main pass plus the tiny hand pass.
+// Frame: [shadow pass (Fancy/Ultra)] -> [planar water reflection (Ultra)] -> main pass (sky
+// first, then terrain by layer; into the HDR post target on Ultra) -> [post chain (Ultra)] ->
+// hand pass (depth cleared). Off pack: one main pass plus the tiny hand pass.
 import {
   WebGLRenderer, Scene, PerspectiveCamera, OrthographicCamera, Mesh, Group, Frustum, Matrix4, Sphere, Vector3,
-  Color, WebGLRenderTarget, RGBAFormat, UnsignedByteType, NearestFilter, LinearSRGBColorSpace, ClampToEdgeWrapping,
+  Color, WebGLRenderTarget, RGBAFormat, UnsignedByteType, NearestFilter, LinearFilter, LinearSRGBColorSpace,
+  ClampToEdgeWrapping, Vector2,
 } from 'three';
 import type { ShaderMaterial, Material } from 'three';
 import type { Atlas } from './atlas';
 import { setAtlasMipmaps } from './atlas';
-import { createMaterials, createLayerGeometry } from './materials';
+import { createMaterials, createLayerGeometry, WATER_PLANE_Y } from './materials';
+import { PostFX } from './post';
 import type { Materials } from './materials';
 import { Sky } from './sky';
 import { Particles } from './particles';
@@ -84,14 +87,21 @@ export class Renderer {
   private lastFov = -1;
   private lastAspect = -1;
   private disposed = false;
+  private post: PostFX | null = null;
+  private reflRT: WebGLRenderTarget | null = null;
+  private mirrorCam = new PerspectiveCamera();
+  private rayColor = new Color();
+  private reflShift = new Matrix4();
 
   constructor(canvas: HTMLCanvasElement, atlas: Atlas, settings: Settings) {
     this.canvas = canvas;
     this.atlas = atlas;
     this.settings = { ...settings };
-    // three r162 warns once that WebGL1 is deprecated; the fallback is intentional here.
-    const warn = console.warn;
+    // three r162 warns once that WebGL1 is deprecated and logs the failed WebGL2 attempt on
+    // WebGL1-only machines; the fallback is intentional here (a total failure still throws).
+    const warn = console.warn, error = console.error;
     console.warn = (...a: unknown[]) => { if (typeof a[0] === 'string' && a[0].includes('WebGL 1 support was deprecated')) return; warn.apply(console, a as []); };
+    console.error = (...a: unknown[]) => { if (typeof a[0] === 'string' && a[0].includes('A WebGL context could not be created')) return; error.apply(console, a as []); };
     try {
       this.gl = new WebGLRenderer({
         canvas, antialias: false, alpha: false, depth: true, stencil: false,
@@ -99,6 +109,7 @@ export class Renderer {
       });
     } finally {
       console.warn = warn;
+      console.error = error;
     }
     const gl = this.gl;
     gl.outputColorSpace = LinearSRGBColorSpace;   // shaders write display values directly
@@ -229,8 +240,11 @@ export class Renderer {
     // far plane: terrain plus margin, and far enough for the clouds at y=192
     this.camera.far = Math.max(this.fogFar * 1.25 + 32, cloudR + 140);
     this.lastFov = -1;
-    this.mats.setWaving(!!s.waving);
+    const pack = s.shaderPack || 'off';
+    const fancy = pack !== 'off', ultra = pack === 'ultra';
+    this.mats.setPack({ shadows: !!s.shadows, waving: !!s.waving, fancy, ultra, planar: ultra });
     this.setShadows(!!s.shadows, s.shadowQuality || 2048);
+    this.setUltra(ultra);
     setAtlasMipmaps(this.atlas, !!s.mipmaps);
     this.resize();
   }
@@ -259,6 +273,31 @@ export class Renderer {
     this.mats.setShadows(on);
   }
 
+  /** Ultra: HDR post chain and the planar water reflection target (freed when leaving Ultra). */
+  private setUltra(on: boolean): void {
+    if (on) {
+      if (!this.post) this.post = new PostFX(this.gl);
+      if (!this.reflRT) {
+        this.reflRT = new WebGLRenderTarget(1, 1, {
+          format: RGBAFormat, type: UnsignedByteType, minFilter: LinearFilter, magFilter: LinearFilter,
+          wrapS: ClampToEdgeWrapping, wrapT: ClampToEdgeWrapping, depthBuffer: true, stencilBuffer: false,
+          generateMipmaps: false,
+        });
+        this.reflRT.texture.name = 'water-reflection';
+        this.mats.uniforms.uReflection.value = this.reflRT.texture;
+      }
+    } else {
+      this.post?.dispose();
+      this.post = null;
+      if (this.reflRT) {
+        this.reflRT.dispose();
+        this.reflRT = null;
+        this.mats.uniforms.uReflection.value = null;
+        this.mats.releaseReflection();
+      }
+    }
+  }
+
   resize(): void {
     const w = Math.max(1, Math.floor(window.innerWidth || this.canvas.clientWidth || 1));
     const h = Math.max(1, Math.floor(window.innerHeight || this.canvas.clientHeight || 1));
@@ -268,8 +307,12 @@ export class Renderer {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     const ctx = this.gl.getContext();
-    this.highlight.setResolution(ctx.drawingBufferWidth, ctx.drawingBufferHeight, NEAR);
+    const bw = ctx.drawingBufferWidth, bh = ctx.drawingBufferHeight;
+    this.highlight.setResolution(bw, bh, NEAR);
     this.sky.setPixelRatio(pr);
+    this.post?.setSize(bw, bh);
+    this.reflRT?.setSize(Math.max(1, bw >> 1), Math.max(1, bh >> 1));
+    (this.mats.uniforms.uScreenInv.value as Vector2).set(1 / bw, 1 / bh);
   }
 
   // ------------------------------------------------------------------ effects
@@ -347,15 +390,89 @@ export class Renderer {
     if (this.shadowRT && !shadowOn) u.uShadowStrength.value = 0;
     if (shadowOn) this.renderShadows(cam.position);
 
-    // main pass
+    // main pass (Ultra: mirror reflection of the world above sea level first, then the scene
+    // into the post target)
     this.cull(cam, true);
-    gl.setRenderTarget(null);
+    let planar = false;
+    if (this.reflRT && !s.underwater && !s.inLava && cam.position.y > WATER_PLANE_Y + 0.05 && this.seaVisible()) {
+      this.renderReflection(fog);
+      this.cull(cam, true);
+      planar = true;
+    }
+    u.uPlanarOn.value = planar ? 1 : 0;
+    const post = this.post;
+    gl.setRenderTarget(post ? post.target : null);
     gl.setClearColor(fog, 1);
     gl.clear(true, true, false);
     gl.render(this.scene, cam);
+    if (post) {
+      const sd = u.uSunDir.value as Vector3;
+      const dawnDusk = Math.min(1, (u.uGlow.value as number) / 0.85);
+      const strength = sd.y > 0 ? smooth(0, 0.12, sd.y) * (0.6 + 0.4 * dawnDusk) : smooth(0, 0.12, -sd.y) * 0.18;
+      this.rayColor.copy(u.uSunColor.value as Color);
+      post.finish({
+        camera: cam, lightDir: u.uLightDir.value as Vector3, lightStrength: strength, rayColor: this.rayColor,
+        fogColor: fog, sunColor: u.uSunColor.value as Color, fogFar: this.fogFar, dawnDusk,
+        underwater: s.underwater || s.inLava,
+      });
+    }
     if (s.showHand) this.hand.render(gl);
 
     if (this.shotQueue.length) this.capture();
+  }
+
+  /** True when a visible section holds water near sea level (worth a reflection pass). */
+  private seaVisible(): boolean {
+    const sy = Math.floor(WATER_PLANE_Y / 16);
+    for (const e of this.sections.values()) if (e.visible && e.sy === sy && e.meshes[3]) return true;
+    return false;
+  }
+
+  /**
+   * Planar reflection: the world seen from a camera mirrored through the sea-level plane, drawn
+   * at half resolution with clip-plane materials. A plain (upright) mirrored camera gives an
+   * upside-down image of the reflection; the water shader flips it back when sampling.
+   */
+  private renderReflection(fog: Color): void {
+    const gl = this.gl;
+    const u = this.mats.uniforms;
+    const cam = this.camera;
+    const mc = this.mirrorCam;
+    mc.copy(cam, false);
+    mc.position.y = 2 * WATER_PLANE_Y - cam.position.y;
+    mc.rotation.set(-cam.rotation.x, cam.rotation.y, -cam.rotation.z, 'YXZ');
+    mc.updateMatrixWorld(true);
+    const skyGroup = this.sky.objects[0];
+    skyGroup.position.y = mc.position.y;
+    skyGroup.updateMatrixWorld(true);
+    const hide: { visible: boolean }[] = [this.particles.mesh, this.highlight.mesh, this.layerGroups[2], this.layerGroups[3]];
+    const was = hide.map((o) => o.visible);
+    for (const o of hide) o.visible = false;
+    const swap = (g: Group, mat: ShaderMaterial) => { for (const c of g.children) (c as Mesh).material = mat; };
+    swap(this.layerGroups[0], this.mats.refl.opaque);
+    swap(this.layerGroups[1], this.mats.refl.cutout);
+    swap(this.layerGroups[4], this.mats.refl.lava);
+    this.cull(mc, true);
+    u.uCamWrap.value.set(wrap(mc.position.x), wrap(mc.position.y), wrap(mc.position.z));
+    // the shadow lookup takes camera-relative positions: shift it to the mirrored eye
+    const sm = u.uShadowMatrix.value as Matrix4;
+    this.tmpM.copy(sm);
+    sm.multiply(this.reflShift.makeTranslation(0, mc.position.y - cam.position.y, 0));
+
+    gl.setRenderTarget(this.reflRT);
+    gl.setClearColor(fog, 1);
+    gl.clear(true, true, false);
+    gl.render(this.scene, mc);
+
+    swap(this.layerGroups[0], this.mats.opaque);
+    swap(this.layerGroups[1], this.mats.cutout);
+    swap(this.layerGroups[4], this.mats.lava);
+    hide.forEach((o, i) => { o.visible = was[i]; });
+    sm.copy(this.tmpM);
+    skyGroup.position.y = cam.position.y;
+    skyGroup.updateMatrixWorld(true);
+    const cp = cam.position;
+    u.uCamWrap.value.set(wrap(cp.x), wrap(cp.y), wrap(cp.z));
   }
 
   private overrideFog(r: number, g: number, b: number, near: number, far: number): void {
@@ -485,6 +602,7 @@ export class Renderer {
     this.hand.dispose();
     this.mats.dispose();
     this.shadowRT?.dispose();
+    this.setUltra(false);
     this.gl.dispose();
     for (const p of this.shotQueue.splice(0)) p.reject(new Error('renderer disposed'));
     void (null as unknown as Material);
