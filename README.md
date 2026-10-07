@@ -10,9 +10,9 @@ no backend: the whole game runs in the browser and your bankroll lives in
 
 **Geometry Dash replica:** https://game-production-8782.up.railway.app (online levels, leaderboard and cloud saves), offline copy on [GitHub Pages](https://elliotread250-source.github.io/Blackjack/geometry-dash/)
 
-**Apex GP (first-person F1 racing, solo or peer-to-peer multiplayer):** https://elliotread250-source.github.io/Blackjack/apex-gp/
+**Apex GP (first-person F1 racing, solo or peer-to-peer multiplayer):** https://apex-gp-production.up.railway.app, also on [GitHub Pages](https://elliotread250-source.github.io/Blackjack/apex-gp/)
 
-**2 Weeks (build-and-shoot battle royale against 24 bots):** https://elliotread250-source.github.io/Blackjack/2-weeks/
+**2 Weeks (build-and-shoot battle royale against 24 bots):** https://two-weeks-production.up.railway.app, also on [GitHub Pages](https://elliotread250-source.github.io/Blackjack/2-weeks/)
 
 **BlockForge (creative-mode voxel sandbox, 400+ blocks):** https://blockforge-web-production.up.railway.app, also on [GitHub Pages](https://elliotread250-source.github.io/Blackjack/blockforge/dist/)
 
