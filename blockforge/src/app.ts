@@ -1,5 +1,5 @@
 // Boot: textures -> atlas -> icons -> font -> renderer -> UI -> title screen -> frame loop.
-import { loadSettings, saveSettings } from './settings';
+import { loadSettings, saveSettings, applyPreset } from './settings';
 import type { Settings } from './settings';
 import { injectStyles } from './ui/style';
 import { loadPixelFont } from './ui/font';
@@ -193,7 +193,15 @@ async function boot() {
   };
   requestAnimationFrame(loop);
 
-  (window as unknown as { blockforge: unknown }).blockforge = { game, renderer, settings, storage };
+  // Handle for the e2e tests and for curious players poking at the console.
+  (window as unknown as { blockforge: unknown }).blockforge = {
+    game, renderer, settings, storage, handlers, hud, inventory, menus, hotbar,
+    applyPreset(p: 'low' | 'medium' | 'high') { applyPreset(settings, p); handlers.settingsChanged(settings); },
+    debug: {
+      /** Enter play state without pointer lock (headless tests). */
+      play() { menus.hide(); game.state = 'playing'; input.enabled = true; },
+    },
+  };
 }
 
 boot().catch((e) => {
