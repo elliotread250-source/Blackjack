@@ -119,7 +119,7 @@ export class Noise {
       t2 *= t2;
       n += t2 * t2 * (GRAD2[g] * x2 + GRAD2[g + 1] * y2);
     }
-    return 70 * n;
+    return 99.204 * n; // 70 * sqrt(2): unit-length gradients
   }
 
   /** 3D simplex noise, about [-1, 1]. */
