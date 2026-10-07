@@ -6,14 +6,12 @@ You drop in with a pickaxe, 100 health and 100 shield against 24 bots. Farm mate
 
 ## Run it
 
-From the root of the repo:
-
 ```bash
 python server.py
-# open http://localhost:8080/2-weeks/
+# open http://localhost:8080
 ```
 
-No build step and no install. three.js comes from jsDelivr through the import map in `index.html`, and every path is relative, so the folder runs from any static host.
+No build step and no install. three.js comes from jsDelivr through the import map in `index.html`, and every path is relative, so the folder runs from any static host. `server.py` is a stdlib-only static server with `/healthz` for Railway; the `Dockerfile` and `railway.json` here let a Railway service deploy this folder on its own (root directory `/2-weeks`).
 
 ## Controls
 
@@ -65,6 +63,8 @@ Numbers in `js/config.js` are based on:
 ## Project layout
 
 ```
+server.py            static server + /healthz
+Dockerfile, railway.json   Railway build/deploy config
 index.html           HUD, lobby, menus
 css/style.css
 js/
