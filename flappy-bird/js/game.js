@@ -545,8 +545,12 @@
     for (let j = -r; j <= r; j += 2) { const w = Math.floor(Math.sqrt(r * r - j * j) / 2) * 2; x.fillRect(cx - w, cy + j, w * 2, 2); }
   }
   function drawScore(n, cx, y, s) { pixText(String(n), cx, y, s, '#ffffff', { out: s >= 4 ? 2 : 1 }); }
+  let inset = 0;
+  // headline size: drop a step when the sides of the screen are trimmed
+  const bigS = () => (inset > 24 ? 3 : 4);          // logical px hidden at each side on narrow screens
   function panel(px, py) {
-    const w = 226, h = 116;
+    px = Math.max(px, inset + 4);
+    const w = W - px * 2, h = 116;
     x.fillStyle = K; x.fillRect(px + 2, py, w - 4, h); x.fillRect(px, py + 2, w, h - 4);
     x.fillStyle = '#ded895'; x.fillRect(px + 2, py + 2, w - 4, h - 4);
     x.fillStyle = '#cbb968'; x.fillRect(px + 4, py + h - 6, w - 8, 2);
@@ -632,7 +636,7 @@
     if (state === 'levels') { drawLevels(); }
     else if (state === 'scores') { drawScores(); }
     else if (state === 'title') {
-      pixText('FlappyBird', W / 2, 104, 4, '#fdd13a', { rim: 2, shade: '#f9a72b' });
+      pixText('FlappyBird', W / 2, 104, bigS(), '#fdd13a', { rim: 2, shade: '#f9a72b' });
       pixText('replica', W / 2, 152, 2, '#ffffff', { out: 1 });
       bird.x = W / 2;
       drawBird();
@@ -642,7 +646,7 @@
       pixText('BEST ' + best, W / 2, 430, 2, '#ffffff', { out: 1 });
     } else {
       if (state === 'ready') {
-        pixText('Get Ready!', W / 2, 118, 4, '#79d34a', { rim: 2, shade: '#4fb83a' });
+        pixText('Get Ready!', W / 2, 118, bigS(), '#79d34a', { rim: 2, shade: '#4fb83a' });
         drawTapHint(W / 2 + 20, 270);
       }
       drawBird();
@@ -666,7 +670,7 @@
       if (state === 'over') {
         const slide = Math.min(1, Math.max(0, (overT - 0.3) / 0.35));
         // "Game Over" drops in with a small bounce, as in the original
-        if (overT > 0.15) { const k = Math.min(1, (overT - 0.15) / 0.25); pixText('Game Over', W / 2, 118 - Math.round(Math.sin(k * Math.PI) * 10), 4, '#f9a72b', { rim: 2, shade: '#e86a17' }); }
+        if (overT > 0.15) { const k = Math.min(1, (overT - 0.15) / 0.25); pixText('Game Over', W / 2, 118 - Math.round(Math.sin(k * Math.PI) * 10), bigS(), '#f9a72b', { rim: 2, shade: '#e86a17' }); }
         panel(31, 190 + (1 - slide) * 340);
         if (overT > 0.9) { button(BTN.play, 'play'); button(BTN.score, 'menu'); }
         if (level >= 0 && overT > 0.5) pixText('LEVEL ' + (level + 1) + ' ' + cfg.n + '  ' + score + '/' + cfg.target, W / 2, 172, 1, '#ffffff', { out: 1 });
@@ -679,19 +683,27 @@
   }
 
   // ---------- layout ----------
+  // a touch closer than the original framing: most of the extra crop comes
+  // off the sand at the bottom, a little off the empty sky at the top
+  const ZOOM = 1.1, CROP_TOP = 10;
   function fit() {
     const vw = window.innerWidth, vh = window.innerHeight;
     const dpr = Math.min(3, window.devicePixelRatio || 1);
-    // height always fills the screen; on phones narrower than 9:16 the sides
-    // get trimmed equally, so corner buttons move in to stay on screen
-    const s = vh / H;
-    const cw = Math.round(W * s), ch = Math.round(vh);
+    const s = (vh / H) * ZOOM;
+    const cw = Math.round(W * s), ch = Math.round(H * s);
     screen.style.width = cw + 'px'; screen.style.height = ch + 'px';
+    screen.style.left = Math.round((vw - cw) / 2) + 'px';
+    screen.style.top = -Math.round(CROP_TOP * s) + 'px';
     screen.width = Math.round(cw * dpr); screen.height = Math.round(ch * dpr);
     sctx.imageSmoothingEnabled = false;
-    const inset = Math.max(0, Math.ceil((cw - vw) / 2 / s));
-    BTN.pause.x = 10 + inset;
-    BTN.sound.x = 252 - inset;
+    // keep corner and row buttons inside whatever is visible
+    inset = Math.max(0, Math.ceil((cw - vw) / 2 / s));
+    BTN.pause.x = 10 + inset; BTN.sound.x = 252 - inset;
+    BTN.pause.y = BTN.sound.y = 10 + CROP_TOP;
+    const edge = Math.max(30, inset + 6);
+    const bw = Math.min(104, Math.floor((W - edge * 2 - 12) / 2));
+    BTN.play.x = edge; BTN.play.w = bw;
+    BTN.score.x = W - edge - bw; BTN.score.w = bw;
   }
   window.addEventListener('resize', fit);
   fit();
