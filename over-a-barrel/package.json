@@ -1,0 +1,29 @@
+{
+  "name": "over-a-barrel",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "start": "serve -s dist -l tcp://0.0.0.0:${PORT:-3000}",
+    "probe": "tsx tools/probe.ts"
+  },
+  "devDependencies": {
+    "@types/three": "^0.186.0",
+    "tsx": "^4.23.15",
+    "typescript": "~6.0.2",
+    "vite": "^8.3.0"
+  },
+  "dependencies": {
+    "planck": "^1.5.0",
+    "poly2tri": "^1.5.0",
+    "serve": "^14.2.6",
+    "three": "^0.186.1"
+  },
+  "description": "Over a Barrel: a mouse-only climbing game. A frog, a barrel, a telescopic pickaxe, one tall mountain.",
+  "engines": {
+    "node": ">=22.12"
+  }
+}
