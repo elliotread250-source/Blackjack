@@ -10,7 +10,7 @@ no backend: the whole game runs in the browser and your bankroll lives in
 | --- | --- | --- |
 | Blackjack | https://blackjack-production-0312.up.railway.app | this folder |
 | Geometry Dash replica | https://game-production-8782.up.railway.app | `geometry-dash/` |
-| Getting Over It | https://getting-over-it-production.up.railway.app | `getting-over-it/` |
+| Getting Over It | https://over-a-barrel-production.up.railway.app | separate project (`over-a-barrel` on Railway) |
 | BlockForge | https://blockforge-web-production.up.railway.app | `blockforge/` |
 | Apex GP (F1) | https://apex-gp-production.up.railway.app | [apex-gp](https://github.com/elliotread250-source/apex-gp) |
 | 2 Weeks | https://two-weeks-production.up.railway.app | [2-weeks](https://github.com/elliotread250-source/2-weeks) |
