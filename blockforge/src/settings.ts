@@ -84,8 +84,9 @@ export function loadSettings(): Settings {
       const saved = JSON.parse(raw) as Partial<Settings>;
       const s = { ...DEFAULT_SETTINGS, ...saved };
       // Settings saved before shader packs existed: map the old toggles onto a pack.
+      // Saved shadows/waving are kept as they are (the menus sync them when the pack changes).
       if (!saved.shaderPack) s.shaderPack = saved.shadows ? 'fancy' : saved.waving ? 'fancy' : 'off';
-      return syncShaderFlags(s);
+      return s;
     }
   } catch { /* storage blocked: use defaults */ }
   return syncShaderFlags({ ...DEFAULT_SETTINGS });
