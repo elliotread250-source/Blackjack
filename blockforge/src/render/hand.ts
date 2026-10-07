@@ -209,11 +209,11 @@ export class Hand {
     const p = this.pivot;
     if (this.current) {
       // held block: lower right, turned 45 degrees, swings in a short arc towards the crosshair
-      p.position.set(0.56 - 0.4 * f1, -0.52 + down + 0.2 * Math.sin(sq * Math.PI * 2), -0.72 - 0.2 * Math.sin(sp * Math.PI));
-      p.rotation.set(-f1 * 1.3, -f2 * 0.35, -f1 * 0.35, 'YXZ');
+      p.position.set(0.5 - 0.4 * f1, -0.44 + down + 0.2 * Math.sin(sq * Math.PI * 2), -0.8 - 0.2 * Math.sin(sp * Math.PI));
+      p.rotation.set(0.12 - f1 * 1.3, -f2 * 0.35, -f1 * 0.35, 'YXZ');
       this.item.position.set(0, 0, 0);
       this.item.rotation.set(0, Math.PI / 4, 0);
-      this.item.scale.setScalar(0.4);
+      this.item.scale.setScalar(0.3);
     } else {
       // empty hand: arm reaching in from the lower right, punching forward on swing
       p.position.set(0.5 - 0.3 * f1, -0.42 + down + 0.12 * Math.sin(sq * Math.PI * 2), -0.62 - 0.35 * Math.sin(sp * Math.PI));
