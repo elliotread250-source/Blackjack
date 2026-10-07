@@ -162,6 +162,11 @@ export class InventoryScreen {
     this.track = div('bf-inv-track', this.panel);
     this.track.dataset.k = 'track';
     this.thumb = div('bf-inv-thumb', this.track);
+    // Tappable close button: phones have no E or Esc key.
+    const closeBtn = div('bf-inv-close', this.panel);
+    closeBtn.dataset.k = 'close';
+    closeBtn.textContent = 'X';
+    closeBtn.setAttribute('aria-label', 'Close inventory');
     this.tip = div('bf-tip', this.gui);
     this.heldEl = div('bf-held', this.gui);
 
@@ -405,6 +410,7 @@ export class InventoryScreen {
     const { k, el } = this.hit(e.clientX, e.clientY);
     if (k === 'search') return;                   // let the text box take the click
     e.preventDefault();
+    if (k === 'close') { this.close(); return; }
     if (document.activeElement === this.search && TABS[this.tab].key !== 'search') this.search.blur();
     if (k === 'track') {
       this.thumbDrag = e.pointerId;

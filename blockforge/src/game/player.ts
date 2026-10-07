@@ -134,6 +134,9 @@ export class Player {
   private nb = (dx: number, dy: number, dz: number): number => this.w!.get(this.qx + dx, this.qy + dy, this.qz + dz);
   private lcx = NaN; private lcz = NaN; private lres = false;
 
+  /** Toggle creative flight on the next tick (the touch Fly button; same as a double-tap of Space). */
+  toggleFlight(): void { this.flyToggle = true; }
+
   eyeHeight(): number { return this.oEyeH + (this.eyeH - this.oEyeH) * this.alpha; }
   /** Collision box height: 1.5 while crouching (fits under 1.5 block gaps), else 1.8. */
   boxHeight(): number { return this.crouched ? CROUCH_H : STAND_H; }
@@ -261,7 +264,12 @@ export class Player {
     if (this.noJumpDelay > 0) this.noJumpDelay--;
 
     // Double-tap Space toggles creative flight (not while sneaking into a crawl gap).
-    if (this.flyToggle) { this.flyToggle = false; this.flying = !this.flying; }
+    if (this.flyToggle) {
+      this.flyToggle = false;
+      this.flying = !this.flying;
+      // Taking off from the ground (touch Fly button): lift a little so landing does not end it at once.
+      if (this.flying && this.onGround) { this.tvy = Math.max(this.tvy, 0.2); this.onGround = false; }
+    }
 
     // Pose: crouch while Shift is held on foot; stay crouched where there is no room to stand.
     const shift = this.kShift;

@@ -337,6 +337,10 @@ a.bf-btn{color:#fff}
 .bf-inv-root{z-index:20;display:none;touch-action:none}
 .bf-inv-root.bf-open{display:block}
 .bf-inv-panel{position:absolute;width:${u(195)};height:${u(136)};left:${u('(var(--cx) - 98)')};top:${u('(var(--cy) - 68)')}}
+.bf-inv-close{position:absolute;left:${u(198)};top:${u(4)};width:${u(16)};height:${u(16)};display:flex;align-items:center;justify-content:center;
+  background:#8b8b8b;color:#fff;font-size:${u(9)};line-height:1;text-shadow:${u(1)} ${u(1)} 0 #3f3f3f;cursor:pointer;
+  box-shadow:inset ${u(1)} ${u(1)} 0 #d8d8d8,inset ${u(-1)} ${u(-1)} 0 #565656,0 0 0 ${u(1)} #000}
+.bf-inv-close:hover{background:#9aa6d4}
 .bf-inv-bg{position:absolute;inset:0;border-style:solid;border-width:${u(4)};border-image:var(--bf-panel) 4 fill stretch;image-rendering:pixelated}
 .bf-inv-title{position:absolute;left:${u(8)};top:${u(5)}}
 .bf-tab{position:absolute;width:${u(28)};height:${u(32)};background:var(--bf-tab) no-repeat;background-size:100% 100%;image-rendering:pixelated}

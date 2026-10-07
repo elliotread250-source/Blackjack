@@ -119,6 +119,7 @@ async function boot() {
     openInventory: () => gameRef?.openInventory(),
     pause: () => gameRef?.pause(),
     isFlying: () => !!gameRef?.player.flying,
+    toggleFly: () => gameRef?.player.toggleFlight(),
   });
   const game = new Game({ renderer, input, hud, inventory, hotbar, sounds, settings, touch });
   gameRef = game;

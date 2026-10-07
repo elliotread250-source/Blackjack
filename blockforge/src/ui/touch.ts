@@ -9,6 +9,7 @@ export interface TouchHooks {
   openInventory(): void;
   pause(): void;
   isFlying(): boolean;
+  toggleFly(): void;
 }
 
 /** True on phones/tablets where the primary pointer is a finger. */
@@ -308,11 +309,7 @@ export class TouchControls {
           this.buttons.get('sneak')!.classList.toggle('latched', this.sneakLatched);
         }
         break;
-      case 'fly':
-        // Two quick Space taps: the player's double-tap toggles flight.
-        this.tapKey('Space');
-        setTimeout(() => this.tapKey('Space'), 90);
-        break;
+      case 'fly': this.hooks.toggleFly(); break;
       case 'break': this.input.clicked[0] = true; this.input.buttons[0] = true; break;
       case 'place': this.input.clicked[2] = true; this.input.buttons[2] = true; break;
       case 'pick': this.click(1); break;
