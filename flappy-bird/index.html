@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#4ec0ca">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Flappy Bird">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Flappy Bird Replica</title>
+<style>
+  :root { --bg: #1f1a24; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overscroll-behavior: none;
+  }
+  canvas { display: block; image-rendering: pixelated; image-rendering: crisp-edges; cursor: pointer; }
+</style>
+</head>
+<body>
+<canvas id="screen" width="288" height="512" aria-label="Flappy Bird"></canvas>
+<script src="js/game.js"></script>
+</body>
+</html>
