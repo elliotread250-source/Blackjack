@@ -4,7 +4,7 @@ A single-page blackjack table with play-money chips. No accounts, no real money,
 no backend: the whole game runs in the browser and your bankroll lives in
 `localStorage`.
 
-**All the games in one place: https://elliots-arcade.up.railway.app**
+**All the games in one place: https://open-arcade.up.railway.app**
 
 | Game | Live on Railway | Code |
 | --- | --- | --- |

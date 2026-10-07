@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0a0b10">
-<meta name="description" content="Every game Elliot has built, in one place. Free, in your browser, no installs.">
-<meta property="og:title" content="Elliot's Arcade">
+<meta name="description" content="Free browser games in one place. No installs, no sign-ups.">
+<meta property="og:title" content="Open Arcade">
 <meta property="og:description" content="Blackjack, Geometry Dash, Getting Over It, BlockForge, Apex GP, 2 Weeks and more. Free, in your browser.">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<title>Elliot's Arcade</title>
+<title>Open Arcade</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -93,14 +93,13 @@
 <body>
 <div class="wrap">
   <header>
-    <a class="logo" href="/"><img src="icon.svg" alt="">Elliot's Arcade</a>
-    <nav><a href="https://github.com/elliotread250-source" rel="noopener">GitHub</a></nav>
+    <a class="logo" href="/"><img src="icon.svg" alt="">Open Arcade</a>
   </header>
 
   <section class="hero">
     <span class="eyebrow"><i></i> Everything's free and runs in your browser</span>
-    <h1>Elliot's <span>Arcade.</span></h1>
-    <p class="lede">Every game I've built, in one place. Card tables, rage climbers, a block world, an F1 grid and a battle royale. Pick one and you're playing in a second.</p>
+    <h1>Open <span>Arcade.</span></h1>
+    <p class="lede">A shelf of free browser games. Card tables, rage climbers, a block world, an F1 grid and a battle royale. Pick one and you're playing in a second.</p>
   </section>
 
   <div class="bar">
@@ -144,9 +143,6 @@ const ITEMS = [
   { name: 'The Humanizer', kind: 'tool', url: 'https://humanizer-production-e796.up.railway.app',
     blurb: 'Paste AI-written text, get back something that reads like a person wrote it. Checks itself against AI detectors.',
     tags: ['Writing', 'AI', 'No sign-in'], c1: '#8b7bff', c2: '#16112e', glow: 'rgba(140,120,255,.4)', art: 'humanizer' },
-  { name: 'Master Client', kind: 'tool', url: 'https://github.com/elliotread250-source/Blackjack/tree/claude/great-tesla-luw1c8/master-client', ping: false,
-    blurb: 'A launcher for Minecraft Bedrock on Windows: HUD editor, overlay, keystrokes and FPS. Source and build steps on GitHub.',
-    tags: ['Windows app', 'Minecraft', 'Source'], c1: '#4a5568', c2: '#12151c', glow: 'rgba(160,170,190,.3)', art: 'master' },
 ];
 
 const ART = {
@@ -157,7 +153,6 @@ const ART = {
   apex: `<svg viewBox="0 0 320 180"><path d="M-10 180 C60 120 140 110 330 120 L330 180Z" fill="#20232b"/><path d="M-10 180 C60 120 140 110 330 120" stroke="#fff" stroke-width="3" stroke-dasharray="14 10" fill="none" opacity=".5"/><g transform="translate(70 92)"><path d="M10 34 L40 22 L120 18 L170 26 L178 34 L10 40Z" fill="#e8313a"/><path d="M60 18 Q84 4 104 18Z" fill="#111"/><rect x="0" y="30" width="22" height="6" fill="#111"/><rect x="164" y="16" width="12" height="20" fill="#111"/><circle cx="40" cy="42" r="14" fill="#111"/><circle cx="40" cy="42" r="6" fill="#444"/><circle cx="140" cy="42" r="14" fill="#111"/><circle cx="140" cy="42" r="6" fill="#444"/><path d="M76 14 L96 14" stroke="#ffd21f" stroke-width="3"/></g><g fill="#fff" opacity=".7"><rect x="20" y="70" width="40" height="2"/><rect x="8" y="84" width="54" height="2"/><rect x="26" y="98" width="36" height="2"/></g></svg>`,
   twoweeks: `<svg viewBox="0 0 320 180"><ellipse cx="160" cy="150" rx="150" ry="34" fill="#e8d28a"/><ellipse cx="160" cy="146" rx="128" ry="26" fill="#5fbf4a"/><rect x="118" y="104" width="34" height="34" fill="#c98a4a"/><path d="M114 106 L135 88 L156 106Z" fill="#d94a3a"/><rect x="176" y="96" width="30" height="42" fill="#9aa3ad"/><g transform="translate(218 34)"><path d="M0 20 Q30 -6 60 20Z" fill="#3cc3ff"/><path d="M14 18 L30 44 L46 18" stroke="#fff" stroke-width="1.5" fill="none"/><rect x="25" y="42" width="10" height="12" rx="3" fill="#ffd21f"/></g><g transform="translate(60 26)"><rect width="66" height="26" rx="7" fill="#3c6dff"/><rect x="6" y="6" width="10" height="8" fill="#bfe6ff"/><rect x="20" y="6" width="10" height="8" fill="#bfe6ff"/><rect x="34" y="6" width="10" height="8" fill="#bfe6ff"/><path d="M14 -6 Q40 -18 60 -4" stroke="#bfe6ff" stroke-width="3" fill="none"/></g></svg>`,
   humanizer: `<svg viewBox="0 0 320 180"><g font-family="Space Grotesk, sans-serif" font-weight="600"><rect x="40" y="52" width="104" height="76" rx="12" fill="rgba(255,255,255,.08)" stroke="rgba(255,255,255,.25)"/><g fill="#8f86c9"><rect x="54" y="68" width="76" height="6" rx="3"/><rect x="54" y="82" width="62" height="6" rx="3"/><rect x="54" y="96" width="70" height="6" rx="3"/><rect x="54" y="110" width="44" height="6" rx="3"/></g><path d="M156 90 L184 90 M176 80 L188 90 L176 100" stroke="#fff" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="198" y="52" width="104" height="76" rx="12" fill="#fff"/><g fill="#2a2440"><rect x="212" y="68" width="66" height="6" rx="3"/><rect x="212" y="82" width="78" height="6" rx="3"/><rect x="212" y="96" width="50" height="6" rx="3"/><rect x="212" y="110" width="70" height="6" rx="3"/></g></g></svg>`,
-  master: `<svg viewBox="0 0 320 180"><rect x="70" y="34" width="180" height="112" rx="10" fill="#1c212b" stroke="rgba(255,255,255,.18)"/><rect x="70" y="34" width="180" height="20" rx="10" fill="#262c38"/><circle cx="84" cy="44" r="4" fill="#ff5f57"/><circle cx="98" cy="44" r="4" fill="#febc2e"/><circle cx="112" cy="44" r="4" fill="#28c840"/><rect x="88" y="70" width="64" height="58" rx="6" fill="#5fae4a"/><rect x="88" y="70" width="64" height="14" rx="6" fill="#6fbf4a"/><rect x="166" y="70" width="66" height="12" rx="4" fill="#3d4656"/><rect x="166" y="90" width="50" height="12" rx="4" fill="#3d4656"/><rect x="166" y="112" width="66" height="16" rx="5" fill="#3ddc84"/></svg>`,
 };
 
 const grid = document.getElementById('grid');
