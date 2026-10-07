@@ -1,3 +1,2 @@
-// Placeholder entry while the engine lands. Replaced by the real bootstrap.
-const boot = document.getElementById('boot');
-if (boot) boot.textContent = 'BlockForge is being built. Check back soon.';
+// Entry point: the real bootstrap lives in app.ts.
+import './app';

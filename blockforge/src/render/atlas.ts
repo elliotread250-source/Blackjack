@@ -71,7 +71,7 @@ export function setAtlasMipmaps(atlas: Atlas, on: boolean): void {
   if (on) {
     let chain = chains.get(atlas);
     if (!chain) {
-      chain = buildMipChain(tex.image.data as Uint8Array);
+      chain = buildMipChain(tex.image.data as unknown as Uint8Array);
       chains.set(atlas, chain);
     }
     tex.mipmaps = chain as unknown as typeof tex.mipmaps;
