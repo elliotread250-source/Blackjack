@@ -198,7 +198,8 @@ export class Hand {
     const swayY = Math.max(-0.12, Math.min(0.12, dy * 0.6));
 
     // bobbing (same curve as the camera bob, applied to the hand)
-    const ph = f.bob.phase * Math.PI, am = f.bob.amount;
+    // phase is already in radians; amount is 0..1 (scaled down to a gentle sway)
+    const ph = f.bob.phase, am = f.bob.amount * 0.1;
     this.root.position.set(Math.sin(ph) * am * 0.5 * 0.6, -Math.abs(Math.cos(ph) * am) * 0.6, 0);
     this.root.rotation.set(swayX, swayY, Math.sin(ph) * am * 0.05);
 
