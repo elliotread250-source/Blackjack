@@ -12,6 +12,14 @@ flap -4.6 px/frame, terminal fall 10 px/frame, pipes scrolling 2 px/frame
 with a 100 px gap, all on a fixed 60 Hz step so it plays the same at any
 refresh rate. The bird tilts up on a flap and noses down as it falls.
 
+The background is built on the original's 144x256 art grid and doubled,
+so every edge is a hard 2x2 pixel, and the logo, Get Ready and Game Over
+lettering use a mixed-case pixel font with the same outlined, two-tone
+look. The title screen has the original's play and score buttons (score
+opens a local top-ten board, standing in for Game Center) with Levels
+above them where Rate used to be. It installs to a phone home screen and
+runs full screen.
+
 Like the original, each run picks day or night and a yellow, blue or red
 bird. Score a pipe by passing its middle. Medals: bronze at 10, silver at
 20, gold at 30, platinum at 40. Your best score is saved in the browser.
