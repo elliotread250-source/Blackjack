@@ -218,6 +218,12 @@
 
   .shoe{font-size:10px; letter-spacing:.12em; color:rgba(168,187,176,.7)}
 
+  /* ---------- other games ---------- */
+  .games{display:flex; gap:4px 14px; justify-content:center; flex-wrap:wrap; padding:2px 16px 14px;
+    font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:rgba(168,187,176,.7)}
+  .games a{color:var(--muted); text-decoration:none}
+  .games a:hover{color:var(--gold)}
+
   /* ---------- toast ---------- */
   .toast{
     position:fixed; left:50%; top:38%; transform:translate(-50%,-50%) scale(.8);
@@ -306,6 +312,15 @@
     <span class="shoe" id="shoeInfo"></span>
   </div>
 </div>
+
+<nav class="games" aria-label="More games">
+  <span>More:</span>
+  <a href="https://game-production-8782.up.railway.app">Geometry Dash</a>
+  <a href="https://apex-gp-production.up.railway.app">Apex GP</a>
+  <a href="https://two-weeks-production.up.railway.app">2 Weeks</a>
+  <a href="https://blockforge-web-production.up.railway.app">BlockForge</a>
+  <a href="https://humanizer-production-e796.up.railway.app">Humanizer</a>
+</nav>
 
 <div class="toast" id="toast"></div>
 
