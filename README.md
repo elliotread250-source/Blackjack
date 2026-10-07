@@ -4,15 +4,17 @@ A single-page blackjack table with play-money chips. No accounts, no real money,
 no backend: the whole game runs in the browser and your bankroll lives in
 `localStorage`.
 
-**Play it: https://elliotread250-source.github.io/Blackjack/**
+## All the games
 
-**Geometry Dash replica: https://elliotread250-source.github.io/Blackjack/geometry-dash/**
+**Blackjack (this table):** https://blackjack-production-0312.up.railway.app, also on [GitHub Pages](https://elliotread250-source.github.io/Blackjack/)
 
-**Apex GP (first-person F1 racing, solo or peer-to-peer multiplayer): https://elliotread250-source.github.io/Blackjack/apex-gp/**
+**Geometry Dash replica:** https://game-production-8782.up.railway.app (online levels, leaderboard and cloud saves), offline copy on [GitHub Pages](https://elliotread250-source.github.io/Blackjack/geometry-dash/)
 
-**2 Weeks (build-and-shoot battle royale against 24 bots): https://elliotread250-source.github.io/Blackjack/2-weeks/**
+**Apex GP (first-person F1 racing, solo or peer-to-peer multiplayer):** https://elliotread250-source.github.io/Blackjack/apex-gp/
 
-**Humanizer (AI text to human text, free, no API keys): https://humanizer-production-e796.up.railway.app**
+**2 Weeks (build-and-shoot battle royale against 24 bots):** https://elliotread250-source.github.io/Blackjack/2-weeks/
+
+**Humanizer (AI text to human text, free, no API keys):** https://humanizer-production-e796.up.railway.app, also on [GitHub Pages](https://elliotread250-source.github.io/Blackjack/humanizer/) (no ZeroGPT, no sign-in-free mode)
 
 ## Rules on the table
 
