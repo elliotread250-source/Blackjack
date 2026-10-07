@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#1d6fd1">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BTD6 Replica">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Bloons TD 6 Replica</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --blue: #1d6fd1; --blue2: #0f4a9a; --panel: #2a5bb8; --panel2: #18397a;
+    --green: #5ad12a; --green2: #2f8a12; --red: #e8402a; --red2: #9a1f12;
+    --gold: #ffd21f; --ink: #fff; --wood: #8a5a2b; --wood2: #5e3a17;
+    --shop-w: 208px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; background: #0d2a12; color: var(--ink);
+    font-family: 'Luckiest Guy', 'Lilita One', system-ui, sans-serif; letter-spacing: 0.5px;
+    user-select: none; -webkit-user-select: none; touch-action: none; overscroll-behavior: none;
+  }
+  .stroke { text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 3px 0 #000; }
+  .stroke-s { text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000, 0 2px 0 #000; }
+  button { font-family: inherit; color: inherit; cursor: pointer; border: 0; letter-spacing: inherit; }
+  .btn {
+    padding: 10px 22px; border-radius: 14px; font-size: 22px;
+    background: linear-gradient(#7ae84a, var(--green) 50%, var(--green2)); border: 3px solid #12400a;
+    box-shadow: inset 0 3px 0 rgba(255,255,255,0.45), 0 4px 0 #0c2e06; transition: transform .08s;
+    text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000;
+  }
+  .btn:active { transform: translateY(3px); box-shadow: inset 0 3px 0 rgba(255,255,255,0.45), 0 1px 0 #0c2e06; }
+  .btn.blue { background: linear-gradient(#5aa8ff, var(--blue) 50%, var(--blue2)); border-color: #082a5c; box-shadow: inset 0 3px 0 rgba(255,255,255,0.4), 0 4px 0 #061d40; }
+  .btn.red { background: linear-gradient(#ff7a5a, var(--red) 50%, var(--red2)); border-color: #4a0e06; box-shadow: inset 0 3px 0 rgba(255,255,255,0.4), 0 4px 0 #3a0a04; }
+  .btn.gold { background: linear-gradient(#ffe97a, var(--gold) 50%, #c89a0a); border-color: #5a4004; box-shadow: inset 0 3px 0 rgba(255,255,255,0.5), 0 4px 0 #4a3404; }
+  .btn:disabled { filter: grayscale(0.8) brightness(0.7); cursor: default; }
+  .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 10; padding: max(12px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left)); }
+  .screen.on { display: flex; }
+  .sky { background: radial-gradient(ellipse at 50% 120%, #7fd0ff 0%, #2a8de8 45%, #1356b0 100%); overflow: hidden; }
+  #menuBloons { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .title { font-size: clamp(42px, 9vw, 96px); line-height: 0.9; text-align: center; color: #ffd21f; transform: rotate(-3deg); position: relative; }
+  .title small { display: block; color: #fff; font-size: 0.42em; margin-top: 8px; }
+  .title .six { color: #ff4a2a; font-size: 1.25em; }
+  .menu-row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 26px; position: relative; }
+  .menu-row .btn { min-width: 150px; }
+  #playBtn { font-size: 40px; padding: 14px 54px; border-radius: 22px; }
+  .hdr { font-size: clamp(28px, 5vw, 46px); margin: 0 0 12px; }
+  .backbtn { position: absolute; top: max(12px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left)); font-size: 18px; padding: 8px 16px; }
+  .tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; justify-content: center; }
+  .tab { padding: 8px 16px; border-radius: 12px; font-size: 18px; background: rgba(0,0,0,0.3); border: 3px solid rgba(0,0,0,0.4); }
+  .tab.on { background: var(--gold); color: #3a2a00; text-shadow: none; }
+  #mapGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; width: min(980px, 100%); overflow-y: auto; max-height: 72vh; padding: 4px; touch-action: pan-y; }
+  .mapcard { background: var(--panel2); border: 4px solid #0a1f45; border-radius: 16px; padding: 8px; text-align: center; box-shadow: 0 5px 0 #071633; }
+  .mapcard canvas { width: 100%; border-radius: 10px; display: block; border: 3px solid #071633; }
+  .mapcard .nm { font-size: 20px; margin: 6px 0 2px; }
+  .medals { display: flex; gap: 4px; justify-content: center; min-height: 20px; }
+  .medal { width: 18px; height: 18px; border-radius: 50%; border: 2px solid rgba(0,0,0,0.5); background: #3a4a6a; }
+  .medal.got { box-shadow: 0 0 6px rgba(255,255,255,0.6); }
+  #diffBox { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; max-height: 80vh; overflow-y: auto; touch-action: pan-y; }
+  .dcol { background: var(--panel2); border: 4px solid #0a1f45; border-radius: 18px; padding: 12px; width: 230px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 5px 0 #071633; }
+  .dcol h3 { margin: 0 0 4px; font-size: 26px; text-align: center; font-weight: normal; }
+  .dcol .btn { font-size: 18px; padding: 8px 10px; }
+  .dcol .btn small { display: block; font-size: 11px; opacity: 0.9; letter-spacing: 0; }
+  #heroGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; width: min(900px, 100%); max-height: 70vh; overflow-y: auto; touch-action: pan-y; }
+  .herocard { background: var(--panel2); border: 4px solid #0a1f45; border-radius: 16px; padding: 10px; text-align: center; cursor: pointer; box-shadow: 0 5px 0 #071633; }
+  .herocard.on { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold), 0 5px 0 #071633; }
+  .herocard canvas { width: 90px; height: 90px; }
+  .herocard .nm { font-size: 18px; } .herocard .sub { font-size: 12px; color: #bcd4ff; font-family: system-ui, sans-serif; letter-spacing: 0; }
+
+  /* ---------- game ---------- */
+  #game { position: fixed; inset: 0; display: none; background: #0d2a12; }
+  #game.on { display: flex; }
+  #field { position: relative; flex: 1; min-width: 0; overflow: hidden; }
+  #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #hud { position: absolute; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 10px; padding: max(6px, env(safe-area-inset-top)) 10px 0 max(10px, env(safe-area-inset-left)); pointer-events: none; z-index: 3; }
+  .pill { display: flex; align-items: center; gap: 6px; font-size: 24px; }
+  .pill svg { width: 26px; height: 26px; filter: drop-shadow(0 2px 0 #000); }
+  #cash { color: #fff; }
+  #round { margin-left: auto; font-size: 22px; text-align: right; }
+  #round b { font-weight: normal; font-size: 28px; }
+  #gear { pointer-events: auto; width: 44px; height: 44px; border-radius: 12px; font-size: 24px; padding: 0; }
+  #shop { width: var(--shop-w); background: linear-gradient(#8a5a2b, #6a4218); border-left: 4px solid #3a2208; display: flex; flex-direction: column; padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right)) max(6px, env(safe-area-inset-bottom)) 6px; gap: 6px; z-index: 4; }
+  #shopSide, #shopSide2 { display: contents; }
+  #shopGrid { flex: 1; min-height: 0; overflow-y: auto; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: 92px; gap: 6px; align-content: start; touch-action: pan-y; padding-right: 2px; }
+  .tw { position: relative; height: 100%; border-radius: 12px; border: 3px solid rgba(0,0,0,0.5); padding: 2px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; overflow: hidden; box-shadow: inset 0 2px 0 rgba(255,255,255,0.35); }
+  .tw canvas { position: absolute; top: 2px; left: 50%; transform: translateX(-50%); width: 76%; height: auto; pointer-events: none; }
+  .tw .pr { position: relative; font-size: 15px; z-index: 1; }
+  .tw .hk { position: absolute; top: 2px; left: 5px; font-size: 11px; opacity: 0.8; z-index: 1; }
+  .tw.poor .pr { color: #ff6a5a; }
+  .tw.lock { filter: grayscale(1) brightness(0.5); }
+  .tw.sel { outline: 3px solid var(--gold); }
+  #heroSlot { height: 60px; border-radius: 12px; border: 3px solid rgba(0,0,0,0.5); background: linear-gradient(#ffd96a, #d89a1a); display: flex; align-items: center; gap: 6px; padding: 2px 8px; color: #fff; font-size: 16px; }
+  #heroSlot canvas { width: 50px; height: 50px; }
+  #heroSlot.used { filter: grayscale(0.9) brightness(0.6); }
+  #goBtn { height: 64px; border-radius: 16px; font-size: 34px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  #goBtn svg { width: 40px; height: 40px; filter: drop-shadow(0 2px 0 #000); }
+  #goBtn.fast { background: linear-gradient(#ffe97a, var(--gold) 50%, #c89a0a); border-color: #5a4004; }
+  #autoChk { display: flex; align-items: center; gap: 6px; font-size: 13px; justify-content: center; cursor: pointer; }
+  #autoChk input { width: 18px; height: 18px; }
+
+  #upg { position: absolute; top: 52px; bottom: 10px; width: 250px; background: linear-gradient(#2a5bb8, #18397a); border: 4px solid #0a1f45; border-radius: 16px; z-index: 5; display: none; flex-direction: column; padding: 8px; gap: 6px; box-shadow: 0 6px 0 rgba(0,0,0,0.35); overflow-y: auto; touch-action: pan-y; }
+  #upg.on { display: flex; }
+  #upg.left { left: 10px; } #upg.right { right: 10px; }
+  #upgHead { display: flex; align-items: center; gap: 6px; }
+  #upgHead canvas { width: 48px; height: 48px; flex: none; }
+  #upgName { font-size: 18px; line-height: 1; }
+  #upgPops { font-size: 12px; color: #cfe0ff; font-family: system-ui, sans-serif; letter-spacing: 0; }
+  #upgX { margin-left: auto; width: 32px; height: 32px; padding: 0; font-size: 16px; border-radius: 10px; flex: none; }
+  #targ { display: flex; align-items: center; justify-content: space-between; background: rgba(0,0,0,0.3); border-radius: 10px; padding: 3px; }
+  #targ button { width: 34px; height: 30px; border-radius: 8px; background: var(--gold); color: #3a2a00; font-size: 18px; text-shadow: none; }
+  #targName { font-size: 17px; }
+  .path { display: flex; gap: 5px; align-items: stretch; background: rgba(0,0,0,0.25); border-radius: 12px; padding: 4px; }
+  .pips { display: flex; flex-direction: column-reverse; gap: 2px; justify-content: center; width: 12px; }
+  .pip { width: 12px; height: 9px; border-radius: 3px; background: rgba(0,0,0,0.45); border: 1px solid rgba(0,0,0,0.6); }
+  .pip.on { background: #6aff3a; }
+  .ucard { flex: 1; min-height: 64px; border-radius: 10px; padding: 4px 6px; display: flex; gap: 4px; align-items: center; text-align: left; background: linear-gradient(#7ae84a, var(--green) 50%, var(--green2)); border: 2px solid #12400a; position: relative; }
+  .ucard canvas { width: 46px; height: 46px; flex: none; }
+  .ucard .un { font-size: 14px; line-height: 1.05; }
+  .ucard .uc { font-size: 15px; color: #fff; }
+  .ucard.poor { background: linear-gradient(#ff8a6a, #d84a2a 50%, #8a1f12); border-color: #4a0e06; }
+  .ucard.locked { background: linear-gradient(#777, #555); border-color: #222; }
+  .ucard.max { background: linear-gradient(#ffe97a, #d8a01a); border-color: #5a4004; }
+  .owned { font-size: 11px; color: #d9f0ff; font-family: system-ui, sans-serif; letter-spacing: 0; padding: 0 2px; }
+  #upgFoot { display: flex; gap: 6px; margin-top: auto; }
+  #sellBtn { flex: 1; font-size: 17px; padding: 8px 6px; }
+  #aimBtn { font-size: 15px; padding: 8px 8px; }
+  #xpbar { height: 12px; border-radius: 6px; background: rgba(0,0,0,0.4); overflow: hidden; }
+  #xpbar i { display: block; height: 100%; background: linear-gradient(90deg, #ffd21f, #ff9a1a); }
+  #upgDesc { font-size: 12px; font-family: system-ui, sans-serif; letter-spacing: 0; color: #e8f1ff; line-height: 1.3; background: rgba(0,0,0,0.25); border-radius: 8px; padding: 6px; min-height: 40px; }
+
+  #abil { position: absolute; left: 10px; bottom: max(10px, env(safe-area-inset-bottom)); display: flex; gap: 8px; z-index: 3; flex-wrap: wrap-reverse; max-width: 60%; }
+  .ab { width: 56px; height: 56px; border-radius: 50%; border: 3px solid #000; background: radial-gradient(circle at 35% 35%, #ffe97a, #d89a1a); position: relative; overflow: hidden; font-size: 11px; display: flex; align-items: center; justify-content: center; text-align: center; line-height: 1; padding: 4px; }
+  .ab .cdw { position: absolute; inset: 0; background: conic-gradient(rgba(0,0,0,0.6) var(--p), transparent 0); pointer-events: none; }
+  .ab .kb { position: absolute; bottom: 2px; right: 6px; font-size: 11px; }
+  .ab.ready { animation: pulse 1s infinite alternate; }
+  @keyframes pulse { to { box-shadow: 0 0 12px 4px rgba(255,230,80,0.9); } }
+
+  #toast { position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%); font-size: clamp(30px, 6vw, 56px); pointer-events: none; z-index: 6; opacity: 0; transition: opacity .25s; text-align: center; white-space: nowrap; }
+  #toast.on { opacity: 1; }
+  .modal { position: absolute; inset: 0; background: rgba(0,0,0,0.55); z-index: 8; display: none; align-items: center; justify-content: center; padding: 16px; }
+  .modal.on { display: flex; }
+  .box { background: linear-gradient(#2a5bb8, #18397a); border: 5px solid #0a1f45; border-radius: 22px; padding: 18px 22px; min-width: min(360px, 100%); max-width: 520px; text-align: center; box-shadow: 0 8px 0 rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 10px; align-items: stretch; max-height: 92vh; overflow-y: auto; }
+  .box h2 { margin: 0; font-size: 40px; font-weight: normal; }
+  .box p { margin: 0; font-family: system-ui, sans-serif; letter-spacing: 0; font-size: 15px; color: #dce9ff; }
+  .row { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .slider { display: flex; align-items: center; gap: 10px; font-size: 18px; justify-content: space-between; }
+  .slider input { flex: 1; }
+  #tip { position: fixed; z-index: 20; pointer-events: none; background: rgba(10,25,60,0.95); border: 2px solid #000; border-radius: 10px; padding: 8px 10px; max-width: 240px; font-family: system-ui, sans-serif; letter-spacing: 0; font-size: 13px; display: none; }
+  #tip b { font-family: 'Luckiest Guy', sans-serif; font-weight: normal; font-size: 16px; display: block; margin-bottom: 2px; }
+
+  @media (max-width: 900px), (max-height: 560px) {
+    :root { --shop-w: 168px; }
+    #shopGrid { grid-auto-rows: 74px; }
+    .tw .pr { font-size: 13px; }
+    #upg { width: 220px; }
+    .pill { font-size: 19px; } #round { font-size: 17px; } #round b { font-size: 22px; }
+    #goBtn { height: 52px; }
+    .ucard { min-height: 54px; } .ucard canvas { width: 38px; height: 38px; } .ucard .un { font-size: 12px; }
+    .ab { width: 48px; height: 48px; font-size: 9px; }
+  }
+  @media (orientation: portrait) and (max-width: 760px) {
+    #game { flex-direction: column; }
+    #shop { width: 100%; height: 150px; border-left: 0; border-top: 4px solid #3a2208; flex-direction: row; }
+    #shopGrid { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 64px; grid-template-rows: 1fr; grid-auto-rows: auto; overflow-x: auto; overflow-y: hidden; touch-action: pan-x; }
+    .tw canvas { width: 70%; }
+    #shopSide, #shopSide2 { display: flex; flex-direction: column; gap: 4px; width: 92px; flex: none; justify-content: center; }
+    #heroSlot { height: 46px; font-size: 12px; } #heroSlot canvas { width: 38px; height: 38px; }
+    #goBtn { height: 46px; font-size: 22px; }
+    #upg { top: 46px; width: min(250px, 70vw); }
+  }
+</style>
+</head>
+<body>
+
+<!-- main menu -->
+<div id="menu" class="screen sky on">
+  <canvas id="menuBloons"></canvas>
+  <div class="title stroke">BLOONS<br>TD <span class="six">6</span><small>REPLICA</small></div>
+  <div class="menu-row"><button id="playBtn" class="btn">Play</button></div>
+  <div class="menu-row">
+    <button class="btn blue" id="heroesBtn">Heroes</button>
+    <button class="btn blue" id="statsBtn">Stats</button>
+    <button class="btn blue" id="setBtn">Settings</button>
+  </div>
+</div>
+
+<!-- map select -->
+<div id="maps" class="screen sky">
+  <button class="btn red backbtn" data-back="menu">Back</button>
+  <h1 class="hdr stroke">Select Map</h1>
+  <div class="tabs" id="mapTabs"></div>
+  <div id="mapGrid"></div>
+</div>
+
+<!-- difficulty -->
+<div id="diff" class="screen sky">
+  <button class="btn red backbtn" data-back="maps">Back</button>
+  <h1 class="hdr stroke" id="diffTitle">Map</h1>
+  <div id="diffBox"></div>
+</div>
+
+<!-- heroes -->
+<div id="heroes" class="screen sky">
+  <button class="btn red backbtn" data-back="menu">Back</button>
+  <h1 class="hdr stroke">Heroes</h1>
+  <div id="heroGrid"></div>
+  <p id="heroInfo" class="stroke-s" style="max-width:640px;text-align:center;font-family:system-ui,sans-serif;letter-spacing:0;font-size:15px;margin-top:12px"></p>
+</div>
+
+<!-- stats -->
+<div id="stats" class="screen sky">
+  <button class="btn red backbtn" data-back="menu">Back</button>
+  <h1 class="hdr stroke">Stats</h1>
+  <div class="box" id="statsBox" style="min-width:min(420px,100%)"></div>
+</div>
+
+<!-- game -->
+<div id="game">
+  <div id="field">
+    <canvas id="cv"></canvas>
+    <div id="hud" class="stroke">
+      <div class="pill"><svg viewBox="0 0 24 24"><path fill="#ff3a4a" stroke="#000" stroke-width="1.5" d="M12 21s-8-5.2-8-11a4.6 4.6 0 0 1 8-3 4.6 4.6 0 0 1 8 3c0 5.8-8 11-8 11z"/></svg><span id="lives">150</span></div>
+      <div class="pill"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#ffd21f" stroke="#000" stroke-width="1.5"/><text x="12" y="17" text-anchor="middle" font-size="14" font-family="Arial" font-weight="bold" fill="#7a5a00">$</text></svg><span id="cash">650</span></div>
+      <div id="round">Round <b id="roundN">1</b>/<span id="roundMax">60</span></div>
+      <button id="gear" class="btn blue">&#9881;</button>
+    </div>
+    <div id="upg">
+      <div id="upgHead">
+        <canvas id="upgIcon" width="96" height="96"></canvas>
+        <div><div id="upgName" class="stroke-s">Dart Monkey</div><div id="upgPops">Pops: 0</div></div>
+        <button id="upgX" class="btn red">X</button>
+      </div>
+      <div id="heroLvl" style="display:none"><div class="stroke-s" id="heroLvlTxt" style="font-size:16px">Level 1</div><div id="xpbar"><i></i></div></div>
+      <div id="targ"><button id="tPrev">&lsaquo;</button><span id="targName" class="stroke-s">First</span><button id="tNext">&rsaquo;</button></div>
+      <div id="paths"></div>
+      <div id="upgDesc">Tap an upgrade to buy it.</div>
+      <div id="upgFoot"><button id="aimBtn" class="btn blue" style="display:none">Set Target</button><button id="sellBtn" class="btn red">Sell $0</button></div>
+    </div>
+    <div id="abil"></div>
+    <div id="toast" class="stroke"></div>
+    <div id="pause" class="modal"><div class="box">
+      <h2 class="stroke">Paused</h2>
+      <div class="slider stroke-s">Sound <input type="range" id="vol" min="0" max="1" step="0.05"></div>
+      <label id="autoChk2" class="slider stroke-s" style="justify-content:center"><input type="checkbox" id="autoBox2"> Auto-start rounds</label>
+      <div class="row"><button class="btn" id="resumeBtn">Resume</button></div>
+      <div class="row"><button class="btn blue" id="restartBtn">Restart</button><button class="btn red" id="homeBtn">Home</button></div>
+    </div></div>
+    <div id="endModal" class="modal"><div class="box">
+      <h2 class="stroke" id="endTitle">Victory!</h2>
+      <p id="endText"></p>
+      <div class="row" id="endBtns"></div>
+    </div></div>
+    <div id="confirm" class="modal"><div class="box">
+      <h2 class="stroke" id="cfTitle" style="font-size:30px">Sure?</h2>
+      <p id="cfText"></p>
+      <div class="row"><button class="btn" id="cfYes">Yes</button><button class="btn red" id="cfNo">No</button></div>
+    </div></div>
+  </div>
+  <div id="shop">
+    <div id="shopSide">
+      <div id="heroSlot" class="stroke-s"></div>
+    </div>
+    <div id="shopGrid"></div>
+    <div id="shopSide2">
+      <label id="autoChk" class="stroke-s"><input type="checkbox" id="autoBox"> Auto start</label>
+      <button id="goBtn" class="btn"></button>
+    </div>
+  </div>
+</div>
+
+<!-- settings modal (menu) -->
+<div id="settings" class="screen sky">
+  <button class="btn red backbtn" data-back="menu">Back</button>
+  <h1 class="hdr stroke">Settings</h1>
+  <div class="box">
+    <div class="slider stroke-s">Sound <input type="range" id="vol2" min="0" max="1" step="0.05"></div>
+    <p>Hotkeys: Q W E R T Y Z X C V B N M A S D F G H J K L place monkeys, U places your hero. Comma, period and slash buy upgrades on paths 1, 2 and 3. Tab changes targeting, Backspace sells, Space starts the round or toggles fast forward, 1-9 fire abilities, Esc cancels.</p>
+    <button class="btn red" id="wipeBtn">Reset all progress</button>
+  </div>
+</div>
+
+<div id="tip"></div>
+
+<script src="js/bloons.js"></script>
+<script src="js/rounds.js"></script>
+<script src="js/maps.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/towers.js"></script>
+<script src="js/heroes.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/render.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>

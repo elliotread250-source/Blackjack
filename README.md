@@ -8,6 +8,8 @@ no backend: the whole game runs in the browser and your bankroll lives in
 
 **Geometry Dash replica: https://elliotread250-source.github.io/Blackjack/geometry-dash/**
 
+**Bloons TD 6 replica: https://elliotread250-source.github.io/Blackjack/bloons-td-6/**
+
 **Humanizer (AI text to human text, free, no API keys): https://humanizer-production-e796.up.railway.app**
 
 ## Rules on the table
