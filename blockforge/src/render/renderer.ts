@@ -43,6 +43,7 @@ interface SectionEntry {
 }
 
 const LAYERS = 5;
+const BOB_STRENGTH = 0.04;                 // blocks of camera sway at full walking speed
 const SECTION_RADIUS = 8 * Math.sqrt(3);   // 13.86 blocks (3547 / 256)
 const NEAR = 0.05;
 const WRAP = 1024;
@@ -290,9 +291,11 @@ export class Renderer {
     // camera + view bobbing (MC style: translate in view space, small roll and pitch)
     cam.position.set(s.eye.x, s.eye.y, s.eye.z);
     cam.rotation.set(s.pitch, s.yaw, 0, 'YXZ');
-    const amt = s.bob.amount || 0;
+    // Player.bob() gives the phase in radians and amount as 0..1; BOB_STRENGTH turns that into a
+    // gentle sway (well under the reference game's 0.1 blocks, which felt too strong).
+    const amt = (s.bob.amount || 0) * BOB_STRENGTH;
     if (amt > 0) {
-      const ph = s.bob.phase * Math.PI;
+      const ph = s.bob.phase;
       cam.updateMatrix();
       cam.translateX(Math.sin(ph) * amt * 0.5);
       cam.translateY(-Math.abs(Math.cos(ph) * amt));
