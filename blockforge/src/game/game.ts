@@ -18,6 +18,7 @@ import type { SoundName } from '../blocks/registry';
 import type { Hud } from '../ui/hud';
 import type { Menus } from '../ui/screens';
 import type { InventoryScreen } from '../ui/inventory';
+import type { TouchControls } from '../ui/touch';
 import type { Settings } from '../settings';
 import { DAY_LENGTH, xzIndex, SEA_LEVEL } from '../world/constants';
 import type { RayHit, TimeMode, WorldMeta } from '../types';
@@ -35,6 +36,7 @@ export interface GameDeps {
   hotbar: Hotbar;
   sounds: Sounds;
   settings: Settings;
+  touch?: TouchControls;
 }
 
 export type GameState = 'menu' | 'loading' | 'playing' | 'paused';
@@ -73,6 +75,22 @@ export class Game {
   }
 
   private get settings() { return this.d.settings; }
+  private get touchMode() { return this.d.settings.controls === 'touch' && !!this.d.touch; }
+
+  /** Touch mode has no pointer lock: show/hide the on-screen controls and fake the lock. */
+  private setTouchActive(on: boolean) {
+    if (!this.d.touch) return;
+    this.d.touch.setEnabled(on && this.touchMode);
+    this.d.input.virtualLock = on && this.touchMode;
+  }
+
+  openInventory() {
+    if (this.state !== 'playing' || this.d.inventory.isOpen) return;
+    this.d.input.enabled = false;
+    this.d.inventory.open();
+    this.d.input.exitLock();
+    this.setTouchActive(false);
+  }
 
   // ------------------------------------------------------------------ lifecycle
   async startWorld(meta: WorldMeta) {
@@ -207,6 +225,7 @@ export class Game {
     this.d.renderer.clear();
     this.state = 'menu';
     this.d.input.enabled = false;
+    this.setTouchActive(false);
     this.d.input.exitLock();
     this.d.hud.setVisible(false);
     this.d.hud.setUnderwaterTint(false);
@@ -218,6 +237,7 @@ export class Game {
     if (this.state !== 'playing') return;
     this.state = 'paused';
     this.d.input.enabled = false;
+    this.setTouchActive(false);
     if (this.d.inventory.isOpen) this.d.inventory.close();
     this.menus?.showPause();
     void this.saveAll();
@@ -233,6 +253,7 @@ export class Game {
 
   /** Try to grab the mouse; if the browser refuses (no gesture yet), fall back to the pause screen. */
   private async lockOrPause() {
+    if (this.touchMode) { this.setTouchActive(true); return; }
     if (this.d.input.locked) return;
     const ok = await this.d.input.requestLock();
     if (!ok && this.state === 'playing' && !this.d.inventory.isOpen) {
@@ -259,6 +280,7 @@ export class Game {
   applySettings(s: Settings) {
     this.d.renderer.applySettings(s);
     this.d.sounds.setVolume(s.volume);
+    this.d.touch?.applySettings(s);
     if (this.chunks) {
       this.chunks.setRenderDistance(s.renderDistance);
       const mo = { fancyLeaves: s.fancyLeaves, smoothLighting: s.smoothLighting };
@@ -286,9 +308,7 @@ export class Game {
     if (this.state !== 'playing') return;
     switch (code) {
       case 'KeyE':
-        this.d.input.enabled = false;
-        this.d.input.exitLock();
-        inv.open();
+        this.openInventory();
         e.preventDefault();
         break;
       case 'Escape':
@@ -358,6 +378,7 @@ export class Game {
     if (this.state === 'playing') {
       this.time += dt;
       if (this.timeMode === 'cycle') this.dayTime = (this.dayTime + dt / DAY_LENGTH) % 1;
+      this.d.touch?.update(dt);
       if (input.enabled) {
         if (input.wheel) this.d.hotbar.scroll(Math.sign(input.wheel));
       }

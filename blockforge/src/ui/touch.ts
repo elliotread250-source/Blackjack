@@ -111,8 +111,6 @@ export class TouchControls {
     this.addButton('break', '', { right: 'calc(max(14px,env(safe-area-inset-right)) + 2vmin)', bottom: 'calc(var(--s)*clamp(64px,16vmin,110px) + var(--s)*clamp(56px,15vmin,98px)*2)' });
     this.addButton('place', '', { right: 'calc(max(14px,env(safe-area-inset-right)) + var(--s)*clamp(56px,15vmin,98px) + 2vmin)', bottom: 'calc(var(--s)*clamp(64px,16vmin,110px) + var(--s)*clamp(56px,15vmin,98px)*2)' });
     this.addButton('pick', 'small', { right: 'calc(max(14px,env(safe-area-inset-right)) + var(--s)*clamp(56px,15vmin,98px)*2 + 2vmin)', bottom: 'calc(var(--s)*clamp(64px,16vmin,110px) + var(--s)*clamp(56px,15vmin,98px)*2)' });
-    this.addButton('prev', 'small', { left: 'calc(50% - var(--s)*clamp(48px,12vmin,72px) * 3.9)', bottom: '8px' });
-    this.addButton('next', 'small', { left: 'calc(50% + var(--s)*clamp(48px,12vmin,72px) * 3.1)', bottom: '8px' });
 
     el.addEventListener('pointerdown', (e) => this.onDown(e));
     el.addEventListener('pointermove', (e) => this.onMove(e));
@@ -200,6 +198,16 @@ export class TouchControls {
     try { this.el.setPointerCapture(e.pointerId); } catch { /* old browsers */ }
     const target = (e.target as HTMLElement).closest('.bt') as HTMLElement | null;
     const now = performance.now();
+    // The hotbar sits under this overlay: a tap on a slot selects it.
+    if (!target) {
+      for (const el of document.elementsFromPoint(e.clientX, e.clientY)) {
+        const slot = (el as HTMLElement).dataset?.slot;
+        if (slot !== undefined && el.closest('.bf-hotbar, .bf-hud, [data-slot]')) {
+          this.hotbar.select(Number(slot));
+          return;
+        }
+      }
+    }
     if (target) {
       const name = target.dataset.btn!;
       this.tracks.set(e.pointerId, { role: name, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: now, moved: false });

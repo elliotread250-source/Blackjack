@@ -8,6 +8,7 @@ import { Menus } from './ui/screens';
 import type { MenuHandlers } from './ui/screens';
 import { Hud } from './ui/hud';
 import { InventoryScreen } from './ui/inventory';
+import { TouchControls } from './ui/touch';
 import { buildAtlas } from './render/atlas';
 import { Renderer } from './render/renderer';
 import { Input } from './game/input';
@@ -15,7 +16,7 @@ import { Sounds } from './game/audio';
 import { Hotbar, DEFAULT_HOTBAR } from './game/hotbar';
 import { Game } from './game/game';
 import { storage } from './world/storage';
-import { BLOCKS } from './blocks/registry';
+import { BLOCKS, ID } from './blocks/registry';
 import type { WorldMeta } from './types';
 
 const VERSION = '1.0.0';
@@ -112,7 +113,15 @@ async function boot() {
   const sounds = new Sounds();
   sounds.setVolume(settings.volume);
 
-  const game = new Game({ renderer, input, hud, inventory, hotbar, sounds, settings });
+  // Created before the game so it can be handed in; hooks reach the game lazily.
+  let gameRef: Game | null = null;
+  const touch = new TouchControls(uiRoot, input, hotbar, settings, {
+    openInventory: () => gameRef?.openInventory(),
+    pause: () => gameRef?.pause(),
+    isFlying: () => !!gameRef?.player.flying,
+  });
+  const game = new Game({ renderer, input, hud, inventory, hotbar, sounds, settings, touch });
+  gameRef = game;
 
   const handlers: MenuHandlers = {
     listWorlds: () => storage.listWorlds(),
@@ -195,7 +204,7 @@ async function boot() {
 
   // Handle for the e2e tests and for curious players poking at the console.
   (window as unknown as { blockforge: unknown }).blockforge = {
-    game, renderer, settings, storage, handlers, hud, inventory, menus, hotbar,
+    game, renderer, settings, storage, handlers, hud, inventory, menus, hotbar, touch, input, ID, BLOCKS,
     applyPreset(p: 'low' | 'medium' | 'high') { applyPreset(settings, p); handlers.settingsChanged(settings); },
     debug: {
       /** Enter play state without pointer lock (headless tests). */
