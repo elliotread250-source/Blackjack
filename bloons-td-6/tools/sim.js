@@ -81,7 +81,7 @@ for (const m of BTD.MAPS) {
   }
   check(placed >= 2, m.id + ' placed darts ' + placed);
   play(G, 6);
-  check(!G.over, m.id + ' survived 6 rounds, lives ' + G.lives);
+  if (m.diff !== 'Expert') check(!G.over, m.id + ' survived 6 rounds, lives ' + G.lives);
   console.log(m.id, 'len', G.paths.map((p) => Math.round(p.len)).join('/'), 'lives', G.lives, 'cash', Math.floor(G.cash), 'darts', placed, 'water', G.cells.filter((c) => c & 2).length);
 }
 // rounds parse

@@ -126,6 +126,16 @@
       for (let r = 10; r < sr; r += 9) { x.beginPath(); x.arc(sx, sy, r, 0, TAU); x.stroke(); }
       x.fillStyle = '#2a1608'; x.beginPath(); x.arc(sx, sy, 20, 0, TAU); x.fill();
     }
+    // drain hole the bloons drop into
+    if (G.map.hole) {
+      const [hx, hy, hr] = G.map.hole;
+      x.fillStyle = '#6f6a62'; x.beginPath(); x.arc(hx, hy, hr + 8, 0, TAU); x.fill();
+      x.fillStyle = '#8c867c';
+      for (let i = 0; i < 10; i++) { const a = (i / 10) * TAU; x.beginPath(); x.arc(hx + Math.cos(a) * (hr + 5), hy + Math.sin(a) * (hr + 5), 6, 0, TAU); x.fill(); }
+      const g = x.createRadialGradient(hx, hy, 2, hx, hy, hr);
+      g.addColorStop(0, '#000'); g.addColorStop(1, '#2a2420');
+      x.fillStyle = g; x.beginPath(); x.arc(hx, hy, hr, 0, TAU); x.fill();
+    }
     // trees and props
     for (const t of G.trees) drawProp(x, t, th, G.map.theme);
     if (G.map.castle) drawCastle(x, G.map.castle[0], G.map.castle[1]);

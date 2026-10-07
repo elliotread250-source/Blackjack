@@ -29,9 +29,11 @@ worth $381 popped all the way down).
 Rounds: 1-100 follow BTD6's milestones, then freeplay with BTD6-style blimp
 health and speed ramps. Pop cash drops off after round 50 like the real game.
 
-Maps: Monkey Meadow, Tree Stump, Alpine Run, Park Path, Spa Pits, Cubism,
-Dark Castle (two lanes) and Infernal, sorted into Beginner to Expert. Water
-maps take subs and boats.
+Maps: twelve, three per difficulty. Beginner: Monkey Meadow, Tree Stump,
+Alpine Run. Intermediate: Park Path, Spa Pits, Downstream. Advanced:
+Cubism, Pat's Pond, Underground. Expert: Dark Castle (two lanes), Quad
+(four lanes into a centre drain) and Infernal. Water maps take subs and
+boats.
 
 Modes: Easy, Medium and Hard with Standard, Primary/Military/Magic Only,
 Deflation, Apopalypse, Reverse, Double HP MOABs, Half Cash, Impoppable and

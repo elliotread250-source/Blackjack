@@ -8,8 +8,24 @@
   const GRAVITY = 0.25 * 3600;      // px/s^2
   const FLAP = -4.6 * 60;           // px/s
   const MAX_FALL = 10 * 60;         // px/s
-  const SPEED = 2 * 60;             // pipe and ground scroll, px/s
-  const PIPE_W = 52, GAP = 100, PIPE_SPACING = 180;
+  const PIPE_W = 52;
+  // classic run: pipes scroll 2 px/frame, 100 px gaps
+  const CLASSIC = { speed: 2 * 60, gap: 100, spacing: 180, move: 0, target: 0 };
+  // levels mode: ten stages from a gentle warm-up to moving-pipe chaos
+  const LEVELS = [
+    { n: 'BREEZY', target: 10, gap: 135, speed: 100, spacing: 210, move: 0 },
+    { n: 'EASY', target: 15, gap: 125, speed: 105, spacing: 200, move: 0 },
+    { n: 'CASUAL', target: 20, gap: 115, speed: 115, spacing: 190, move: 0 },
+    { n: 'NORMAL', target: 25, gap: 105, speed: 120, spacing: 180, move: 0 },
+    { n: 'TRICKY', target: 25, gap: 105, speed: 120, spacing: 180, move: 18 },
+    { n: 'HARD', target: 30, gap: 100, speed: 130, spacing: 175, move: 28, night: 1 },
+    { n: 'HARDER', target: 30, gap: 96, speed: 140, spacing: 170, move: 36 },
+    { n: 'BRUTAL', target: 35, gap: 92, speed: 150, spacing: 165, move: 44, night: 1 },
+    { n: 'INSANE', target: 40, gap: 90, speed: 155, spacing: 165, move: 48 },
+    { n: 'DEMON', target: 50, gap: 88, speed: 165, spacing: 162, move: 54, night: 1 },
+  ];
+  let cfg = CLASSIC;
+  let SPEED = cfg.speed, GAP = cfg.gap, PIPE_SPACING = cfg.spacing;
 
   const screen = document.getElementById('screen');
   const sctx = screen.getContext('2d');
@@ -97,7 +113,10 @@
     U: ['10001', '10001', '10001', '10001', '10001', '10001', '01110'],
     V: ['10001', '10001', '10001', '10001', '10001', '01010', '00100'],
     W: ['10001', '10001', '10001', '10101', '10101', '11011', '10001'],
+    X: ['10001', '10001', '01010', '00100', '01010', '10001', '10001'],
     Y: ['10001', '10001', '01010', '00100', '00100', '00100', '00100'],
+    Z: ['11111', '00001', '00010', '00100', '01000', '10000', '11111'],
+    '/': ['00001', '00010', '00010', '00100', '01000', '01000', '10000'],
     '!': ['1', '1', '1', '1', '1', '0', '1'],
     0: ['01110', '11011', '11011', '11011', '11011', '11011', '01110'],
     1: ['00110', '01110', '00110', '00110', '00110', '00110', '00110'],
@@ -225,7 +244,7 @@
     g.fillStyle = K; g.fillRect(0, 0, c.width, 2); g.fillRect(0, 22, c.width, 2);
     return c;
   })();
-  function drawPipe(px, gapTop) {
+  function drawPipe(px, gapTop, GAP) {
     const bodyX = px + 2;
     // top pipe
     x.drawImage(PIPE_BODY, 0, 0, 48, gapTop - 24, bodyX, 0, 48, gapTop - 24);
@@ -280,9 +299,16 @@
   let pipes = [], score = 0, groundX = 0, t = 0;
   let flash = 0, fade = 0, fadeTo = null, overT = 0, shownScore = 0, newBest = false, paused = false;
   let sparkle = { t: 0, x: 0, y: 0 };
+  let level = -1, spawned = 0, clearT = 0;
+  let unlocked = store.get('unlocked', 1);           // levels you can play
+  const levelBest = store.get('levelBest', {});
 
-  function newRun() {
-    theme = Math.random() < 0.5 ? 'day' : 'night';
+  function newRun(lv) {
+    level = lv == null ? -1 : lv;
+    cfg = level >= 0 ? LEVELS[level] : CLASSIC;
+    SPEED = cfg.speed; GAP = cfg.gap; PIPE_SPACING = cfg.spacing;
+    spawned = 0; clearT = 0;
+    theme = level >= 0 ? (cfg.night ? 'night' : 'day') : Math.random() < 0.5 ? 'day' : 'night';
     birdSet = Math.floor(Math.random() * 3);
     bird.x = 80; bird.y = 236; bird.vy = 0; bird.rot = 0; bird.bob = 0;
     pipes = []; score = 0; shownScore = 0; newBest = false; flash = 0; overT = 0; paused = false;
@@ -300,8 +326,18 @@
     sfx.play('wing');
   }
   function spawnPipe(px) {
-    const gapTop = 60 + Math.floor(Math.random() * (GROUND_Y - GAP - 120));
-    pipes.push({ x: px, gapTop, scored: false });
+    if (cfg.target && spawned >= cfg.target) return;
+    spawned++;
+    const lo = 60, hi = GROUND_Y - GAP - 60;
+    let gapTop = lo + Math.floor(Math.random() * (hi - lo));
+    // in levels, keep each jump between pipes climbable at that speed
+    const prev = pipes[pipes.length - 1];
+    if (cfg.target && prev) {
+      // the slide on moving levels adds up to 2x its range, so budget for it
+      const maxD = Math.max(24, Math.min(200, (PIPE_SPACING / SPEED) * 120) - cfg.move * 1.5);
+      gapTop = Math.max(lo, Math.min(hi, prev.base + (Math.random() * 2 - 1) * maxD));
+    }
+    pipes.push({ x: px, gapTop, base: gapTop, gap: GAP, ph: Math.random() * 6.28, scored: false });
   }
   function die(hitPipe) {
     if (state !== 'play') return;
@@ -309,7 +345,8 @@
     flash = 1;
     sfx.play('hit');
     if (hitPipe) setTimeout(() => sfx.play('die'), 250);
-    if (score > best) { best = score; newBest = true; store.set('best', best); }
+    if (level < 0 && score > best) { best = score; newBest = true; store.set('best', best); }
+    if (level >= 0 && score > (levelBest[level] || 0)) { levelBest[level] = score; store.set('levelBest', levelBest); }
     const games = store.get('games', 0) + 1; store.set('games', games);
   }
 
@@ -323,7 +360,7 @@
     }
     if (flash > 0) flash = Math.max(0, flash - dt * 5);
     if (paused) return;
-    const scrolling = state === 'title' || state === 'ready' || state === 'play';
+    const scrolling = state === 'title' || state === 'ready' || state === 'play' || state === 'levels' || state === 'clear';
     if (scrolling) groundX = (groundX + SPEED * dt) % 12;
     // wing flaps
     const flapRate = state === 'play' ? 12 : 8;
@@ -331,6 +368,14 @@
       bird.ft += dt * flapRate;
       bird.frame = [0, 1, 2, 1][Math.floor(bird.ft) % 4];
     }
+    if (state === 'clear') {
+      clearT += dt;
+      bird.bob += dt * 7; bird.vy = 0; bird.rot = 0;
+      bird.y += (236 + Math.sin(bird.bob) * 4 - bird.y) * Math.min(1, dt * 3);
+      for (const p of pipes) p.x -= SPEED * dt;
+      return;
+    }
+    if (state === 'levels') return;
     if (state === 'title' || state === 'ready') {
       bird.bob += dt * 7;
       bird.y = (state === 'title' ? 196 : 236) + Math.sin(bird.bob) * 4;
@@ -345,18 +390,32 @@
       if (bird.y < -30) { bird.y = -30; bird.vy = 0; }
     }
     if (state === 'play') {
-      for (const p of pipes) p.x -= SPEED * dt;
+      for (const p of pipes) {
+        p.x -= SPEED * dt;
+        // moving pipes slide while they approach, then lock before the bird
+        // reaches them so the hard levels stay fair
+        if (cfg.move && p.x > bird.x + 110) p.gapTop = Math.max(40, Math.min(GROUND_Y - p.gap - 40, p.base + Math.sin(t * 1.6 + p.ph) * cfg.move));
+      }
       if (pipes.length && pipes[0].x < -PIPE_W) pipes.shift();
       const last = pipes[pipes.length - 1];
       if (last && last.x < W + 20 - PIPE_SPACING + PIPE_W) spawnPipe(last.x + PIPE_SPACING);
       // scoring and collisions (hitbox a touch smaller than the sprite, as in the original)
       const r = 11;
       for (const p of pipes) {
-        if (!p.scored && bird.x > p.x + PIPE_W / 2) { p.scored = true; score++; sfx.play('point'); }
+        if (!p.scored && bird.x > p.x + PIPE_W / 2) {
+          p.scored = true; score++; sfx.play('point');
+          if (cfg.target && score >= cfg.target) {
+            state = 'clear'; clearT = 0;
+            if (score > (levelBest[level] || 0)) { levelBest[level] = score; store.set('levelBest', levelBest); }
+            if (level + 2 > unlocked) { unlocked = Math.min(LEVELS.length, level + 2); store.set('unlocked', unlocked); }
+            const done = store.get('cleared', []); if (!done.includes(level)) { done.push(level); store.set('cleared', done); }
+            return;
+          }
+        }
         const inX = bird.x + r > p.x + 2 && bird.x - r < p.x + PIPE_W - 2;
-        if (inX && (bird.y - r < p.gapTop || bird.y + r > p.gapTop + GAP)) {
+        if (inX && (bird.y - r < p.gapTop || bird.y + r > p.gapTop + p.gap)) {
           // circle vs the two rectangles for a fair corner test
-          const hit = rectHit(bird.x, bird.y, r, p.x, -100, PIPE_W, p.gapTop + 100) || rectHit(bird.x, bird.y, r, p.x, p.gapTop + GAP, PIPE_W, GROUND_Y);
+          const hit = rectHit(bird.x, bird.y, r, p.x, -100, PIPE_W, p.gapTop + 100) || rectHit(bird.x, bird.y, r, p.x, p.gapTop + p.gap, PIPE_W, GROUND_Y);
           if (hit) { die(true); break; }
         }
       }
@@ -403,6 +462,10 @@
       x.fillStyle = K; x.fillRect(cx - 16, cy + 8, 32, 4);
       x.fillStyle = '#f9a72b'; x.fillRect(cx - 14, cy - 2, 8, 10); x.fillStyle = '#ffffff'; x.fillRect(cx - 4, cy - 12, 8, 20); x.fillStyle = '#e86a17'; x.fillRect(cx + 6, cy + 2, 8, 6);
       x.fillStyle = K; x.strokeStyle = K; x.lineWidth = 2; x.strokeRect(cx - 14, cy - 2, 8, 10); x.strokeRect(cx - 4, cy - 12, 8, 20); x.strokeRect(cx + 6, cy + 2, 8, 6);
+    } else if (kind === 'levels') {
+      pixText('LEVELS', cx, cy - 7, 2, '#f9a72b', { out: 1 });
+    } else if (kind === 'next') {
+      pixText('NEXT', cx, cy - 7, 2, '#5ac54f', { out: 1 });
     } else if (kind === 'menu') {
       pixText('MENU', cx, cy - 7, 2, '#f9a72b', { out: 1 });
     } else if (kind === 'ok') {
@@ -437,7 +500,7 @@
     x.fillStyle = '#f2ebb0'; x.fillRect(px + 4, py + 4, w - 8, 2);
     pixText('MEDAL', px + 46, py + 14, 1, '#e86a17', { out: 0 });
     pixText('SCORE', px + w - 40, py + 14, 1, '#e86a17', { out: 0 });
-    pixText('BEST', px + w - 34, py + 62, 1, '#e86a17', { out: 0 });
+    pixText(level >= 0 ? 'GOAL' : 'BEST', px + w - 34, py + 62, 1, '#e86a17', { out: 0 });
     // medal slot
     x.fillStyle = '#e4dba0'; x.beginPath(); x.arc(px + 46, py + 64, 24, 0, Math.PI * 2); x.fill();
     const medal = score >= 40 ? ['#e7f4f9', '#b4d6e2'] : score >= 30 ? ['#fcdb4a', '#d8a61b'] : score >= 20 ? ['#e0e0e0', '#a8a8a8'] : score >= 10 ? ['#e8a35c', '#a8673a'] : null;
@@ -454,11 +517,31 @@
       x.fillRect(sx - 1, sy - 4 * k, 2, 8 * k); x.fillRect(sx - 4 * k, sy - 1, 8 * k, 2);
     }
     drawScore(shownScore, px + w - 40, py + 28, 2);
-    drawScore(best, px + w - 40, py + 76, 2);
+    drawScore(level >= 0 ? cfg.target : best, px + w - 40, py + 76, 2);
     if (newBest && overT > 1.2) {
       x.fillStyle = '#ff3a3a'; x.fillRect(px + w - 106, py + 64, 28, 12);
       pixText('NEW', px + w - 92, py + 66, 1, '#ffffff', { out: 0 });
     }
+  }
+  const LBTN = LEVELS.map((_, i) => ({ x: i % 2 ? 150 : 26, y: 120 + Math.floor(i / 2) * 54, w: 112, h: 46 }));
+  const BACK = { x: 94, y: 410, w: 100, h: 40 };
+  function drawLevels() {
+    pixText('LEVELS', W / 2, 60, 3, '#fdd13a', { rim: 2, shade: '#f9a72b' });
+    const done = store.get('cleared', []);
+    LEVELS.forEach((lv, i) => {
+      const b = LBTN[i], open = i < unlocked;
+      x.fillStyle = K; x.fillRect(b.x, b.y + 2, b.w, b.h - 2); x.fillRect(b.x + 2, b.y, b.w - 4, b.h);
+      x.fillStyle = open ? '#ffffff' : '#9c9c9c'; x.fillRect(b.x + 2, b.y + 2, b.w - 4, b.h - 4);
+      // difficulty stripe from green to red
+      const hue = 120 - (i / (LEVELS.length - 1)) * 120;
+      x.fillStyle = open ? `hsl(${hue},75%,50%)` : '#6f6f6f'; x.fillRect(b.x + 2, b.y + 2, 6, b.h - 4);
+      pixText(String(i + 1), b.x + 29, b.y + 8, 3, open ? '#ffffff' : '#cfcfcf', { out: 1 });
+      pixText(open ? lv.n : 'LOCKED', b.x + 52, b.y + 10, 1, open ? '#e86a17' : '#555555', { out: 0, left: true });
+      if (open) pixText('GOAL ' + lv.target, b.x + 52, b.y + 22, 1, '#543847', { out: 0, left: true });
+      if (done.includes(i)) { x.fillStyle = '#fdd13a'; x.fillRect(b.x + b.w - 14, b.y + 30, 8, 8); x.fillStyle = K; x.fillRect(b.x + b.w - 14, b.y + 38, 8, 2); }
+      else if (open && levelBest[i]) pixText('BEST ' + levelBest[i], b.x + 52, b.y + 33, 1, '#888888', { out: 0, left: true });
+    });
+    button(BACK, 'menu');
   }
   function drawTapHint(cx, cy) {
     // the "tap" hand from the Get Ready screen
@@ -474,15 +557,16 @@
   }
   function draw() {
     x.drawImage(backgrounds[theme], 0, 0);
-    for (const p of pipes) drawPipe(Math.round(p.x), p.gapTop);
+    for (const p of pipes) drawPipe(Math.round(p.x), Math.round(p.gapTop), p.gap);
     x.drawImage(ground, -Math.floor(groundX), GROUND_Y);
-    if (state === 'title') {
+    if (state === 'levels') { drawLevels(); }
+    else if (state === 'title') {
       pixText('FLAPPY BIRD', W / 2, 110, 3, '#fdd13a', { rim: 2, shade: '#f9a72b' });
       pixText('REPLICA', W / 2, 150, 2, '#ffffff', { out: 1 });
       bird.x = W / 2;
       drawBird();
       button(BTN.play, 'play');
-      button(BTN.score, 'score');
+      button(BTN.score, 'levels');
       pixText('BEST ' + best, W / 2, 430, 2, '#ffffff', { out: 1 });
     } else {
       if (state === 'ready') {
@@ -490,13 +574,29 @@
         drawTapHint(W / 2 + 20, 270);
       }
       drawBird();
-      if (state === 'play' || state === 'ready' || state === 'dying') drawScore(score, W / 2, 50, 4);
+      if (state === 'play' || state === 'ready' || state === 'dying' || state === 'clear') {
+        drawScore(score, W / 2, 50, 4);
+        if (level >= 0) {
+          pixText('LEVEL ' + (level + 1) + '  GOAL ' + cfg.target, W / 2, 92, 1, '#ffffff', { out: 1 });
+          x.fillStyle = K; x.fillRect(W / 2 - 52, 104, 104, 8);
+          x.fillStyle = '#5ac54f'; x.fillRect(W / 2 - 50, 106, Math.round(100 * Math.min(1, score / cfg.target)), 4);
+        }
+      }
+      if (state === 'clear') {
+        pixText('LEVEL CLEAR!', W / 2, 150, 3, '#79d34a', { rim: 2, shade: '#4fb83a' });
+        if (clearT > 0.6) {
+          pixText(cfg.n, W / 2, 196, 2, '#ffffff', { out: 1 });
+          if (level < LEVELS.length - 1) button(BTN.play, 'next'); else pixText('ALL CLEAR!', W / 2 - 64, 362, 2, '#fdd13a', { out: 1 });
+          button(BTN.score, 'menu');
+        }
+      }
       if (state === 'play') smallButton(BTN.pause, 'pause');
       if (state === 'over') {
         const slide = Math.min(1, Math.max(0, (overT - 0.3) / 0.35));
         if (overT > 0.15) pixText('GAME OVER', W / 2, 120, 3, '#f9a72b', { rim: 2, shade: '#e86a17' });
         panel(31, 190 + (1 - slide) * 340);
         if (overT > 0.9) { button(BTN.play, 'play'); button(BTN.score, 'menu'); }
+        if (level >= 0 && overT > 0.5) pixText('LEVEL ' + (level + 1) + ' ' + cfg.n + '  ' + score + '/' + cfg.target, W / 2, 172, 1, '#ffffff', { out: 1 });
       }
       if (paused) { x.fillStyle = 'rgba(0,0,0,0.35)'; x.fillRect(0, 0, W, H); pixText('PAUSED', W / 2, 220, 3, '#ffffff', { out: 2 }); }
     }
@@ -530,16 +630,28 @@
     if (p && inBtn(p, BTN.sound)) { muted = !muted; store.set('muted', muted); return; }
     if (fade > 0) return;
     if (state === 'title') {
-      if (!p || inBtn(p, BTN.play)) transition(newRun);
-      else if (inBtn(p, BTN.score)) { /* best is shown on the title already */ }
+      if (!p || inBtn(p, BTN.play)) transition(() => newRun());
+      else if (inBtn(p, BTN.score)) transition(() => { state = 'levels'; pipes = []; });
+      return;
+    }
+    if (state === 'levels') {
+      if (!p) return;
+      if (inBtn(p, BACK)) { transition(() => { state = 'title'; }); return; }
+      LBTN.forEach((b, i) => { if (inBtn(p, b) && i < unlocked) transition(() => newRun(i)); });
+      return;
+    }
+    if (state === 'clear') {
+      if (clearT < 0.6) return;
+      if ((!p || inBtn(p, BTN.play)) && level < LEVELS.length - 1) { const n = level + 1; transition(() => newRun(n)); }
+      else if (p && inBtn(p, BTN.score)) transition(() => { state = 'levels'; pipes = []; bird.rot = 0; });
       return;
     }
     if (state === 'play' && p && inBtn(p, BTN.pause)) { paused = !paused; return; }
     if (paused) { paused = false; return; }
     if (state === 'over') {
       if (overT < 0.9) return;
-      if (!p || inBtn(p, BTN.play)) transition(newRun);
-      else if (inBtn(p, BTN.score)) transition(() => { state = 'title'; pipes = []; bird.rot = 0; });
+      if (!p || inBtn(p, BTN.play)) { const lv = level; transition(() => newRun(lv >= 0 ? lv : null)); }
+      else if (inBtn(p, BTN.score)) transition(() => { state = level >= 0 ? 'levels' : 'title'; pipes = []; bird.rot = 0; });
       return;
     }
     flap();
@@ -568,5 +680,5 @@
   requestAnimationFrame(frame);
 
   // hooks for automated checks
-  window.FLAPPY = { get state() { return state; }, get score() { return score; }, get bird() { return bird; }, get pipes() { return pipes; }, press, newRun, update, consts: { GRAVITY, FLAP, MAX_FALL, SPEED, GAP, PIPE_W, GROUND_Y } };
+  window.FLAPPY = { get state() { return state; }, get score() { return score; }, get bird() { return bird; }, get pipes() { return pipes; }, get level() { return level; }, get unlocked() { return unlocked; }, LEVELS, press, newRun, update, consts: { GRAVITY, FLAP, MAX_FALL, PIPE_W, GROUND_Y } };
 })();

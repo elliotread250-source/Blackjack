@@ -162,6 +162,7 @@
       }
       for (const l of m.lava || []) mark(l.x, l.y, l.r, 4);
       if (m.stump) mark(m.stump[0], m.stump[1], m.stump[2] + 4, 4);
+      if (m.hole) mark(m.hole[0], m.hole[1], m.hole[2] + 6, 4);
       if (m.castle) mark(m.castle[0], m.castle[1], 80, 4);
       // trees: seeded so the same map always looks the same
       let s = 0;
