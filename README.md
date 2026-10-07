@@ -10,6 +10,10 @@ no backend: the whole game runs in the browser and your bankroll lives in
 
 **Bloons TD 6 replica: https://game-production-6f5d.up.railway.app** (also at https://elliotread250-source.github.io/Blackjack/bloons-td-6/)
 
+**Space Invaders: https://game-production-0b23.up.railway.app**
+
+**Pong (with online play): https://game-production-3c6d.up.railway.app**
+
 **Flappy Bird replica: https://game-production-2b7d2.up.railway.app** (also at https://elliotread250-source.github.io/Blackjack/flappy-bird/)
 
 **Humanizer (AI text to human text, free, no API keys): https://humanizer-production-e796.up.railway.app**

@@ -12,10 +12,20 @@ a rally. First to 11 wins.
   against a decent player; Hard is tough but beatable.
 - 2 players on one keyboard (W/S and Up/Down) or one touch screen (each
   half of the screen drives its own paddle).
+- Online: Play Online, then Create Room gives a 4-letter code and an
+  invite link (tap the lobby to copy or share it). The other player picks
+  Join Room and types the code, or just opens the link. The host plays the
+  left paddle and runs the game; the guest's paddle and the ball stay in
+  sync over a WebSocket. Leaving or losing the connection drops both
+  players back to the menu.
 - Optional CRT look: glow, scanlines and vignette.
 
-P or Esc pauses; Q from the pause screen goes back to the menu.
+P or Esc pauses offline (Esc leaves the room online); Q from the pause screen goes back to the menu.
 
 ```bash
-python server.py    # http://localhost:8080
+python server.py    # http://localhost:8080, includes the /ws rooms
 ```
+
+The server is stdlib Python: static files plus a small WebSocket relay that
+pairs two players by room code. The GitHub Pages copy connects to the Railway
+server for online games.
