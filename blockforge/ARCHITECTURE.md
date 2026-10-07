@@ -521,3 +521,32 @@ chunks), time-budgeted lighting/meshing per frame, a section is meshed only once
 column and all 8 neighbours are lit, edits remesh synchronously the same frame, day
 cycle, autosave every 30 s and on pause/unload, `beforeunload` guard while in game,
 F2 screenshot download, F1 hide HUD, F3 debug.
+
+## WS8 Touch controls (mobile): `src/ui/touch.ts` (+ small hooks in hud/inventory/screens/game)
+
+`settings.controls` is `'keyboard'` (default, keyboard + mouse) or `'touch'`. It is chosen in
+Options > Controls ("Controls: Keyboard & Mouse / Touch"), together with `touchSensitivity` and
+`touchButtonScale`. When a touch-only device is detected (`matchMedia('(pointer: coarse)')` and no
+fine pointer) the title screen shows a one-line hint pointing at that option; it never switches
+the default by itself.
+
+```ts
+export class TouchControls {
+  constructor(root: HTMLElement, input: Input, hotbar: Hotbar, settings: Settings, hooks: {
+    openInventory(): void; pause(): void; isFlying(): boolean;
+  });
+  setEnabled(on: boolean): void;   // show/hide the overlay (only while playing and settings.controls === 'touch')
+  applySettings(s: Settings): void;
+  update(dt: number): void;        // per frame: feeds Input
+  dispose(): void;
+}
+```
+Touch drives the existing `Input` without changing the game logic: movement keys are synthesised
+as `KeyboardEvent('keydown'/'keyup', { code })` on `window` (KeyW/A/S/D from a left-thumb
+joystick, Space, ShiftLeft, ControlLeft), look is added to `input.mouseDX/mouseDY`, and break/place
+set `input.buttons` / `input.clicked`. The game treats touch mode as "locked" (no pointer lock;
+interaction runs; pausing is the on-screen pause button). Layout (landscape and portrait):
+left joystick (pushing to the rim sprints), right-side drag to look, buttons: Jump (double-tap
+toggles flying, hold to rise when flying), Sneak/Descend, Break (hold repeats), Place/Use (hold
+repeats), Pick, Inventory, Pause; the HUD hotbar slots are tappable. All with `touch-action: none`,
+multi-touch (move + look + button at once), no page zoom/scroll, and readable at phone sizes.

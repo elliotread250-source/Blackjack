@@ -1,8 +1,12 @@
 // Player-facing options, presets and persistence (localStorage, guarded).
 
 export type Preset = 'low' | 'medium' | 'high' | 'custom';
+export type ControlScheme = 'keyboard' | 'touch';
 
 export interface Settings {
+  controls: ControlScheme;  // 'keyboard' = keyboard + mouse (default), 'touch' = on-screen touch controls
+  touchSensitivity: number; // 0.25..3, look speed for touch dragging (1 = default)
+  touchButtonScale: number; // 0.75..1.5, size of the on-screen buttons
   preset: Preset;
   renderDistance: number;   // chunks, 2..12
   fov: number;              // degrees, 50..110
@@ -32,6 +36,9 @@ export const PRESETS: Record<Exclude<Preset, 'custom'>, Partial<Settings>> = {
 };
 
 export const DEFAULT_SETTINGS: Settings = {
+  controls: 'keyboard',
+  touchSensitivity: 1,
+  touchButtonScale: 1,
   preset: 'low',
   renderDistance: 4,
   fov: 70,
