@@ -682,12 +682,16 @@
   function fit() {
     const vw = window.innerWidth, vh = window.innerHeight;
     const dpr = Math.min(3, window.devicePixelRatio || 1);
-    let s = Math.min(vw / W, vh / H);
-    if (s >= 1) s = Math.floor(s * dpr) / dpr || s; // whole device pixels when we can
-    const cw = Math.round(W * s), ch = Math.round(H * s);
+    // height always fills the screen; on phones narrower than 9:16 the sides
+    // get trimmed equally, so corner buttons move in to stay on screen
+    const s = vh / H;
+    const cw = Math.round(W * s), ch = Math.round(vh);
     screen.style.width = cw + 'px'; screen.style.height = ch + 'px';
     screen.width = Math.round(cw * dpr); screen.height = Math.round(ch * dpr);
     sctx.imageSmoothingEnabled = false;
+    const inset = Math.max(0, Math.ceil((cw - vw) / 2 / s));
+    BTN.pause.x = 10 + inset;
+    BTN.sound.x = 252 - inset;
   }
   window.addEventListener('resize', fit);
   fit();
