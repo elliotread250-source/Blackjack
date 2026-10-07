@@ -65,6 +65,14 @@ function codeOf(e: KeyboardEvent): string {
   return k;
 }
 
+import { bound } from './keybinds';
+import type { Action } from './keybinds';
+
+/** 0..4 for "Mouse0".."Mouse4", else -1. */
+function mouseIndex(code: string): number {
+  return code.length === 6 && code.startsWith('Mouse') ? code.charCodeAt(5) - 48 : -1;
+}
+
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
 
@@ -81,7 +89,7 @@ export class Input {
   clicked: [boolean, boolean, boolean] = [false, false, false];
   onLockChange: ((locked: boolean) => void) | null = null;
   /** Every non-repeat keydown (E, Esc, F1-F3, digits...), even while !enabled. */
-  onKey: ((code: string, e: KeyboardEvent) => void) | null = null;
+  onKey: ((code: string, e: Event) => void) | null = null;
   /** Last pointer lock failure, for the debug console. */
   lastLockError: string | null = null;
 
@@ -153,6 +161,44 @@ export class Input {
   down(code: string): boolean { return this._enabled && this.held.has(code); }
   pressed(code: string): boolean { return this._enabled && this.edges.has(code); }
 
+  /** The action's bound key or mouse button is held (left/right Shift and Ctrl both count). */
+  actionDown(a: Action): boolean {
+    if (!this._enabled) return false;
+    const b = bound(a);
+    const m = mouseIndex(b);
+    if (m >= 0 && m <= 2 && this.buttons[m]) return true;
+    return this.held.has(b) || (b === 'ShiftLeft' && this.held.has('ShiftRight')) || (b === 'ControlLeft' && this.held.has('ControlRight'));
+  }
+
+  /** The action's binding went down since the last endFrame(). */
+  actionPressed(a: Action): boolean {
+    if (!this._enabled) return false;
+    const b = bound(a);
+    const m = mouseIndex(b);
+    if (m >= 0 && m <= 2 && this.clicked[m]) return true;
+    return this.edges.has(b) || (b === 'ShiftLeft' && this.edges.has('ShiftRight')) || (b === 'ControlLeft' && this.edges.has('ControlRight'));
+  }
+
+  /** Touch controls: hold or release an action through whatever it is bound to. */
+  setAction(a: Action, down: boolean): void {
+    const b = bound(a);
+    const m = mouseIndex(b);
+    if (m >= 0 && m <= 2) {
+      if (down && !this.buttons[m]) this.clicked[m] = true;
+      this.buttons[m] = down;
+      return;
+    }
+    if (down) { if (!this.held.has(b)) { this.held.add(b); this.edges.add(b); } }
+    else this.held.delete(b);
+  }
+
+  /** Touch controls: a one-frame press of an action (released after the next frame has seen it). */
+  tapAction(a: Action): void {
+    this.setAction(a, true);
+    this.pulses.add(a);
+  }
+  private pulses = new Set<Action>();
+
   requestLock(): Promise<boolean> {
     if (this.locked) return Promise.resolve(true);
     if (this.pending) return this.pending;
@@ -171,6 +217,8 @@ export class Input {
   }
 
   endFrame(): void {
+    // Taps happen between frames, so the frame that just ran has seen them: let go now.
+    if (this.pulses.size) { for (const a of this.pulses) this.setAction(a, false); this.pulses.clear(); }
     this.edges.clear();
     this.mouseDX = 0;
     this.mouseDY = 0;
@@ -303,15 +351,19 @@ export class Input {
   // ------------------------------------------------------------------ mouse
   private onMouseDown = (e: MouseEvent) => {
     if (e.button === 1) e.preventDefault();
-    if (e.button < 0 || e.button > 2) return;
+    if (e.button < 0 || e.button > 4) return;
     // The click that captures the mouse must not also break a block.
     if (!this._enabled || document.pointerLockElement !== this.target) return;
-    this.buttons[e.button] = true;
-    this.clicked[e.button] = true;
+    if (e.button > 2) e.preventDefault();   // side buttons would navigate the page back/forward
+    const code = 'Mouse' + e.button;
+    if (e.button <= 2) { this.buttons[e.button] = true; this.clicked[e.button] = true; }
+    if (!this.held.has(code)) { this.held.add(code); this.edges.add(code); }
+    if (this.onKey) this.onKey(code, e);
   };
 
   private onMouseUp = (e: MouseEvent) => {
     if (e.button >= 0 && e.button <= 2) this.buttons[e.button] = false;
+    if (e.button >= 0 && e.button <= 4) this.held.delete('Mouse' + e.button);
   };
 
   private onMouseMove = (e: MouseEvent) => {

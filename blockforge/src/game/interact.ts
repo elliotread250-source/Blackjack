@@ -349,17 +349,17 @@ export class Interaction {
 
   update(dt: number, input: Input, hit: RayHit | null): void {
     // Middle click: pick block.
-    if (input.clicked[1] && hit) {
+    if (input.actionPressed('pick') && hit) {
       const id = hit.block & ID_MASK;
       if (isItem(id)) this.hotbar.pick(id);
     }
 
     // Left: break at once on click, then every 0.25 s while held on a block.
-    if (input.clicked[0]) {
+    if (input.actionPressed('attack')) {
       this.breakDelay = BREAK_REPEAT;
       if (hit) this.breakBlock(hit.x, hit.y, hit.z);
       this.hooks.onSwing();
-    } else if (input.buttons[0]) {
+    } else if (input.actionDown('attack')) {
       if (hit) {
         this.breakDelay -= dt;
         if (this.breakDelay <= 0) {
@@ -372,10 +372,10 @@ export class Interaction {
 
     // Right: use a door/trapdoor or place, at once on click, then every 0.2 s while held.
     if (this.useDelay > 0) this.useDelay -= dt;
-    if (input.clicked[2]) {
+    if (input.actionPressed('use')) {
       this.useDelay = USE_REPEAT;
       this.use(hit);
-    } else if (input.buttons[2] && this.useDelay <= 0) {
+    } else if (input.actionDown('use') && this.useDelay <= 0) {
       this.useDelay = Math.max(0, this.useDelay + USE_REPEAT);
       this.use(hit);
     }

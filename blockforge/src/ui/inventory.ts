@@ -9,6 +9,7 @@
 //   click outside the panel (or drop there), or click the grid while holding -> discard held item
 //   1-9 while hovering     -> put the hovered item in that hotbar slot (hotbar: swap slots)
 //   mouse wheel / scrollbar drag -> scroll; T, / or Ctrl+F -> search; E / Esc -> close
+import { matches, HOTBAR_ACTIONS } from '../game/keybinds';
 import type { IconSheet } from './icons';
 import { EXTRA_ICONS } from './icons';
 import type { Hotbar } from '../game/hotbar';
@@ -213,9 +214,11 @@ export class InventoryScreen {
   handleKey(code: string): boolean {
     if (!this._open) return false;
     if (code === 'Escape') { this.close(); return true; }
-    const digit = /^(?:Digit|Numpad)([1-9])$/.exec(code);
-    if (digit && this.hover) {
-      const n = Number(digit[1]) - 1;
+    const bindSlot = HOTBAR_ACTIONS.findIndex((a) => matches(a, code));
+    const digit = /^Numpad([1-9])$/.exec(code);
+    const slotKey = bindSlot >= 0 ? bindSlot : digit ? Number(digit[1]) - 1 : -1;
+    if (slotKey >= 0 && this.hover) {
+      const n = slotKey;
       if (this.hover.kind === 'grid') {
         const id = this.items[this.scroll * COLS + this.hover.index] ?? 0;
         if (id) this.hotbar.set(n, id);
@@ -228,7 +231,7 @@ export class InventoryScreen {
       return true;
     }
     if (document.activeElement === this.search) return false; // typing in the search box
-    if (code === 'KeyE') { this.close(); return true; }
+    if (matches('inventory', code)) { this.close(); return true; }
     if (code === 'KeyT' || code === 'Slash' || code === 'KeyF') {
       this.selectTab(TABS.length - 1);
       this.focusSearch();

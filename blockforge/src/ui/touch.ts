@@ -2,6 +2,7 @@
 // movement keys are synthesised as keyboard events, looking adds to the mouse deltas and
 // breaking/placing presses the virtual mouse buttons, so the game logic is unchanged.
 import type { Input } from '../game/input';
+import type { Action } from '../game/keybinds';
 import type { Hotbar } from '../game/hotbar';
 import type { Settings } from '../settings';
 
@@ -68,7 +69,7 @@ export class TouchControls {
   private hint: HTMLDivElement;
   private buttons = new Map<string, HTMLDivElement>();
   private tracks = new Map<number, Track>();
-  private keys = new Set<string>();
+  private keys = new Set<Action>();      // actions currently held by touch
   private stickHome = { x: 0, y: 0 };
   private sneakLatched = false;
   private enabled = false;
@@ -77,8 +78,6 @@ export class TouchControls {
   private hotbar: Hotbar;
   private hooks: TouchHooks;
   private sens = 1;
-  private pendingClicks: number[] = [];   // virtual clicks made since the last update()
-  private releaseClicks: number[] = [];   // clicks to let go of on the next update()
 
   constructor(root: HTMLElement, input: Input, hotbar: Hotbar, settings: Settings, hooks: TouchHooks) {
     this.input = input;
@@ -166,22 +165,16 @@ export class TouchControls {
   get isEnabled() { return this.enabled; }
 
   // ------------------------------------------------------------------ keys
-  private key(code: string, down: boolean) {
-    if (down === this.keys.has(code)) return;
-    if (down) this.keys.add(code); else this.keys.delete(code);
-    const key = code === 'Space' ? ' ' : code.startsWith('Key') ? code.slice(3).toLowerCase() : code.replace('Left', '');
-    window.dispatchEvent(new KeyboardEvent(down ? 'keydown' : 'keyup', { code, key, bubbles: true }));
-  }
-
-  private tapKey(code: string) {
-    this.key(code, true);
-    setTimeout(() => this.key(code, false), 40);
+  /** Hold or release an action through whatever it is bound to (rebinding keeps touch working). */
+  private key(a: Action, down: boolean) {
+    if (down === this.keys.has(a)) return;
+    if (down) this.keys.add(a); else this.keys.delete(a);
+    this.input.setAction(a, down);
   }
 
   private releaseAll() {
     for (const k of Array.from(this.keys)) this.key(k, false);
     this.tracks.clear();
-    this.input.buttons[0] = this.input.buttons[1] = this.input.buttons[2] = false;
     this.sneakLatched = false;
     this.buttons.forEach((b) => b.classList.remove('down', 'latched'));
     this.longPress = null;
@@ -248,15 +241,15 @@ export class TouchControls {
     if (!t) return;
     this.tracks.delete(e.pointerId);
     if (t.role === 'stick') {
-      for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ControlLeft']) this.key(k, false);
+      for (const k of ['forward', 'left', 'back', 'right', 'sprint'] as Action[]) this.key(k, false);
       this.showStick(this.stickHome.x, this.stickHome.y, 0, 0, true);
       return;
     }
     if (t.role === 'look') {
       const lp = this.longPress;
       if (lp && lp.id === e.pointerId) {
-        if (lp.fired) this.input.buttons[0] = false;
-        else if (!t.moved && performance.now() - t.t < 350) this.click(2); // quick tap: place / use
+        if (lp.fired) this.key('attack', false);
+        else if (!t.moved && performance.now() - t.t < 350) this.input.tapAction('use'); // quick tap: place / use
         this.longPress = null;
       }
       return;
@@ -285,34 +278,28 @@ export class TouchControls {
     const nx = dx / r, ny = dy / r;
     this.showStick(t.sx, t.sy, dx, dy, false);
     const dead = 0.28;
-    this.key('KeyW', ny < -dead);
-    this.key('KeyS', ny > dead);
-    this.key('KeyA', nx < -dead);
-    this.key('KeyD', nx > dead);
-    this.key('ControlLeft', ny < -0.88 && Math.abs(nx) < 0.55);
-  }
-
-  private click(button: 0 | 1 | 2) {
-    this.input.clicked[button] = true;
-    this.input.buttons[button] = true;
-    this.pendingClicks.push(button);
+    this.key('forward', ny < -dead);
+    this.key('back', ny > dead);
+    this.key('left', nx < -dead);
+    this.key('right', nx > dead);
+    this.key('sprint', ny < -0.88 && Math.abs(nx) < 0.55);
   }
 
   private buttonDown(name: string) {
     switch (name) {
-      case 'jump': this.key('Space', true); break;
+      case 'jump': this.key('jump', true); break;
       case 'sneak':
-        if (this.hooks.isFlying()) this.key('ShiftLeft', true);
+        if (this.hooks.isFlying()) this.key('sneak', true);
         else {
           this.sneakLatched = !this.sneakLatched;
-          this.key('ShiftLeft', this.sneakLatched);
+          this.key('sneak', this.sneakLatched);
           this.buttons.get('sneak')!.classList.toggle('latched', this.sneakLatched);
         }
         break;
       case 'fly': this.hooks.toggleFly(); break;
-      case 'break': this.input.clicked[0] = true; this.input.buttons[0] = true; break;
-      case 'place': this.input.clicked[2] = true; this.input.buttons[2] = true; break;
-      case 'pick': this.click(1); break;
+      case 'break': this.key('attack', true); break;
+      case 'place': this.key('use', true); break;
+      case 'pick': this.input.tapAction('pick'); break;
       case 'inventory': this.releaseAll(); this.hooks.openInventory(); break;
       case 'pause': this.releaseAll(); this.hooks.pause(); break;
       case 'prev': this.hotbar.scroll(-1); break;
@@ -322,40 +309,27 @@ export class TouchControls {
 
   private buttonUp(name: string) {
     switch (name) {
-      case 'jump': this.key('Space', false); break;
-      case 'sneak': if (!this.sneakLatched) this.key('ShiftLeft', false); break;
-      case 'break': this.input.buttons[0] = false; break;
-      case 'place': this.input.buttons[2] = false; break;
+      case 'jump': this.key('jump', false); break;
+      case 'sneak': if (!this.sneakLatched) this.key('sneak', false); break;
+      case 'break': this.key('attack', false); break;
+      case 'place': this.key('use', false); break;
     }
   }
 
   /** Per frame: long-press to break, release one-frame virtual clicks. */
   update(_dt: number) {
     if (!this.enabled) return;
-    // A virtual click stays "held" for one full frame, then lets go (unless a control still holds it).
-    for (const b of this.releaseClicks) if (!this.buttonHeldByControl(b)) this.input.buttons[b] = false;
-    this.releaseClicks = this.pendingClicks;
-    this.pendingClicks = [];
     const lp = this.longPress;
     if (lp && !lp.fired) {
       const t = this.tracks.get(lp.id);
       if (!t) this.longPress = null;
       else if (!t.moved && performance.now() - t.t > 380) {
         lp.fired = true;
-        this.input.clicked[0] = true;
-        this.input.buttons[0] = true;
+        this.key('attack', true);
         if (navigator.vibrate) { try { navigator.vibrate(12); } catch { /* ignore */ } }
       }
     }
     // Releasing sneak-to-descend if the player landed while holding it is handled by buttonUp.
-  }
-
-  private buttonHeldByControl(b: number) {
-    for (const t of this.tracks.values()) {
-      if (b === 0 && (t.role === 'break' || (t.role === 'look' && this.longPress?.fired))) return true;
-      if (b === 2 && t.role === 'place') return true;
-    }
-    return false;
   }
 
   dispose() {

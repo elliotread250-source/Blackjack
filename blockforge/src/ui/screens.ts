@@ -1,15 +1,18 @@
 // Menus: title, world list, create world, options, controls, pause and loading screens.
 // Every screen is laid out like the classic block games: on the GUI-pixel grid, relative to
 // the screen centre, and rebuilt (re-positioned) whenever the GUI size changes.
-import type { Settings, Preset } from '../settings';
-import { saveSettings, applyPreset } from '../settings';
+import type { Settings, Preset, ShaderPack, ResourcePackId } from '../settings';
+import { saveSettings, applyPreset, restoreDefaults, syncShaderFlags, PRESETS } from '../settings';
 import type { TimeMode, WorldMeta } from '../types';
 import { injectStyles, guiLayout, onGuiLayout, U } from './style';
 import type { GuiLayout } from './style';
 import { centered, textAdvance } from './font';
 import { blockIconCanvas } from './icons';
-import { generateTexture } from '../blocks/textures';
-import { ID, COUNT, TEXTURE_NAMES } from '../blocks/registry';
+import { packTexture, packTile, RESOURCE_PACKS, setCustomPack, customPackInfo } from '../blocks/packs';
+import { importResourcePack, saveCustomPack, deleteCustomPack } from '../blocks/importer';
+import { ACTIONS, bound, keyName, setBinding, resetBindings, conflicts, UNBINDABLE } from '../game/keybinds';
+import type { Action } from '../game/keybinds';
+import { ID, COUNT } from '../blocks/registry';
 
 export interface MenuHandlers {
   listWorlds(): Promise<WorldMeta[]>;
@@ -22,9 +25,13 @@ export interface MenuHandlers {
   getTimeMode(): TimeMode; setTimeMode(m: TimeMode): void;
   offlineDownloadUrl: string | null;      // '/download' over http(s), null on file://
   version: string;
+  /** Redraw textures for the current resource pack even if its id did not change (re-imported pack). */
+  reapplyResourcePack?(): void;
 }
 
-type ScreenName = 'title' | 'worlds' | 'create' | 'pause' | 'options' | 'controls' | 'loading';
+type ScreenName = 'title' | 'worlds' | 'create' | 'pause' | 'options' | 'controls' | 'loading' | 'shaders' | 'packs';
+/** Screens that are part of Options (shown over the paused game when opened from the pause menu). */
+const OPTION_SCREENS: ScreenName[] = ['options', 'controls', 'shaders', 'packs'];
 
 // ============================================================================ helpers
 
@@ -273,26 +280,29 @@ class Screen {
 
 // ============================================================================ art
 
-let tileCache: Map<number, Uint8ClampedArray> | null = null;
-const genTile = (t: number) => {
-  if (!tileCache) tileCache = new Map();
-  let d = tileCache.get(t);
-  if (!d) { d = generateTexture(TEXTURE_NAMES[t] ?? 'missing'); tileCache.set(t, d); }
-  return d;
-};
-
-const thumbCache = new Map<number, string>();
-const THUMB_BLOCKS = ['grass_block', 'oak_log', 'cherry_leaves', 'sand', 'snowy_grass_block', 'stone_bricks', 'birch_log', 'mossy_cobblestone', 'spruce_planks', 'podzol'];
-function worldThumb(seed: number): string {
-  const name = THUMB_BLOCKS[(((seed | 0) % THUMB_BLOCKS.length) + THUMB_BLOCKS.length) % THUMB_BLOCKS.length];
-  const id = ID[name] ?? ID.grass_block;
-  let url = thumbCache.get(id);
-  if (!url) {
-    try { url = blockIconCanvas(id, genTile).toDataURL(); } catch { url = ''; }
-    thumbCache.set(id, url);
+/** A block icon drawn with a resource pack, as a data URL (cached). */
+const iconCache = new Map<string, string>();
+function clearPackIcons(pack: ResourcePackId) {
+  for (const k of Array.from(iconCache.keys())) if (k.startsWith(pack + ':')) iconCache.delete(k);
+}
+function packIcon(id: number, pack: ResourcePackId): string {
+  const key = pack + ':' + id;
+  let url = iconCache.get(key);
+  if (url === undefined) {
+    try { url = blockIconCanvas(id, (t) => packTile(t, pack)).toDataURL(); } catch { url = ''; }
+    iconCache.set(key, url);
   }
   return url;
 }
+
+const THUMB_BLOCKS = ['grass_block', 'oak_log', 'cherry_leaves', 'sand', 'snowy_grass_block', 'stone_bricks', 'birch_log', 'mossy_cobblestone', 'spruce_planks', 'podzol'];
+function worldThumb(seed: number, pack: ResourcePackId): string {
+  const name = THUMB_BLOCKS[(((seed | 0) % THUMB_BLOCKS.length) + THUMB_BLOCKS.length) % THUMB_BLOCKS.length];
+  return packIcon(ID[name] ?? ID.grass_block, pack);
+}
+
+/** Blocks shown in each resource pack's preview strip. */
+const PACK_PREVIEW = ['grass_block', 'oak_planks', 'stone_bricks', 'oak_leaves', 'bricks', 'diamond_ore', 'poppy'];
 
 // Chunky logo letters (6x7), drawn as textured blocks. Original lettering.
 const LOGO_GLYPHS: Record<string, string[]> = {
@@ -312,17 +322,18 @@ const LOGO_DEPTH = 10;         // extrusion in canvas px
 export const LOGO_W = (LOGO_TEXT.length * 7 - 1) * LOGO_CELL + LOGO_DEPTH + 4;
 export const LOGO_H = 7 * LOGO_CELL + LOGO_DEPTH + 4;
 
-let logoURL: string | null = null;
-function drawLogo(): string {
-  if (logoURL !== null) return logoURL;
+let logoArt: { pack: ResourcePackId; url: string } | null = null;
+function drawLogo(pack: ResourcePackId): string {
+  if (logoArt && logoArt.pack === pack) return logoArt.url;
+  let logoURL = '';
   try {
     const c = document.createElement('canvas');
     c.width = LOGO_W; c.height = LOGO_H;
     const g = c.getContext('2d')!;
     const img = g.createImageData(LOGO_W, LOGO_H);
     const d = img.data;
-    const stone = generateTexture('stone_bricks'), cobble = generateTexture('cobblestone');
-    const hot = generateTexture('gold_block'), ember = generateTexture('magma');
+    const stone = packTexture('stone_bricks', pack), cobble = packTexture('cobblestone', pack);
+    const hot = packTexture('gold_block', pack), ember = packTexture('magma', pack);
     const solid = new Uint8Array(LOGO_W * LOGO_H);
     const front = new Int8Array(LOGO_W * LOGO_H).fill(-1); // letter index painting the front face
     let x0 = 2;
@@ -380,14 +391,16 @@ function drawLogo(): string {
   } catch {
     logoURL = '';
   }
+  logoArt = { pack, url: logoURL };
   return logoURL;
 }
 
 // Side-on pixel landscape for the title screen, seamless over PANO_W pixels.
 const PANO_W = 1024, PANO_H = 256;
-let panoURL: string | null = null;
-function drawPanorama(): string {
-  if (panoURL !== null) return panoURL;
+let panoArt: { pack: ResourcePackId; url: string } | null = null;
+function drawPanorama(pack: ResourcePackId): string {
+  if (panoArt && panoArt.pack === pack) return panoArt.url;
+  let panoURL = '';
   try {
     const c = document.createElement('canvas');
     c.width = PANO_W; c.height = PANO_H;
@@ -427,7 +440,7 @@ function drawPanorama(): string {
       }
     }
     // Block terrain, 16 px columns
-    const tile = (name: string) => generateTexture(name);
+    const tile = (name: string) => packTexture(name, pack);
     const grassSide = tile('grass_side'), dirt = tile('dirt'), stone = tile('stone'), sand = tile('sand');
     const water = tile('water'), log = tile('oak_log'), leaves = tile('oak_leaves'), birch = tile('birch_log');
     const coal = tile('ore_stone_coal'), poppy = tile('flower_poppy'), dand = tile('flower_dandelion'), grass = tile('tall_grass');
@@ -476,6 +489,7 @@ function drawPanorama(): string {
   } catch {
     panoURL = '';
   }
+  panoArt = { pack, url: panoURL };
   return panoURL;
 }
 
@@ -505,6 +519,22 @@ const HINTS = [
 const TIME_LABEL: Record<TimeMode, string> = { cycle: 'Day Cycle', sunrise: 'Sunrise', noon: 'Noon', sunset: 'Sunset', midnight: 'Midnight' };
 const TIME_ORDER: TimeMode[] = ['cycle', 'sunrise', 'noon', 'sunset', 'midnight'];
 const PRESET_LABEL: Record<Preset, string> = { low: 'Low', medium: 'Medium', high: 'High', custom: 'Custom' };
+const SHADER_LABEL: Record<ShaderPack, string> = { off: 'Off', fancy: 'Fancy', ultra: 'Ultra' };
+const SHADER_ORDER: ShaderPack[] = ['off', 'fancy', 'ultra'];
+const SHADER_INFO: { id: ShaderPack; desc: string }[] = [
+  { id: 'off', desc: 'Fastest, for school laptops and Chromebooks.' },
+  { id: 'fancy', desc: 'Sun shadows, waving plants, reflective water.' },
+  { id: 'ultra', desc: 'Adds bloom, god rays, fog and mirror water. Needs a strong graphics chip.' },
+];
+
+/** The preset whose every value matches the current options, else 'custom'. */
+export function matchPreset(st: Settings): Preset {
+  for (const p of ['low', 'medium', 'high'] as const) {
+    const vals = PRESETS[p] as Record<string, unknown>;
+    if (Object.keys(vals).every((k) => (st as unknown as Record<string, unknown>)[k] === vals[k])) return p;
+  }
+  return 'custom';
+}
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 function formatDate(ms: number): string {
@@ -525,22 +555,9 @@ function isTouchOnly(): boolean {
 }
 
 // Key bindings shown on the Controls screen (the game's bindings are fixed).
-const KEYS: [string, [string, string][]][] = [
-  ['Movement', [
-    ['Walk forward / back', 'W / S'], ['Strafe left / right', 'A / D'], ['Jump, fly up', 'Space'],
-    ['Toggle flying', 'Space x2'], ['Sneak, fly down', 'Shift'], ['Sprint', 'Ctrl or W x2'],
-  ]],
-  ['Building', [
-    ['Break block (hold)', 'Left Click'], ['Place block, open door', 'Right Click'], ['Pick block', 'Middle Click'],
-    ['Choose hotbar slot', '1 to 9'], ['Next / previous slot', 'Mouse Wheel'],
-  ]],
-  ['Inventory', [
-    ['Creative inventory', 'E'], ['Hovered item to slot', '1 to 9'], ['Item to hotbar', 'Shift+Click'],
-    ['Clear hotbar slot', 'Right Click'], ['Search blocks', 'T'], ['Close', 'E or Esc'],
-  ]],
-  ['Interface', [
-    ['Pause menu', 'Esc'], ['Hide HUD', 'F1'], ['Screenshot', 'F2'], ['Debug screen', 'F3'],
-  ]],
+const FIXED_KEYS: [string, string][] = [
+  ['Pause menu', 'Esc'], ['Toggle flying', 'Jump x2'], ['Sprint', 'Forward x2'],
+  ['Next / previous slot', 'Mouse Wheel'], ['Item to hotbar (inventory)', 'Shift+Click'], ['Search blocks (inventory)', 'T'],
 ];
 const TOUCH_KEYS: [string, string][] = [
   ['Move (push far to sprint)', 'Left stick'], ['Look around', 'Drag right'], ['Jump, x2 to fly', 'Jump'],
@@ -566,6 +583,8 @@ export class Menus {
   private selected: string | null = null;
   private confirmDelete: WorldMeta | null = null;
   private busy = false;
+  private lastWorld: WorldMeta | null = null;   // most recently played world, for Continue
+  private titleRefresh = 0;
   private loadingState = { text: '', progress: -2 };
 
   constructor(root: HTMLElement, private handlers: MenuHandlers, private settings: Settings) {
@@ -577,6 +596,8 @@ export class Menus {
     this.buildControls();
     this.buildPause();
     this.buildLoading();
+    this.buildShaders();
+    this.buildPacks();
     this.tip = div('bf-tip', this.root);
     this.tip.style.position = 'absolute';
     this.root.addEventListener('pointerover', (e) => this.onTipOver(e));
@@ -598,6 +619,16 @@ export class Menus {
     this.screens.get('controls')!.setBg(this.overGame ? 'bf-pause-bg' : 'bf-dirt');
     this.show('controls');
   }
+  /** Options > Shaders (Off / Fancy / Ultra). Done returns to Options. */
+  showShaders(): void {
+    this.screens.get('shaders')!.setBg(this.overGame ? 'bf-pause-bg' : 'bf-dirt');
+    this.show('shaders');
+  }
+  /** Options > Resource Packs. Done returns to Options. */
+  showPacks(): void {
+    this.screens.get('packs')!.setBg(this.overGame ? 'bf-pause-bg' : 'bf-dirt');
+    this.show('packs');
+  }
   showLoading(text: string, progress?: number): void {
     const p = progress === undefined ? -1 : Math.max(0, Math.min(1, progress));
     if (this.cur !== 'loading') { this.loadingState = { text: '', progress: -2 }; this.pickHint(); this.show('loading'); }
@@ -615,6 +646,8 @@ export class Menus {
     switch (this.cur) {
       case 'options': saveSettings(this.settings); this.optionsBack(); break;
       case 'controls': this.controlsBack(); break;
+      case 'shaders':
+      case 'packs': saveSettings(this.settings); this.keepOptionsScroll = true; this.showOptions(this.optionsBack); break;
       case 'create': this.showWorlds(); break;
       case 'worlds':
         if (this.confirmDelete) { this.confirmDelete = null; this.renderWorlds(); } else this.showTitle();
@@ -627,7 +660,7 @@ export class Menus {
   // ------------------------------------------------------------------ plumbing
   private show(name: ScreenName) {
     if (name === 'pause') this.overGame = true;
-    else if (name !== 'options' && name !== 'controls') this.overGame = false;
+    else if (!OPTION_SCREENS.includes(name)) this.overGame = false;
     const prev = this.cur;
     if (prev && prev !== name) this.screens.get(prev)!.root.style.display = 'none';
     const s = this.screens.get(name)!;
@@ -677,6 +710,9 @@ export class Menus {
     logo.alt = 'BlockForge';
     logo.draggable = false;
     const splash = div('bf-splash bf-font', s.gui);
+    const cont = button(s.gui, 'Continue', 200, () => this.continueLast());
+    cont.el.classList.add('bf-continue');
+    cont.el.style.display = 'none';
     const single = button(s.gui, 'Singleplayer', 200, () => this.showWorlds(), 'Create a world or continue one you have played before.');
     const dl = this.handlers.offlineDownloadUrl
       ? linkButton(s.gui, 'Download offline version', 200, this.handlers.offlineDownloadUrl)
@@ -690,8 +726,10 @@ export class Menus {
     if (hint) hint.textContent = centered('On a touchscreen? Turn on Touch in Options.', 0);
     let splashText = '';
 
+    this.titleUI = { cont };
     s.layout = (l) => {
-      const art = drawPanorama();
+      const pack = this.settings.resourcePack;
+      const art = drawPanorama(pack);
       if (art) {
         // Scale the strip to the screen height; animate one period to the left, forever.
         const hPx = window.innerHeight;
@@ -702,7 +740,7 @@ export class Menus {
         pano.style.setProperty('--pano-w', `${-period}px`);
         pano.style.animationDuration = `${Math.round(period / 12)}s`;
       }
-      const lg = drawLogo();
+      const lg = drawLogo(pack);
       if (lg && logo.src !== lg) logo.src = lg;
       const lw = Math.round(LOGO_W / 2), lh = Math.round(LOGO_H / 2);
       at(logo, l.cx - (lw >> 1), 28, lw, lh);
@@ -711,8 +749,18 @@ export class Menus {
       at(splash, l.cx + 104, 28 + lh - 2);
       splash.style.setProperty('--ss', String(Math.min(1.8, (1.8 * 100) / (textAdvance(splashText) + 32))));
       const y0 = l.qh + 48;
-      at(single.el, l.cx - 100, y0);
-      let y = y0 + 24;
+      let y = y0;
+      const last = this.lastWorld;
+      cont.el.style.display = last ? '' : 'none';
+      if (last) {
+        const label = 'Continue: ';
+        cont.set(label + fit(last.name || 'World', 200 - 10 - textAdvance(label)));
+        cont.el.dataset.tip = `Jump straight back into ${last.name || 'your world'}. Last played ${formatDate(last.lastPlayed)}.`;
+        at(cont.el, l.cx - 100, y);
+        y += 24;
+      }
+      at(single.el, l.cx - 100, y);
+      y += 24;
       if (dl) { at(dl.el, l.cx - 100, y); y += 24; }
       y += 12;
       at(opts.el, l.cx - 100, y);
@@ -723,8 +771,34 @@ export class Menus {
     };
     (s as Screen & { onShow?: () => void }).onShow = () => {
       splashText = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
+      cont.enable(true);
       s.layout(guiLayout());
+      void this.refreshContinue();
     };
+  }
+
+  private titleUI!: { cont: Btn };
+
+  /** Look up the most recently played world for the Continue button. */
+  private async refreshContinue() {
+    const ticket = ++this.titleRefresh;
+    let worlds: WorldMeta[] = [];
+    try { worlds = await this.handlers.listWorlds(); } catch (e) { console.warn('[menus] listWorlds failed', e); }
+    if (ticket !== this.titleRefresh) return;
+    worlds.sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
+    this.lastWorld = worlds[0] ?? null;
+    if (this.cur === 'title') this.screens.get('title')!.layout(guiLayout());
+  }
+
+  /** Continue: play the most recently played world directly. */
+  private continueLast() {
+    const w = this.lastWorld;
+    if (!w || this.busy) return;
+    this.busy = true;
+    this.titleUI.cont.enable(false);
+    this.handlers.playWorld(w.id)
+      .catch((e) => { console.warn('[menus] playWorld failed', e); this.showTitle(); })
+      .finally(() => { this.busy = false; this.titleUI.cont.enable(true); });
   }
 
   // ------------------------------------------------------------------ worlds
@@ -827,7 +901,7 @@ export class Menus {
       at(row, l.cx - 135, 4 + i * 36, 270, 36);
       row.classList.toggle('bf-sel', w.id === this.selected);
       const img = el('img', 'bf-thumbimg', row);
-      img.src = worldThumb(w.seed);
+      img.src = worldThumb(w.seed, this.settings.resourcePack);
       img.alt = '';
       img.draggable = false;
       const play = div('bf-play', row);
@@ -945,6 +1019,15 @@ export class Menus {
   }
 
   // ------------------------------------------------------------------ options
+  /** Save, apply live, and keep the preset label honest after an option changed. */
+  private settingsEdited(presetKey: boolean) {
+    const st = this.settings;
+    syncShaderFlags(st);
+    if (presetKey) st.preset = matchPreset(st);
+    saveSettings(st);
+    try { this.handlers.settingsChanged(st); } catch (e) { console.warn('[menus] settingsChanged failed', e); }
+  }
+
   private buildOptions() {
     const s = this.add('options', 'bf-dirt');
     const title = line(s.gui, 'Options', 13);
@@ -952,17 +1035,15 @@ export class Menus {
     const list = new ScrollList(s.gui, false);
     const done = button(s.gui, 'Done', 200, () => this.back());
     const st = this.settings;
-    const PRESET_KEYS: (keyof Settings)[] = ['renderDistance', 'fancyLeaves', 'smoothLighting', 'shadows', 'shadowQuality', 'waving', 'clouds', 'resolutionScale', 'mipmaps'];
+    const PRESET_KEYS: (keyof Settings)[] = ['renderDistance', 'fancyLeaves', 'smoothLighting', 'shaderPack', 'shadowQuality', 'clouds', 'resolutionScale', 'mipmaps'];
 
     const changed = (key?: keyof Settings) => {
-      if (key && PRESET_KEYS.includes(key)) st.preset = 'custom';
-      saveSettings(st);
-      try { this.handlers.settingsChanged(st); } catch (e) { console.warn('[menus] settingsChanged failed', e); }
+      this.settingsEdited(!!key && PRESET_KEYS.includes(key));
       if (key === 'guiScale') injectStyles(st.guiScale);
       refreshAll();
     };
     const onOff = (b: boolean) => (b ? 'ON' : 'OFF');
-    type Item = { kind: 'header'; text: string } | { kind: 'pair'; a: HTMLElement | null; b: HTMLElement | null };
+    type Item = { kind: 'header'; text: string } | { kind: 'pair'; a: HTMLElement | null; b: HTMLElement | null } | { kind: 'wide'; el: HTMLElement; gap?: number };
     const items: Item[] = [];
     const refreshers: (() => void)[] = [];
     const refreshAll = () => { for (const f of refreshers) f(); };
@@ -991,29 +1072,32 @@ export class Menus {
       return sl.el;
     };
     const pair = (a: HTMLElement | null, b: HTMLElement | null) => items.push({ kind: 'pair', a, b });
+    const wide = (e: HTMLElement, gap = 0) => items.push({ kind: 'wide', el: e, gap });
     const header = (text: string) => items.push({ kind: 'header', text });
 
     header('Graphics');
+    const shaders = button(list.inner, '', 310, () => this.showShaders(),
+      'Off is the fastest. Fancy adds sun shadows, waving plants and reflective water. Ultra adds bloom, god rays and mirror water.');
+    shaders.el.classList.add('bf-feature');
+    refreshers.push(() => shaders.set(`Shaders: ${SHADER_LABEL[st.shaderPack] ?? 'Off'}...`));
+    wide(shaders.el);
     pair(
       cycle<Preset>('Graphics', ['low', 'medium', 'high'], () => st.preset, (p) => applyPreset(st, p as Exclude<Preset, 'custom'>),
-        (p) => PRESET_LABEL[p], 'preset', 'Low runs at 60 fps on most school laptops. Medium adds see-through leaves and waving plants, High adds sun shadows.'),
+        (p) => PRESET_LABEL[p], 'preset', 'Low runs at 60 fps on most school laptops. Medium turns on Fancy shaders and see-through leaves. High uses Ultra shaders and sees further.'),
       slide('renderDistance', 2, 12, 1, (v) => `Render Distance: ${v} chunks`, 'How far you can see. Lower is faster.'),
     );
+    const packs = button(list.inner, 'Resource Packs...', W, () => this.showPacks(), 'Change the look of every block: smooth, retro, vivid or pastel.');
+    packs.el.classList.add('bf-feature');
     pair(
+      packs.el,
       slide('fov', 50, 110, 1, (v) => `FOV: ${v === 70 ? 'Normal' : v}`, 'Field of view in degrees.'),
+    );
+    pair(
       slide('brightness', 0, 100, 1, (v) => `Brightness: ${v === 0 ? 'Moody' : v === 100 ? 'Bright' : v + '%'}`, 'Lifts dark caves and nights.', 100),
-    );
-    pair(
       toggle('Smooth Lighting', 'smoothLighting', 'Soft light and shadows in corners (ambient occlusion).'),
+    );
+    pair(
       toggle('Fancy Leaves', 'fancyLeaves', 'See-through leaves. Off draws solid leaves, which is faster.'),
-    );
-    pair(
-      toggle('Shadows', 'shadows', 'Real-time sun shadows. Needs a strong graphics chip.'),
-      cycle<1024 | 2048>('Shadow Quality', [1024, 2048], () => st.shadowQuality, (v) => { st.shadowQuality = v; }, (v) => (v === 2048 ? 'High' : 'Normal'),
-        'shadowQuality', 'Sharper shadows cost more graphics memory.', () => st.shadows),
-    );
-    pair(
-      toggle('Waving Plants', 'waving', 'Grass, leaves and water move in the wind.'),
       toggle('Clouds', 'clouds', 'Blocky clouds drifting overhead.'),
     );
     pair(
@@ -1054,6 +1138,31 @@ export class Menus {
       null,
     );
 
+    // Restore Defaults: the first click arms it for 3 seconds, the second one resets everything.
+    let armTimer = 0;
+    const disarm = () => {
+      clearTimeout(armTimer);
+      armTimer = 0;
+      restore.set('Restore Defaults');
+      restore.el.classList.remove('bf-warn');
+    };
+    const restore = button(list.inner, 'Restore Defaults', 310, () => {
+      if (!armTimer) {
+        restore.set('Click again to restore defaults');
+        restore.el.classList.add('bf-warn');
+        armTimer = window.setTimeout(disarm, 3000);
+        return;
+      }
+      disarm();
+      restoreDefaults(st);
+      saveSettings(st);
+      injectStyles(st.guiScale);
+      try { this.handlers.settingsChanged(st); } catch (e) { console.warn('[menus] settingsChanged failed', e); }
+      refreshAll();
+    }, 'Put every option back the way it was the first time you played. Your worlds are not touched.');
+    restore.el.classList.add('bf-restore');
+    wide(restore.el, 8);
+
     const headers: HTMLDivElement[] = [];
     for (const it of items) if (it.kind === 'header') {
       const h = div('bf-h1 bf-c-yellow', list.inner);
@@ -1071,6 +1180,11 @@ export class Menus {
           const h = headers[hi++];
           h.style.top = U(y + 5);
           y += 18;
+        } else if (it.kind === 'wide') {
+          y += it.gap ?? 0;
+          at(it.el, l.cx - 155, y);
+          it.el.dataset.y = String(y);
+          y += 24;
         } else {
           if (it.a) { at(it.a, l.cx - 155, y); it.a.dataset.y = String(y); }
           if (it.b) { at(it.b, l.cx + 5, y); it.b.dataset.y = String(y); }
@@ -1081,7 +1195,231 @@ export class Menus {
       at(done.el, l.cx - 100, l.gh - 26);
       refreshAll();
     };
-    (s as Screen & { onShow?: () => void }).onShow = () => { list.scrollTo(0); refreshAll(); };
+    (s as Screen & { onShow?: () => void }).onShow = () => {
+      if (!this.keepOptionsScroll) list.scrollTo(0);
+      this.keepOptionsScroll = false;
+      disarm();
+      refreshAll();
+    };
+  }
+  private keepOptionsScroll = false;
+
+  // ------------------------------------------------------------------ shaders
+  private buildShaders() {
+    const s = this.add('shaders', 'bf-dirt');
+    const title = line(s.gui, 'Shaders', 13);
+    const st = this.settings;
+    const cards = SHADER_INFO.map((info) => {
+      const b = el('button', 'bf-btn bf-card', s.gui);
+      b.type = 'button';
+      const radio = div('bf-radio', b);
+      const name = div('bf-abs bf-card-name', b);
+      const desc = div('bf-abs bf-c-gray bf-card-desc', b);
+      b.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (st.shaderPack === info.id) return;
+        st.shaderPack = info.id;
+        this.settingsEdited(true);
+        refresh();
+      });
+      return { info, b, radio, name, desc };
+    });
+    const quality = button(s.gui, '', 200, () => {
+      st.shadowQuality = st.shadowQuality === 2048 ? 1024 : 2048;
+      this.settingsEdited(true);
+      refresh();
+    }, 'Sharper shadows cost more graphics memory.');
+    const note = div('bf-h1 bf-c-gray', s.gui);
+    const done = button(s.gui, 'Done', 200, () => this.back());
+    const refresh = () => {
+      for (const c of cards) {
+        const on = st.shaderPack === c.info.id;
+        c.b.classList.toggle('bf-on', on);
+        c.b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      }
+      quality.set(`Shadow Quality: ${st.shadowQuality === 2048 ? 'High' : 'Normal'}`);
+      quality.enable(st.shaderPack !== 'off');
+    };
+    s.layout = (l) => {
+      const w = Math.min(300, l.gw - 16);
+      const lines = cards.map((c) => wrapText(c.info.desc, w - 34));
+      const h = 19 + Math.max(...lines.map((x) => x.length)) * 10 + 4;
+      const block = cards.length * (h + 4) + 4 + 20;
+      const top = Math.max(28, Math.min(l.qh + 4, Math.round((l.gh - 30 - block) / 2)));
+      title.style.top = U(Math.max(8, top - 18) - 1);
+      cards.forEach((c, i) => {
+        at(c.b, l.cx - (w >> 1), top + i * (h + 4), w, h);
+        c.b.style.height = U(h);
+        at(c.radio, 7, Math.round(h / 2) - 5, 10, 10);
+        c.name.textContent = SHADER_LABEL[c.info.id];
+        at(c.name, 26, 5);
+        c.desc.textContent = '';
+        lines[i].forEach((ln, k) => { const d = div('', c.desc, ln); d.style.height = U(10); void k; });
+        at(c.desc, 26, 16);
+      });
+      const qy = top + cards.length * (h + 4) + 4;
+      at(quality.el, l.cx - 100, qy);
+      const ny = qy + 28;
+      note.style.display = ny + 10 < l.gh - 30 ? '' : 'none';
+      note.textContent = centered('Changes show right away. Off is the fastest.', 0);
+      note.style.top = U(ny);
+      at(done.el, l.cx - 100, l.gh - 26);
+      refresh();
+    };
+    (s as Screen & { onShow?: () => void }).onShow = () => refresh();
+  }
+
+  // ------------------------------------------------------------------ resource packs
+  private buildPacks() {
+    const s = this.add('packs', 'bf-dirt');
+    line(s.gui, 'Resource Packs', 13);
+    const list = new ScrollList(s.gui, true);
+    const done = button(s.gui, 'Done', 98, () => this.back());
+    const st = this.settings;
+    const ROW = 48;
+    // Importing a pack: the player picks a .zip; it is read in this browser and kept here only.
+    const file = el('input', '', s.root);
+    file.type = 'file';
+    file.accept = '.zip,application/zip';
+    file.style.display = 'none';
+    const status = div('bf-abs bf-c-gray', s.gui);
+    let busy = false;
+    const importBtn = button(s.gui, 'Import Pack...', 98, () => { if (!busy) file.click(); },
+      'Load a resource pack .zip from your computer. It stays in this browser and is never uploaded.');
+    const removeBtn = button(s.gui, 'Remove Import', 98, () => {
+      if (busy || !customPackInfo()) return;
+      setCustomPack(null);
+      void deleteCustomPack();
+      clearPackIcons('custom');
+      if (st.resourcePack === 'custom') this.pickPack('default', () => refresh());
+      resetPreview();
+      refresh();
+    }, 'Forget the imported pack.');
+    file.addEventListener('change', async () => {
+      const f = file.files && file.files[0];
+      file.value = '';
+      if (!f || busy) return;
+      busy = true;
+      importBtn.enable(false);
+      status.textContent = 'Reading ' + fit(f.name, 200) + '...';
+      try {
+        const pack = await importResourcePack(f, f.name, (d, n) => { status.textContent = `Importing textures: ${Math.round((d / n) * 100)}%`; });
+        setCustomPack(pack);
+        clearPackIcons('custom');
+        resetPreview();
+        await saveCustomPack(pack).catch((e) => console.warn('[packs] could not store the imported pack', e));
+        status.textContent = `Imported ${pack.tiles.size} textures from ${fit(pack.name, 140)}.`;
+        if (st.resourcePack === 'custom') {
+          try { this.handlers.reapplyResourcePack?.(); } catch (e) { console.warn(e); }
+        } else this.pickPack('custom', () => refresh());
+      } catch (e) {
+        status.textContent = (e instanceof Error ? e.message : String(e)).slice(0, 120);
+      } finally {
+        busy = false;
+        importBtn.enable(true);
+        refresh();
+      }
+    });
+    const rows = RESOURCE_PACKS.map((p, i) => {
+      const row = div('bf-row bf-packrow', list.inner);
+      row.tabIndex = 0;
+      row.dataset.pack = p.id;
+      row.dataset.y = String(4 + i * ROW);
+      row.dataset.h = String(ROW);
+      const name = div('bf-abs', row, p.name);
+      const used = div('bf-abs bf-c-green bf-right', row, 'Selected');
+      const desc = div('bf-abs bf-c-gray', row);
+      const strip = div('bf-abs bf-strip', row);
+      const imgs = PACK_PREVIEW.map(() => {
+        const im = el('img', 'bf-stripimg', strip);
+        im.alt = ''; im.draggable = false;
+        return im;
+      });
+      const pick = () => {
+        // The imported pack slot opens the file picker until something has been imported.
+        if (p.id === 'custom' && !customPackInfo()) { if (!busy) file.click(); return; }
+        this.pickPack(p.id, refresh);
+      };
+      row.addEventListener('click', pick);
+      row.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); }
+        else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          e.preventDefault();
+          const n = Math.max(0, Math.min(RESOURCE_PACKS.length - 1, i + (e.key === 'ArrowDown' ? 1 : -1)));
+          rows[n]?.row.focus({ preventScroll: true });
+          list.ensureVisible(4 + n * ROW, ROW);
+        }
+      });
+      return { p, row, name, used, desc, strip, imgs };
+    });
+    const resetPreview = () => {
+      const r = rows.find((x) => x.p.id === 'custom');
+      if (r) r.imgs.forEach((im, k) => { im.src = customPackInfo() ? packIcon(ID[PACK_PREVIEW[k]] ?? 0, 'custom') : ''; im.style.visibility = customPackInfo() ? '' : 'hidden'; });
+    };
+    const refresh = () => {
+      const info = customPackInfo();
+      for (const r of rows) {
+        const on = st.resourcePack === r.p.id;
+        r.row.classList.toggle('bf-sel', on);
+        r.name.classList.toggle('bf-c-yellow', on);
+        r.used.style.display = on ? '' : 'none';
+        if (r.p.id === 'custom') {
+          r.name.textContent = info ? info.name : 'Imported Pack';
+          r.desc.textContent = fit(info ? `${info.count} textures, kept in this browser only.` : 'Click to load a resource pack .zip from your computer.', curW - 12);
+        }
+      }
+      removeBtn.enable(!!info && !busy);
+    };
+    let curW = 300;
+    s.layout = (l) => {
+      const w = Math.min(300, l.gw - 20);
+      curW = w;
+      list.place(l, 30, l.gh - 30 - 46, l.cx + (w >> 1) + 4);
+      rows.forEach((r, i) => {
+        at(r.row, l.cx - (w >> 1), 4 + i * ROW, w, ROW - 4);
+        at(r.name, 6, 4);
+        at(r.used, w - 8 - textAdvance('Selected'), 4);
+        r.desc.textContent = fit(r.p.description, w - 12);
+        at(r.desc, 6, 14);
+        at(r.strip, 6, 25, PACK_PREVIEW.length * 18, 16);
+        r.imgs.forEach((im, k) => at(im, k * 18, 0, 16, 16));
+      });
+      list.setContent(RESOURCE_PACKS.length * ROW + 8);
+      at(status, l.cx - (w >> 1), l.gh - 40);
+      at(importBtn.el, l.cx - 151, l.gh - 26);
+      at(removeBtn.el, l.cx - 49, l.gh - 26);
+      at(done.el, l.cx + 53, l.gh - 26);
+      refresh();
+    };
+    (s as Screen & { onShow?: () => void }).onShow = () => {
+      // Preview icons are drawn the first time the screen opens (a few ms per pack).
+      for (const r of rows) {
+        if (r.p.id === 'custom') continue;
+        r.imgs.forEach((im, k) => {
+          const id = ID[PACK_PREVIEW[k]] ?? 0;
+          if (!im.src) im.src = packIcon(id, r.p.id);
+        });
+      }
+      resetPreview();
+      status.textContent = '';
+      refresh();
+    };
+  }
+
+  /** Select a resource pack: highlight it now, rebuild the textures on the next frame. */
+  private pickPack(id: ResourcePackId, refresh: () => void) {
+    const st = this.settings;
+    if (st.resourcePack === id) return;
+    st.resourcePack = id;
+    refresh();
+    saveSettings(st);
+    const apply = () => {
+      if (st.resourcePack !== id) return;
+      this.settingsEdited(false);
+      // Title art and world thumbnails are redrawn from the new pack when shown next.
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(() => setTimeout(apply, 0));
+    else setTimeout(apply, 0);
   }
 
   // ------------------------------------------------------------------ controls
@@ -1089,35 +1427,125 @@ export class Menus {
     const s = this.add('controls', 'bf-dirt');
     line(s.gui, 'Controls', 13);
     const list = new ScrollList(s.gui, false);
-    const done = button(s.gui, 'Done', 200, () => this.back());
+    const done = button(s.gui, 'Done', 98, () => { stopCapture(); this.back(); });
+    const resetAll = button(s.gui, 'Reset Keys', 98, () => {
+      stopCapture();
+      resetBindings(this.settings);
+      saveSettings(this.settings);
+      render();
+    }, 'Put every key back the way it started.');
     const content = div('bf-abs', list.inner);
     content.style.left = '0'; content.style.right = '0';
-    s.layout = (l) => {
-      list.place(l, 32, l.gh - 64, l.cx + 160);
+    let capturing: Action | null = null;
+    let lastLayout: GuiLayout | null = null;
+
+    // While waiting for a key, grab the next key or mouse button before the game sees it.
+    const onKey = (e: KeyboardEvent) => {
+      if (!capturing) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      if (e.repeat) return;
+      const code = e.code || '';
+      if (code !== 'Escape' && code && !UNBINDABLE.has(code)) assign(capturing, code);
+      stopCapture();
+      render();
+    };
+    const onMouse = (e: MouseEvent) => {
+      if (!capturing || e.button < 0 || e.button > 4) return;
+      e.preventDefault(); e.stopImmediatePropagation();
+      assign(capturing, 'Mouse' + e.button);
+      // A left click is followed by a click event: swallow it so it does not press another button.
+      if (e.button === 0) {
+        const swallow = (c: Event) => { c.preventDefault(); c.stopImmediatePropagation(); };
+        window.addEventListener('click', swallow, { capture: true, once: true });
+        setTimeout(() => window.removeEventListener('click', swallow, true), 500);
+      }
+      stopCapture();
+      render();
+    };
+    const assign = (a: Action, code: string) => { setBinding(this.settings, a, code); saveSettings(this.settings); };
+    const startCapture = (a: Action) => {
+      capturing = a;
+      window.addEventListener('keydown', onKey, true);
+      window.addEventListener('mousedown', onMouse, true);
+      render();
+    };
+    function stopCapture() {
+      capturing = null;
+      window.removeEventListener('keydown', onKey, true);
+      window.removeEventListener('mousedown', onMouse, true);
+    }
+
+    const render = () => {
+      const l = lastLayout;
+      if (!l) return;
       content.textContent = '';
+      const bad = conflicts();
       let y = 4;
-      const sections: [string, [string, string][]][] = this.settings.controls === 'touch'
-        ? [['Touch controls', TOUCH_KEYS], ...KEYS]
-        : [...KEYS, ['Touch controls', TOUCH_KEYS]];
-      for (const [head, rows] of sections) {
+      const head = (t: string) => {
         const h = div('bf-h1 bf-c-yellow', content);
-        h.textContent = centered(head, 0);
+        h.textContent = centered(t, 0);
         h.style.top = U(y + 5);
         y += 18;
-        for (const [action, key] of rows) {
-          const a = div('bf-abs', content, fit(action, 200));
-          at(a, l.cx - 155, y + 5);
+      };
+      const touchFirst = this.settings.controls === 'touch';
+      const touchRows = () => {
+        head('Touch controls');
+        for (const [label, key] of TOUCH_KEYS) {
+          at(div('bf-abs', content, fit(label, 170)), l.cx - 155, y + 5);
           const k = div('bf-keycap', content);
           k.textContent = centered(key, 90);
-          at(k, l.cx + 65, y, 90, 20);
+          at(k, l.cx + 20, y, 90, 20);
+          y += 22;
+        }
+        y += 4;
+      };
+      if (touchFirst) touchRows();
+      for (const group of ['Movement', 'Gameplay', 'Interface', 'Hotbar'] as const) {
+        head(group === 'Gameplay' ? 'Gameplay' : group);
+        for (const info of ACTIONS) {
+          if (info.group !== group) continue;
+          const lab = div('bf-abs', content, fit(info.label, 170));
+          at(lab, l.cx - 155, y + 5);
+          const code = bound(info.id);
+          const waiting = capturing === info.id;
+          const key = button(content, waiting ? '> Press a key <' : keyName(code), 90, () => {
+            if (capturing === info.id) { stopCapture(); render(); } else startCapture(info.id);
+          }, waiting ? 'Press any key or mouse button. Esc cancels.' : 'Click, then press the new key or mouse button.');
+          if (waiting) key.el.classList.add('bf-c-yellow');
+          else if (bad.has(info.id)) key.el.classList.add('bf-c-red');
+          at(key.el, l.cx + 20, y);
+          const reset = button(content, 'Reset', 44, () => {
+            stopCapture();
+            setBinding(this.settings, info.id, info.def);
+            saveSettings(this.settings);
+            render();
+          }, 'Back to ' + keyName(info.def) + '.');
+          reset.enable(code !== info.def);
+          at(reset.el, l.cx + 114, y);
           y += 22;
         }
         y += 4;
       }
+      head('Fixed');
+      for (const [label, key] of FIXED_KEYS) {
+        at(div('bf-abs', content, fit(label, 170)), l.cx - 155, y + 5);
+        const k = div('bf-keycap', content);
+        k.textContent = centered(key, 90);
+        at(k, l.cx + 20, y, 90, 20);
+        y += 22;
+      }
+      y += 4;
+      if (!touchFirst) touchRows();
       list.setContent(y + 4);
-      at(done.el, l.cx - 100, l.gh - 26);
     };
-    (s as Screen & { onShow?: () => void }).onShow = () => list.scrollTo(0);
+    s.layout = (l) => {
+      lastLayout = l;
+      list.place(l, 32, l.gh - 64, l.cx + 160);
+      render();
+      at(resetAll.el, l.cx - 100, l.gh - 26);
+      at(done.el, l.cx + 2, l.gh - 26);
+    };
+    (s as Screen & { onShow?: () => void }).onShow = () => { stopCapture(); render(); list.scrollTo(0); };
   }
 
   // ------------------------------------------------------------------ pause
@@ -1132,6 +1560,13 @@ export class Menus {
       this.handlers.setTimeMode(TIME_ORDER[(TIME_ORDER.indexOf(m) + 1) % TIME_ORDER.length]);
       refreshTime();
     }, 'Keep the sun moving, or stop the clock at a time you like.');
+    const shaders = button(s.gui, '', 204, () => {
+      const st = this.settings;
+      st.shaderPack = SHADER_ORDER[(SHADER_ORDER.indexOf(st.shaderPack) + 1) % SHADER_ORDER.length];
+      this.settingsEdited(true);
+      refreshShaders();
+    }, 'Off is the fastest. Fancy adds sun shadows, waving plants and reflective water. Ultra adds bloom, god rays and mirror water.');
+    const refreshShaders = () => shaders.set(`Shaders: ${SHADER_LABEL[this.settings.shaderPack] ?? 'Off'}`);
     const quit = button(s.gui, 'Save and Quit to Title', 204, () => {
       if (this.busy) return;
       this.busy = true;
@@ -1149,16 +1584,21 @@ export class Menus {
       at(opts.el, l.cx - 102, y0 + 24);
       at(ctrl.el, l.cx + 4, y0 + 24);
       at(time.el, l.cx - 102, y0 + 48);
-      at(quit.el, l.cx - 102, y0 + 84);
+      at(shaders.el, l.cx - 102, y0 + 72);
+      at(quit.el, l.cx - 102, y0 + 108);
       tip.textContent = '';
-      let y = y0 + 118;
+      let y = y0 + 140;
       const lines = wrapText('Ctrl+W closes the tab in browsers: sprint with a double-tap of W, or turn on Fullscreen on Play in Options.', Math.min(300, l.gw - 20));
-      line(tip, 'Tip', y, 'bf-c-yellow');
-      y += 11;
-      for (const ln of lines) { line(tip, ln, y, 'bf-c-gray'); y += 10; }
+      // The tip is only shown when it fits under the buttons (small screens skip it).
+      if (y + 11 + lines.length * 10 <= l.gh - 4) {
+        line(tip, 'Tip', y, 'bf-c-yellow');
+        y += 11;
+        for (const ln of lines) { line(tip, ln, y, 'bf-c-gray'); y += 10; }
+      }
       refreshTime();
+      refreshShaders();
     };
-    (s as Screen & { onShow?: () => void }).onShow = () => { quit.enable(true); refreshTime(); };
+    (s as Screen & { onShow?: () => void }).onShow = () => { quit.enable(true); refreshTime(); refreshShaders(); };
   }
 
   // ------------------------------------------------------------------ loading

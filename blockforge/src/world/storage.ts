@@ -4,6 +4,12 @@
 // private modes) or never answers. Every call is guarded and never rejects for storage
 // reasons: a write that IndexedDB refuses is kept in memory for the rest of the session.
 //
+// Tabs get closed mid-game, so writes are kept small (one column or one world record per
+// transaction, committed straight away) and backed by an emergency copy in localStorage,
+// which is synchronous: `saveSession` (player, hotbar, time) and `journalChunk` (an edited
+// column) are written when the page is hidden or closed and folded back in on the next
+// read. A later successful IndexedDB save of the same data removes the emergency copy.
+//
 // Chunk records carry their own small palette (block names used in that column), so a save
 // stays readable whatever the registry looks like later: unknown names load as air. Blocks
 // are run-length encoded as varint pairs (token = paletteIndex * 64 + meta, runLength - 1)
@@ -203,6 +209,11 @@ function reqP<T>(r: IDBRequest<T>): Promise<T> {
   });
 }
 
+/** Ask the browser to commit now instead of when the event loop is idle (finishes sooner on close). */
+function commitNow(tx: IDBTransaction): void {
+  try { (tx as IDBTransaction & { commit?: () => void }).commit?.(); } catch { /* already committing */ }
+}
+
 function txDone(tx: IDBTransaction): Promise<void> {
   return new Promise<void>((res, rej) => {
     tx.oncomplete = () => res();
@@ -240,6 +251,117 @@ function askPersist(): void {
 }
 
 // ---------------------------------------------------------------------------
+// Emergency copies in localStorage
+
+const LS_SESSION = 'blockforge.session.';   // + worldId
+const LS_JOURNAL = 'blockforge.journal.';   // + worldId + '|' + cx + '|' + cz
+
+/** The part of WorldMeta that changes while playing. */
+interface SessionSnapshot {
+  t: number;
+  player: WorldMeta['player'];
+  hotbar: number[];
+  hotbarNames?: string[];
+  selected: number;
+  dayTime: number;
+  timeMode: WorldMeta['timeMode'];
+}
+
+interface JournalEntry { t: number; cx: number; cz: number; names: string[]; data: string; biome: string; tint: string }
+
+function ls(): Storage | null {
+  try { return (globalThis as { localStorage?: Storage }).localStorage ?? null; } catch { return null; }
+}
+
+function toB64(a: Uint8Array): string {
+  let s = '';
+  for (let i = 0; i < a.length; i += 0x8000) s += String.fromCharCode.apply(null, Array.from(a.subarray(i, i + 0x8000)));
+  return btoa(s);
+}
+function fromB64(s: string): Uint8Array {
+  const bin = atob(s);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+const journalKey = (worldId: string, cx: number, cz: number) => `${LS_JOURNAL}${worldId}|${cx}|${cz}`;
+
+/** Journal keys present in localStorage (scanned once, then kept up to date). */
+let journalKeys: Set<string> | null = null;
+function knownJournal(): Set<string> {
+  if (journalKeys) return journalKeys;
+  journalKeys = new Set();
+  const st = ls();
+  if (st) {
+    try {
+      for (let i = 0; i < st.length; i++) {
+        const k = st.key(i);
+        if (k && k.startsWith(LS_JOURNAL)) journalKeys.add(k);
+      }
+    } catch { /* ignore */ }
+  }
+  return journalKeys;
+}
+/** Sequence number of journal writes made by this page, by key. */
+const journalSeq = new Map<string, number>();
+let seq = 0;
+
+function readJournal(key: string): ChunkRecord | null {
+  const st = ls();
+  if (!st || !knownJournal().has(key)) return null;
+  try {
+    const raw = st.getItem(key);
+    if (!raw) { knownJournal().delete(key); return null; }
+    const j = JSON.parse(raw) as JournalEntry;
+    const w = key.slice(LS_JOURNAL.length, key.indexOf('|'));
+    return { w, cx: j.cx, cz: j.cz, v: 2, names: j.names, data: fromB64(j.data), biome: fromB64(j.biome), tint: fromB64(j.tint) };
+  } catch (e) {
+    warnOnce('could not read an emergency chunk copy', e);
+    return null;
+  }
+}
+
+/** Drop the emergency copy of a column once IndexedDB holds data at least as new (`atSeq`). */
+function dropJournal(key: string, atSeq: number): void {
+  if (!knownJournal().has(key)) return;
+  const written = journalSeq.get(key);
+  if (written !== undefined && written > atSeq) return;
+  try { ls()?.removeItem(key); } catch { /* ignore */ }
+  knownJournal().delete(key);
+  journalSeq.delete(key);
+}
+
+function readSession(worldId: string): SessionSnapshot | null {
+  try {
+    const raw = ls()?.getItem(LS_SESSION + worldId);
+    return raw ? JSON.parse(raw) as SessionSnapshot : null;
+  } catch { return null; }
+}
+
+/** Fold a newer emergency session snapshot into a world record. */
+function withSession(m: WorldMeta): WorldMeta {
+  const s = readSession(m.id);
+  if (!s || !(s.t > (m.lastPlayed || 0))) return m;
+  const out: WorldMeta = { ...m, lastPlayed: s.t, selected: s.selected, dayTime: s.dayTime, timeMode: s.timeMode };
+  if (s.player) out.player = s.player;
+  if (Array.isArray(s.hotbar)) out.hotbar = s.hotbar;
+  if (Array.isArray(s.hotbarNames)) out.hotbarNames = s.hotbarNames;
+  return out;
+}
+
+/** IndexedDB put of one record in its own small, immediately committed transaction. */
+async function putRecord(store: string, value: unknown): Promise<void> {
+  const db = await openDB();
+  if (!db) throw new Error('no database');
+  const tx = db.transaction(store, 'readwrite');
+  const done = txDone(tx);
+  tx.objectStore(store).put(value);
+  commitNow(tx);
+  await done;
+}
+
+// ---------------------------------------------------------------------------
 
 export const storage = {
   /** All saved worlds, newest lastPlayed first. */
@@ -253,17 +375,17 @@ export const storage = {
       } catch (e) { warnOnce('could not list worlds', e); }
     }
     for (const [id, m] of memWorlds) byId.set(id, cloneMeta(m));
-    return Array.from(byId.values()).sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
+    return Array.from(byId.values()).map(withSession).sort((a, b) => (b.lastPlayed || 0) - (a.lastPlayed || 0));
   },
 
   async getWorld(id: string): Promise<WorldMeta | null> {
     const mem = memWorlds.get(id);
-    if (mem) return cloneMeta(mem);
+    if (mem) return withSession(cloneMeta(mem));
     const db = await openDB();
     if (!db) return null;
     try {
       const m = await reqP(db.transaction(WORLDS, 'readonly').objectStore(WORLDS).get(id) as IDBRequest<WorldMeta | undefined>);
-      return m ?? null;
+      return m ? withSession(m) : null;
     } catch (e) {
       warnOnce('could not read a world', e);
       return null;
@@ -277,9 +399,7 @@ export const storage = {
     const db = await openDB();
     if (!db) return;
     try {
-      const tx = db.transaction(WORLDS, 'readwrite');
-      tx.objectStore(WORLDS).put(snap);
-      await txDone(tx);
+      await putRecord(WORLDS, snap);
       if (memWorlds.get(snap.id) === snap) memWorlds.delete(snap.id);
       askPersist();
     } catch (e) {
@@ -291,6 +411,10 @@ export const storage = {
   async deleteWorld(id: string): Promise<void> {
     memWorlds.delete(id);
     memChunks.delete(id);
+    try { ls()?.removeItem(LS_SESSION + id); } catch { /* ignore */ }
+    for (const k of Array.from(knownJournal())) {
+      if (k.startsWith(`${LS_JOURNAL}${id}|`)) { try { ls()?.removeItem(k); } catch { /* ignore */ } knownJournal().delete(k); }
+    }
     const db = await openDB();
     if (!db) return;
     try {
@@ -333,6 +457,19 @@ export const storage = {
     }
     const mem = memChunks.get(worldId);
     if (mem) for (const k of mem.keys()) out.add(k);
+    // Emergency copies left by a tab that closed before IndexedDB finished: count them as
+    // saved and move them into IndexedDB now (newest data wins, so they replace what is there).
+    const prefix = `${LS_JOURNAL}${worldId}|`;
+    for (const k of Array.from(knownJournal())) {
+      if (!k.startsWith(prefix)) continue;
+      const rec = readJournal(k);
+      if (!rec) continue;
+      out.add(chunkKey(rec.cx, rec.cz));
+      if (db) {
+        const at = seq;
+        putRecord(CHUNKS, rec).then(() => dropJournal(k, at)).catch((e) => warnOnce('could not move an emergency chunk copy', e));
+      }
+    }
     return out;
   },
 
@@ -340,6 +477,8 @@ export const storage = {
   async loadChunk(worldId: string, cx: number, cz: number): Promise<{ blocks: Uint16Array; biome: Uint8Array; tint: Uint8Array } | null> {
     const mem = memChunks.get(worldId)?.get(chunkKey(cx, cz));
     if (mem) return decodeRecord(mem);
+    const jr = readJournal(journalKey(worldId, cx, cz));
+    if (jr) return decodeRecord(jr);
     const db = await openDB();
     if (!db) return null;
     try {
@@ -358,13 +497,13 @@ export const storage = {
     const key = chunkKey(c.cx, c.cz);
     const mem = memChunkMap(worldId);
     mem.set(key, rec);
+    const at = ++seq;
     const db = await openDB();
     if (!db) return;
     try {
-      const tx = db.transaction(CHUNKS, 'readwrite');
-      tx.objectStore(CHUNKS).put(rec);
-      await txDone(tx);
+      await putRecord(CHUNKS, rec);
       if (mem.get(key) === rec) mem.delete(key);
+      dropJournal(journalKey(worldId, c.cx, c.cz), at);
     } catch (e) {
       warnOnce('could not save a chunk, keeping it in memory', e);
     }
@@ -387,6 +526,53 @@ export const storage = {
       if (v === 0) continue;
       const id = table[v & 0x3ff];
       blocks[i] = id === 0 ? 0 : id | (v & 0xfc00);
+    }
+  },
+
+  /**
+   * Synchronous emergency copy of the player's state (position, look, hotbar, time) for a
+   * page that is being hidden or closed. Read back by getWorld/listWorlds when newer.
+   */
+  saveSession(meta: WorldMeta): void {
+    const snap: SessionSnapshot = {
+      t: Date.now(), player: meta.player, hotbar: meta.hotbar, hotbarNames: meta.hotbarNames,
+      selected: meta.selected, dayTime: meta.dayTime, timeMode: meta.timeMode,
+    };
+    try { ls()?.setItem(LS_SESSION + meta.id, JSON.stringify(snap)); } catch (e) { warnOnce('could not write the session copy', e); }
+  },
+
+  /** Synchronous emergency copy of an edited column (see file header). */
+  journalChunk(worldId: string, c: Chunk): void {
+    const st = ls();
+    if (!st) return;
+    try {
+      const rec = encodeChunk(worldId, c);
+      const j: JournalEntry = { t: Date.now(), cx: rec.cx, cz: rec.cz, names: rec.names, data: toB64(rec.data), biome: toB64(rec.biome), tint: toB64(rec.tint) };
+      const key = journalKey(worldId, c.cx, c.cz);
+      st.setItem(key, JSON.stringify(j));
+      knownJournal().add(key);
+      journalSeq.set(key, ++seq);
+    } catch (e) {
+      warnOnce('could not write an emergency chunk copy', e);
+    }
+  },
+
+  /** Journal every column whose IndexedDB write has not finished yet (the tab is closing). */
+  journalPending(worldId: string): void {
+    const mem = memChunks.get(worldId);
+    if (!mem || memoryMode) return;
+    for (const rec of mem.values()) {
+      const st = ls();
+      if (!st) return;
+      try {
+        const key = journalKey(worldId, rec.cx, rec.cz);
+        const j: JournalEntry = { t: Date.now(), cx: rec.cx, cz: rec.cz, names: rec.names, data: toB64(rec.data), biome: toB64(rec.biome), tint: toB64(rec.tint) };
+        st.setItem(key, JSON.stringify(j));
+        knownJournal().add(key);
+        journalSeq.set(key, ++seq);
+      } catch (e) {
+        warnOnce('could not write an emergency chunk copy', e);
+      }
     }
   },
 
