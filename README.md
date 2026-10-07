@@ -14,6 +14,8 @@ no backend: the whole game runs in the browser and your bankroll lives in
 
 **2 Weeks (build-and-shoot battle royale against 24 bots):** https://elliotread250-source.github.io/Blackjack/2-weeks/
 
+**BlockForge (creative-mode voxel sandbox, 400+ blocks):** https://blockforge-web-production.up.railway.app, also on [GitHub Pages](https://elliotread250-source.github.io/Blackjack/blockforge/dist/)
+
 **Humanizer (AI text to human text, free, no API keys):** https://humanizer-production-e796.up.railway.app, also on [GitHub Pages](https://elliotread250-source.github.io/Blackjack/humanizer/) (no ZeroGPT, no sign-in-free mode)
 
 ## Rules on the table
