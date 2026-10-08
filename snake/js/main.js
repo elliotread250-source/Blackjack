@@ -641,6 +641,7 @@
     get stepMs() { return stepMs; },
     get settings() { return JSON.parse(JSON.stringify(settings)); },
     get steps() { return game.steps; },
+    get game() { return game; },
     placeApple: function (x, y, i) {
       var a = game.apples[i || 0];
       if (!a || !game.isFree(x, y)) return false;

@@ -280,7 +280,7 @@
   // Layout: fit the board to the viewport
   // =====================================================================
   function metrics(cell) {
-    var s = cell / 16, k = Math.min(s, 2), hs = clamp(s, 1, 2);
+    var s = cell / 16, k = Math.min(s, 2), hs = clamp(s, 1, flags.short ? 1.25 : 2);
     var n = flags.narrow;
     var m = {
       cb: n ? 2 : clamp(Math.round(3 * k), 2, 6),

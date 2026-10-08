@@ -315,9 +315,10 @@ html.short #win > .titlebar, html.short .statusbar { display: none; }
 /* ---- touch mode bar ---- */
 .modebar { display: none; margin-top: 8px; gap: 10px; justify-content: center; flex: none; }
 html.touch .modebar { display: flex; }
-html.side .modebar { flex-direction: column; margin: 0 0 0 8px; }
+html.side .modebar { flex-direction: column; margin: 0 0 0 8px; align-items: stretch; }
 .modebar .seg { display: flex; }
-html.side .modebar .seg { flex-direction: column; }
+html.side .modebar .seg:first-child { flex-direction: column; }
+html.side .modebar .zoom { flex: 1; width: auto; }
 .modebar .btn98 {
   min-width: 0;
   height: 44px;

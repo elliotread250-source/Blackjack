@@ -8,6 +8,7 @@
   var loop = null;       // persistent background voice (siren / fright / eyes)
   var loopKey = '';
   var lastChomp = 0, chompAlt = false;
+  var music = [];        // scheduled jingle voices, so they can be cut short
 
   function noteHz(n) {
     var m = /^([A-G])(#?)(\d)$/.exec(n);
@@ -68,33 +69,66 @@
   A.suspend = function () { if (ctx && ctx.state === 'running') ctx.suspend().catch(function () {}); };
   A.resume = function () { if (ctx && ctx.state === 'suspended') ctx.resume().catch(function () {}); };
 
+  function playTune(mel, bass, u, reps, melGain, bassGain) {
+    A.stopMusic();
+    var t = ctx.currentTime + 0.05;
+    var len = 0;
+    mel.forEach(function (n) { len += n[1]; });
+    for (var r = 0; r < reps; r++) {
+      var x = t + r * len * u;
+      mel.forEach(function (n) {
+        if (n[0] !== '-') {
+          var o = voice('wsg', x, n[1] * u * 0.85, melGain);
+          o.frequency.setValueAtTime(noteHz(n[0]), x);
+          music.push(o);
+        }
+        x += n[1] * u;
+      });
+      x = t + r * len * u;
+      bass.forEach(function (n) {
+        var o = voice('triangle', x, n[1] * u * 0.7, bassGain);
+        o.frequency.setValueAtTime(noteHz(n[0]), x);
+        music.push(o);
+        x += n[1] * u;
+      });
+    }
+  }
+
+  A.stopMusic = function () {
+    if (!ctx) return;
+    var now = ctx.currentTime;
+    music.forEach(function (o) { try { o.stop(now); } catch (e) { /* not started or already stopped */ } });
+    music = [];
+  };
+
+  A.intermission = function () {
+    if (!ensure()) return;
+    playTune([
+      ['C5', 1], ['E5', 1], ['G5', 1], ['E5', 1], ['A5', 2], ['G5', 2],
+      ['F5', 1], ['A5', 1], ['G5', 1], ['E5', 1], ['D5', 2], ['C5', 2],
+      ['C5', 1], ['E5', 1], ['G5', 1], ['C6', 1], ['B5', 2], ['G5', 2],
+      ['A5', 1], ['F5', 1], ['D5', 1], ['B4', 1], ['C5', 3], ['-', 1]
+    ], [
+      ['C3', 2], ['G2', 2], ['C3', 2], ['G2', 2],
+      ['F2', 2], ['C3', 2], ['G2', 2], ['B2', 2],
+      ['C3', 2], ['E3', 2], ['G3', 2], ['E3', 2],
+      ['F3', 2], ['G3', 2], ['C3', 4]
+    ], 0.15, 2, 0.14, 0.28);
+  };
+
   A.intro = function () {
     if (!ensure()) return;
-    var u = 0.135, t = ctx.currentTime + 0.05;
-    var mel = [
+    playTune([
       ['B4', 1], ['B5', 1], ['F#5', 1], ['D#5', 1], ['B5', 0.5], ['F#5', 1.5], ['D#5', 2],
       ['C5', 1], ['C6', 1], ['G5', 1], ['E5', 1], ['C6', 0.5], ['G5', 1.5], ['E5', 2],
       ['B4', 1], ['B5', 1], ['F#5', 1], ['D#5', 1], ['B5', 0.5], ['F#5', 1.5], ['D#5', 2],
       ['D#5', 0.5], ['E5', 0.5], ['F5', 1], ['F5', 0.5], ['F#5', 0.5], ['G5', 1], ['G5', 0.5], ['G#5', 0.5], ['A5', 1], ['B5', 2]
-    ];
-    var bass = [
+    ], [
       ['B2', 3], ['B3', 1], ['B2', 3], ['B3', 1],
       ['C3', 3], ['C4', 1], ['C3', 3], ['C4', 1],
       ['B2', 3], ['B3', 1], ['B2', 3], ['B3', 1],
       ['F#3', 2], ['G#3', 2], ['A#3', 2], ['B3', 2]
-    ];
-    var x = t;
-    mel.forEach(function (n) {
-      var o = voice('wsg', x, n[1] * u * 0.85, 0.16);
-      o.frequency.setValueAtTime(noteHz(n[0]), x);
-      x += n[1] * u;
-    });
-    x = t;
-    bass.forEach(function (n) {
-      var o = voice('triangle', x, n[1] * u * 0.7, 0.3);
-      o.frequency.setValueAtTime(noteHz(n[0]), x);
-      x += n[1] * u;
-    });
+    ], 0.135, 1, 0.16, 0.3);
   };
 
   // "Wa" and "ka": alternating falling and rising sweeps, one per dot.

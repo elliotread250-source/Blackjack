@@ -33,6 +33,7 @@
         case 'fruit': A.fruit(); break;
         case 'death': A.death(); break;
         case 'extra': A.extraLife(); break;
+        case 'intermission': A.intermission(); break;
         case 'attractPower': break;
       }
     },
@@ -46,7 +47,7 @@
 
   function inGame() {
     var s = game.state;
-    return s === 'ready' || s === 'playing' || s === 'dying' || s === 'levelComplete';
+    return s === 'ready' || s === 'playing' || s === 'dying' || s === 'levelComplete' || s === 'intermission';
   }
 
   function startGame() {
@@ -72,6 +73,7 @@
     },
     start: function () {
       if (game.paused) { setPaused(false); return; }
+      if (game.state === 'intermission') { A.stopMusic(); game.cut = null; game.startReady(false); return; }
       if (game.state === 'attract' || (game.state === 'gameOver' && game.t >= 60)) startGame();
     },
     tap: function () { actions.start(); },

@@ -147,11 +147,16 @@
       if (!this.app.gesturesEnabled()) return;
       const t = performance.now();
       const dy = e.clientY - g.sy;
-      const old = g.samples[0];
-      const dt = Math.max(1, t - old[2]);
-      const vy = (e.clientY - old[1]) / dt;   // px per ms, recent
+      // Release velocity from the move samples; a finger that paused before lifting is not a flick.
+      const last = g.samples[g.samples.length - 1];
+      let vy = 0;
+      if (t - last[2] < 90) {
+        let old = last;
+        for (const sm of g.samples) if (last[2] - sm[2] <= 110) { old = sm; break; }
+        vy = (last[1] - old[1]) / Math.max(16, last[2] - old[2]);   // px per ms
+      }
       const step = Math.max(12, this.app.cellCss() * 0.9);
-      if (g.axis === 'down' && vy > 0.75 && dy > step * 0.8) { this.app.onGesture('hard'); return; }
+      if (g.axis === 'down' && vy > 0.6 && dy > step * 0.8) { this.app.onGesture('hard'); return; }
       if (g.axis === 'up' && !g.held && -dy > step * 0.8) { this.app.onGesture('hold'); return; }
       if (!g.axis && !g.moved && t - g.t0 < 400) this.app.onGesture('cw');
     }

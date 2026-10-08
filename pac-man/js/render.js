@@ -135,6 +135,24 @@
     bottom(game);
   }
 
+  function renderIntermission(game) {
+    header(game, false);
+    var k = game.cut;
+    if (k) {
+      var y = 20 * 8 + 4;
+      var mouth = [1, 2, 1, 0][Math.floor(k.anim / 4) % 4];
+      var frame = Math.floor(k.anim / 8) % 2;
+      if (k.phase === 0) {
+        img(sprites.pac[LEFT][mouth], Math.round(k.pac) - 8, y - 8);
+        img(ghostSprite('blinky', frame, LEFT), Math.round(k.ghost) - 8, y - 8);
+      } else {
+        img(sprites.fright[0][frame], Math.round(k.ghost) - 8, y - 8);
+        img(sprites.bigPac[mouth], Math.round(k.pac) - 16, y - 24);
+      }
+    }
+    bottom(game);
+  }
+
   var ROLL = [
     ['blinky', '-SHADOW', '"BLINKY"', C.red],
     ['pinky', '-SPEEDY', '"PINKY"', C.pink],
@@ -219,6 +237,7 @@
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
     if (game.state === 'attract') renderAttract(game, opts.touch);
+    else if (game.state === 'intermission') renderIntermission(game);
     else {
       renderGame(game);
       if (game.state === 'gameOver') renderGameOver(game, opts.touch);

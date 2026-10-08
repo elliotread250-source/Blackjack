@@ -144,6 +144,7 @@
       case 'playing': this.tickPlaying(); break;
       case 'dying': this.tickDying(); break;
       case 'levelComplete': this.tickLevelComplete(); break;
+      case 'intermission': this.tickIntermission(); break;
       case 'gameOver':
         this.t++;
         if (this.t > 60 * 30) this.toAttract();
@@ -573,8 +574,38 @@
   P.tickLevelComplete = function () {
     this.t++;
     if (this.t >= 60 + 8 * 12 + 24) {
+      var done = this.level;
       this.level++;
       this.setupLevel();
+      if (done === 2 || done === 5 || done === 9 || done === 13 || done === 17) this.startIntermission();
+      else this.startReady(false);
+    }
+  };
+
+  // Coffee break after levels 2, 5, 9, 13 and 17: Blinky chases Pac-Man off
+  // the left edge, then a giant Pac-Man chases a blue Blinky back.
+  P.startIntermission = function () {
+    this.state = 'intermission';
+    this.t = 0;
+    this.cut = { phase: 0, pac: 236, ghost: 236 + 28, anim: 0 };
+    this.sfx('intermission');
+  };
+
+  P.tickIntermission = function () {
+    this.t++;
+    var k = this.cut;
+    k.anim++;
+    if (k.phase === 0) {
+      k.pac -= 1.25;
+      k.ghost -= 1.32;
+      if (k.ghost < -40) { k.phase = 1; k.ghost = -24; k.pac = -90; k.wait = 50; }
+    } else if (k.phase === 1) {
+      if (k.wait > 0) { k.wait--; return; }
+      k.ghost += 0.95;
+      k.pac += 1.05;
+      if (k.pac > 290) { k.phase = 2; k.wait = 30; }
+    } else if (--k.wait <= 0) {
+      this.cut = null;
       this.startReady(false);
     }
   };
@@ -598,7 +629,7 @@
     if (!a) {
       a = this.attract = {
         pac: { x: 236, dir: LEFT, anim: 0 },
-        ghosts: [0, 1, 2, 3].map(function (i) { return { x: 236 + 22 + i * 16, alive: true, anim: 0 }; }),
+        ghosts: [0, 1, 2, 3].map(function (i) { return { x: 236 + 34 + i * 16, alive: true, anim: 0 }; }),
         powered: false, freeze: 0, combo: 0, eaten: null, done: 0, energizer: true
       };
     }
@@ -615,7 +646,7 @@
     var p = a.pac;
     if (!a.powered) {
       p.x -= 1; p.anim++;
-      a.ghosts.forEach(function (g) { g.x -= 1.06; });
+      a.ghosts.forEach(function (g) { g.x -= 1.05; });
       if (p.x <= 36) { a.powered = true; a.energizer = false; p.dir = RIGHT; this.sfx('attractPower'); }
     } else {
       p.x += 1.1; p.anim++;

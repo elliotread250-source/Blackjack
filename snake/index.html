@@ -236,15 +236,35 @@
   }
   #menuMute svg { width: 20px; height: 20px; }
 
-  @media (max-height: 560px) and (min-width: 560px) {
-    .overlay { padding-top: max(50px, env(safe-area-inset-top)); }
-    .card.wide { width: min(700px, 100%); padding: 14px 18px 12px; }
-    .card.wide .settings { grid-template-columns: 1fr 1fr; column-gap: 14px; }
-    .card.wide .logo { margin-bottom: 8px; }
-    .card.wide .logo img { width: 40px; height: 40px; }
-    .card.wide h1 { font-size: 32px; }
-    .card.wide .bestline { margin: 10px 0 8px; }
-    .card.wide .hint { margin-top: 8px; }
+  /* short screens (landscape phones): tighter cards, no hint lines */
+  @media (max-height: 560px) {
+    .card { padding: 12px 16px; }
+    h2 { font-size: 24px; margin-bottom: 8px; }
+    .tile { padding: 8px 6px 6px; }
+    .tile svg { width: 26px; height: 26px; }
+    .tile b { font-size: 26px; }
+    .badge { margin-bottom: 6px; }
+    .meta { margin-bottom: 10px; }
+    .play { padding: 10px; font-size: 19px; }
+    .sec { padding: 7px 10px; margin-top: 8px; }
+    .card .hint { display: none !important; }
+  }
+  /* short and wide: settings in two columns, chrome beside the card */
+  @media (max-height: 560px) and (min-width: 640px) {
+    .overlay {
+      padding: max(10px, env(safe-area-inset-top)) max(112px, env(safe-area-inset-right))
+        max(10px, env(safe-area-inset-bottom)) max(112px, env(safe-area-inset-left));
+    }
+    .card.wide { width: min(640px, 100%); }
+    .card.wide .settings { grid-template-columns: 1fr 1fr; column-gap: 14px; row-gap: 8px; }
+    .card.wide .logo { margin-bottom: 6px; gap: 10px; }
+    .card.wide .logo img { width: 34px; height: 34px; }
+    .card.wide h1 { font-size: 28px; }
+    .card.wide .glabel { margin-bottom: 3px; font-size: 10.5px; }
+    .card.wide .seg button { padding: 6px 3px; font-size: 14px; }
+    .card.wide .seg button small { font-size: 10px; }
+    .card.wide .swatch { width: 30px; height: 30px; }
+    .card.wide .bestline { margin: 8px 0; }
   }
   @media (max-width: 360px) {
     .seg button { font-size: 13.5px; }

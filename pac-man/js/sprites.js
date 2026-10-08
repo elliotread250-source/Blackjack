@@ -45,6 +45,22 @@
     return cv;
   }
 
+  // Giant Pac-Man for the intermission, 32x32 facing right.
+  function bigPacCanvas(half) {
+    var cv = canvas(32, 32), ctx = cv.getContext('2d');
+    var t = half * Math.PI / 180;
+    ctx.fillStyle = C.pac;
+    for (var y = 0; y < 32; y++) {
+      for (var x = 0; x < 32; x++) {
+        var dx = x - 15.5, dy = y - 15.5;
+        if (dx * dx + dy * dy > 15.6 * 15.6) continue;
+        if (half > 0 && dx > 0 && Math.atan2(Math.abs(dy), dx) <= t) continue;
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+    return cv;
+  }
+
   function burstCanvas(r0, r1) {
     var cv = canvas(16, 16), ctx = cv.getContext('2d');
     for (var k = 0; k < 8; k++) {
@@ -159,6 +175,7 @@
     [16, 34, 52, 70, 88, 106, 124, 142, 160, 176].forEach(function (a) { S.pacDeath.push(pacCanvas(UP, a, C.pac)); });
     S.burst = [burstCanvas(3, 6), burstCanvas(5, 7)];
     S.life = pacCanvas(LEFT, 46, C.pac);
+    S.bigPac = [bigPacCanvas(0), bigPacCanvas(24), bigPacCanvas(46)];
 
     var ghostColors = { blinky: C.red, pinky: C.pink, inky: C.cyan, clyde: C.orange };
     S.ghost = {};
