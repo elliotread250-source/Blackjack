@@ -1,6 +1,7 @@
 // Procedural 16x16 pixel-art textures. Nothing here is copied from any game:
 // every tile is drawn by code from noise, palettes and small shape routines.
 import type { Dye, Wood } from './registry';
+import { handmadeTexture } from './handmade';
 
 export type RGB = [number, number, number];
 type Rng = () => number;
@@ -1317,6 +1318,8 @@ const GEN: Record<string, Gen> = {
 };
 
 export function generateTexture(name: string): Uint8ClampedArray {
+  const hand = handmadeTexture(name);
+  if (hand) return hand;
   const r = makeRng(hashStr(name));
   const g = GEN[name];
   if (g) return g(r).d;
