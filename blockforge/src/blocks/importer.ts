@@ -145,27 +145,43 @@ let nativeInflate = typeof DecompressionStream !== 'undefined';
 let canvas: HTMLCanvasElement | null = null;
 let ctx2d: CanvasRenderingContext2D | null = null;
 
-let bitmapOK = typeof createImageBitmap === 'function';
+/** createImageBitmap with options, then without, then <img>: whatever this browser handles. */
+let bitmapMode: 'options' | 'plain' | 'none' = typeof createImageBitmap === 'function' ? 'options' : 'none';
 
 /** A decoded image plus how to free it. */
 interface Decoded { src: CanvasImageSource; width: number; height: number; free(): void }
 
 async function decodePng(png: Uint8Array): Promise<Decoded | null> {
   const blob = new Blob([png as BlobPart], { type: 'image/png' });
-  if (bitmapOK) {
+  while (bitmapMode !== 'none') {
     try {
-      const bmp = await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+      const bmp = bitmapMode === 'options'
+        ? await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' })
+        : await createImageBitmap(blob);
       return { src: bmp, width: bmp.width, height: bmp.height, free: () => bmp.close() };
-    } catch {
-      // some Safari versions reject these options or blobs here: decode through <img> instead
-      bitmapOK = false;
+    } catch (e) {
+      // A TypeError means this browser rejects the call itself (options or blobs): step down
+      // for every later tile. Anything else is just this one damaged PNG: try it via <img>.
+      if (!(e instanceof TypeError)) break;
+      bitmapMode = bitmapMode === 'options' ? 'plain' : 'none';
     }
   }
   const url = URL.createObjectURL(blob);
+  const img = new Image();
   try {
-    const img = new Image();
     img.src = url;
-    await img.decode();
+    try {
+      await img.decode();
+    } catch {
+      // decode() can reject although the image loaded fine: trust load/error instead
+      if (!(img.complete && img.naturalWidth)) {
+        await new Promise<void>((resolve, reject) => {
+          if (img.complete) { if (img.naturalWidth) resolve(); else reject(new Error('bad png')); return; }
+          img.onload = () => resolve();
+          img.onerror = () => reject(new Error('bad png'));
+        });
+      }
+    }
     return { src: img, width: img.naturalWidth, height: img.naturalHeight, free: () => URL.revokeObjectURL(url) };
   } catch {
     URL.revokeObjectURL(url);
@@ -267,7 +283,13 @@ export async function importResourcePack(file: Blob, fileName: string, onProgres
     if (!packRoot) packRoot = e.name.slice(0, i);
     byName.set(e.name.slice(i + BLOCK_DIR.length, -4), e);
   }
-  if (!byName.size) throw new Error('No block textures found. Pick a resource pack zip with assets/minecraft/textures/block in it.');
+  if (!byName.size) {
+    // Bedrock packs (.mcpack, manifest.json + textures/blocks/) use other names and folders.
+    if (entries.some((e) => /(^|\/)manifest\.json$/.test(e.name)) && entries.some((e) => e.name.includes('textures/blocks/'))) {
+      throw new Error('That is a Bedrock pack. BlockForge reads Java Edition resource packs (.zip).');
+    }
+    throw new Error('No block textures found. Pick a resource pack zip with assets/minecraft/textures/block in it.');
+  }
 
   const cache = new Map<string, Uint8ClampedArray | null>();
   const load = async (n: string) => {
@@ -311,7 +333,7 @@ export async function importResourcePack(file: Blob, fileName: string, onProgres
   }
   onProgress?.(names.length, names.length);
   if (!tiles.size) throw new Error('None of the textures in that pack match BlockForge blocks.');
-  const base = fileName.replace(/\.zip$/i, '').trim() || 'Imported Pack';
+  const base = fileName.replace(/\.(zip|mcpack)$/i, '').trim() || 'Imported Pack';
   return { name: base.length > 32 ? base.slice(0, 31) + '…' : base, tiles };
 }
 
@@ -325,6 +347,7 @@ function openDb(): Promise<IDBDatabase> {
     req.onupgradeneeded = () => { req.result.createObjectStore(STORE); };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
+    req.onblocked = () => reject(new Error('pack storage is blocked by another tab'));
   });
 }
 
@@ -337,28 +360,29 @@ export async function saveCustomPack(p: CustomPack): Promise<void> {
     tx.objectStore(STORE).put({ name: p.name, tiles }, KEY);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
-  });
-  db.close();
+    // a full disk (QuotaExceededError at commit) only fires 'abort'
+    tx.onabort = () => reject(tx.error ?? new Error('saving the pack was aborted'));
+  }).finally(() => db.close());
   // ask the browser not to clear the pack when the disk runs low (it stays on at every start)
   try { void navigator.storage?.persist?.().catch(() => undefined); } catch { /* ignore */ }
 }
 
+/**
+ * The imported pack, or null when none is stored. Rejects when the storage itself fails
+ * (WebKit sometimes loses its IndexedDB connection for a moment): that is not "no pack", and
+ * the caller must not switch the player's choice off because of it.
+ */
 export async function loadCustomPack(): Promise<CustomPack | null> {
-  try {
-    const db = await openDb();
-    const rec = await new Promise<{ name: string; tiles: Record<string, ArrayBuffer> } | undefined>((resolve, reject) => {
-      const req = db.transaction(STORE, 'readonly').objectStore(STORE).get(KEY);
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-    db.close();
-    if (!rec) return null;
-    const tiles = new Map<string, Uint8ClampedArray>();
-    for (const [k, v] of Object.entries(rec.tiles)) if (v.byteLength === 1024) tiles.set(k, new Uint8ClampedArray(v));
-    return tiles.size ? { name: rec.name, tiles } : null;
-  } catch {
-    return null;
-  }
+  const db = await openDb();
+  const rec = await new Promise<{ name: string; tiles: Record<string, ArrayBuffer> } | undefined>((resolve, reject) => {
+    const req = db.transaction(STORE, 'readonly').objectStore(STORE).get(KEY);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  }).finally(() => db.close());
+  if (!rec || !rec.tiles) return null;
+  const tiles = new Map<string, Uint8ClampedArray>();
+  for (const [k, v] of Object.entries(rec.tiles)) if (v && v.byteLength === 1024) tiles.set(k, new Uint8ClampedArray(v));
+  return tiles.size ? { name: rec.name, tiles } : null;
 }
 
 export async function deleteCustomPack(): Promise<void> {

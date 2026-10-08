@@ -16,7 +16,7 @@ export const RESOURCE_PACKS: ResourcePackInfo[] = [
   { id: 'retro', name: 'Retro', description: 'Chunky 8x8 pixels and a tiny palette.' },
   { id: 'vivid', name: 'Vivid', description: 'Bold colours and punchy contrast.' },
   { id: 'pastel', name: 'Pastel', description: 'Light, soft tones. Calm and dreamy.' },
-  { id: 'custom', name: 'Imported Pack', description: 'Load a resource pack .zip from your computer.' },
+  { id: 'custom', name: 'Imported Pack', description: 'Load a resource pack .zip from this device.' },
 ];
 
 // ---------------------------------------------------------------- imported pack (this browser only)

@@ -208,6 +208,9 @@ class ScrollList {
     });
     // Finger scrolling (a drag that moved does not click the button under it).
     this.el.addEventListener('pointerdown', (e) => {
+      // A scrolling drag usually fires no click at all, so a leftover "swallow" must not eat
+      // the next real tap (any click from the drag itself arrives before this pointerdown).
+      this.swallowClick = false;
       if (e.pointerType === 'mouse') return;
       this.touch = { id: e.pointerId, y: e.clientY, s: this.scroll, moved: false };
     }, true);
@@ -1284,17 +1287,27 @@ export class Menus {
     // Importing a pack: the player picks a .zip; it is read in this browser and kept here only.
     const file = el('input', '', s.root);
     file.type = 'file';
-    // phone file pickers label zips several ways; the importer checks the contents anyway
-    file.accept = '.zip,application/zip,application/x-zip-compressed,application/x-zip';
+    // Phone file pickers label zips several ways, and phone players often have Bedrock .mcpack
+    // files (the importer explains those instead of the picker greying them out).
+    file.accept = '.zip,.mcpack,application/zip,application/x-zip-compressed,application/x-zip';
     file.style.display = 'none';
     const status = div('bf-abs bf-c-gray', s.gui);
     let busy = false;
+    let savedOk = true;          // false when this browser would not store the imported pack
+    let lastLayout: GuiLayout | null = null;
+    /** Status line under the list: wrapped to at most two lines so phones show all of it. */
+    const say = (t: string) => {
+      const lines = t ? wrapText(t, curW).slice(0, 2) : [];
+      status.textContent = lines.join('\n');
+      if (lastLayout) at(status, lastLayout.cx - (curW >> 1), lastLayout.gh - 30 - 10 * Math.max(1, lines.length));
+    };
     const importBtn = button(s.gui, 'Import Pack...', 98, () => { if (!busy) file.click(); },
       'Load a resource pack .zip from this device. It stays in this browser and is never uploaded.');
     const removeBtn = button(s.gui, 'Remove Import', 98, () => {
       if (busy || !customPackInfo()) return;
       setCustomPack(null);
       void deleteCustomPack();
+      savedOk = true;
       clearPackIcons('custom');
       if (st.resourcePack === 'custom') this.pickPack('default', () => refresh());
       resetPreview();
@@ -1306,19 +1319,24 @@ export class Menus {
       if (!f || busy) return;
       busy = true;
       importBtn.enable(false);
-      status.textContent = 'Reading ' + fit(f.name, 200) + '...';
+      say(fit('Reading ' + f.name, curW));
       try {
-        const pack = await importResourcePack(f, f.name, (d, n) => { status.textContent = `Importing textures: ${Math.round((d / n) * 100)}%`; });
+        const pack = await importResourcePack(f, f.name, (d, n) => { say(`Importing textures: ${Math.round((d / n) * 100)}%`); });
+        // Show it first: storing it can stall or fail on some phones and must not hold it back.
         setCustomPack(pack);
         clearPackIcons('custom');
         resetPreview();
-        await saveCustomPack(pack).catch((e) => console.warn('[packs] could not store the imported pack', e));
-        status.textContent = `Imported ${pack.tiles.size} textures from ${fit(pack.name, 140)}.`;
         if (st.resourcePack === 'custom') {
           try { this.handlers.reapplyResourcePack?.(); } catch (e) { console.warn(e); }
         } else this.pickPack('custom', () => refresh());
+        say(`Imported ${pack.tiles.size} textures from ${pack.name}`);
+        savedOk = await Promise.race([
+          saveCustomPack(pack).then(() => true, (e) => { console.warn('[packs] could not store the imported pack', e); return false; }),
+          new Promise<boolean>((r) => setTimeout(() => r(false), 8000)),
+        ]);
+        if (!savedOk) say('Imported for this visit only: this browser would not save it, so import it again next time.');
       } catch (e) {
-        status.textContent = (e instanceof Error ? e.message : String(e)).slice(0, 120);
+        say((e instanceof Error ? e.message : String(e)).slice(0, 160));
       } finally {
         busy = false;
         importBtn.enable(true);
@@ -1370,7 +1388,8 @@ export class Menus {
         r.used.style.display = on ? '' : 'none';
         if (r.p.id === 'custom') {
           r.name.textContent = info ? info.name : 'Imported Pack';
-          r.desc.textContent = fit(info ? `${info.count} textures, kept in this browser only.` : 'Click to load a resource pack .zip from your computer.', curW - 12);
+          r.desc.textContent = fit(!info ? 'Load a resource pack .zip from this device.'
+            : savedOk ? `${info.count} textures, kept in this browser only.` : `${info.count} textures, not saved: import again next time.`, curW - 12);
         }
       }
       removeBtn.enable(!!info && !busy);
@@ -1379,7 +1398,9 @@ export class Menus {
     s.layout = (l) => {
       const w = Math.min(300, l.gw - 20);
       curW = w;
-      list.place(l, 30, l.gh - 30 - 46, l.cx + (w >> 1) + 4);
+      lastLayout = l;
+      // room for a two-line status message between the list and the buttons
+      list.place(l, 30, l.gh - 30 - 56, l.cx + (w >> 1) + 4);
       rows.forEach((r, i) => {
         at(r.row, l.cx - (w >> 1), 4 + i * ROW, w, ROW - 4);
         at(r.name, 6, 4);
@@ -1390,7 +1411,8 @@ export class Menus {
         r.imgs.forEach((im, k) => at(im, k * 18, 0, 16, 16));
       });
       list.setContent(RESOURCE_PACKS.length * ROW + 8);
-      at(status, l.cx - (w >> 1), l.gh - 40);
+      const nLines = status.textContent ? status.textContent.split('\n').length : 1;
+      at(status, l.cx - (w >> 1), l.gh - 30 - 10 * nLines);
       at(importBtn.el, l.cx - 151, l.gh - 26);
       at(removeBtn.el, l.cx - 49, l.gh - 26);
       at(done.el, l.cx + 53, l.gh - 26);
@@ -1406,7 +1428,7 @@ export class Menus {
         });
       }
       resetPreview();
-      status.textContent = '';
+      say('');
       refresh();
     };
   }

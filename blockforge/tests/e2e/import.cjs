@@ -115,6 +115,141 @@ fs.writeFileSync(zipPath, zip(files));
     check(`${tag}: no console errors`, errors.length === 0, errors.slice(0, 3).join(' | '));
     await context.close();
   }
+
+  // ---------------------------------------------------------------- storage trouble on phones
+  // Init script: IndexedDB faults for the pack database, switched by flags in localStorage so
+  // they survive reloads: 'abort' aborts the save, 'hang' never answers, 'failOnce' throws once.
+  const faults = () => {
+    const open = indexedDB.open.bind(indexedDB);
+    indexedDB.open = (name, ver) => {
+      const mode = name === 'blockforge-packs' ? localStorage.getItem('bf.test.idb') : null;
+      if (mode === 'hang') return {};
+      if (mode === 'failOnce') {
+        localStorage.removeItem('bf.test.idb');
+        const req = { error: new DOMException('Connection to Indexed Database server lost', 'UnknownError') };
+        setTimeout(() => req.onerror && req.onerror(new Event('error')), 5);
+        return req;
+      }
+      return open(name, ver);
+    };
+    const put = IDBObjectStore.prototype.put;
+    IDBObjectStore.prototype.put = function (...a) {
+      const r = put.apply(this, a);
+      if (this.name === 'packs' && localStorage.getItem('bf.test.idb') === 'abort') this.transaction.abort();
+      return r;
+    };
+  };
+  const phone = (w = 750, h = 342) => browser.newContext({
+    viewport: { width: w, height: h }, deviceScaleFactor: 3, isMobile: true, hasTouch: true,
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+  });
+  const boot = async (page) => {
+    await page.goto('http://127.0.0.1:8133/');
+    await page.waitForFunction(() => window.blockforge && window.blockforge.game, null, { timeout: 60000 });
+  };
+  const openPacks = async (page) => {
+    await page.evaluate(() => window.blockforge.menus.showOptions(() => window.blockforge.menus.showTitle()));
+    await page.locator('.bf-screen:visible button', { hasText: 'Resource Packs' }).first().tap();
+    await page.waitForTimeout(300);
+  };
+  const statusText = (page) => page.evaluate(() => {
+    const s = Array.from(document.querySelectorAll('.bf-screen .bf-c-gray')).find((e) => e.offsetParent && /Import|Reading|Bedrock|visit|No block/.test(e.textContent));
+    if (!s) return { text: '', right: 0, vw: innerWidth };
+    return { text: s.textContent, right: s.getBoundingClientRect().right, vw: innerWidth };
+  });
+
+  for (const mode of ['abort', 'hang']) {
+    const context = await phone();
+    await context.addInitScript(faults);
+    const page = await context.newPage();
+    await boot(page);
+    await page.evaluate((m) => localStorage.setItem('bf.test.idb', m), mode);
+    await openPacks(page);
+    await page.locator('input[type=file]').setInputFiles(zipPath);
+    await page.waitForFunction(() => window.blockforge.atlas.pack === 'custom', null, { timeout: 30000 }).catch(() => undefined);
+    check(`save ${mode}: the pack is still applied`, (await page.evaluate(() => window.blockforge.atlas.pack)) === 'custom');
+    await page.waitForFunction(() => /this visit only/.test(document.body.innerText), null, { timeout: 15000 }).catch(() => undefined);
+    const st = await statusText(page);
+    check(`save ${mode}: the player is told it was not saved`, /this visit only/.test(st.text), st.text.replace(/\n/g, ' / '));
+    check(`save ${mode}: Import is usable again`, await page.locator('.bf-screen:visible button', { hasText: 'Import Pack' }).first().isEnabled());
+    await page.screenshot({ path: path.join(outDir, `save-${mode}.png`) });
+    await context.close();
+  }
+
+  {
+    // a storage error at startup must not switch the imported pack off
+    const context = await phone();
+    await context.addInitScript(faults);
+    const page = await context.newPage();
+    await boot(page);
+    await openPacks(page);
+    await page.locator('input[type=file]').setInputFiles(zipPath);
+    await page.waitForFunction(() => /Imported \d+ textures/.test(document.body.innerText), null, { timeout: 30000 });
+    await page.waitForTimeout(800);
+    await page.evaluate(() => localStorage.setItem('bf.test.idb', 'failOnce'));
+    await boot(page);
+    await page.waitForFunction(() => window.blockforge.atlas.pack === 'custom', null, { timeout: 15000 }).catch(() => undefined);
+    const r = await page.evaluate(() => ({ atlas: window.blockforge.atlas.pack, setting: window.blockforge.settings.resourcePack, saved: JSON.parse(localStorage.getItem('blockforge.settings.v1') || '{}').resourcePack }));
+    check('read error at startup: pack comes back after a retry', r.atlas === 'custom' && r.setting === 'custom' && r.saved === 'custom', JSON.stringify(r));
+    await context.close();
+  }
+
+  {
+    // a hung pack database must not delay the start when no imported pack is selected
+    const context = await phone();
+    await context.addInitScript(faults);
+    const page = await context.newPage();
+    await page.goto('http://127.0.0.1:8133/');
+    await page.evaluate(() => localStorage.setItem('bf.test.idb', 'hang'));
+    const t0 = Date.now();
+    await boot(page);
+    const ms = Date.now() - t0;
+    check('hung pack storage does not hold up the start', ms < 4500, `${ms} ms`);
+    await context.close();
+  }
+
+  {
+    // Bedrock packs: explained, and every message fits on a portrait phone
+    const bedrock = path.join(outDir, 'bedrock-pack.mcpack');
+    fs.writeFileSync(bedrock, zip([
+      ['manifest.json', Buffer.from('{"format_version":2,"header":{"name":"test"}}'), true],
+      ['textures/blocks/stone.png', png(16, 16, solid(1, 2, 3))],
+    ]));
+    const context = await phone(390, 664);
+    const page = await context.newPage();
+    await boot(page);
+    await openPacks(page);
+    check('the file picker offers .mcpack files', /\.mcpack/.test(await page.locator('input[type=file]').getAttribute('accept')));
+    await page.locator('input[type=file]').setInputFiles(bedrock);
+    await page.waitForFunction(() => /Bedrock/.test(document.body.innerText), null, { timeout: 15000 }).catch(() => undefined);
+    const st = await statusText(page);
+    check('a Bedrock pack is explained', /Bedrock/.test(st.text), st.text.replace(/\n/g, ' / '));
+    check('the message fits on a portrait phone', st.right > 0 && st.right <= st.vw + 0.5, `right ${Math.round(st.right)} of ${st.vw}`);
+    await page.screenshot({ path: path.join(outDir, 'bedrock-portrait.png') });
+    await context.close();
+  }
+
+  {
+    // after a finger scroll in the list, the very next tap must work
+    const context = await phone(750, 342);
+    const page = await context.newPage();
+    await boot(page);
+    await openPacks(page);
+    const cdp = await context.newCDPSession(page);
+    const list = await page.evaluate(() => { const r = Array.from(document.querySelectorAll('.bf-list')).find((e) => e.offsetParent).getBoundingClientRect(); return { x: r.x + r.width / 2, top: r.top, bottom: r.bottom }; });
+    const y0 = list.bottom - 20, y1 = list.top + 20;
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: list.x, y: y0, id: 1 }] });
+    for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: list.x, y: y0 + ((y1 - y0) * i) / 8, id: 1 }] });
+    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.waitForTimeout(300);
+    const row = await page.evaluate(() => { const r = document.querySelector('[data-pack="custom"]').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, vh: innerHeight }; });
+    check('the imported-pack row is on screen after scrolling', row.y > 0 && row.y < row.vh, JSON.stringify(row));
+    const chooser = page.waitForEvent('filechooser', { timeout: 3000 }).then(() => true, () => false);
+    await page.touchscreen.tap(row.x, row.y);
+    check('first tap after a scroll opens the file picker', await chooser);
+    await context.close();
+  }
+
   await browser.close();
   server.kill();
   console.log(failures ? `${failures} FAILED` : 'ALL PASSED');
