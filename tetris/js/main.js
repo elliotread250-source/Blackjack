@@ -324,6 +324,7 @@
         rows.push(['Lines', String(g.lines)]);
         rows.push(['Tetrises', String(g.stats.tetrises)]);
         rows.push(['T-spins', String(g.stats.tspins)]);
+        rows.push(['Time', R.fmtTime(g.time).replace(/\.\d+$/, '')]);
         rows.push(['Best', R.fmt(this.best.marathon)]);
       }
       const box = $('over-stats');

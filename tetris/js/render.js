@@ -482,9 +482,8 @@
           rr(ctx, x, h.y, w, h.h, u * 0.22);
           ctx.fillStyle = 'rgba(255,255,255,0.04)'; ctx.fill();
           ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = Math.max(1, L.dpr); ctx.stroke();
-          const fs = Math.max(8, Math.round(u * 0.36));
-          ctx.font = `700 ${fs}px ${FONT}`;
-          spacing(ctx, Math.round(fs * 0.12));
+          const fs = this.fitFont(label, w - u * 0.3, Math.max(8, Math.round(u * 0.34)), 700);
+          spacing(ctx, Math.round(fs * 0.1));
           ctx.fillStyle = '#8d96bf'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
           ctx.fillText(label, x + w / 2, h.y + Math.round(u * 0.2));
           spacing(ctx, 0);
