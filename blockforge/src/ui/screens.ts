@@ -10,6 +10,7 @@ import { centered, textAdvance } from './font';
 import { blockIconCanvas } from './icons';
 import { packTexture, packTile, RESOURCE_PACKS, setCustomPack, customPackInfo } from '../blocks/packs';
 import { importResourcePack, saveCustomPack, deleteCustomPack } from '../blocks/importer';
+import { forgetKey } from '../blocks/unlock';
 import { ACTIONS, bound, keyName, setBinding, resetBindings, conflicts, UNBINDABLE } from '../game/keybinds';
 import type { Action } from '../game/keybinds';
 import { ID, COUNT } from '../blocks/registry';
@@ -609,6 +610,19 @@ export class Menus {
   }
 
   // ------------------------------------------------------------------ public API
+  private noticeEl: HTMLDivElement | null = null;
+  private noticeTimer = 0;
+  /** A short message at the top of the screen (over menus or the game), gone after a while. */
+  notice(text: string, seconds = 7): void {
+    if (!this.noticeEl) this.noticeEl = div('bf-notice bf-font bf-c-yellow', document.body);
+    const n = this.noticeEl;
+    n.textContent = text;
+    n.style.opacity = '1';
+    clearTimeout(this.noticeTimer);
+    this.noticeTimer = window.setTimeout(() => { n.style.opacity = '0'; }, seconds * 1000);
+  }
+  /** The imported pack slot changed outside this screen: redraw its preview icons next time. */
+  importedPackChanged(): void { clearPackIcons('custom'); }
   showTitle(): void { this.show('title'); }
   showWorlds(): void { this.confirmDelete = null; this.show('worlds'); void this.reloadWorlds(); }
   showPause(): void { this.busy = false; this.show('pause'); }
@@ -639,6 +653,7 @@ export class Menus {
   }
   hide(): void {
     if (this.cur) this.screens.get(this.cur)!.root.style.display = 'none';
+    if (this.noticeEl) this.noticeEl.style.opacity = '0';   // menu notices do not follow into the game
     this.cur = null;
     this.root.classList.remove('bf-open');
     this.hideTip();
@@ -1307,6 +1322,7 @@ export class Menus {
       if (busy || !customPackInfo()) return;
       setCustomPack(null);
       void deleteCustomPack();
+      forgetKey();          // a pack link's pack must not come back by itself after this
       savedOk = true;
       clearPackIcons('custom');
       if (st.resourcePack === 'custom') this.pickPack('default', () => refresh());

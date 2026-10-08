@@ -61,6 +61,9 @@ async function writeOutputs(result) {
   // Inline build: escape anything that could close the script tag early.
   const safe = js.replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
   fs.writeFileSync(path.join(dist, 'blockforge.html'), html({ css, scriptTag: `<script>${safe}</script>` }));
+  // static/ (e.g. the locked texture pack) is served as is next to the game
+  const staticDir = path.join(root, 'static');
+  if (fs.existsSync(staticDir)) fs.cpSync(staticDir, dist, { recursive: true });
   const kb = (n) => (n / 1024).toFixed(0) + ' KB';
   const single = fs.statSync(path.join(dist, 'blockforge.html')).size;
   console.log(`[build] blockforge.js ${kb(js.length)}, blockforge.html ${kb(single)}`);

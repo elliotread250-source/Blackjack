@@ -210,6 +210,9 @@ function css(): string {
   white-space:pre;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
 .bf-font *{box-sizing:border-box}
 .bf-abs{position:absolute}
+.bf-notice{position:fixed;left:50%;top:max(${u(6)},env(safe-area-inset-top));transform:translateX(-50%);z-index:60;
+  max-width:calc(100% - ${u(8)});padding:${u(3)} ${u(6)};background:rgba(0,0,0,.72);text-align:center;white-space:pre-wrap;
+  pointer-events:none;transition:opacity .4s}
 .bf-c-white{color:#fff;--sh:#3f3f3f}
 .bf-c-gray{color:#a0a0a0;--sh:#282828}
 .bf-c-dim{color:#808080;--sh:#202020}
