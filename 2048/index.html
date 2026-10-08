@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#faf8ef" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#262320" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="2048: slide the tiles, merge equal numbers and reach the 2048 tile. Free, with undo, 3x3 to 6x6 boards and saved games.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
+  <title>2048</title>
+  <link rel="icon" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="top">
+      <div class="topbar">
+        <a class="arcade-link" href="https://open-arcade.up.railway.app">&larr; Arcade</a>
+        <button class="icon-btn" id="mute" type="button" aria-label="Mute sound" aria-pressed="false" title="Sound (M)">
+          <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.2L12 5.6v12.8l-4.8-3.9H4z" fill="currentColor"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.2L12 5.6v12.8l-4.8-3.9H4z" fill="currentColor"/><path d="M15.5 9.5l5 5M20.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <div class="heading">
+        <h1 class="title">2048</h1>
+        <div class="scores">
+          <div class="score-box" id="score-box">
+            <span class="score-label">Score</span>
+            <span class="score-value" id="score">0</span>
+          </div>
+          <div class="score-box" id="best-box">
+            <span class="score-label">Best</span>
+            <span class="score-value" id="best">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="above-game">
+        <p class="intro">Join the tiles, get to <strong>2048!</strong></p>
+        <button class="btn" id="new-game" type="button" title="New game (N)">New Game</button>
+      </div>
+
+      <div class="toolbar">
+        <div class="sizes" id="sizes" role="radiogroup" aria-label="Board size">
+          <button type="button" role="radio" data-size="3" aria-checked="false">3&times;3</button>
+          <button type="button" role="radio" data-size="4" aria-checked="true">4&times;4</button>
+          <button type="button" role="radio" data-size="5" aria-checked="false">5&times;5</button>
+          <button type="button" role="radio" data-size="6" aria-checked="false">6&times;6</button>
+        </div>
+        <div class="moves" aria-label="Moves"><span class="moves-label">Moves</span> <span id="moves">0</span></div>
+        <button class="btn btn-undo" id="undo" type="button" title="Undo (U or Ctrl+Z)" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7H4.5V2.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><path d="M4.8 7A8 8 0 1 1 4 13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          <span>Undo</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="board-area" id="board-area">
+      <div class="board" id="board" role="application" aria-label="2048 board. Use the arrow keys or swipe to move the tiles.">
+        <div class="grid" id="grid" aria-hidden="true"></div>
+        <div class="tiles" id="tiles" aria-hidden="true"></div>
+
+        <div class="overlay" id="overlay" hidden>
+          <p class="overlay-title" id="overlay-title">Game over!</p>
+          <p class="overlay-sub" id="overlay-sub"></p>
+          <div class="overlay-actions" id="overlay-actions"></div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="hint">
+      <p class="hint-keys"><b>How to play:</b> <kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd><kbd>&rarr;</kbd>, WASD or HJKL slide the tiles; equal numbers merge. <kbd>U</kbd> undo &middot; <kbd>N</kbd> new &middot; <kbd>M</kbd> mute</p>
+      <p class="hint-touch"><b>Swipe</b> to slide the tiles. Equal numbers merge into one.</p>
+    </footer>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="js/logic.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
