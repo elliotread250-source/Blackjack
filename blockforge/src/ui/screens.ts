@@ -1280,12 +1280,13 @@ export class Menus {
     // Importing a pack: the player picks a .zip; it is read in this browser and kept here only.
     const file = el('input', '', s.root);
     file.type = 'file';
-    file.accept = '.zip,application/zip';
+    // phone file pickers label zips several ways; the importer checks the contents anyway
+    file.accept = '.zip,application/zip,application/x-zip-compressed,application/x-zip';
     file.style.display = 'none';
     const status = div('bf-abs bf-c-gray', s.gui);
     let busy = false;
     const importBtn = button(s.gui, 'Import Pack...', 98, () => { if (!busy) file.click(); },
-      'Load a resource pack .zip from your computer. It stays in this browser and is never uploaded.');
+      'Load a resource pack .zip from this device. It stays in this browser and is never uploaded.');
     const removeBtn = button(s.gui, 'Remove Import', 98, () => {
       if (busy || !customPackInfo()) return;
       setCustomPack(null);
