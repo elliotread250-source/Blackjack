@@ -41,6 +41,10 @@
 
   function $(id) { return document.getElementById(id); }
   var dom = {
+    app: $('app'),
+    topbar: document.querySelector('.topbar'),
+    top: document.querySelector('.top'),
+    hint: document.querySelector('.hint'),
     boardArea: $('board-area'),
     board: $('board'),
     grid: $('grid'),
@@ -166,10 +170,30 @@
     }
   }
 
+  // Room for the board, measured from the app box and the fixed-height
+  // pieces around the board (never from the board area itself, whose size
+  // follows the board and would feed back into this).
+  function availableSpace() {
+    var cs = getComputedStyle(dom.app);
+    var innerW = dom.app.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    var innerH = dom.app.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+    if (cs.display === 'grid') {
+      // Side-by-side: controls column on the left, board on the right.
+      return { w: innerW - dom.top.offsetWidth - (parseFloat(cs.columnGap) || 0), h: innerH };
+    }
+    var acs = getComputedStyle(dom.boardArea);
+    var tcs = getComputedStyle(dom.topbar);
+    var used = dom.topbar.offsetHeight + parseFloat(tcs.marginBottom) +
+      dom.top.offsetHeight + dom.hint.offsetHeight +
+      parseFloat(acs.marginTop) + parseFloat(acs.marginBottom);
+    return { w: innerW, h: innerH - used };
+  }
+
   function layout(force) {
-    var w = dom.boardArea.clientWidth;
-    var h = dom.boardArea.clientHeight;
-    if (!w || !h) return;
+    var room = availableSpace();
+    var w = room.w;
+    var h = room.h;
+    if (!(w > 0) || !(h > 0)) return;
     var avail = Math.floor(Math.min(w, h, MAX_BOARD));
     avail = Math.max(avail, 160);
     var n = size;
@@ -608,17 +632,18 @@
   function bindInput() {
     document.addEventListener('keydown', onKey);
 
-    // Touch: swipes anywhere on the board area.
+    // Touch: a swipe on the board (or anywhere else on the page that isn't
+    // a button or link) moves the tiles. Nothing on this page scrolls, so
+    // every touchmove is cancelled: no scrolling, rubber-banding or pinch.
     var start = null;
-    var area = dom.boardArea;
-    area.addEventListener('touchstart', function (e) {
+    document.addEventListener('touchstart', function (e) {
       if (e.touches.length !== 1 || (e.target.closest && e.target.closest('button, a'))) { start = null; return; }
       start = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }, { passive: true });
-    area.addEventListener('touchmove', function (e) {
+    document.addEventListener('touchmove', function (e) {
       if (e.cancelable) e.preventDefault();
     }, { passive: false });
-    area.addEventListener('touchend', function (e) {
+    document.addEventListener('touchend', function (e) {
       if (!start || e.touches.length) return;
       var t = e.changedTouches[0];
       var dir = swipeDir(t.clientX - start.x, t.clientY - start.y, SWIPE_MIN);
@@ -626,12 +651,8 @@
       Sound.unlock();
       if (dir) doMove(dir);
     });
-    area.addEventListener('touchcancel', function () { start = null; });
-
-    // Nothing on this page scrolls; stop iOS rubber-banding and pinch.
-    document.addEventListener('touchmove', function (e) {
-      if (e.cancelable) e.preventDefault();
-    }, { passive: false });
+    document.addEventListener('touchcancel', function () { start = null; });
+    var area = dom.boardArea;
     document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
     document.addEventListener('dblclick', function (e) { e.preventDefault(); });
 
@@ -669,7 +690,19 @@
 
     // Keep the board fitted through resizes and rotations.
     var relayout = function () { layout(false); };
-    if (window.ResizeObserver) new ResizeObserver(relayout).observe(dom.boardArea);
+    // Resize work is deferred a frame: resizing the board inside the
+    // observer callback would resize observed boxes again in the same frame.
+    var queued = false;
+    var queueLayout = function () {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(function () { queued = false; layout(false); });
+    };
+    if (window.ResizeObserver) {
+      var ro = new ResizeObserver(queueLayout);
+      ro.observe(dom.app);
+      ro.observe(dom.top);
+    }
     window.addEventListener('resize', relayout);
     window.addEventListener('orientationchange', function () { setTimeout(relayout, 120); });
     if (window.visualViewport) window.visualViewport.addEventListener('resize', relayout);

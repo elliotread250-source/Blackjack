@@ -86,28 +86,40 @@ body {
 
 button { font: inherit; color: inherit; touch-action: manipulation; }
 
+/* Column layout: nav bar pinned to the top, then header, board and hint as
+   one block. JS sizes the board to the height that is left, and any spare
+   height goes above and below that block rather than inside it. */
 .app {
   position: relative;
   display: flex;
   flex-direction: column;
+  align-items: center;
   width: 100%;
   max-width: calc(540px + 32px);
   height: 100vh;
   height: 100dvh;
-  max-height: 900px;
+  max-height: 960px;
   padding: max(10px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  touch-action: none;
 }
 
 /* ---------- header ---------- */
 
-.top { flex: none; }
+.top {
+  flex: none;
+  width: 100%;
+  max-width: max(var(--board-size), 400px);
+  margin-top: auto;
+}
 
 .topbar {
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   height: 30px;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
 }
 
 .arcade-link {
@@ -294,12 +306,13 @@ button { font: inherit; color: inherit; touch-action: manipulation; }
 
 .board-area {
   position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 12px 0 6px;
+  width: 100%;
+  height: var(--board-size);
+  margin: 12px 0 10px;
   touch-action: none;
 }
 
@@ -461,13 +474,16 @@ button { font: inherit; color: inherit; touch-action: manipulation; }
 
 .hint {
   flex: none;
-  margin: 0;
+  width: 100%;
+  max-width: max(var(--board-size), 400px);
+  margin: 0 0 auto;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.55;
   text-align: center;
 }
 .hint p { margin: 0; }
+.hint-keys span { white-space: nowrap; }
 .hint b { color: var(--text); }
 .hint-touch { display: none; }
 kbd {
@@ -525,6 +541,21 @@ kbd {
   .board-area { margin-top: 10px; }
 }
 
+/* Short portrait screens (small phones with browser bars): tighten the
+   header so the board keeps as much room as possible. */
+@media (max-height: 700px) and (max-aspect-ratio: 4/3) {
+  .topbar { height: 26px; margin-bottom: 0; }
+  .title { font-size: 46px; }
+  .score-box { padding: 4px 10px 3px; }
+  .score-value { font-size: 19px; }
+  .above-game, .toolbar { margin-top: 8px; }
+  .btn { height: 34px; }
+  .btn-undo { height: 30px; }
+  .sizes button { height: 26px; }
+  .board-area { margin: 8px 0 6px; }
+  .hint { font-size: 12px; }
+}
+
 @media (max-width: 360px) {
   .sizes button { padding: 0 6px; }
   .moves-label { display: none; }
@@ -533,19 +564,21 @@ kbd {
 
 /* Short, wide screens (phones in landscape, squat windows): controls in a
    column on the left, board on the right, so the board stays big. */
-@media (min-aspect-ratio: 4/3) and (max-height: 600px) {
+@media (min-aspect-ratio: 4/3) and (max-height: 720px) {
   .app {
     display: grid;
-    grid-template-columns: minmax(220px, 290px) minmax(0, 1fr);
-    grid-template-rows: 1fr auto;
-    column-gap: 24px;
-    max-width: 1000px;
+    grid-template-columns: minmax(220px, 290px) auto;
+    grid-template-rows: auto 1fr auto;
+    justify-content: center;
+    column-gap: 32px;
+    max-width: none;
     max-height: none;
   }
-  .top { grid-column: 1; grid-row: 1; align-self: center; }
-  .hint { grid-column: 1; grid-row: 2; text-align: left; padding-bottom: 2px; }
-  .board-area { grid-column: 2; grid-row: 1 / span 2; margin: 0; }
-  .title { font-size: 52px; }
+  .topbar { grid-column: 1; grid-row: 1; }
+  .top { grid-column: 1; grid-row: 2; align-self: center; margin: 0; max-width: none; }
+  .hint { grid-column: 1; grid-row: 3; margin: 0; max-width: none; text-align: left; padding-bottom: 2px; }
+  .board-area { grid-column: 2; grid-row: 1 / span 3; align-self: center; width: var(--board-size); margin: 0; }
+  .title { font-size: 56px; }
   .heading { flex-wrap: wrap; }
   .intro { display: none; }
   .above-game { margin-top: 10px; }

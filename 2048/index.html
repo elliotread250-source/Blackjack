@@ -17,15 +17,15 @@
 </head>
 <body>
   <div class="app" id="app">
-    <header class="top">
-      <div class="topbar">
-        <a class="arcade-link" href="https://open-arcade.up.railway.app">&larr; Arcade</a>
-        <button class="icon-btn" id="mute" type="button" aria-label="Mute sound" aria-pressed="false" title="Sound (M)">
-          <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.2L12 5.6v12.8l-4.8-3.9H4z" fill="currentColor"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.2L12 5.6v12.8l-4.8-3.9H4z" fill="currentColor"/><path d="M15.5 9.5l5 5M20.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        </button>
-      </div>
+    <nav class="topbar">
+      <a class="arcade-link" href="https://open-arcade.up.railway.app">&larr; Arcade</a>
+      <button class="icon-btn" id="mute" type="button" aria-label="Mute sound" aria-pressed="false" title="Sound (M)">
+        <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.2L12 5.6v12.8l-4.8-3.9H4z" fill="currentColor"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.2L12 5.6v12.8l-4.8-3.9H4z" fill="currentColor"/><path d="M15.5 9.5l5 5M20.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </nav>
 
+    <header class="top">
       <div class="heading">
         <h1 class="title">2048</h1>
         <div class="scores">
@@ -74,7 +74,7 @@
     </main>
 
     <footer class="hint">
-      <p class="hint-keys"><b>How to play:</b> <kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd><kbd>&rarr;</kbd>, WASD or HJKL slide the tiles; equal numbers merge. <kbd>U</kbd> undo &middot; <kbd>N</kbd> new &middot; <kbd>M</kbd> mute</p>
+      <p class="hint-keys"><span><kbd>&larr;</kbd><kbd>&uarr;</kbd><kbd>&darr;</kbd><kbd>&rarr;</kbd> or WASD / HJKL to move</span> &middot; <span><kbd>U</kbd> undo</span> &middot; <span><kbd>N</kbd> new game</span> &middot; <span><kbd>M</kbd> sound</span></p>
       <p class="hint-touch"><b>Swipe</b> to slide the tiles. Equal numbers merge into one.</p>
     </footer>
   </div>
