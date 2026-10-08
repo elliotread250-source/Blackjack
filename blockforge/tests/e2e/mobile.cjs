@@ -37,11 +37,18 @@ function check(name, ok, detail = '') {
   await page.waitForFunction(() => window.blockforge && window.blockforge.game, null, { timeout: 60000 });
   await page.waitForTimeout(400);
   await page.screenshot({ path: path.join(outDir, '01-title-phone.png') });
-  const hint = await page.evaluate(() => document.body.innerText.includes('Touch'));
-  check('title screen hints at touch controls on a phone', hint);
+  // Phones and tablets with no mouse start on touch controls (keyboard + mouse stays the default
+  // wherever a mouse or trackpad exists, see menus.cjs); the title hint is then not needed.
+  check('a phone starts on touch controls', (await page.evaluate(() => window.blockforge.settings.controls)) === 'touch');
+  check('no "turn on Touch" hint while touch is on', !(await page.evaluate(() => document.body.innerText.includes('On a touchscreen'))));
 
-  // Default must stay keyboard + mouse; the player turns touch on in Options.
-  check('default control scheme is keyboard + mouse', (await page.evaluate(() => window.blockforge.settings.controls)) === 'keyboard');
+  // A player who picks keyboard + mouse in Options keeps it (and gets the hint back).
+  await page.evaluate(() => { const bf = window.blockforge; bf.settings.controls = 'keyboard'; bf.settings.controlsChosen = true; bf.handlers.settingsChanged(bf.settings); });
+  await page.reload();
+  await page.waitForFunction(() => window.blockforge && window.blockforge.game, null, { timeout: 60000 });
+  await page.waitForTimeout(400);
+  check('an explicit keyboard choice survives a reload', (await page.evaluate(() => window.blockforge.settings.controls)) === 'keyboard');
+  check('title hint shows when keyboard is chosen on a phone', await page.evaluate(() => document.body.innerText.includes('On a touchscreen')));
   await page.evaluate(() => { const bf = window.blockforge; bf.settings.controls = 'touch'; bf.handlers.settingsChanged(bf.settings); });
 
   await page.evaluate(() => window.blockforge.handlers.createWorld('Phone World', 'mobile-test'));

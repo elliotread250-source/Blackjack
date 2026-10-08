@@ -7,6 +7,7 @@ export type ResourcePackId = 'default' | 'smooth' | 'retro' | 'vivid' | 'pastel'
 
 export interface Settings {
   controls: ControlScheme;  // 'keyboard' = keyboard + mouse (default), 'touch' = on-screen touch controls
+  controlsChosen: boolean;  // the player picked a scheme in Options (else phones start on touch)
   touchSensitivity: number; // 0.25..3, look speed for touch dragging (1 = default)
   touchButtonScale: number; // 0.75..1.5, size of the on-screen buttons
   preset: Preset;
@@ -43,6 +44,7 @@ export const PRESETS: Record<Exclude<Preset, 'custom'>, Partial<Settings>> = {
 
 export const DEFAULT_SETTINGS: Settings = {
   controls: 'keyboard',
+  controlsChosen: false,
   touchSensitivity: 1,
   touchButtonScale: 1,
   preset: 'low',
@@ -79,6 +81,22 @@ export function syncShaderFlags(s: Settings): Settings {
   return s;
 }
 
+/** A phone or tablet with no mouse or trackpad attached (keyboard + mouse controls cannot work). */
+export function isTouchOnlyDevice(): boolean {
+  try {
+    return matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches && (navigator.maxTouchPoints || 0) > 0;
+  } catch { return false; }
+}
+
+/**
+ * Keyboard + mouse is the default everywhere a mouse or trackpad exists; phones and tablets
+ * start on touch controls until the player picks a scheme in Options themselves.
+ */
+function deviceDefaults(s: Settings): Settings {
+  if (!s.controlsChosen && isTouchOnlyDevice()) s.controls = 'touch';
+  return s;
+}
+
 export function loadSettings(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
@@ -89,10 +107,10 @@ export function loadSettings(): Settings {
       // Settings saved before shader packs existed: map the old toggles onto a pack.
       // Saved shadows/waving are kept as they are (the menus sync them when the pack changes).
       if (!saved.shaderPack) s.shaderPack = saved.shadows ? 'fancy' : saved.waving ? 'fancy' : 'off';
-      return s;
+      return deviceDefaults(s);
     }
   } catch { /* storage blocked: use defaults */ }
-  return syncShaderFlags({ ...DEFAULT_SETTINGS, keybinds: {} });
+  return deviceDefaults(syncShaderFlags({ ...DEFAULT_SETTINGS, keybinds: {} }));
 }
 
 /** Reset every option to its default, in place (the same object is shared by the whole game). */
@@ -100,7 +118,7 @@ export function restoreDefaults(s: Settings): Settings {
   for (const k of Object.keys(s) as (keyof Settings)[]) delete (s as unknown as Record<string, unknown>)[k];
   Object.assign(s, DEFAULT_SETTINGS);
   s.keybinds = {};
-  return syncShaderFlags(s);
+  return deviceDefaults(syncShaderFlags(s));
 }
 
 export function saveSettings(s: Settings): void {
