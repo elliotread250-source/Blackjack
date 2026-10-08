@@ -13,7 +13,7 @@ import { buildAtlas, rebuildAtlas } from './render/atlas';
 import { isResourcePack, setCustomPack, customPackInfo } from './blocks/packs';
 import { loadCustomPack, saveCustomPack } from './blocks/importer';
 import type { CustomPack } from './blocks/importer';
-import { keyFromLink, rememberedKey, unlockPack } from './blocks/unlock';
+import { keyFromLink, keyFromText, rememberKey, rememberedKey, unlockPack } from './blocks/unlock';
 import { Renderer } from './render/renderer';
 import { Input } from './game/input';
 import { Sounds } from './game/audio';
@@ -225,16 +225,27 @@ async function boot() {
   // A private pack link (#pack=...) adds the owner's locked texture pack to Resource Packs (not
   // switched on). A key remembered from an earlier link only restores the pack when this
   // browser has lost it (and switches it back on if it was the selected pack).
+  /** Unlock with a key and put the pack in the imported slot (stored, shown if selected). */
+  const addUnlocked = async (key: string, reselect: boolean) => {
+    const pack = await unlockPack(key);
+    rememberKey(key);
+    setCustomPack(pack);
+    menus.importedPackChanged();
+    await saveCustomPack(pack).catch((e) => console.warn('[packs] could not store the unlocked pack', e));
+    if (reselect) { settings.resourcePack = 'custom'; handlers.settingsChanged(settings); }
+    else if (settings.resourcePack === 'custom') applyResourcePack('custom');
+    return pack.name;
+  };
+  handlers.unlockPackCode = async (code: string) => {
+    const key = keyFromText(code);
+    if (!key) throw new Error('That is not a pack code. Paste the whole code or the pack link.');
+    return addUnlocked(key, false);
+  };
   const unlockFrom = async (key: string, fromLink: boolean, reselect: boolean) => {
     if (fromLink) menus.notice('Unlocking your texture pack...', 30);
     try {
-      const pack = await unlockPack(key);
-      setCustomPack(pack);
-      menus.importedPackChanged();
-      await saveCustomPack(pack).catch((e) => console.warn('[packs] could not store the unlocked pack', e));
-      if (reselect) { settings.resourcePack = 'custom'; handlers.settingsChanged(settings); }
-      else if (settings.resourcePack === 'custom') applyResourcePack('custom');
-      if (fromLink) menus.notice(`${pack.name} added. Pick it in Options > Resource Packs.`);
+      const name = await addUnlocked(key, reselect);
+      if (fromLink) menus.notice(`${name} added. Pick it in Options > Resource Packs.`);
     } catch (e) {
       if (fromLink) menus.notice(e instanceof Error ? e.message : String(e), 12);
       else console.warn('[packs] could not restore the pack from its link', e);
@@ -249,7 +260,7 @@ async function boot() {
       await unlockFrom(packKey, !!linkKey, !linkKey && wantCustom && first === null);
     })();
   }
-  // the link opened in a tab that already shows the game only changes the #fragment
+  // the #link opened in a tab that already shows the game only changes the fragment
   window.addEventListener('hashchange', () => {
     const k = keyFromLink();
     if (k) void unlockFrom(k, true, false);

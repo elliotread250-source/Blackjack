@@ -28,6 +28,8 @@ export interface MenuHandlers {
   version: string;
   /** Redraw textures for the current resource pack even if its id did not change (re-imported pack). */
   reapplyResourcePack?(): void;
+  /** Extra: unlock the owner's locked texture pack with a pack code (or a pasted pack link). */
+  unlockPackCode?(code: string): Promise<string>;
 }
 
 type ScreenName = 'title' | 'worlds' | 'create' | 'pause' | 'options' | 'controls' | 'loading' | 'shaders' | 'packs';
@@ -680,7 +682,10 @@ export class Menus {
     if (name === 'pause') this.overGame = true;
     else if (!OPTION_SCREENS.includes(name)) this.overGame = false;
     const prev = this.cur;
-    if (prev && prev !== name) this.screens.get(prev)!.root.style.display = 'none';
+    if (prev && prev !== name) {
+      this.screens.get(prev)!.root.style.display = 'none';
+      if (this.noticeEl) this.noticeEl.style.opacity = '0';   // a notice belongs to the screen it came up on
+    }
     const s = this.screens.get(name)!;
     this.cur = name;
     this.root.classList.add('bf-open');
@@ -1296,9 +1301,10 @@ export class Menus {
     const s = this.add('packs', 'bf-dirt');
     line(s.gui, 'Resource Packs', 13);
     const list = new ScrollList(s.gui, true);
-    const done = button(s.gui, 'Done', 98, () => this.back());
+    const done = button(s.gui, 'Done', 200, () => this.back());
     const st = this.settings;
     const ROW = 48;
+    const STATUS_BOTTOM = 54;    // status text sits just above the first row of buttons
     // Importing a pack: the player picks a .zip; it is read in this browser and kept here only.
     const file = el('input', '', s.root);
     file.type = 'file';
@@ -1314,10 +1320,32 @@ export class Menus {
     const say = (t: string) => {
       const lines = t ? wrapText(t, curW).slice(0, 2) : [];
       status.textContent = lines.join('\n');
-      if (lastLayout) at(status, lastLayout.cx - (curW >> 1), lastLayout.gh - 30 - 10 * Math.max(1, lines.length));
+      if (lastLayout) at(status, lastLayout.cx - (curW >> 1), lastLayout.gh - STATUS_BOTTOM - 10 * Math.max(1, lines.length));
     };
     const importBtn = button(s.gui, 'Import Pack...', 98, () => { if (!busy) file.click(); },
       'Load a resource pack .zip from this device. It stays in this browser and is never uploaded.');
+    // A private pack code (or the whole pack link pasted in): for when a link loses its code.
+    const codeBtn = button(s.gui, 'Pack Code...', 98, async () => {
+      if (busy || !this.handlers.unlockPackCode) return;
+      const code = window.prompt('Paste your pack code or pack link:');
+      if (!code || !code.trim()) return;
+      busy = true;
+      importBtn.enable(false); codeBtn.enable(false);
+      say('Unlocking the texture pack...');
+      try {
+        const name = await this.handlers.unlockPackCode(code);
+        savedOk = true;
+        clearPackIcons('custom');
+        resetPreview();
+        say(`${name} added. Tap it above to switch it on.`);
+      } catch (e) {
+        say((e instanceof Error ? e.message : String(e)).slice(0, 160));
+      } finally {
+        busy = false;
+        importBtn.enable(true); codeBtn.enable(true);
+        refresh();
+      }
+    }, 'Unlock a texture pack you were given a private code or link for.');
     const removeBtn = button(s.gui, 'Remove Import', 98, () => {
       if (busy || !customPackInfo()) return;
       setCustomPack(null);
@@ -1415,8 +1443,8 @@ export class Menus {
       const w = Math.min(300, l.gw - 20);
       curW = w;
       lastLayout = l;
-      // room for a two-line status message between the list and the buttons
-      list.place(l, 30, l.gh - 30 - 56, l.cx + (w >> 1) + 4);
+      // room for a two-line status message and two rows of buttons under the list
+      list.place(l, 30, l.gh - 30 - (STATUS_BOTTOM + 26), l.cx + (w >> 1) + 4);
       rows.forEach((r, i) => {
         at(r.row, l.cx - (w >> 1), 4 + i * ROW, w, ROW - 4);
         at(r.name, 6, 4);
@@ -1428,10 +1456,11 @@ export class Menus {
       });
       list.setContent(RESOURCE_PACKS.length * ROW + 8);
       const nLines = status.textContent ? status.textContent.split('\n').length : 1;
-      at(status, l.cx - (w >> 1), l.gh - 30 - 10 * nLines);
-      at(importBtn.el, l.cx - 151, l.gh - 26);
-      at(removeBtn.el, l.cx - 49, l.gh - 26);
-      at(done.el, l.cx + 53, l.gh - 26);
+      at(status, l.cx - (w >> 1), l.gh - STATUS_BOTTOM - 10 * nLines);
+      at(importBtn.el, l.cx - 151, l.gh - 50);
+      at(codeBtn.el, l.cx - 49, l.gh - 50);
+      at(removeBtn.el, l.cx + 53, l.gh - 50);
+      at(done.el, l.cx - 100, l.gh - 26);
       refresh();
     };
     (s as Screen & { onShow?: () => void }).onShow = () => {

@@ -16,14 +16,37 @@ function fromB64Url(s: string): Uint8Array {
   return out;
 }
 
-/** A key from the address bar (#pack=...), removed from it and remembered; null if none. */
+const KEY_RE = /^[A-Za-z0-9_-]{40,64}$/;
+
+/** A pack key from a pasted code or a whole pasted pack link; null if there is none. */
+export function keyFromText(text: string): string | null {
+  const t = text.trim();
+  const m = t.match(/[?#&]pack=([A-Za-z0-9_-]{40,64})/);
+  if (m) return m[1];
+  return KEY_RE.test(t) ? t : null;
+}
+
+/** Remember a key in this browser (the pack comes back by itself if storage is cleared). */
+export function rememberKey(key: string): void {
+  try { localStorage.setItem(KEY_STORE, key); } catch { /* storage blocked */ }
+}
+
+/**
+ * A key from the address bar (?pack=... or #pack=...), removed from it (it is remembered only
+ * once it has unlocked the pack); null if none. Some chat apps drop the #part of links, so the ?form works too (that form does reach
+ * the server, which is the owner's own).
+ */
 export function keyFromLink(): string | null {
   try {
-    const m = location.hash.match(/(?:^#|&)pack=([A-Za-z0-9_-]{40,64})/);
-    if (!m) return null;
-    history.replaceState(null, '', location.pathname + location.search);
-    try { localStorage.setItem(KEY_STORE, m[1]); } catch { /* storage blocked */ }
-    return m[1];
+    const q = new URLSearchParams(location.search).get('pack');
+    const h = location.hash.match(/(?:^#|&)pack=([A-Za-z0-9_-]{40,64})/);
+    const key = q && KEY_RE.test(q) ? q : h ? h[1] : null;
+    if (!key) return null;
+    const rest = new URLSearchParams(location.search);
+    rest.delete('pack');
+    const qs = rest.toString();
+    history.replaceState(null, '', location.pathname + (qs ? '?' + qs : ''));
+    return key;
   } catch {
     return null;
   }

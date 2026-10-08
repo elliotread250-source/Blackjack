@@ -4,6 +4,7 @@
 import * as esbuild from 'esbuild';
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 
 const watch = process.argv.includes('--watch');
 const root = path.dirname(new URL(import.meta.url).pathname);
@@ -57,7 +58,10 @@ async function writeOutputs(result) {
   const css = fs.readFileSync(path.join(root, 'src/ui/boot.css'), 'utf8');
   fs.mkdirSync(path.join(dist, 'assets'), { recursive: true });
   fs.writeFileSync(path.join(dist, 'assets/blockforge.js'), js);
-  fs.writeFileSync(path.join(dist, 'index.html'), html({ css, scriptTag: '<script src="assets/blockforge.js"></script>' }));
+  // The script URL changes with its contents, so a browser never keeps running an old copy
+  // after a deploy (index.html itself is served no-cache).
+  const v = crypto.createHash('sha256').update(js).digest('hex').slice(0, 12);
+  fs.writeFileSync(path.join(dist, 'index.html'), html({ css, scriptTag: `<script src="assets/blockforge.js?v=${v}"></script>` }));
   // Inline build: escape anything that could close the script tag early.
   const safe = js.replace(/<\/script/gi, '<\\/script').replace(/<!--/g, '<\\!--');
   fs.writeFileSync(path.join(dist, 'blockforge.html'), html({ css, scriptTag: `<script>${safe}</script>` }));
