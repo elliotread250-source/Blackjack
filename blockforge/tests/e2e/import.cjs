@@ -237,13 +237,18 @@ fs.writeFileSync(zipPath, zip(files));
     await openPacks(page);
     const cdp = await context.newCDPSession(page);
     const list = await page.evaluate(() => { const r = Array.from(document.querySelectorAll('.bf-list')).find((e) => e.offsetParent).getBoundingClientRect(); return { x: r.x + r.width / 2, top: r.top, bottom: r.bottom }; });
-    const y0 = list.bottom - 20, y1 = list.top + 20;
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: list.x, y: y0, id: 1 }] });
-    for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: list.x, y: y0 + ((y1 - y0) * i) / 8, id: 1 }] });
-    await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    await page.waitForTimeout(300);
-    const row = await page.evaluate(() => { const r = document.querySelector('[data-pack="custom"]').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, vh: innerHeight }; });
-    check('the imported-pack row is on screen after scrolling', row.y > 0 && row.y < row.vh, JSON.stringify(row));
+    // swipe up (finger scroll) until the last row is fully inside the list
+    const rowRect = () => page.evaluate(() => { const r = document.querySelector('[data-pack="custom"]').getBoundingClientRect(); return { top: r.top, bottom: r.bottom, x: r.x + r.width / 2 }; });
+    for (let swipe = 0; swipe < 4 && (await rowRect()).bottom > list.bottom; swipe++) {
+      const y0 = list.bottom - 10, y1 = list.top + 10;
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: list.x, y: y0, id: 1 }] });
+      for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: list.x, y: y0 + ((y1 - y0) * i) / 8, id: 1 }] });
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await page.waitForTimeout(300);
+    }
+    const rr = await rowRect();
+    const row = { x: rr.x, y: (Math.max(rr.top, list.top) + Math.min(rr.bottom, list.bottom)) / 2 };
+    check('the imported-pack row is inside the list after scrolling', rr.top >= list.top - 1 && rr.bottom <= list.bottom + 1, JSON.stringify({ rr, list }));
     const chooser = page.waitForEvent('filechooser', { timeout: 3000 }).then(() => true, () => false);
     await page.touchscreen.tap(row.x, row.y);
     check('first tap after a scroll opens the file picker', await chooser);

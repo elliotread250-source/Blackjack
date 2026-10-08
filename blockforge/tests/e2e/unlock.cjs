@@ -63,7 +63,9 @@ const WRONG = crypto.randomBytes(32).toString('base64url');
   await page.waitForFunction(() => /does not fit/.test(document.querySelector('.bf-notice')?.textContent || ''), null, { timeout: 15000 }).catch(() => undefined);
   check('a wrong key is explained', /does not fit/.test(await notice()), await notice());
   check('the key is taken out of the address bar', (await state()).hash === '');
-  await page.evaluate(() => localStorage.removeItem('blockforge.packkey'));
+  check('a wrong key is not remembered', (await state()).key === null);
+  check('the page loads a versioned script (no stale copies after a deploy)',
+    await page.evaluate(() => /assets\/blockforge\.js\?v=[0-9a-f]{8,}/.test(document.querySelector('script[src]')?.getAttribute('src') || '')));
 
   // the real flow
   await boot(`http://127.0.0.1:8134/#pack=${KEY}`);
@@ -103,6 +105,30 @@ const WRONG = crypto.randomBytes(32).toString('base64url');
   await boot('http://127.0.0.1:8134/');
   await page.waitForTimeout(1500);
   check('and the pack does not come back', !/Test Pack/.test(await packRowText()));
+
+  // the ?pack= form (survives apps that drop the #part of links)
+  await boot(`http://127.0.0.1:8134/?pack=${KEY}`);
+  await page.waitForFunction(() => /added/.test(document.querySelector('.bf-notice')?.textContent || ''), null, { timeout: 15000 }).catch(() => undefined);
+  check('a ?pack= link works too', /Test Pack added/.test(await notice()), await notice());
+  check('and is taken out of the address bar', await page.evaluate(() => location.search === '' && location.hash === ''));
+  await packRowText();
+  await page.locator('.bf-screen:visible button', { hasText: 'Remove Import' }).first().tap();
+  await page.waitForTimeout(400);
+
+  // Pack Code button: paste the whole link (as a chat app might show it)
+  let answer = `look: https://example.test/#pack=${KEY} enjoy`;
+  page.on('dialog', (d) => d.accept(answer).catch(() => undefined));
+  const statusOf = () => page.evaluate(() => Array.from(document.querySelectorAll('.bf-screen .bf-c-gray'))
+    .filter((e) => e.offsetParent && /added|pack code|fit|Unlocking|Could not/.test(e.textContent)).map((e) => e.textContent).join(' | '));
+  await page.locator('.bf-screen:visible button', { hasText: 'Pack Code' }).first().tap();
+  await page.waitForFunction(() => Array.from(document.querySelectorAll('.bf-screen .bf-c-gray')).some((e) => e.offsetParent && /Tap it above|not a pack|does not fit|Could not/.test(e.textContent)), null, { timeout: 15000 }).catch(() => undefined);
+  check('Pack Code accepts a pasted link', /Test Pack added/.test(await statusOf()), (await statusOf()).slice(0, 160));
+  check('and the pack is listed', /Test Pack/.test(await page.evaluate(() => document.querySelector('[data-pack="custom"]').textContent)));
+  answer = 'hello';
+  await page.locator('.bf-screen:visible button', { hasText: 'Pack Code' }).first().tap();
+  await page.waitForFunction(() => /not a pack code/.test(document.body.innerText), null, { timeout: 15000 }).catch(() => undefined);
+  check('a wrong code is explained', /not a pack code/.test(await statusOf()), (await statusOf()).slice(0, 160));
+  await page.screenshot({ path: path.join(outDir, '03-pack-code.png') });
 
   check('no console errors', errors.length === 0, errors.slice(0, 3).join(' | '));
   await browser.close();
