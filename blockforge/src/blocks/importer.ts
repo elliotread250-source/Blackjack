@@ -6,6 +6,7 @@
 // resource packs). Texture names that differ from BlockForge's are mapped below; anything the
 // pack does not have keeps BlockForge's own texture.
 import { TEXTURE_NAMES, DYES } from './registry';
+import { inflateRaw } from './inflate';
 
 export interface CustomPack {
   name: string;
@@ -88,7 +89,7 @@ const BAKE_TINT: Record<string, [number, number, number]> = {
 
 // ------------------------------------------------------------------ zip reading
 
-interface ZipEntry { name: string; method: number; compSize: number; offset: number }
+interface ZipEntry { name: string; method: number; compSize: number; size: number; offset: number }
 
 function readZipDirectory(buf: ArrayBuffer): ZipEntry[] {
   const v = new DataView(buf);
@@ -106,10 +107,11 @@ function readZipDirectory(buf: ArrayBuffer): ZipEntry[] {
     if (v.getUint32(p, true) !== 0x02014b50) break;
     const method = v.getUint16(p + 10, true);
     const compSize = v.getUint32(p + 20, true);
+    const size = v.getUint32(p + 24, true);
     const nameLen = v.getUint16(p + 28, true), extraLen = v.getUint16(p + 30, true), commentLen = v.getUint16(p + 32, true);
     const offset = v.getUint32(p + 42, true);
     const name = dec.decode(new Uint8Array(buf, p + 46, nameLen));
-    out.push({ name, method, compSize, offset });
+    out.push({ name, method, compSize, size, offset });
     p += 46 + nameLen + extraLen + commentLen;
   }
   return out;
@@ -122,24 +124,59 @@ async function readEntry(buf: ArrayBuffer, e: ZipEntry): Promise<Uint8Array> {
   const data = new Uint8Array(buf, start, e.compSize);
   if (e.method === 0) return data.slice();
   if (e.method !== 8) throw new Error('Unsupported compression in ' + e.name);
-  const ds = new DecompressionStream('deflate-raw');
-  const stream = new Blob([data as BlobPart]).stream().pipeThrough(ds);
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+  if (nativeInflate) {
+    try {
+      const ds = new DecompressionStream('deflate-raw');
+      const stream = new Blob([data as BlobPart]).stream().pipeThrough(ds);
+      return new Uint8Array(await new Response(stream).arrayBuffer());
+    } catch {
+      // no 'deflate-raw' here (older Chrome): use the built-in decoder from now on
+      nativeInflate = false;
+    }
+  }
+  return inflateRaw(data, e.size);
 }
+
+/** iPhones before iOS 16.4 have no DecompressionStream; older Chrome lacks 'deflate-raw'. */
+let nativeInflate = typeof DecompressionStream !== 'undefined';
 
 // ------------------------------------------------------------------ image decoding
 
 let canvas: HTMLCanvasElement | null = null;
 let ctx2d: CanvasRenderingContext2D | null = null;
 
-/** Decode a PNG and return its top square frame as 16x16 RGBA. */
-async function decodeTile(png: Uint8Array): Promise<Uint8ClampedArray | null> {
-  let bmp: ImageBitmap;
+let bitmapOK = typeof createImageBitmap === 'function';
+
+/** A decoded image plus how to free it. */
+interface Decoded { src: CanvasImageSource; width: number; height: number; free(): void }
+
+async function decodePng(png: Uint8Array): Promise<Decoded | null> {
+  const blob = new Blob([png as BlobPart], { type: 'image/png' });
+  if (bitmapOK) {
+    try {
+      const bmp = await createImageBitmap(blob, { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+      return { src: bmp, width: bmp.width, height: bmp.height, free: () => bmp.close() };
+    } catch {
+      // some Safari versions reject these options or blobs here: decode through <img> instead
+      bitmapOK = false;
+    }
+  }
+  const url = URL.createObjectURL(blob);
   try {
-    bmp = await createImageBitmap(new Blob([png as BlobPart], { type: 'image/png' }), { premultiplyAlpha: 'none', colorSpaceConversion: 'none' });
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    return { src: img, width: img.naturalWidth, height: img.naturalHeight, free: () => URL.revokeObjectURL(url) };
   } catch {
+    URL.revokeObjectURL(url);
     return null;
   }
+}
+
+/** Decode a PNG and return its top square frame as 16x16 RGBA. */
+async function decodeTile(png: Uint8Array): Promise<Uint8ClampedArray | null> {
+  const bmp = await decodePng(png);
+  if (!bmp || !bmp.width || !bmp.height) { bmp?.free(); return null; }
   const w = bmp.width, frame = Math.min(bmp.width, bmp.height);
   if (!canvas) {
     canvas = document.createElement('canvas');
@@ -151,8 +188,8 @@ async function decodeTile(png: Uint8Array): Promise<Uint8ClampedArray | null> {
   // Exact 16x16 pixels stay crisp; higher resolution packs are scaled down smoothly.
   g.imageSmoothingEnabled = frame > 16;
   if (frame > 16) g.imageSmoothingQuality = 'high';
-  g.drawImage(bmp, 0, 0, Math.min(w, frame), frame, 0, 0, 16, 16);
-  bmp.close();
+  g.drawImage(bmp.src, 0, 0, Math.min(w, frame), frame, 0, 0, 16, 16);
+  bmp.free();
   return g.getImageData(0, 0, 16, 16).data;
 }
 
@@ -220,7 +257,6 @@ function bake(t: Uint8ClampedArray, c: [number, number, number]): Uint8ClampedAr
 // ------------------------------------------------------------------ import
 
 export async function importResourcePack(file: Blob, fileName: string, onProgress?: (done: number, total: number) => void): Promise<CustomPack> {
-  if (typeof DecompressionStream === 'undefined') throw new Error('This browser is too old to read zip files. Update Chrome or Edge.');
   const buf = await file.arrayBuffer();
   const entries = readZipDirectory(buf);
   const byName = new Map<string, ZipEntry>();
