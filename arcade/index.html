@@ -121,6 +121,7 @@
 
 <script>
 // One entry per thing on the shelf. `ping` false skips the online check (non-web downloads).
+// `pending` true keeps a card off the shelf until its game is deployed.
 const ITEMS = [
   { name: 'Blackjack', kind: 'game', url: 'https://blackjack-production-0312.up.railway.app',
     blurb: 'A six-deck table with play-money chips. Blackjack pays 3:2, dealer stands on soft 17, split up to four hands.',
@@ -143,10 +144,10 @@ const ITEMS = [
   { name: 'Tetris', kind: 'game', url: 'https://tetris-production-9024.up.railway.app',
     blurb: 'The falling-block puzzle done the modern way: 7-bag, SRS rotation, hold, ghost piece, T-spins and back-to-backs, Marathon and a 40-line sprint.',
     tags: ['Puzzle', 'Classic', 'Touch controls'], c1: '#4a3bb0', c2: '#0c0a26', glow: 'rgba(140,110,255,.4)', art: 'tetris' },
-  { name: 'Snake', kind: 'game', url: 'https://snake-production-7c68.up.railway.app',
+  { name: 'Snake', kind: 'game', pending: true, url: 'https://snake-production-7c68.up.railway.app',
     blurb: 'Eat the apple, grow, and don\'t bite your own tail. Smooth gliding movement, buffered turns for tight U-turns, three board sizes and three speeds.',
     tags: ['Arcade', 'Classic', 'Swipe to steer'], c1: '#8fd14f', c2: '#1d3d12', glow: 'rgba(130,210,80,.38)', art: 'snake' },
-  { name: 'Pac-Man', kind: 'game', url: 'https://pac-man-production-74bc.up.railway.app',
+  { name: 'Pac-Man', kind: 'game', pending: true, url: 'https://pac-man-production-74bc.up.railway.app',
     blurb: 'The 1980 maze, all 240 dots. Blinky, Pinky, Inky and Clyde hunt with their real arcade personalities, scatter and chase on the original timers.',
     tags: ['Arcade', 'Maze', 'Classic'], c1: '#23238f', c2: '#000000', glow: 'rgba(255,230,0,.32)', art: 'pacman' },
   { name: '2048', kind: 'game', url: 'https://2048-production-ed21.up.railway.app',
@@ -195,7 +196,7 @@ const grid = document.getElementById('grid');
 const arrow = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-for (const it of ITEMS) {
+for (const it of ITEMS.filter(it => !it.pending)) {
   const a = document.createElement('a');
   a.className = 'card'; a.href = it.url; a.dataset.kind = it.kind;
   if (it.ping === false) { a.target = '_blank'; a.rel = 'noopener'; }
