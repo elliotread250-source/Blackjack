@@ -169,7 +169,7 @@
     }
     const r = RANKS[rank];
     const rankEl = '<text x="12" y="88" font-family="' + SANS + '" font-size="96" font-weight="700" fill="' + color + '"' +
-      (rank === 10 ? ' textLength="112" lengthAdjust="spacingAndGlyphs" letter-spacing="-4"' : '') + '>' + r + '</text>';
+      (rank === 10 ? ' textLength="104" lengthAdjust="spacingAndGlyphs"' : '') + '>' + r + '</text>';
     return cardBase(defs) + rankEl + pip(suit, 158, 50, 62, false, color) + centre + '</svg>';
   }
 
