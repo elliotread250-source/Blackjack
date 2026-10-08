@@ -767,7 +767,11 @@ export class Menus {
       at(ctrl.el, l.cx + 2, y);
       at(ver, 2, l.gh - 10);
       at(credit, l.gw - 2 - textAdvance(credit.textContent!), l.gh - 10);
-      if (hint) hint.style.top = U(Math.min(l.gh - 24, y + 30));
+      if (hint) {
+        hint.style.top = U(Math.min(l.gh - 24, y + 30));
+        // phones start on touch controls; the hint is only for someone who switched them off
+        hint.style.display = this.settings.controls === 'touch' ? 'none' : '';
+      }
     };
     (s as Screen & { onShow?: () => void }).onShow = () => {
       splashText = SPLASHES[Math.floor(Math.random() * SPLASHES.length)];
@@ -1110,7 +1114,7 @@ export class Menus {
     );
     header('Controls');
     pair(
-      cycle<'keyboard' | 'touch'>('Controls', ['keyboard', 'touch'], () => st.controls, (v) => { st.controls = v; }, (v) => (v === 'touch' ? 'Touch' : 'Keyboard & Mouse'),
+      cycle<'keyboard' | 'touch'>('Controls', ['keyboard', 'touch'], () => st.controls, (v) => { st.controls = v; st.controlsChosen = true; }, (v) => (v === 'touch' ? 'Touch' : 'Keyboard & Mouse'),
         'controls', 'Touch shows on-screen sticks and buttons for phones and tablets.'),
       slide('sensitivity', 10, 200, 5, (v) => `Sensitivity: ${v}%`, 'Mouse look speed.', 100),
     );
