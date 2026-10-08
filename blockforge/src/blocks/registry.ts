@@ -192,6 +192,8 @@ add({ name: 'glass', display: 'Glass', cat: 'building', tex: 'glass', layer: 'cu
 add({ name: 'tinted_glass', display: 'Tinted Glass', cat: 'building', tex: 'tinted_glass', layer: 'translucent', cullSelf: true, opacity: 15, sound: 'glass' });
 add({ name: 'glass_pane', display: 'Glass Pane', cat: 'building', tex: 'glass', shape: 'pane', layer: 'cutout', family: 'pane', sound: 'glass' });
 add({ name: 'iron_bars', display: 'Iron Bars', cat: 'building', tex: 'iron_bars', shape: 'pane', layer: 'cutout', family: 'pane', sound: 'metal' });
+// hand-drawn by the owner (src/blocks/handmade.ts)
+add({ name: 'weathered_copper_bars', display: 'Weathered Copper Bars', cat: 'building', tex: 'weathered_copper_bars', shape: 'pane', layer: 'cutout', family: 'pane', sound: 'metal' });
 
 // slabs, stairs and walls for the common stones
 const SHAPED: [string, string, string, boolean][] = [
@@ -245,6 +247,11 @@ add({ name: 'soul_lantern', display: 'Soul Lantern', cat: 'light', tex: 'soul_la
 add({ name: 'shroomlight', display: 'Shroomlight', cat: 'light', tex: 'shroomlight', light: 15, sound: 'wool' });
 add({ name: 'jack_o_lantern', display: "Jack o'Lantern", cat: 'light', tex: { top: 'pumpkin_top', bottom: 'pumpkin_top', side: 'pumpkin_side', front: 'jack_o_lantern' }, orient: 'horizontal', light: 15, sound: 'wood' });
 add({ name: 'redstone_lamp', display: 'Redstone Lamp', cat: 'light', tex: 'redstone_lamp_on', light: 15, sound: 'glass' });
+// hand-drawn by the owner (src/blocks/handmade.ts)
+add({ name: 'weathered_copper_bulb', display: 'Weathered Copper Bulb', cat: 'light', tex: 'weathered_copper_bulb', sound: 'metal' });
+add({ name: 'weathered_copper_bulb_lit', display: 'Lit Weathered Copper Bulb', cat: 'light', tex: 'weathered_copper_bulb_lit', light: 12, sound: 'metal' });
+add({ name: 'weathered_copper_bulb_powered', display: 'Powered Weathered Copper Bulb', cat: 'light', tex: 'weathered_copper_bulb_powered', sound: 'metal' });
+add({ name: 'weathered_copper_bulb_lit_powered', display: 'Lit Powered Weathered Copper Bulb', cat: 'light', tex: 'weathered_copper_bulb_lit_powered', light: 12, sound: 'metal' });
 add({ name: 'ochre_froglight', display: 'Ochre Froglight', cat: 'light', tex: { end: 'froglight_ochre_top', side: 'froglight_ochre' }, orient: 'axis', light: 15 });
 add({ name: 'verdant_froglight', display: 'Verdant Froglight', cat: 'light', tex: { end: 'froglight_verdant_top', side: 'froglight_verdant' }, orient: 'axis', light: 15 });
 add({ name: 'pearlescent_froglight', display: 'Pearlescent Froglight', cat: 'light', tex: { end: 'froglight_pearl_top', side: 'froglight_pearl' }, orient: 'axis', light: 15 });
