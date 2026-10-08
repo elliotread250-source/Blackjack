@@ -276,14 +276,14 @@
   Renderer.prototype.computeRadii = function (len) {
     var ss = this.ss, rad = this.rad, n = ss.length;
     rad.length = n;
-    var taper = Math.min(2.6, Math.max(0.6, len * 0.55));
+    var taper = Math.min(2.4, Math.max(0.6, len * 0.42));
     for (var i = 0; i < n; i++) {
       var s = ss[i];
       var r = BODY_R;
       var u = (len - s) / taper;
       if (u < 1) {
         var e = 1 - (1 - u) * (1 - u);
-        r = BODY_R * (0.36 + 0.64 * e);
+        r = BODY_R * (0.45 + 0.55 * e);
       }
       if (s < 0.55) r *= 1 + 0.08 * (1 - s / 0.55);
       rad[i] = r;
@@ -385,8 +385,8 @@
   Renderer.prototype.drawEyes = function (hx, hy, dx, dy, r, skin, v, off) {
     var g = this.ctx;
     var px = -dy, py = dx;
-    var er = r * 0.37, pr = er * 0.56;
-    var fwd = r * 0.14, side = r * 0.5;
+    var er = r * 0.42, pr = er * 0.58;
+    var fwd = r * 0.12, side = r * 0.48;
     for (var sIdx = -1; sIdx <= 1; sIdx += 2) {
       var ex = hx + dx * fwd + px * side * sIdx;
       var ey = hy + dy * fwd + py * side * sIdx;

@@ -32,7 +32,7 @@
     '................',
     '......RRK.......',
     '....RRRRK.......',
-    '...RRRRRK.......',
+    '..RRRRRRK.......',
     '....RRRRK.......',
     '......RRK.......',
     '........K.......',
@@ -116,7 +116,7 @@
     '0': 'abcdef', '1': 'bc', '2': 'abged', '3': 'abgcd', '4': 'fgbc', '5': 'afgcd',
     '6': 'afgedc', '7': 'abc', '8': 'abcdefg', '9': 'abcdfg', '-': 'g', ' ': ''
   };
-  var LCD_ON = '#ff0000', LCD_OFF = '#4a0000';
+  var LCD_ON = '#ff0000', LCD_OFF = '#2c0000';
 
   // --- snapped drawing primitives -----------------------------------------
   // (sx, sy) = device pixels per art pixel; (ox, oy) = device offset.
