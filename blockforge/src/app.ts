@@ -10,8 +10,9 @@ import { Hud } from './ui/hud';
 import { InventoryScreen } from './ui/inventory';
 import { TouchControls } from './ui/touch';
 import { buildAtlas, rebuildAtlas } from './render/atlas';
-import { isResourcePack, setCustomPack } from './blocks/packs';
+import { isResourcePack, setCustomPack, customPackInfo } from './blocks/packs';
 import { loadCustomPack } from './blocks/importer';
+import type { CustomPack } from './blocks/importer';
 import { Renderer } from './render/renderer';
 import { Input } from './game/input';
 import { Sounds } from './game/audio';
@@ -26,6 +27,9 @@ const VERSION = '1.0.0';
 
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** The stored imported pack, null when there is none, 'error' when storage could not be read. */
+type PackLoad = CustomPack | null | 'error';
 
 function bootText(text: string) {
   const el = document.getElementById('boot');
@@ -81,14 +85,18 @@ async function boot() {
   await nextFrame();
 
   const fontReady = loadPixelFont().catch(() => undefined);
-  // A pack the player imported earlier lives in this browser's IndexedDB and is switched on
-  // again at every start. A slow disk never drops it: after a few seconds the game starts with
-  // the built-in look and swaps the imported textures in as soon as they arrive.
-  const customLoad = loadCustomPack();
-  const imported = await Promise.race([customLoad, sleep(6000).then(() => undefined)]);
-  const customLate = imported === undefined && settings.resourcePack === 'custom';
-  if (imported) setCustomPack(imported);
-  else if (imported === null && settings.resourcePack === 'custom') settings.resourcePack = 'default';
+  // A pack the player imported earlier lives in this browser's IndexedDB. When it is the
+  // selected pack, the start waits a little for it and it is switched on again; otherwise it is
+  // loaded in the background for the Resource Packs list. A slow or failing disk never switches
+  // it off: the game starts with the built-in look and swaps the imported textures in when they
+  // arrive (with one retry, since WebKit sometimes loses its IndexedDB connection for a moment).
+  const loadPack = (): Promise<PackLoad> => loadCustomPack().catch((e) => { console.warn('[packs] could not read the imported pack', e); return 'error' as const; });
+  const wantCustom = settings.resourcePack === 'custom';
+  const customLoad = loadPack();
+  const first: PackLoad | 'late' = wantCustom ? await Promise.race([customLoad, sleep(6000).then(() => 'late' as const)]) : 'late';
+  if (first && first !== 'late' && first !== 'error') setCustomPack(first);
+  else if (first === null) settings.resourcePack = 'default';      // selected, but really gone
+  const customLate = wantCustom && (first === 'late' || first === 'error');
   const atlas = buildAtlas(settings.mipmaps, customLate ? 'default' : settings.resourcePack);
   bootText('Carving block icons…');
   await nextFrame();
@@ -198,16 +206,19 @@ async function boot() {
 
   const menus = new Menus(uiRoot, handlers, settings);
   game.menus = menus;
-  if (customLate) {
-    void customLoad.then((p) => {
-      if (p) {
-        setCustomPack(p);
-        if (settings.resourcePack === 'custom') applyResourcePack('custom');
-      } else if (settings.resourcePack === 'custom') {
-        settings.resourcePack = 'default';
+  if (first === 'late' || first === 'error') {
+    void (async () => {
+      let p: PackLoad = first === 'error' ? 'error' : await customLoad;
+      if (p === 'error') { await sleep(3000); p = await loadPack(); }
+      if (p && p !== 'error') {
+        if (!customPackInfo()) setCustomPack(p);       // unless a new import beat us to it
+        if (settings.resourcePack === 'custom' && atlas.pack !== 'custom') applyResourcePack('custom');
+      } else if (p === null && settings.resourcePack === 'custom' && !customPackInfo()) {
+        settings.resourcePack = 'default';             // really gone (site data cleared)
         handlers.settingsChanged(settings);
       }
-    });
+      // still failing: keep the player's choice; the next start tries again
+    })();
   }
 
   // Click on the game view to grab the mouse again.
