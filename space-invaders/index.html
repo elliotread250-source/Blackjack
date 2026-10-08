@@ -3,36 +3,25 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#05010f">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon.svg">
-<title>Space Invaders</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+<title>Space Invaders Extreme</title>
 <style>
-  html, body { margin: 0; height: 100%; overflow: hidden; background: #000; color: #fff; touch-action: none; user-select: none; -webkit-user-select: none; overscroll-behavior: none; }
-  body { display: flex; flex-direction: column; align-items: center; justify-content: center; font-family: ui-monospace, Menlo, Consolas, monospace; }
-  canvas { display: block; image-rendering: pixelated; cursor: pointer; }
-  #pad { display: none; width: 100%; max-width: 520px; padding: 10px 12px max(12px, env(safe-area-inset-bottom)); box-sizing: border-box; }
-  body.touch #pad { display: block; }
-  body.touch { justify-content: space-between; }
-  body.touch canvas { margin: auto 0; }
-  .row { display: flex; gap: 10px; }
-  .row + .row { margin-top: 10px; }
-  #pad button { flex: 1; height: 64px; border-radius: 14px; border: 2px solid #3a3a3a; background: #111; color: #fff; font: 700 18px ui-monospace, Menlo, monospace; letter-spacing: 1px; touch-action: none; }
-  #pad button.small { height: 38px; font-size: 13px; color: #9a9a9a; }
-  #pad button.fire { background: #2a0d0d; border-color: #ff3b3b; color: #ff6a6a; flex: 1.3; }
-  #pad button.on { background: #29ff4a; color: #000; border-color: #29ff4a; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #05010f; color: #fff; touch-action: none; user-select: none; -webkit-user-select: none; overscroll-behavior: none; }
+  canvas#screen { position: fixed; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
 </style>
 </head>
 <body>
-<canvas id="screen" aria-label="Space Invaders"></canvas>
-<div id="pad">
-  <div class="row"><button class="small" data-k="1p">1 PLAYER</button><button class="small" data-k="2p">2 PLAYERS</button><button class="small" data-k="diff">NORMAL</button><button class="small" data-k="pause">PAUSE</button><button class="small" data-k="sound">SOUND</button></div>
-  <div class="row"><button data-k="left">&#9664;</button><button data-k="right">&#9654;</button><button class="fire" data-k="fire">FIRE</button></div>
-</div>
+<canvas id="screen" aria-label="Space Invaders Extreme"></canvas>
 <script src="js/sprites.js"></script>
+<script src="js/audio.js"></script>
 <script src="js/game.js"></script>
 </body>
 </html>

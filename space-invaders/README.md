@@ -1,49 +1,46 @@
-# Space Invaders
+# Space Invaders Extreme (remix)
 
-A remake of Taito's 1978 arcade board. Everything is drawn from hand-copied
-bitmaps on the original 224x256 portrait screen, with the green and red
-cellophane overlay, a CRT glow and synthesised sound.
+A 2D take on Taito's 2008 Space Invaders Extreme: the 1978 invaders, recoloured
+in neon, marching to a beat engine instead of the old four-note thump. Everything
+is vanilla JS on one canvas, with synthesised music and effects.
 
-## Faithful bits
+## How it plays
 
-- One alien moves per frame, so the rack ripples across the screen and
-  speeds up on its own as you thin it out. The last alien runs right at
-  3 pixels a frame.
-- Four-note bass march that quickens with the rack.
-- Three bomb types: the rolling bomb drops from the column above you, the
-  plunger and squiggly bombs follow the board's fixed column tables, and
-  the plunger stops when one alien is left. Fire rate climbs with your score.
-- Bunkers erode pixel by pixel from shots, bombs and invaders flying
-  through them. Bombs that miss blow holes in the floor line.
-- Alien explosions freeze the rack for a moment, like the original.
-- Mystery ship every 25.6 seconds while 8+ aliens remain. Its score comes
-  from the board's table indexed by your shot count, so the 23rd shot and
-  every 15th after it is worth 300.
-- Extra life at 1,500. Later waves start lower down the screen.
-- Attract mode: the typed-out title and score advance table, the alien
-  that swaps the upside-down Y in PLAY every other cycle, a demo game, and
-  the insert coin screens. Credits, 1 or 2 player starts, and two-player
-  alternating turns with separate racks and bunkers.
-
-## Difficulty
-
-| Level | Lives | Bomb rate | Bomb speed | March |
-|---|---|---|---|---|
-| Easy | 5 | 0.6x | 0.8x | normal, 2 bombs max |
-| Normal | 3 | arcade | arcade | arcade |
-| Hard | 3 | 1.8x | 1.3x | double speed |
-
-A test bot that leads its shots reaches wave 9 on Easy, wave 2 on Normal
-and dies in wave 1 on Hard.
+- Invaders come in four colours: red, blue, green and black. Shoot four of the
+  same colour in a row and your next shots pick up that colour's power for a few
+  seconds: red bombs, blue piercing lasers, green spread shot, black shield.
+- Finish two chains and a UFO shows up. What it does depends on the two colours
+  you chained: a matching pair gives a points UFO, black plus green spins a
+  roulette (1UP, ghost, double score, freeze, UFO time, +5000), black plus red
+  turns the whole rack into UFOs, black plus blue freezes them, and anything else
+  opens a Round.
+- Rounds are short challenges (clear the wave, shoot only one colour, hit the
+  marked targets, or survive). Win one and you get Fever: 12 seconds of faster
+  music, maxed out fire and big score.
+- Special invaders mixed into later waves: armoured (three hits), bomb carriers
+  that blow up their neighbours, splitters, divers that break formation when hit,
+  and shielded ones that bounce shots back.
+- Cannon level goes up a step every wave and boss, and drops two when you're hit.
+  Kills inside a short window build a combo multiplier.
+- Five stages of three waves each, then a boss: Giant Crab, Twin Squids,
+  Mothership (kill the turrets to open the core), Mirror Lord (orbiting mirrors
+  bounce everything but lasers) and the Invader King, who telegraphs beam strikes
+  in his later phases. Score well and you take the harder B route.
 
 ## Controls
 
-Left/Right or A/D move, Space/Up/W fire. Enter (or a tap) starts a
-1-player game; 5 or C inserts a coin, 1 and 2 start games with credits.
-X changes difficulty on the title screens, P pauses, M mutes, O toggles
-the colour overlay, T toggles the CRT effect. Phones get on-screen
-buttons.
+- Player 1: A / D to move, W or Space to fire.
+- Player 2 (co-op): arrow keys, Up or Enter to fire.
+- Touch / mouse: drag anywhere to steer, hold to fire. In co-op each half of the
+  screen controls one ship.
+- P or Esc pauses.
 
-```bash
-python server.py    # http://localhost:8080
-```
+## Difficulty
+
+Easy gives 5 lives with slower, sparser enemy fire. Hard gives 3 lives with
+faster bullets and a quicker march. Hi-scores are kept per difficulty.
+
+## Run it
+
+`python server.py` and open http://localhost:8080. On Railway the service uses
+this folder as its root and the Dockerfile here.
