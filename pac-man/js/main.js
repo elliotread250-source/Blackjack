@@ -182,8 +182,14 @@
     } else {
       place(btnMute, vw - sar - m - bs, sat + m);
       place(btnPause, vw - sar - m * 2 - bs * 2, sat + m);
-      link.style.left = (sal + 6) + 'px'; link.style.top = (sat + 6) + 'px';
-      link.style.bottom = 'auto'; link.style.right = 'auto';
+      link.style.left = (sal + 6) + 'px'; link.style.right = 'auto';
+      if (left - sal >= 110 || top - sat >= 34) {
+        // In the letterbox, clear of the screen.
+        link.style.top = (sat + 6) + 'px'; link.style.bottom = 'auto';
+      } else {
+        // No room beside the screen: bottom-left, over the empty lives row.
+        link.style.top = 'auto'; link.style.bottom = (sab + 4) + 'px';
+      }
     }
   }
   window.addEventListener('resize', layout);

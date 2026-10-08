@@ -266,6 +266,21 @@
     .card.wide .swatch { width: 30px; height: 30px; }
     .card.wide .bestline { margin: 8px 0; }
   }
+  /* small portrait phones (iPhone SE class) */
+  @media (max-height: 680px) and (max-width: 559px) {
+    .overlay { padding-top: max(50px, calc(env(safe-area-inset-top) + 44px)); }
+    .card { padding: 14px 14px 12px; }
+    .logo { margin-bottom: 8px; gap: 10px; }
+    .logo img { width: 38px; height: 38px; }
+    h1 { font-size: 30px; }
+    .settings { gap: 7px; }
+    .glabel { margin-bottom: 3px; }
+    .seg button { padding: 6px 3px; }
+    .swatch { width: 30px; height: 30px; }
+    .bestline { margin: 9px 0 8px; }
+    .play { padding: 10px; font-size: 19px; }
+    .card .hint { display: none !important; }
+  }
   @media (max-width: 360px) {
     .seg button { font-size: 13.5px; }
     h1 { font-size: 34px; }
