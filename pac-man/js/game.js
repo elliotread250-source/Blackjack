@@ -533,7 +533,8 @@
     this.ghostCombo++;
     this.addScore(pts);
     g.fright = false;
-    g.state = 'eyes';
+    // Caught in the doorway on the way out: the eyes drop straight back in.
+    g.state = g.state === 'leaving' ? 'entering' : 'eyes';
     this.freeze = 60;
     this.eatenGhost = g;
     this.eatenPts = pts;

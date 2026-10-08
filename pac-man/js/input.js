@@ -56,6 +56,7 @@
       swipe.x = e.clientX; swipe.y = e.clientY; swipe.moved = true;
     }, { passive: true });
     function end(e) {
+      if (e.type === 'pointerup') h.gesture(); // iOS only unlocks audio on touchend
       if (!swipe || e.pointerId !== swipe.id) return;
       var s = swipe;
       swipe = null;

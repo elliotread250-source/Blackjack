@@ -26,6 +26,7 @@
   var startHi = 0;
   var game = new PM.Game({
     sfx: function (name) {
+      if (game && game.state === 'attract') return; // the attract mode is silent, as in the arcade
       switch (name) {
         case 'intro': A.intro(); break;
         case 'chomp': A.chomp(); break;
