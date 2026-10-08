@@ -11,8 +11,9 @@ import { InventoryScreen } from './ui/inventory';
 import { TouchControls } from './ui/touch';
 import { buildAtlas, rebuildAtlas } from './render/atlas';
 import { isResourcePack, setCustomPack, customPackInfo } from './blocks/packs';
-import { loadCustomPack } from './blocks/importer';
+import { loadCustomPack, saveCustomPack } from './blocks/importer';
 import type { CustomPack } from './blocks/importer';
+import { keyFromLink, rememberedKey, unlockPack } from './blocks/unlock';
 import { Renderer } from './render/renderer';
 import { Input } from './game/input';
 import { Sounds } from './game/audio';
@@ -220,6 +221,39 @@ async function boot() {
       // still failing: keep the player's choice; the next start tries again
     })();
   }
+
+  // A private pack link (#pack=...) adds the owner's locked texture pack to Resource Packs (not
+  // switched on). A key remembered from an earlier link only restores the pack when this
+  // browser has lost it (and switches it back on if it was the selected pack).
+  const unlockFrom = async (key: string, fromLink: boolean, reselect: boolean) => {
+    if (fromLink) menus.notice('Unlocking your texture pack...', 30);
+    try {
+      const pack = await unlockPack(key);
+      setCustomPack(pack);
+      menus.importedPackChanged();
+      await saveCustomPack(pack).catch((e) => console.warn('[packs] could not store the unlocked pack', e));
+      if (reselect) { settings.resourcePack = 'custom'; handlers.settingsChanged(settings); }
+      else if (settings.resourcePack === 'custom') applyResourcePack('custom');
+      if (fromLink) menus.notice(`${pack.name} added. Pick it in Options > Resource Packs.`);
+    } catch (e) {
+      if (fromLink) menus.notice(e instanceof Error ? e.message : String(e), 12);
+      else console.warn('[packs] could not restore the pack from its link', e);
+    }
+  };
+  const linkKey = keyFromLink();
+  const packKey = linkKey ?? rememberedKey();
+  if (packKey) {
+    void (async () => {
+      const stored = await customLoad;
+      if (!linkKey && stored !== null) return;       // still stored, or storage unreadable right now
+      await unlockFrom(packKey, !!linkKey, !linkKey && wantCustom && first === null);
+    })();
+  }
+  // the link opened in a tab that already shows the game only changes the #fragment
+  window.addEventListener('hashchange', () => {
+    const k = keyFromLink();
+    if (k) void unlockFrom(k, true, false);
+  });
 
   // Click on the game view to grab the mouse again.
   canvas.addEventListener('mousedown', () => {
