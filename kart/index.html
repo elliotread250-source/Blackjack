@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#14123a">
-<meta name="description" content="3D kart racing in the browser: five tracks, drifting and mini-turbos, items, bots, Grand Prix, time trials with ghosts and online races for up to eight players.">
+<meta name="description" content="3D kart racing in the browser: eight tracks (outdoor and indoor), drifting and mini-turbos, items, bots, Grand Prix, time trials with ghosts and online races for up to eight players.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <title>Kart</title>
@@ -244,6 +244,7 @@
     .tcard { padding: 6px; gap: 3px; } .tcard b { font-size: 13px; }
     .tracks { gap: 8px; margin: 2px 0 8px; }
     .tgroup { font-size: 11px; margin: 0 2px -5px; }
+    .tracks:not(.cups) .tcard canvas { aspect-ratio: 2 / 1; }
     .opts { gap: 10px; flex-wrap: nowrap; padding: 8px 10px !important; }
     .opts .seg button { min-width: 30px; padding: 6px 8px; flex: none; white-space: nowrap; }
     .opts .btn { padding: 8px 14px; font-size: 14px; }
@@ -287,7 +288,7 @@
   <div class="top"><button class="btn small" data-back>&larr; Back</button><h2>Choose a mode</h2></div>
   <div class="cards">
     <button class="card" data-mode="race"><div class="ic" style="background:#ff4f8b">1</div><b>Single Race</b><span>Pick a track and race seven bots. Easy, Normal or Hard.</span></button>
-    <button class="card" data-mode="gp"><div class="ic" style="background:#ffbe1a;color:#2a1c00">GP</div><b>Grand Prix</b><span>All five tracks in a row. Points for every finish: 15, 12, 10, 8, 6, 4, 2, 1.</span></button>
+    <button class="card" data-mode="gp"><div class="ic" style="background:#ffbe1a;color:#2a1c00">GP</div><b>Grand Prix</b><span>Pick a cup: Outdoor (5 races), Indoor (3) or the Grand Tour (all 8). Points for every finish: 15, 12, 10, 8, 6, 4, 2, 1.</span></button>
     <button class="card" data-mode="tt"><div class="ic" style="background:#3fd5ff;color:#06263a">&#9201;</div><b>Time Trial</b><span>Just you, three turbos and the clock. Race your best lap's ghost.</span></button>
     <button class="card" data-mode="online"><div class="ic" style="background:#5ee08a;color:#063018">&#8734;</div><b>Online</b><span>Rooms for up to 8 with a share link, or quick match.</span></button>
   </div>
@@ -371,7 +372,7 @@
       <button class="toggle" id="st-tilt">Tilt steering (hold the phone like a wheel) <i></i></button>
       <button class="toggle" id="st-fps">Show FPS <i></i></button>
       <h3>Keys</h3>
-      <div class="muted" style="font-size:13px;line-height:1.6">Drive: WASD or arrows &middot; Hop / drift: Space or Shift &middot; Item: E or Ctrl (hold S/&darr; to throw back) &middot; Look back: C &middot; Reset: R &middot; Pause: P or Esc &middot; Mute: M. Gamepads work too.</div>
+      <div class="muted" style="font-size:13px;line-height:1.6">Drive: WASD or arrows (tap to nudge, hold to turn fully) &middot; Hop / drift: Space or Shift &middot; Item: E or Ctrl (hold S/&darr; to throw back) &middot; Look back: C &middot; Reset: R &middot; Pause: P or Esc &middot; Mute: M. Gamepads work too. On touch screens: slide your thumb on the left half to steer.</div>
     </div>
     <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn primary" data-back>Done</button></div>
   </div>

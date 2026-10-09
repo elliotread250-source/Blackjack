@@ -201,6 +201,11 @@ export class Track {
     const BKs = new Float32Array(N);
     for (let i = 0; i < N; i++) { let s = 0; for (let k = -4; k <= 4; k++) s += BK[(i + k + N) % N]; BKs[i] = s / 9; }
     this.BK = BKs;
+    // indoors: a banked corner at floor level lifts its outer side instead of sinking the inner edge into the floor
+    if (def.indoor) {
+      for (let i = 0; i < N; i++) PY[i] = Math.max(PY[i], Math.abs(BKs[i]) * HW[i] + 0.02);
+      for (let i = 0; i < N; i++) { const a = (i - 1 + N) % N, b = (i + 1) % N; this.SL[i] = (PY[b] - PY[a]) / (2 * ds); }
+    }
 
     // ---- features
     this.ramps = (def.ramps || []).map(r => ({ lip: sOfU(r.at), len: r.len || 12, h: r.h || 2.5, gap: r.gap || 0, land: r.land }));

@@ -246,10 +246,11 @@ function buildTracks() {
       list.querySelectorAll('.tcard').forEach(x => x.classList.toggle('sel', x === b));
     };
   } else {
+    const short = window.matchMedia('(max-height: 520px)').matches; // phones in landscape: wider, flatter thumbnails so both groups fit
     const card = i => {
       const t = TRACK_DEFS[i], b = best(t.id);
       const bl = b ? (tt && b.lap ? `Best lap ${fmtTime(b.lap * 1000)}` : b.race ? `Best ${fmtTime(b.race * 1000)}` : '') : '';
-      return `<button class="tcard${settings.track === i ? ' sel' : ''}" data-i="${i}"><canvas width="240" height="180"></canvas><b>${t.name}</b><small>${t.blurb}</small><span class="best">${bl}</span></button>`;
+      return `<button class="tcard${settings.track === i ? ' sel' : ''}" data-i="${i}"><canvas width="240" height="${short ? 120 : 180}"></canvas><b>${t.name}</b><small>${t.blurb}</small><span class="best">${bl}</span></button>`;
     };
     const idx = TRACK_DEFS.map((t, i) => i);
     const out = idx.filter(i => !TRACK_DEFS[i].indoor), ind = idx.filter(i => TRACK_DEFS[i].indoor);
@@ -680,6 +681,8 @@ function resize() {
   checkRotate();
 }
 window.addEventListener('resize', resize);
+let tracksShort = null;
+window.addEventListener('resize', () => { const sh = window.matchMedia('(max-height: 520px)').matches; if (current === 'tracks' && tracksShort !== null && sh !== tracksShort) buildTracks(); tracksShort = sh; });
 window.addEventListener('orientationchange', () => setTimeout(resize, 200));
 
 // ---------- main loop

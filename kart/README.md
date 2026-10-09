@@ -1,8 +1,9 @@
 # Kart
 
-A 3D kart racer for the browser: five tracks, five karts you can paint and dress up, drifting with
-three-stage mini-turbos, item boxes, bots on three difficulties, a five-race Grand Prix, time trials
-against your own ghost, and online races for up to eight players with share links and quick match.
+A 3D kart racer for the browser: eight tracks (five outdoor, three indoor), five karts you can paint and
+dress up, Apex GP-style steering, drifting with three-stage mini-turbos, item boxes, bots on three
+difficulties, Grand Prix cups, time trials against your own ghost, and online races for up to eight players
+with share links and quick match.
 It runs on three.js with low-poly karts from Kenney (CC0), everything else is generated in code, and
 there is no build step: the folder is the game.
 
@@ -18,7 +19,13 @@ there is no build step: the folder is the game.
   four wheel styles (Sport, Classic, Stealth, Off-road), five drivers (Oobi, Oodi, Ooli, Oopi, Oozi) with driver and
   helmet colours, a race number from 0 to 99, a spoiler and an antenna flag. Saved on your device and shown to everyone
   you race online.
-- **Arcade handling**: grip and slides, hop and drift (hold drift while steering) with a mini-turbo that charges blue,
+- **Steering like Apex GP**: a single-track (bicycle) vehicle model with front and rear tyre slip angles, a
+  Pacejka-style tyre curve, tyre relaxation, a friction ellipse, yaw inertia and load transfer, blended to a
+  kinematic model at walking pace. Keys ramp the steering in progressively (slower at speed), return to centre
+  faster and counter-steer fastest, so a tap nudges and a hold turns fully; the maximum wheel angle drops with
+  speed so the kart stays planted. Sticks, the touch pad and tilt skip the ramp. Kart types change grip, steering
+  lock, yaw inertia and mass.
+- **Arcade handling on top**: hop and drift (hold drift while steering) with a mini-turbo that charges blue,
   orange then purple, boost pads, rocket starts, off-road slowdown, ice, jumps with air control, banked corners,
   walls you slide along, kart-to-kart bumps where heavier karts win, and a rescue drone that puts you back on the
   track if you fall, land in lava or get stuck (or press R).
@@ -28,18 +35,23 @@ there is no build step: the folder is the game.
 - **Bots** follow a racing line computed from the track, brake for corners they see coming, drift through long
   bends for mini-turbos, take shortcuts, dodge karts and bananas, use items sensibly and recover when hit. Easy,
   Normal and Hard change their pace and skill; a little rubber-banding keeps races close.
-- **Modes**: Single Race (you and seven bots, 1 to 5 laps), Grand Prix (all five tracks, points 15/12/10/8/6/4/2/1,
-  standings after each race), Time Trial (three turbos, best times and a ghost of your best lap per track) and Online.
+- **Modes**: Single Race (you and seven bots, 1 to 5 laps), Grand Prix (pick a cup: **Outdoor Cup** of five races,
+  **Indoor Cup** of three, or the eight-race **Grand Tour**; points 15/12/10/8/6/4/2/1, standings after each race),
+  Time Trial (three turbos, best times and a ghost of your best lap per track) and Online.
 - **Looks and sound**: sky gradients and fog per track, a sun with a small shadow map that follows you (High
   graphics), drift sparks in the mini-turbo colours, boost flames, dust, grass and snow kick-up, explosions,
   confetti on the podium, a chase camera with a speed and boost FOV kick and a look-back button. All sound is
   synthesised: engines that follow your speed (and the karts near you), tyre screech, boosts, items, countdown beeps,
-  lap chimes, a finish fanfare and a little chiptune per track. Sound and music toggles are remembered.
-- **Phones**: on-screen steering buttons (or a slider), gas, brake, drift, item and look-back buttons,
-  auto-accelerate, works in landscape and asks you to rotate in portrait. Low graphics are picked automatically
+  lap chimes, a finish fanfare and a little chiptune per track (garage rock in the Kart Hall, four-on-the-floor
+  synthwave in the Neon Arena, a swung toy-piano tune in the Toy Room). Sound and music toggles are remembered.
+- **Phones**: drag-to-steer pad (put your thumb down anywhere on the left half and slide; a knob shows where you
+  are), optional tilt steering (Settings, or the TILT button in a race; hold the phone level to centre), gas,
+  brake, drift, item and look-back buttons, auto-accelerate, works in landscape and asks you to rotate in portrait. Low graphics are picked automatically
   on touch devices (no shadow map, fewer props, capped resolution); you can switch in Settings.
 
 ## Tracks
+
+**Outdoor**:
 
 1. **Sunny Meadow**: a wide, gentle circuit over rolling green hills with a windmill, a grandstand and a dirt
    shortcut lane on the long left-hander.
@@ -52,6 +64,17 @@ there is no build step: the folder is the game.
 5. **Lava Island**: climbs the volcano past fields of lava (touch it and the drone fishes you out), along an
    open ridge with no barriers, then leaps down its flank.
 
+**Indoor** (fully enclosed: walls and roof, no sky; lit by emissive strip lights, panels and screens with only the
+two cheap lights every track uses, so phones keep their frame rate):
+
+6. **Kart Hall**: a real indoor karting centre. Polished concrete with painted lines, red-and-white tyre-stack
+   barriers, a tight figure-eight with hairpins and a steel bridge where the track passes over itself, roof
+   trusses with fluorescent strips, a viewing gallery with a crowd, and a pit area with parked karts.
+7. **Neon Arena**: a dark floor with neon LED strips along every barrier, banked turns, a ramp up to a mezzanine
+   and back down, four giant screens with a scrolling ticker, stands with a crowd, and ceiling rigs with light cones.
+8. **Toy Room**: race a giant playroom on wooden floorboards and a rug, round giant letter blocks, up a ramp of
+   books onto a table and off its edge in a jump, across a toy-train track, past a giant sofa and a sunny window.
+
 Each track is a closed Catmull-Rom spline. From it the game builds the road with banking and elevation, kerbs
 on corners, off-road bands, walls or open edges, boost pads, item box rows, shortcut lanes behind dividers,
 jumps, the racing line the bots use, the checkpoints for lap counting, the minimap and the track card.
@@ -60,7 +83,7 @@ jumps, the racing line the bots use, the checkpoints for lap counting, the minim
 
 | Action | Keyboard | Gamepad | Touch |
 | --- | --- | --- | --- |
-| Steer | A / D or Left / Right | Left stick, d-pad | Arrow buttons or slider (left) |
+| Steer | A / D or Left / Right (progressive) | Left stick (deadzone, curved response), d-pad | Drag pad (left half), or tilt |
 | Accelerate / brake and reverse | W / S or Up / Down | RT / LT (or A / B) | GAS / BRAKE (auto-accelerate optional) |
 | Hop and drift | Space or Shift (hold while steering) | RB or X | DRIFT |
 | Use item | E or Ctrl (hold brake to throw back) | LB or Y | ITEM |
@@ -79,7 +102,8 @@ proxies the socket). It is standard-library Python only.
 - **Rooms**: up to 8 players behind a 4-letter code. Create a room and share the code or the `?room=CODE` link
   (copy and share buttons), join by code, or use **Quick match**, which puts you in the fullest open public lobby or
   opens a new one. The creator is the host; if the host leaves, the next player takes over.
-- **Lobby**: everyone's name, kart colours, kart type, number and ready flag. The host picks the track, the lap
+- **Lobby**: everyone's name, kart colours, kart type, number and ready flag. The host picks the track (any of the
+  eight, indoor ones included), the lap
   count (1 to 5) and whether bots fill the empty places, and starts the race once everyone is ready. You can open the
   garage from the lobby and your new look is sent to the room straight away.
 - **Start**: the server sends a start time on its own clock. Clients sync to the server clock with ping/pong

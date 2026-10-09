@@ -147,8 +147,10 @@ export function stepKart(k, tr, dt = DT) {
     k.ev.push({ type: 'hop' });
   }
   const canDrift = !spun && u > 9;
-  if (!k.drift && k.grounded && inp.drift && canDrift && Math.abs(k.steerRaw) > 0.3 && (k.landT < 0.22)) {
-    k.drift = Math.sign(k.steerRaw); k.driftT = 0; k.driftStage = 0;
+  // direction from the held key (keyboard: the ramp may not have built up during a short hop) or the stick
+  const dsrc = inp.analog ? k.steerRaw : target;
+  if (!k.drift && k.grounded && inp.drift && canDrift && Math.abs(dsrc) > 0.3 && (k.landT < 0.22)) {
+    k.drift = Math.sign(dsrc); k.driftT = 0; k.driftStage = 0;
     k.ev.push({ type: 'driftStart', dir: k.drift });
   }
   if (k.drift) {

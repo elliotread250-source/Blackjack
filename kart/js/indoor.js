@@ -11,7 +11,7 @@ export const INDOOR_THEMES = {
     indoor: true, style: 'hall', H: 24,
     skyTop: '#39404d', skyHorizon: '#9aa3b2', fog: '#7d8594', fogNear: 140, fogFar: 520, bg: '#2b2f37',
     sun: '#ffffff', sunI: 1.5, sunDir: [0.25, 1, 0.18], hemiSky: '#f4f6ff', hemiGround: '#70747e', hemiI: 1.7,
-    road: '#8a8f99', roadAlt: '#8d929c', line: '#ffd23f', kerb: ['#e3342f', '#f7f7f7'],
+    road: '#666b75', roadAlt: '#6a6f79', line: '#ffd23f', kerb: ['#e3342f', '#f7f7f7'],
     off: { [SURF.GRASS]: '#4f6d8c', [SURF.DIRT]: '#6b7280' },
     wall: ['#26282e', '#2e3138'], wallH: 1.0, ground: '#a3a8b0', ground2: '#959aa3', rock: '#6b6f78',
   },
@@ -34,7 +34,6 @@ export const INDOOR_THEMES = {
   },
 };
 
-const lam = new Map();
 function vcMat(opts = {}) { return new THREE.MeshLambertMaterial({ vertexColors: true, ...opts }); }
 
 export function buildIndoor(tr, th, grid, R, quality, anim) {
@@ -77,7 +76,7 @@ function buildShell(g, th, room, hi, anim) {
   let floorTex, wallTex, ceilColor, wallRepeat = [w / 24, 1];
   if (th.style === 'hall') {
     floorTex = canvasTex(256, 256, (x, W, Hh) => {
-      x.fillStyle = '#a3a8b0'; x.fillRect(0, 0, W, Hh);
+      x.fillStyle = '#b3b8c0'; x.fillRect(0, 0, W, Hh);
       const r = rng(4);
       for (let i = 0; i < 900; i++) { x.fillStyle = `rgba(${r() < 0.5 ? '255,255,255' : '40,44,52'},${0.05 + r() * 0.06})`; x.fillRect(r() * W, r() * Hh, 2 + r() * 6, 2 + r() * 6); }
       x.strokeStyle = 'rgba(60,64,72,0.35)'; x.lineWidth = 2; x.strokeRect(0, 0, W, Hh);
@@ -149,10 +148,26 @@ function buildSupports(g, tr, th, hi, lowClear) {
   const style = th.style;
   const bookCols = ['#e3342f', '#3fa9ff', '#ffd23f', '#5ecb6b', '#a66bff', '#ff8fd0', '#f7f7f7'];
   let tableBox = null;
+  // low banked or rising sections: solid sides down to the floor (an embankment), not a deck on stilts
+  const skirt = new Builder();
+  const skirtCol = new THREE.Color(style === 'arena' ? '#1d1b33' : style === 'hall' ? '#4a5160' : '#b57d4a');
+  const skirtTop = style === 'toy' ? 1.0 : 3.2;
+  for (let s = 0; s < tr.L; s += 2.5) {
+    const s1 = Math.min(tr.L, s + 2.5);
+    if (tr.pitRamp(s) || tr.pitRamp(s1)) continue;
+    const fa = tr.frame(s), fb = tr.frame(s1);
+    if (Math.max(fa.y, fb.y) >= skirtTop) continue;
+    for (const side of [-1, 1]) {
+      const a = tr.pointAt(s, side * ((side > 0 ? fa.extR : fa.extL) + 0.02)), b = tr.pointAt(s1, side * ((side > 0 ? fb.extR : fb.extL) + 0.02));
+      if (a.y < 0.06 && b.y < 0.06) continue;
+      skirt.quad({ x: a.x, y: a.y, z: a.z }, { x: b.x, y: b.y, z: b.z }, { x: b.x, y: -0.05, z: b.z }, { x: a.x, y: -0.05, z: a.z }, skirtCol);
+    }
+  }
+  if (skirt.p.length) g.add(new THREE.Mesh(skirt.geometry(), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide })));
   for (let s = 0; s < tr.L; s += 2.5) {
     if (tr.pitRamp(s + 1.25)) continue;
     const f = tr.frame(s + 1.25);
-    if (f.y < 1.0) continue;
+    if (f.y < (style === 'toy' ? 1.0 : skirtTop)) continue;
     const a = tr.pointAt(s + 1.25, -f.extL - 0.6), c = tr.pointAt(s + 1.25, f.extR + 0.6);
     const width = Math.hypot(c.x - a.x, c.z - a.z), mx = (a.x + c.x) / 2, mz = (a.z + c.z) / 2, ry = Math.atan2(f.fx, f.fz);
     if (style === 'toy') {
@@ -176,14 +191,15 @@ function buildSupports(g, tr, th, hi, lowClear) {
     }
     // deck under the road
     const deckW = style === 'arena' ? width + 8 : width;
-    const deck = new THREE.BoxGeometry(deckW, 0.9, 2.6);
-    deck.rotateY(ry);
+    const pitch = -Math.atan(f.sl || 0);
+    const deck = new THREE.BoxGeometry(deckW, 0.9, 2.62);
+    deck.rotateX(pitch); deck.rotateY(ry);
     parts.push(part(deck, style === 'arena' ? '#1d1b33' : '#4a5160', mx, f.y - 0.55, mz));
     if (style === 'arena') {
       // glowing deck edges
       for (const side of [-1, 1]) {
         const e = tr.pointAt(s + 1.25, side * ((side > 0 ? f.extR : f.extL) + 4.6));
-        const eg = new THREE.BoxGeometry(0.25, 0.25, 2.6); eg.rotateY(ry);
+        const eg = new THREE.BoxGeometry(0.25, 0.25, 2.62); eg.rotateX(pitch); eg.rotateY(ry);
         glow.push(part(eg, side > 0 ? th.neon[0] : th.neon[1], e.x, f.y - 0.15, e.z));
       }
     }
@@ -272,11 +288,17 @@ function hallProps(g, tr, th, room, R, hi, clearAll, anim) {
   }
   g.add(new THREE.Mesh(merge(lights), new THREE.MeshBasicMaterial({ vertexColors: true })));
   // tyre-stack barriers along the walls (instanced)
-  const tyre = merge([
-    part(new THREE.CylinderGeometry(0.55, 0.55, 1.15, 10), '#1c1d21', 0, 0.575, 0),
-    part(new THREE.CylinderGeometry(0.57, 0.57, 0.22, 10), '#ffffff', 0, 0.95, 0),
-    part(new THREE.CylinderGeometry(0.57, 0.57, 0.22, 10), '#ffffff', 0, 0.3, 0),
-  ]);
+  // one open cylinder whose band texture is tinted per instance (red or white bands on black rubber) + a top cap
+  const seg = hi ? 9 : 6;
+  const bandTex = canvasTex(4, 32, (x, W, Hh) => {
+    x.fillStyle = '#1c1d21'; x.fillRect(0, 0, W, Hh);
+    x.fillStyle = '#ffffff'; x.fillRect(0, Hh * 0.12, W, Hh * 0.18); x.fillRect(0, Hh * 0.62, W, Hh * 0.18);
+  });
+  const tg = new THREE.CylinderGeometry(0.56, 0.56, 1.15, seg, 1, true).translate(0, 0.575, 0);
+  const cap = new THREE.CircleGeometry(0.56, seg).rotateX(-Math.PI / 2).translate(0, 1.15, 0);
+  { const uv = cap.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, 0.5, 0.97); } // plain rubber on top
+  const tyre = merge([colorGeo(tg, '#ffffff'), colorGeo(cap, '#ffffff')]);
+  const tyreMat = new THREE.MeshLambertMaterial({ vertexColors: true, map: bandTex });
   const stacks = [];
   const step = hi ? 1.2 : 2.4;
   for (let s = 0; s < tr.L; s += step) {
@@ -288,7 +310,7 @@ function hallProps(g, tr, th, room, R, hi, clearAll, anim) {
       stacks.push({ x: p.x, y: p.y + (f.y > 1 ? 0 : 0), z: p.z, ry: R() * 6, s: 1, c: Math.floor(s / step) % 2 ? '#e3342f' : '#ffffff' });
     }
   }
-  g.add(placeInstances(tyre, vcMat(), stacks, false));
+  g.add(placeInstances(tyre, tyreMat, stacks, false));
   // viewing gallery along the wall nearest the start straight
   const f0 = tr.frame(20);
   const sideToWall = [[z0, 'z0'], [z1, 'z1'], [x0, 'x0'], [x1, 'x1']].map(([v, k]) => ({ k, dist: k[0] === 'z' ? Math.abs(f0.z - v) : Math.abs(f0.x - v) })).sort((a, b) => a.dist - b.dist)[0].k;
