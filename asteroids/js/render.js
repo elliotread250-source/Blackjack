@@ -12,7 +12,8 @@
   const TAU = Math.PI * 2;
   const LEVELS = [1, 0.72, 0.42];
   const BEAM = '#f4f8ff';
-  const GLOW = 'rgba(190, 215, 255, 0.95)';
+  const GLOW = 'rgba(170, 200, 255, 0.95)';
+  const BLOOM_DIV = 4;
 
   class Renderer {
     constructor(canvas) {
@@ -21,7 +22,7 @@
       this.segs = [[], [], []];
       this.dots = [[], [], []];
       this.trails = false;
-      this.quality = 2;              // 2: blur glow, 1: cheap glow
+      this.quality = 2;              // 2: blurred bloom, 1: bloom without blur, 0: none
       this.view = { x: 0, y: 0, scale: 1, W: 1024, H: 768 };
       this.dpr = 1; this.cssW = 1; this.cssH = 1;
       this.fresh = true;
@@ -35,6 +36,15 @@
       if (this.cv.height !== h) this.cv.height = h;
       this.cv.style.width = cssW + 'px';
       this.cv.style.height = cssH + 'px';
+      // The bloom layer: a quarter-resolution copy of the beams, blurred and
+      // added back on top, which is far cheaper than blurring at full size.
+      if (!this.bc) {
+        this.bc = document.createElement('canvas');
+        this.bctx = this.bc.getContext('2d');
+      }
+      this.bw = Math.ceil(w / BLOOM_DIV); this.bh = Math.ceil(h / BLOOM_DIV);
+      if (this.bc.width !== this.bw) this.bc.width = this.bw;
+      if (this.bc.height !== this.bh) this.bc.height = this.bh;
       this.fresh = true;
     }
 
@@ -71,6 +81,7 @@
       const ctx = this.ctx;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
       ctx.shadowBlur = 0;
       if (this.trails && !this.fresh) {
         const keep = Math.pow(0.42, Math.min(4, dt * 60));
@@ -81,46 +92,82 @@
         ctx.fillRect(0, 0, this.cv.width, this.cv.height);
       }
       this.fresh = false;
+      if (this.bctx && this.quality > 0) {
+        this.bctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.bctx.clearRect(0, 0, this.bw, this.bh);
+      }
+      this.bloomed = false;
       for (let b = 0; b < 3; b++) { this.segs[b].length = 0; this.dots[b].length = 0; }
     }
 
-    flush(dim) {
-      const ctx = this.ctx, v = this.view, d = this.dpr;
-      const k = d * v.scale;
+    /** Stroke one batch of beams: crisp at full resolution, plus into the bloom layer. */
+    pass(ctx, k, ox, oy, lw, dim, glow) {
+      const v = this.view;
       ctx.save();
-      ctx.setTransform(k, 0, 0, k, d * v.x, d * v.y);
+      ctx.setTransform(k, 0, 0, k, ox, oy);
       ctx.beginPath();
       ctx.rect(0, 0, v.W, v.H);
       ctx.clip();
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      const lw = Math.max(1.7, 1.25 / v.scale);
-      const blurCss = Math.max(4, Math.min(11, 9 * v.scale));
+      if (glow) {
+        ctx.shadowColor = GLOW;
+        ctx.shadowBlur = glow;
+      }
+      ctx.strokeStyle = glow ? GLOW : BEAM;
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.lineWidth = lw;
       for (let b = 0; b < 3; b++) {
         const S = this.segs[b], D = this.dots[b];
         if (!S.length && !D.length) continue;
-        const a = LEVELS[b] * (dim || 1);
+        ctx.globalAlpha = LEVELS[b] * dim;
         ctx.beginPath();
         for (let i = 0; i < S.length; i += 4) { ctx.moveTo(S[i], S[i + 1]); ctx.lineTo(S[i + 2], S[i + 3]); }
-        const dp = new Path2D();
-        for (let i = 0; i < D.length; i += 3) { dp.moveTo(D[i] + D[i + 2], D[i + 1]); dp.arc(D[i], D[i + 1], D[i + 2], 0, TAU); }
-        // Halo: a wide, faint stroke under the beam.
-        ctx.globalAlpha = a * 0.16;
-        ctx.strokeStyle = GLOW; ctx.fillStyle = GLOW;
-        ctx.lineWidth = lw * 3.4;
         ctx.stroke();
-        // Beam, with a soft shadow blur for the phosphor bloom.
-        if (this.quality >= 2) {
-          ctx.shadowColor = GLOW;
-          ctx.shadowBlur = blurCss * d;
+        if (D.length) {
+          ctx.beginPath();
+          const grow = glow ? lw * 0.5 : 0;
+          for (let i = 0; i < D.length; i += 3) { ctx.moveTo(D[i] + D[i + 2] + grow, D[i + 1]); ctx.arc(D[i], D[i + 1], D[i + 2] + grow, 0, TAU); }
+          ctx.fill();
         }
-        ctx.globalAlpha = a;
-        ctx.strokeStyle = BEAM; ctx.fillStyle = BEAM;
-        ctx.lineWidth = lw;
-        ctx.stroke();
-        ctx.fill(dp);
-        ctx.shadowBlur = 0;
-        S.length = 0; D.length = 0;
+      }
+      ctx.restore();
+    }
+
+    flush(dim) {
+      const v = this.view, d = this.dpr;
+      dim = dim || 1;
+      const k = d * v.scale;
+      const lw = Math.max(1.7, 1.25 / v.scale);
+      if (this.quality > 0 && this.bctx) {
+        const kb = k / BLOOM_DIV;
+        // About 2.5 bloom pixels wide, blurred a little more at high quality.
+        this.pass(this.bctx, kb, d * v.x / BLOOM_DIV, d * v.y / BLOOM_DIV, 2.6 / kb, dim, this.quality >= 2 ? 3.5 : 0);
+        this.bloomed = true;
+      } else {
+        // No bloom layer: a wide faint stroke stands in for it.
+        this.pass(this.ctx, k, d * v.x, d * v.y, lw * 3.2, dim * 0.18, 0);
+      }
+      this.pass(this.ctx, k, d * v.x, d * v.y, lw, dim, 0);
+      for (let b = 0; b < 3; b++) { this.segs[b].length = 0; this.dots[b].length = 0; }
+    }
+
+    /** Add the bloom layer over the frame. */
+    end() {
+      if (!this.bloomed) return;
+      const ctx = this.ctx;
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.85;
+      ctx.imageSmoothingEnabled = true;
+      // Only the playfield (plus a margin for the glow) needs compositing.
+      const v = this.view, d = this.dpr / BLOOM_DIV;
+      const x0 = Math.max(0, Math.floor(v.x * d) - 2), y0 = Math.max(0, Math.floor(v.y * d) - 2);
+      const x1 = Math.min(this.bw, Math.ceil((v.x + v.W * v.scale) * d) + 2);
+      const y1 = Math.min(this.bh, Math.ceil((v.y + v.H * v.scale) * d) + 2);
+      if (x1 > x0 && y1 > y0) {
+        ctx.drawImage(this.bc, x0, y0, x1 - x0, y1 - y0, x0 * BLOOM_DIV, y0 * BLOOM_DIV, (x1 - x0) * BLOOM_DIV, (y1 - y0) * BLOOM_DIV);
       }
       ctx.restore();
     }

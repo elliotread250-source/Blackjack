@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#2a62d4"/>
+  <rect x="9" y="9" width="46" height="46" rx="4" fill="#ffffff"/>
+  <g stroke="#cfd6e2" stroke-width="1">
+    <path d="M16.67 9v46M24.33 9v46M39.67 9v46M47.33 9v46M9 16.67h46M9 24.33h46M9 39.67h46M9 47.33h46"/>
+  </g>
+  <g stroke="#1a2233" stroke-width="2">
+    <path d="M32 9v46M9 32h46"/>
+  </g>
+  <rect x="9" y="9" width="46" height="46" rx="4" fill="none" stroke="#1a2233" stroke-width="2.4"/>
+  <rect x="24.8" y="24.8" width="6.6" height="6.6" fill="#bcd4fb"/>
+  <g font-family="system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif" font-weight="700" font-size="9" text-anchor="middle" fill="#1a2233">
+    <text x="12.9" y="16">5</text>
+    <text x="28.2" y="23.6">3</text>
+    <text x="43.5" y="16">7</text>
+    <text x="20.5" y="38.9">8</text>
+    <text x="51.2" y="31.2">1</text>
+    <text x="35.9" y="46.5">6</text>
+    <text x="12.9" y="54.2">4</text>
+    <text x="51.2" y="54.2">9</text>
+  </g>
+  <text x="28.2" y="31.2" font-family="system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif" font-weight="500" font-size="9" text-anchor="middle" fill="#2a62d4">2</text>
+</svg>

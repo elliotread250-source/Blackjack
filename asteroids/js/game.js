@@ -193,7 +193,8 @@
         for (let n = 0; n < 2; n++) {
           const a = base + (n ? 1 : -1) * this.r(0.25, 1.2);
           const c = this.addRock(k.x, k.y, k.size - 1, a);
-          c.x += c.vx * 2; c.y += c.vy * 2;
+          c.x = (c.x + c.vx * 2 + this.W) % this.W;
+          c.y = (c.y + c.vy * 2 + this.H) % this.H;
           c.px = c.x; c.py = c.y;
         }
       }
@@ -460,7 +461,8 @@
         ang = this.rand() * TAU;
       }
       const c = Math.cos(ang), si = Math.sin(ang);
-      const x = u.x + c * u.hw * 0.5, y = u.y + si * u.hw * 0.3;
+      const x = (u.x + c * u.hw * 0.5 + this.W) % this.W;
+      const y = (u.y + si * u.hw * 0.3 + this.H) % this.H;
       this.bullets.push({
         x, y, px: x, py: y,
         vx: c * C.SAUCER_BULLET_SPEED, vy: si * C.SAUCER_BULLET_SPEED,

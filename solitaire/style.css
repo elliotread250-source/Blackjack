@@ -197,6 +197,7 @@ button { font: inherit; color: inherit; }
   position: relative;
   overflow: hidden;
   min-height: 0;
+  isolation: isolate;
   --cw: 100px;
   --ch: 140px;
   --cr: 6.5px;
@@ -249,6 +250,7 @@ button { font: inherit; color: inherit; }
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.22), 0 1px 3px rgba(0, 0, 0, 0.18);
 }
 .card.up .face { background-image: var(--front); }
+.card.under .face { box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.12); }
 .card.grab { cursor: grab; }
 .card.stockcard { cursor: pointer; }
 .card.dragging { cursor: grabbing; }

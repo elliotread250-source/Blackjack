@@ -385,6 +385,7 @@
     for (var k in animTimers) clearTimeout(animTimers[k]);
     animTimers = {};
     for (var i = 0; i < 81; i++) { anim[i] = ''; setCellClass(i); }
+    hintZone = [];
   }
 
   function boardAnim(cls, ms) {
@@ -407,6 +408,9 @@
   var hintTimer = 0;
   function showHint(text) {
     dom.hintText.textContent = text;
+    // Above the tools when the side panel has room, else over the tool row.
+    var room = dom.controls.getBoundingClientRect().top - dom.stage.getBoundingClientRect().top;
+    dom.hintbar.classList.toggle('above', dom.app.classList.contains('wide') && room > 110);
     dom.hintbar.hidden = false;
     clearTimeout(hintTimer);
     hintTimer = setTimeout(hideHint, Math.max(5000, text.length * 75));
@@ -414,6 +418,23 @@
   function hideHint() {
     clearTimeout(hintTimer);
     dom.hintbar.hidden = true;
+    setHintZone([]);
+  }
+  // Cells shaded to show where a hint's reasoning happens; they stay lit
+  // as long as the hint text is on screen.
+  var hintZone = [];
+  function setHintZone(cells) {
+    var k;
+    for (k = 0; k < hintZone.length; k++) {
+      var c = hintZone[k];
+      anim[c] = anim[c].replace(' hintzone', '');
+      setCellClass(c);
+    }
+    hintZone = cells.slice();
+    for (k = 0; k < hintZone.length; k++) {
+      anim[hintZone[k]] += ' hintzone';
+      setCellClass(hintZone[k]);
+    }
   }
 
   // ---------- moves ----------
@@ -577,8 +598,7 @@
       commit([[h.cell, 0, 0]]);
     }
     showHint(h.text);
-    var cells = h.cells || [];
-    for (var k = 0; k < cells.length; k++) if (cells[k] !== h.cell) animateCell(cells[k], 'hintzone', 2600);
+    setHintZone((h.cells || []).filter(function (c) { return c !== h.cell; }));
     placeDigit(h.cell, h.digit, { hint: true });
     if (h.kind === 'fix' && game.status === 'playing') render();
   }
@@ -987,7 +1007,8 @@
     el.scrollTop = 0;
     hideHint();
     syncClock();
-    var f = el.querySelector('.btn.primary, .level-opt.current, .level-opt, .btn, button:not(.modal-x)');
+    var sels = ['.btn.primary:not([hidden])', '.level-opt.current', '[aria-selected="true"]', '.btn:not([hidden])', 'button:not(.modal-x)'], f = null;
+    for (var k = 0; k < sels.length && !f; k++) f = el.querySelector(sels[k]);
     if (f) { try { f.focus({ preventScroll: true }); } catch (e) { f.focus(); } }
   }
   function closeModal() {
@@ -1206,8 +1227,8 @@
     var tallS = Math.min(W - padX, H - infoH - toolsH - numH - gapsT, 760);
     // Wide: board on the left, a panel on the right.
     var panel = Math.max(250, Math.min(340, Math.round(W * 0.3)));
-    var wideS = Math.min(H - infoH - 24, W - panel - 28 - padX - 8, 760);
-    var wide = wideS > tallS * 1.04 && wideS >= 300;
+    var wideS = Math.min(H - infoH - (window.innerHeight <= 480 ? 14 : 24), W - panel - 28 - padX - 8, 760);
+    var wide = wideS > tallS * 1.04;
     var S = Math.floor(wide ? wideS : tallS);
     if (S < 200) S = 200;
     var outer = S >= 480 ? 3 : 2, boxgap = S >= 480 ? 3 : 2;
@@ -1229,7 +1250,17 @@
       st.setProperty('--content', (bs + pw + 28) + 'px');
     } else {
       var bw = (bs - 8 * 5) / 9;
-      st.setProperty('--numh', Math.round(Math.min(numH, bw * 1.55)) + 'px');
+      var nh = Math.round(Math.min(numH, bw * 1.55));
+      // Tall phones have height to spare: grow the pad and the gap above
+      // the tools a little, so the controls sit nearer the thumb.
+      var spare = H - (16 + infoH + bs + toolsH + nh + gapsT);
+      if (spare > 0) {
+        var grow = Math.max(0, Math.min(spare * 0.35, bw * 1.95 - nh, 76 - nh));
+        nh += Math.round(grow);
+        spare -= grow;
+      }
+      st.setProperty('--numh', nh + 'px');
+      st.setProperty('--tgap', Math.round(Math.max(12, Math.min(12 + spare * 0.3, 44))) + 'px');
       st.setProperty('--numf', Math.round(Math.max(20, Math.min(bw * 0.62, 32))) + 'px');
       st.setProperty('--content', bs + 'px');
     }
@@ -1319,6 +1350,12 @@
       if (e.target === dom.modalRoot && modalDismissible()) closeModal();
     });
 
+    // Mouse clicks on game buttons should not leave them focused: the board
+    // is driven by document-level keys, and a stray focus ring (or Space
+    // re-clicking the button) only gets in the way.
+    dom.app.addEventListener('mousedown', function (e) {
+      if (e.target.closest && e.target.closest('.tool, .num, .icon-btn, .level-btn')) e.preventDefault();
+    });
     document.addEventListener('keydown', onKey);
     document.addEventListener('pointerdown', function () { Sound.unlock(); }, { passive: true });
 
@@ -1415,7 +1452,7 @@
     get stats() { return JSON.parse(JSON.stringify(stats)); },
     get settings() { return JSON.parse(JSON.stringify(settings)); },
     newGame: function (level) { newGame('classic', level || 'easy'); },
-    daily: startDaily,
+    playDaily: startDaily,
     select: function (i) { if (canPlay()) select(i); },
     core: C
   };

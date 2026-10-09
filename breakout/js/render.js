@@ -194,7 +194,6 @@
     neon(L, T, L, H, '#39d5ff');
     neon(Rr, T, Rr, H, '#39d5ff');
     neon(0, T, W, T, '#8b6bff');
-    c.restore && c.restore();
     R.panel = cv;
   }
 
@@ -887,10 +886,10 @@
     if (info.demo) {
       c.save();
       c.font = '900 15px ' + FONT;
-      c.textAlign = 'left';
+      c.textAlign = 'center';
       c.textBaseline = 'middle';
-      c.fillStyle = 'rgba(200,210,255,0.55)';
-      c.fillText('DEMO', 18, T / 2 + 1);
+      c.fillStyle = 'rgba(200,210,255,0.5)';
+      c.fillText('D E M O', W / 2, T / 2 + 1);
       c.restore();
       return;
     }

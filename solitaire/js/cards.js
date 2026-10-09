@@ -168,9 +168,9 @@
       centre = pip(suit, 100, 188, rank === 1 ? 118 : 112, false, color);
     }
     const r = RANKS[rank];
-    const rankEl = '<text x="12" y="88" font-family="' + SANS + '" font-size="96" font-weight="700" fill="' + color + '"' +
-      (rank === 10 ? ' textLength="104" lengthAdjust="spacingAndGlyphs"' : '') + '>' + r + '</text>';
-    return cardBase(defs) + rankEl + pip(suit, 158, 50, 62, false, color) + centre + '</svg>';
+    const rankEl = '<text x="13" y="76" font-family="' + SANS + '" font-size="88" font-weight="700" fill="' + color + '"' +
+      (rank === 10 ? ' textLength="100" lengthAdjust="spacingAndGlyphs"' : '') + '>' + r + '</text>';
+    return cardBase(defs) + rankEl + pip(suit, 158, 44, 56, false, color) + centre + '</svg>';
   }
 
   const BACKS = {

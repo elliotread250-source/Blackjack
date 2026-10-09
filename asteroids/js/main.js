@@ -339,8 +339,9 @@
     const rowH = Math.min(36, H * 0.052);
     const size = Math.min(20, rowH * 0.58);
     const blink = performance.now() % 700 < 420;
+    const digits = Math.max(2, String(HS.best()).length);
     HS.list.forEach((e, i) => {
-      const line = String(i + 1).padStart(2, ' ') + '.  ' + String(e.score).padStart(6, ' ') + '  ' + e.initials;
+      const line = String(i + 1).padStart(2, ' ') + '. ' + String(e.score).padStart(digits, ' ') + ' ' + e.initials;
       const b = i === highlight ? (blink ? 0 : 2) : 1;
       R.text(line, W / 2, H * 0.27 + i * rowH, size, 'center', b, W * 0.9);
     });
@@ -350,11 +351,16 @@
     R.begin(dt);
     const paused = state === 'paused';
     R.world(game, alpha, { paused });
-    R.flush(paused ? 0.35 : 1);
+    // Dim the rocks behind screens that are mostly text.
+    let dim = 1;
+    if (paused) dim = 0.35;
+    else if (state === 'initials' || state === 'scores' || (state === 'attract' && attractPage === 1)) dim = 0.45;
+    R.flush(dim);
     const best = Math.max(HS.best(), state === 'attract' ? 0 : game.score);
     R.hud(game, best, state === 'playing' || paused);
     overlay();
     R.flush(1);
+    R.end();
     R.frameBorder();
   }
 
@@ -485,11 +491,11 @@
     Sound.saucer(playing && game.saucer ? (game.saucer.small ? 'small' : 'large') : null);
 
     // If the bloom is too slow on this device, fall back to a cheaper glow.
-    if (R.quality > 1 && !document.hidden) {
+    if (R.quality > 0 && !document.hidden) {
       perfFrames++;
       if (dt > 24) perfSlow++;
-      if (perfFrames >= 240) {
-        if (perfSlow > 120) R.quality = 1;
+      if (perfFrames >= 180) {
+        if (perfSlow > 90) R.quality--;
         perfFrames = perfSlow = 0;
       }
     }

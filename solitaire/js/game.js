@@ -152,31 +152,54 @@
   // ---------------------------------------------------------------- layout
   function layout() {
     const W = table.clientWidth, H = table.clientHeight;
+    // Short, wide screens (phones in landscape): stock and waste go to a
+    // column on the left and the foundations to one on the right, so the
+    // tableau gets the full height for fanning.
+    const side = W >= 560 && H < 560 && W > H * 1.45;
     const narrow = W < 600;
-    const pad = narrow ? 4 : Math.max(10, Math.round(W * 0.012));
-    const topPad = narrow ? 8 : (H < 420 ? 8 : 14);
-    let gap = narrow ? 3 : 0;
-    let cw = narrow ? (W - 2 * pad - 6 * gap) / 7 : (W - 2 * pad) / (7 + 6 * 0.14);
-    const byHeight = (H - topPad - 8) / (1.4 * 4.1);
-    cw = Math.max(20, Math.floor(Math.min(cw, byHeight, 160)));
+    let cw, gap, colX, topY, tabY, extra = {};
+    if (side) {
+      const pad = 10;
+      topY = 8;
+      const vgap = Math.max(5, Math.round(H * 0.02));
+      const byH = (H - 2 * topY - 3 * vgap) / 4 / 1.4;
+      const byW = (W - 2 * pad) / (9 + 6 * 0.12 + 2 * 0.45);
+      cw = Math.max(20, Math.floor(Math.min(byH, byW, 130)));
+      gap = Math.max(4, Math.round(cw * 0.12));
+      const sep = Math.round(cw * 0.45);
+      const totalW = 9 * cw + 6 * gap + 2 * sep;
+      const x0 = Math.round((W - totalW) / 2);
+      const tabX = x0 + cw + sep;
+      colX = [];
+      for (let c = 0; c < 7; c++) colX.push(tabX + c * (cw + gap));
+      tabY = topY;
+      extra = { leftX: x0, rightX: tabX + 7 * cw + 6 * gap + sep, vgap };
+    } else {
+      const pad = narrow ? 4 : Math.max(10, Math.round(W * 0.012));
+      topY = narrow ? 8 : (H < 420 ? 8 : 14);
+      gap = narrow ? 3 : 0;
+      cw = narrow ? (W - 2 * pad - 6 * gap) / 7 : (W - 2 * pad) / (7 + 6 * 0.14);
+      const byHeight = (H - topY - 8) / (1.4 * 4.1);
+      cw = Math.max(20, Math.floor(Math.min(cw, byHeight, 160)));
+      if (!narrow) gap = Math.max(4, Math.round(Math.min(cw * 0.2, (W - 2 * pad - 7 * cw) / 6)));
+      const totalW = 7 * cw + 6 * gap;
+      const x0 = Math.round((W - totalW) / 2);
+      colX = [];
+      for (let c = 0; c < 7; c++) colX.push(x0 + c * (cw + gap));
+      tabY = topY + Math.round(cw * 1.4) + Math.max(narrow ? 8 : 10, Math.round(cw * 1.4 * 0.13));
+    }
     const ch = Math.round(cw * 1.4);
-    if (!narrow) gap = Math.max(4, Math.round(Math.min(cw * 0.2, (W - 2 * pad - 7 * cw) / 6)));
-    const totalW = 7 * cw + 6 * gap;
-    const x0 = Math.round((W - totalW) / 2);
-    const colX = [];
-    for (let c = 0; c < 7; c++) colX.push(x0 + c * (cw + gap));
-    const rowGap = Math.max(narrow ? 8 : 10, Math.round(ch * 0.13));
     const compact = cw < 78;
-    L = {
-      W, H, cw, ch, gap, colX, narrow, compact,
-      topY: topPad,
-      tabY: topPad + ch + rowGap,
-      bottom: H - (narrow ? 6 : 10),
+    L = Object.assign({
+      W, H, cw, ch, gap, colX, narrow, compact, side,
+      topY, tabY,
+      bottom: H - (narrow || side ? 6 : 10),
       fanDown: Math.max(3, ch * (compact ? 0.085 : 0.1)),
-      fanUp: ch * (compact ? 0.3 : 0.26),
-      fanUpMin: ch * (compact ? 0.2 : 0.165),
-      wasteFan: cw * (compact ? 0.3 : 0.24),
-    };
+      fanUp: ch * (compact ? 0.29 : 0.26),
+      fanUpMin: ch * (compact ? 0.25 : 0.165),
+      // draw-3 waste fan: sideways normally, downwards in the side column
+      wasteFan: side ? ch * 0.29 : cw * (compact ? 0.3 : 0.24),
+    }, extra);
     table.style.setProperty('--cw', cw + 'px');
     table.style.setProperty('--ch', ch + 'px');
     table.style.setProperty('--cr', (cw * 0.065).toFixed(2) + 'px');
@@ -188,6 +211,13 @@
   }
 
   function slotXY(name) {
+    if (L.side) {
+      if (name === 's') return { x: L.leftX, y: L.topY };
+      if (name === 'w') return { x: L.leftX, y: L.topY + L.ch + L.vgap * 2 };
+      const i = name.charCodeAt(1) - 48;
+      if (name[0] === 'f') return { x: L.rightX, y: L.topY + i * (L.ch + L.vgap) };
+      return { x: L.colX[i], y: L.tabY };
+    }
     if (name === 's') return { x: L.colX[0], y: L.topY };
     if (name === 'w') return { x: L.colX[1], y: L.topY };
     const i = name.charCodeAt(1) - 48;
@@ -216,20 +246,23 @@
   function positions() {
     const pos = new Array(52);
     const s = game.s;
+    const sp = slotXY('s');
     for (let i = 0; i < s.length; i++) {
       const k = Math.floor(i / 8) * (L.compact ? 0.5 : 1);
-      pos[s[i]] = { x: L.colX[0] - k, y: L.topY - k, z: 1 + i, up: false };
+      pos[s[i]] = { x: sp.x - k, y: sp.y - k, z: 1 + i, up: false };
     }
     const w = game.w;
+    const wp = slotXY('w');
     const vis = game.draw === 3 ? 3 : 1;
     const first = Math.max(0, w.length - vis);
     for (let i = 0; i < w.length; i++) {
-      const k = Math.max(0, i - first);
-      pos[w[i]] = { x: L.colX[1] + k * L.wasteFan, y: L.topY, z: 100 + i, up: true };
+      const k = Math.max(0, i - first) * L.wasteFan;
+      pos[w[i]] = { x: wp.x + (L.side ? 0 : k), y: wp.y + (L.side ? k : 0), z: 100 + i, up: true };
     }
     for (let f = 0; f < 4; f++) {
       const p = game.f[f];
-      for (let i = 0; i < p.length; i++) pos[p[i]] = { x: L.colX[3 + f], y: L.topY, z: 200 + f * 14 + i, up: true };
+      const fp = slotXY(R.FOUNDATIONS[f]);
+      for (let i = 0; i < p.length; i++) pos[p[i]] = { x: fp.x, y: fp.y, z: 200 + f * 14 + i, up: true };
     }
     for (let c = 0; c < 7; c++) {
       const col = game.t[c];
@@ -331,8 +364,16 @@
     locs = game.locate();
     const delays = opts.delays || {};
     const flipDelays = opts.flipDelays || {};
+    const wasteVis = game.w.length - (game.draw === 3 ? 3 : 1);
     for (let id = 0; id < 52; id++) {
       const el = cardEls[id], p = pos[id], loc = locs[id];
+      const k = loc.pile[0];
+      // Cards buried in a squared-up pile drop their shadow so 24 stacked
+      // shadows do not add up to a black edge.
+      el.classList.toggle('under',
+        (k === 's' && loc.index < game.s.length - 1) ||
+        (k === 'w' && loc.index < wasteVis) ||
+        (k === 'f' && loc.index < game.pile(loc.pile).length - 1));
       const delay = delays[id] || 0;
       placeCard(el, p.x, p.y, p.z, anim, delay, opts.dur);
       setUp(el, p.up, anim, delay + (flipDelays[id] || 0));
@@ -614,7 +655,6 @@
     }
     for (const id of game.s) placeCard(cardEls[id], pos[id].x, pos[id].y, pos[id].z, false);
     dealing = true;
-    sound.unlock();
     sound.shuffle();
     const t0 = 380, step = 44;
     let k = 0;
@@ -803,9 +843,10 @@
   function onTap(pr) {
     const now = performance.now();
     const prev = lastTap;
-    // The second click of a double-click lands on whatever was under the
-    // card that just moved; swallow it instead of moving that card too.
-    if (prev && prev.acted && prev.pile === pr.pile && now - prev.t < 330) {
+    // The second click of a double-click lands either on whatever was under
+    // the card that just moved, or on that same card still in flight; swallow
+    // it instead of moving another card (or sending this one back).
+    if (prev && prev.acted && now - prev.t < 330 && (prev.pile === pr.pile || prev.id === pr.ids[0])) {
       lastTap = null;
       return;
     }
@@ -1337,7 +1378,6 @@
       game.t = [[id(13, 0), id(12, 1)], [id(13, 1), id(12, 0)], [id(13, 2), id(12, 3)], [id(13, 3), id(12, 2)], [], [], []];
       game.down = [0, 0, 0, 0, 0, 0, 0];
       game.s = []; game.w = [];
-      if (opts.hidden) { game.t[4] = [id(12, 3)]; game.t[2] = [id(13, 2)]; game.t[4] = []; }
       game.history = [];
       started = true;
       if (!counted) { counted = true; stats[statKey()].played++; saveStats(); }

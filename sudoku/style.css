@@ -202,7 +202,7 @@ svg .fill { fill: currentColor; stroke: none; }
   gap: 14px;
   padding: 4px 10px 12px;
 }
-.tall .stage { flex-direction: column; justify-content: center; gap: 12px; }
+.tall .stage { flex-direction: column; justify-content: center; gap: var(--tgap, 12px); }
 .wide .stage { flex-direction: row; gap: 28px; padding-bottom: 18px; }
 
 .play { flex: none; width: var(--bs); display: flex; flex-direction: column; gap: 4px; }
@@ -440,10 +440,11 @@ svg .fill { fill: currentColor; stroke: none; }
   position: absolute;
   left: 0;
   right: 0;
-  top: -4px;
+  top: 0;
+  min-height: 56px;
   z-index: 6;
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   padding: 10px 8px 10px 14px;
   border-radius: 12px;
@@ -455,8 +456,9 @@ svg .fill { fill: currentColor; stroke: none; }
   animation: rise .2s ease-out;
 }
 .hintbar[hidden] { display: none; }
+.hintbar.above { top: auto; bottom: calc(100% + 14px); }
 .hintbar p { margin: 0; flex: 1; }
-.hint-close { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; color: var(--muted); margin-top: -4px; }
+.hint-close { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; color: var(--muted); }
 .hint-close svg { width: 18px; height: 18px; }
 @keyframes rise { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
 
@@ -660,6 +662,13 @@ kbd { display: inline-block; min-width: 20px; padding: 1px 5px; border-radius: 5
   .btn.link:hover { color: var(--text); }
   .level-opt:hover { background: var(--btn-hover); }
   .daily-card:hover { filter: brightness(.97); }
+}
+
+/* Short screens (phones in landscape): give the board every pixel. */
+@media (max-height: 480px) {
+  .topbar { height: 40px; }
+  .title { font-size: 17px; }
+  .wide .stage { padding-bottom: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
