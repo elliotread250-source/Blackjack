@@ -120,8 +120,6 @@ button {
   display: flex;
   flex-direction: column;
   height: var(--app-h);
-  height: 100dvh;
-  max-height: var(--app-h);
   width: 100%;
   margin: 0 auto;
   padding-top: env(safe-area-inset-top);
@@ -306,38 +304,6 @@ button {
 .tile[data-state="present"] { background: var(--present); }
 .tile[data-state="absent"] { background: var(--absent); }
 
-.tile.pop { animation: pop 100ms ease-out; }
-@keyframes pop {
-  0% { transform: scale(0.8); opacity: 0.5; }
-  40% { transform: scale(1.1); opacity: 1; }
-  100% { transform: scale(1); }
-}
-
-.tile.flip { animation: flip 500ms ease-in-out both; }
-@keyframes flip {
-  0% { transform: rotateX(0deg); }
-  50% { transform: rotateX(-90deg); }
-  100% { transform: rotateX(0deg); }
-}
-
-.row.shake { animation: shake 600ms; }
-@keyframes shake {
-  10%, 90% { transform: translateX(-1px); }
-  20%, 80% { transform: translateX(2px); }
-  30%, 50%, 70% { transform: translateX(-4px); }
-  40%, 60% { transform: translateX(4px); }
-}
-
-.tile.bounce { animation: bounce 1000ms both; }
-@keyframes bounce {
-  0%, 20% { transform: translateY(0); }
-  40% { transform: translateY(-30px); }
-  50% { transform: translateY(5px); }
-  60% { transform: translateY(-15px); }
-  80% { transform: translateY(2px); }
-  100% { transform: translateY(0); }
-}
-
 /* ---------- toasts ---------- */
 
 .toaster {
@@ -436,6 +402,7 @@ button {
 
 .modal-card {
   position: relative;
+  outline: none;
   width: 100%;
   max-width: 500px;
   max-height: 100%;
@@ -642,12 +609,17 @@ kbd {
 
 /* ---------- small and short screens ---------- */
 
-@media (max-width: 380px) {
-  .title { font-size: 26px; padding: 0 4px; }
-  .icon-btn { width: 31px; height: 31px; padding: 4px; }
+@media (max-width: 440px) {
+  .h-right { gap: 0; }
+  .icon-btn { width: 30px; height: 32px; padding: 4px; }
   .icon-btn svg { width: 22px; height: 22px; }
-  .arcade-link { font-size: 12px; padding: 6px 2px; }
   .header { padding: 0 4px 0 8px; }
+  .title { font-size: 28px; }
+}
+
+@media (max-width: 380px) {
+  .title { font-size: 25px; padding: 0 4px; }
+  .arcade-link { font-size: 12px; padding: 6px 2px; }
   .modes button { padding: 5px 10px; }
   .subbar { padding: 0 8px; }
   .stat { width: 68px; }
@@ -683,7 +655,6 @@ kbd {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tile.pop, .row.shake, .tile.bounce { animation-duration: 1ms; }
   .modal-card, .modal.closing, .modal.closing .modal-card { animation-duration: 1ms; }
   .dist-bar { transition: none; }
 }

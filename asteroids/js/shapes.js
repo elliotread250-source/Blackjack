@@ -8,12 +8,12 @@
   // The ship: two long sides from the nose to the wing tips and a short cross
   // bar set in from the back, which leaves the little notch the arcade ship has.
   const SHIP = {
-    nose: [10, 0],
-    left: [-9, -7],
-    right: [-9, 7],
-    barL: [-5.6, -5.3],
-    barR: [-5.6, 5.3],
-    flame: [[-5.6, -2.8], [-13.5, 0], [-5.6, 2.8]],
+    nose: [12, 0],
+    left: [-11, -8.5],
+    right: [-11, 8.5],
+    barL: [-7, -6.6],
+    barR: [-7, 6.6],
+    flame: [[-7, -3.4], [-16.5, 0], [-7, 3.4]],
   };
 
   // The four rock outlines, on an 8 x 8 grid around the centre (y down).

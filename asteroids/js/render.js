@@ -95,7 +95,7 @@
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       const lw = Math.max(1.7, 1.25 / v.scale);
-      const blurCss = Math.max(3, Math.min(8, 6.5 * v.scale));
+      const blurCss = Math.max(4, Math.min(11, 9 * v.scale));
       for (let b = 0; b < 3; b++) {
         const S = this.segs[b], D = this.dots[b];
         if (!S.length && !D.length) continue;
@@ -104,29 +104,22 @@
         for (let i = 0; i < S.length; i += 4) { ctx.moveTo(S[i], S[i + 1]); ctx.lineTo(S[i + 2], S[i + 3]); }
         const dp = new Path2D();
         for (let i = 0; i < D.length; i += 3) { dp.moveTo(D[i] + D[i + 2], D[i + 1]); dp.arc(D[i], D[i + 1], D[i + 2], 0, TAU); }
-        // bloom
+        // Halo: a wide, faint stroke under the beam.
+        ctx.globalAlpha = a * 0.16;
+        ctx.strokeStyle = GLOW; ctx.fillStyle = GLOW;
+        ctx.lineWidth = lw * 3.4;
+        ctx.stroke();
+        // Beam, with a soft shadow blur for the phosphor bloom.
         if (this.quality >= 2) {
           ctx.shadowColor = GLOW;
           ctx.shadowBlur = blurCss * d;
-          ctx.globalAlpha = a * 0.9;
-          ctx.strokeStyle = BEAM; ctx.fillStyle = BEAM;
-          ctx.lineWidth = lw;
-          ctx.stroke();
-          ctx.fill(dp);
-          ctx.shadowBlur = 0;
-        } else {
-          ctx.globalAlpha = a * 0.22;
-          ctx.strokeStyle = GLOW; ctx.fillStyle = GLOW;
-          ctx.lineWidth = lw * 3.2;
-          ctx.stroke();
-          ctx.fill(dp);
         }
-        // beam core
         ctx.globalAlpha = a;
         ctx.strokeStyle = BEAM; ctx.fillStyle = BEAM;
-        ctx.lineWidth = lw * 0.8;
+        ctx.lineWidth = lw;
         ctx.stroke();
         ctx.fill(dp);
+        ctx.shadowBlur = 0;
         S.length = 0; D.length = 0;
       }
       ctx.restore();
@@ -191,8 +184,9 @@
         this.wrapped(p[0], p[1], r, (x, y) => this.rock(k, x, y));
       }
       if (g.saucer) {
+        // Saucers wrap top to bottom but fly off the sides.
         const u = g.saucer, p = lerp(u);
-        this.wrapped(-1e4, p[1], u.hw, (x, y) => this.saucer(p[0], y, u.small));
+        this.wrapped(this.view.W / 2, p[1], u.hw * 0.7 + 2, (x, y) => this.saucer(p[0], y, u.small));
       }
       for (const b of g.bullets) {
         const p = lerp(b);
@@ -234,7 +228,7 @@
       this.text(hi, W / 2, 26, 16, 'center', 1);
       if (showLives) {
         const n = Math.min(g.lives, 12);
-        for (let i = 0; i < n; i++) this.ship(right - 8 - i * 19, 72, -Math.PI / 2, 0.9, 0, 0);
+        for (let i = 0; i < n; i++) this.ship(44 + i * 19, 74, -Math.PI / 2, 0.9, 0, 0);
       }
     }
   }
