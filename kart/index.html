@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#14123a">
+<meta name="description" content="3D kart racing in the browser: five tracks, drifting and mini-turbos, items, bots, Grand Prix, time trials with ghosts and online races for up to eight players.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Kart</title>
+<link rel="icon" href="icon.svg">
+<style>
+  :root {
+    --bg: #14123a;
+    --panel: rgba(18, 16, 52, 0.86);
+    --panel2: rgba(255, 255, 255, 0.07);
+    --line: rgba(255, 255, 255, 0.14);
+    --text: #f4f3ff;
+    --muted: #a9a6d6;
+    --yellow: #ffd23f;
+    --pink: #ff4f8b;
+    --cyan: #3fd5ff;
+    --green: #5ee08a;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-l: env(safe-area-inset-left, 0px);
+    --safe-r: env(safe-area-inset-right, 0px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font);
+    overscroll-behavior: none; touch-action: none; -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none; -webkit-text-size-adjust: 100%;
+  }
+  body { position: fixed; inset: 0; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  input, select { font: inherit; }
+  [hidden] { display: none !important; }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  :focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+
+  /* ---------- screens ---------- */
+  .screen { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; padding: calc(var(--safe-t) + 14px) calc(var(--safe-r) + 16px) calc(var(--safe-b) + 14px) calc(var(--safe-l) + 16px); overflow: hidden; }
+  .screen.dim { background: radial-gradient(ellipse at center, rgba(10, 8, 40, 0.35), rgba(10, 8, 40, 0.8)); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 16px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35); }
+  h1, h2, h3 { margin: 0; }
+  h2 { font-size: 22px; font-style: italic; font-weight: 900; letter-spacing: 0.5px; }
+  h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--muted); font-weight: 700; margin: 12px 0 6px; }
+  .btn { border: 0; border-radius: 14px; padding: 12px 20px; font-weight: 800; font-size: 16px; letter-spacing: 0.3px; background: var(--panel2); border: 1px solid var(--line); transition: transform .08s, background .15s, border-color .15s; }
+  .btn:hover { background: rgba(255, 255, 255, 0.13); border-color: rgba(255, 255, 255, 0.3); }
+  .btn:active { transform: scale(0.97); }
+  .btn.primary { background: linear-gradient(180deg, #ffe066, #ffbe1a); color: #2a1c00; border-color: #ffe794; box-shadow: 0 4px 0 #c98900, 0 8px 18px rgba(255, 190, 26, 0.35); }
+  .btn.primary:hover { background: linear-gradient(180deg, #ffe680, #ffc733); }
+  .btn.pink { background: linear-gradient(180deg, #ff74a6, #ff3f7f); color: #fff; border-color: #ff9cc0; box-shadow: 0 4px 0 #b8205a; }
+  .btn.small { padding: 7px 12px; font-size: 13px; border-radius: 10px; }
+  .btn[disabled] { opacity: 0.45; pointer-events: none; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .grow { flex: 1; }
+  .muted { color: var(--muted); }
+  .arcade { position: fixed; left: calc(var(--safe-l) + 14px); top: calc(var(--safe-t) + 10px); z-index: 30; color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 600; padding: 4px 8px; border-radius: 8px; background: rgba(0,0,0,0.18); }
+  .arcade:hover { color: var(--text); }
+
+  /* title */
+  #s-title { justify-content: center; padding-left: calc(var(--safe-l) + 7vw); }
+  .logo { font-size: clamp(64px, 13vw, 150px); font-weight: 900; font-style: italic; line-height: 0.85; letter-spacing: -2px;
+    background: linear-gradient(180deg, #fff 0%, #ffe066 45%, #ff9f1a 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 6px 0 #c2410c) drop-shadow(0 14px 22px rgba(0,0,0,0.45)); transform: skewX(-8deg); }
+  .tag { margin: 14px 0 26px; font-size: clamp(14px, 1.8vw, 18px); color: #e7e4ff; font-weight: 600; text-shadow: 0 2px 8px rgba(0,0,0,0.5); max-width: 440px; }
+  .menu { display: flex; flex-direction: column; gap: 10px; width: min(300px, 80vw); }
+  .menu .btn { text-align: left; font-size: 18px; padding: 13px 20px; }
+  .stripes { position: fixed; right: -60px; bottom: -40px; width: 60vw; height: 22vh; background: repeating-linear-gradient(-55deg, rgba(255,210,63,0.16) 0 26px, transparent 26px 52px); pointer-events: none; z-index: 1; }
+
+  /* mode cards */
+  .cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin: auto 0; }
+  .card { text-align: left; padding: 18px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; min-height: 170px; transition: transform .1s, border-color .15s; }
+  .card:hover { border-color: var(--yellow); transform: translateY(-2px); }
+  .card .ic { width: 46px; height: 46px; border-radius: 14px; display: grid; place-items: center; font-weight: 900; font-size: 22px; }
+  .card b { font-size: 19px; font-style: italic; }
+  .card span { color: var(--muted); font-size: 13.5px; line-height: 1.35; }
+  .top { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; padding-left: 80px; }
+
+  /* garage */
+  #s-garage { flex-direction: row; gap: 14px; justify-content: space-between; align-items: stretch; }
+  .gcol { width: 300px; max-width: 34vw; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; }
+  .gcol::-webkit-scrollbar { width: 6px; } .gcol::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+  .ktype { text-align: left; padding: 10px 12px; border-radius: 14px; background: var(--panel); border: 2px solid transparent; }
+  .ktype.sel { border-color: var(--yellow); background: rgba(40, 34, 100, 0.92); }
+  .ktype b { font-size: 16px; font-style: italic; }
+  .ktype p { margin: 2px 0 6px; font-size: 12px; color: var(--muted); }
+  .stat { display: grid; grid-template-columns: 74px 1fr; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); margin: 2px 0; }
+  .bar { height: 7px; border-radius: 4px; background: rgba(255,255,255,0.12); overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--cyan), var(--green)); }
+  .swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+  .sw { aspect-ratio: 1; border-radius: 8px; border: 2px solid rgba(255,255,255,0.15); padding: 0; }
+  .sw.sel { border-color: #fff; box-shadow: 0 0 0 2px var(--yellow); }
+  .sw.picker { position: relative; overflow: hidden; background: conic-gradient(red, yellow, lime, cyan, blue, magenta, red); }
+  .sw.picker input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+  .seg { display: flex; gap: 5px; flex-wrap: wrap; }
+  .seg button { flex: 1; min-width: 56px; padding: 7px 6px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line); font-size: 12.5px; font-weight: 700; }
+  .seg button.sel { background: var(--yellow); color: #2a1c00; border-color: var(--yellow); }
+  .drv { display: flex; gap: 6px; }
+  .drv button { flex: 1; aspect-ratio: 1; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); font-size: 10px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px #000; padding: 0; }
+  .drv button.sel { border-color: #fff; box-shadow: 0 0 0 2px var(--yellow); }
+  .gtitle { position: fixed; left: 50%; top: calc(var(--safe-t) + 12px); transform: translateX(-50%); text-align: center; pointer-events: none; z-index: 11; }
+  .gtitle h2 { font-size: 26px; text-shadow: 0 3px 10px rgba(0,0,0,0.5); }
+  .gbottom { position: fixed; left: 50%; bottom: calc(var(--safe-b) + 14px); transform: translateX(-50%); display: flex; gap: 10px; z-index: 12; }
+  .field { width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--line); background: rgba(0,0,0,0.25); color: var(--text); font-weight: 700; }
+  .numrow { display: flex; align-items: center; gap: 8px; }
+  .numrow b { min-width: 34px; text-align: center; font-size: 20px; }
+  .toggle { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; border-radius: 10px; background: var(--panel2); border: 1px solid var(--line); font-weight: 700; font-size: 14px; width: 100%; }
+  .toggle i { width: 38px; height: 22px; border-radius: 11px; background: rgba(255,255,255,0.18); position: relative; transition: background .15s; }
+  .toggle i::after { content: ""; position: absolute; left: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .15s; }
+  .toggle.on i { background: var(--green); }
+  .toggle.on i::after { left: 19px; }
+
+  /* tracks */
+  .tracks { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin: 6px 0 12px; }
+  .tcard { padding: 8px; border-radius: 16px; background: var(--panel); border: 2px solid transparent; text-align: left; display: flex; flex-direction: column; gap: 6px; }
+  .tcard.sel { border-color: var(--yellow); }
+  .tcard canvas { width: 100%; aspect-ratio: 4 / 3; border-radius: 10px; display: block; }
+  .tcard b { font-size: 15px; font-style: italic; }
+  .tcard small { color: var(--muted); font-size: 11.5px; line-height: 1.3; }
+  .tcard .best { color: var(--yellow); font-weight: 700; font-size: 12px; }
+  .opts { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+  .opts label { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); font-weight: 700; margin-right: 6px; }
+  .scroller { overflow-y: auto; overscroll-behavior: contain; touch-action: pan-y; min-height: 0; }
+
+  /* results / tables */
+  .center { margin: auto; width: min(640px, 94vw); max-height: 100%; display: flex; flex-direction: column; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  td, th { padding: 6px 8px; text-align: left; }
+  th { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  tr.me td { background: rgba(255, 210, 63, 0.16); }
+  tr td:first-child { font-weight: 900; font-style: italic; width: 44px; }
+  .chip { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: -2px; margin-right: 8px; border: 1px solid rgba(255,255,255,0.4); }
+  .t-right { text-align: right; }
+
+  /* lobby */
+  .lobby { display: grid; grid-template-columns: 1fr 1.2fr; gap: 14px; flex: 1; min-height: 0; }
+  .code { font-size: 46px; font-weight: 900; letter-spacing: 8px; font-style: italic; color: var(--yellow); }
+  .plist { display: flex; flex-direction: column; gap: 6px; }
+  .pl { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 12px; background: var(--panel2); border: 1px solid var(--line); }
+  .pl .kc { width: 34px; height: 24px; border-radius: 7px; border: 2px solid; }
+  .pl b { font-size: 15px; }
+  .pl small { color: var(--muted); }
+  .pl .rd { margin-left: auto; font-weight: 800; font-size: 12px; padding: 3px 8px; border-radius: 8px; background: rgba(255,255,255,0.1); }
+  .pl .rd.ok { background: var(--green); color: #063018; }
+  .mini-tracks { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .mini-tracks button { padding: 4px; border-radius: 10px; background: var(--panel2); border: 2px solid transparent; font-size: 10.5px; font-weight: 700; }
+  .mini-tracks button.sel { border-color: var(--yellow); }
+  .mini-tracks canvas { width: 100%; aspect-ratio: 4/3; display: block; border-radius: 6px; }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; inset: 0; z-index: 5; pointer-events: none; font-weight: 900; font-style: italic; }
+  .pos { position: absolute; left: calc(var(--safe-l) + 18px); top: calc(var(--safe-t) + 10px); font-size: 64px; line-height: 1; color: #fff;
+    text-shadow: 0 4px 0 #b04a00, 0 6px 16px rgba(0,0,0,0.5); }
+  .pos sup { font-size: 26px; vertical-align: 24px; }
+  .pos small { font-size: 22px; color: #ffe9b0; }
+  .lap { position: absolute; left: calc(var(--safe-l) + 20px); top: calc(var(--safe-t) + 82px); font-size: 20px; text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+  .times { position: absolute; right: calc(var(--safe-r) + 112px); top: calc(var(--safe-t) + 12px); text-align: right; font-style: normal; font-variant-numeric: tabular-nums; text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+  .times div:first-child { font-size: 22px; }
+  .times div { font-size: 14px; font-weight: 700; color: #e9e6ff; }
+  .itembox { position: absolute; right: calc(var(--safe-r) + 16px); top: calc(var(--safe-t) + 12px); width: 82px; height: 82px; border-radius: 18px; background: rgba(20, 16, 60, 0.7); border: 3px solid rgba(255,255,255,0.8); display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
+  .itembox svg { width: 58px; height: 58px; }
+  .itembox .cnt { position: absolute; right: 6px; bottom: 2px; font-size: 16px; }
+  .speedo { position: absolute; right: calc(var(--safe-r) + 18px); bottom: calc(var(--safe-b) + 14px); text-align: right; text-shadow: 0 2px 8px rgba(0,0,0,0.6); }
+  .speedo b { font-size: 46px; font-variant-numeric: tabular-nums; }
+  .speedo small { font-size: 15px; }
+  .speedo .bar { width: 150px; height: 8px; margin-top: 4px; margin-left: auto; }
+  .speedo .bar i { transition: width .08s; background: linear-gradient(90deg, #3fd5ff, #ffd23f, #ff4f8b); }
+  #minimap { position: absolute; left: calc(var(--safe-l) + 12px); bottom: calc(var(--safe-b) + 12px); width: 170px; height: 170px; }
+  .banner { position: absolute; left: 50%; top: 26%; transform: translate(-50%, -50%); font-size: 64px; color: #fff; text-shadow: 0 5px 0 #c2410c, 0 10px 26px rgba(0,0,0,0.5); white-space: nowrap; text-align: center; }
+  .banner.pop { animation: pop .5s cubic-bezier(.2, 1.6, .4, 1); }
+  .banner.warn { color: #ff6060; text-shadow: 0 4px 0 #6b0000, 0 10px 26px rgba(0,0,0,0.5); font-size: 46px; }
+  .banner small { display: block; font-size: 20px; font-style: normal; font-weight: 700; color: #ffe9b0; text-shadow: 0 2px 6px rgba(0,0,0,0.7); }
+  @keyframes pop { from { transform: translate(-50%, -50%) scale(0.3); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
+  .hint { position: absolute; left: 50%; bottom: calc(var(--safe-b) + 22px); transform: translateX(-50%); font-style: normal; font-weight: 700; font-size: 14px; background: rgba(0,0,0,0.45); padding: 6px 12px; border-radius: 10px; }
+  .hudbtns { position: absolute; right: calc(var(--safe-r) + 112px); top: calc(var(--safe-t) + 70px); display: flex; gap: 8px; pointer-events: auto; }
+  .ibtn { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: rgba(20, 16, 60, 0.6); display: grid; place-items: center; padding: 0; }
+  .ibtn svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+  .fps { position: absolute; left: 50%; top: calc(var(--safe-t) + 4px); transform: translateX(-50%); font-size: 11px; font-style: normal; opacity: 0.6; }
+  .names { position: absolute; inset: 0; overflow: hidden; }
+  .names span { position: absolute; transform: translate(-50%, -100%); font-size: 12px; font-style: normal; font-weight: 800; padding: 1px 6px; border-radius: 6px; background: rgba(0,0,0,0.35); white-space: nowrap; }
+
+  /* touch controls */
+  #touch { position: fixed; inset: 0; z-index: 6; pointer-events: none; }
+  #touch .tb { position: absolute; pointer-events: auto; border-radius: 50%; border: 2px solid rgba(255,255,255,0.45); background: rgba(20, 16, 60, 0.35); color: #fff; font-weight: 900; font-size: 15px; display: grid; place-items: center; touch-action: none; backdrop-filter: blur(2px); }
+  #touch .tb.on { background: rgba(255, 210, 63, 0.55); border-color: #fff; }
+  #touch .tb svg { width: 44%; height: 44%; fill: #fff; }
+  #t-left { left: calc(var(--safe-l) + 18px); bottom: calc(var(--safe-b) + 196px); width: 86px; height: 86px; }
+  #t-right { left: calc(var(--safe-l) + 116px); bottom: calc(var(--safe-b) + 196px); width: 86px; height: 86px; }
+  #t-gas { right: calc(var(--safe-r) + 20px); bottom: calc(var(--safe-b) + 70px); width: 96px; height: 96px; }
+  #t-brake { right: calc(var(--safe-r) + 128px); bottom: calc(var(--safe-b) + 24px); width: 64px; height: 64px; font-size: 12px; }
+  #t-drift { right: calc(var(--safe-r) + 124px); bottom: calc(var(--safe-b) + 104px); width: 80px; height: 80px; }
+  #t-item { right: calc(var(--safe-r) + 30px); bottom: calc(var(--safe-b) + 182px); width: 70px; height: 70px; }
+  #t-back { left: calc(var(--safe-l) + 214px); bottom: calc(var(--safe-b) + 206px); width: 48px; height: 48px; font-size: 11px; }
+  #t-steer { position: absolute; pointer-events: auto; left: calc(var(--safe-l) + 14px); bottom: calc(var(--safe-b) + 196px); width: 250px; height: 86px; border-radius: 43px; border: 2px solid rgba(255,255,255,0.4); background: rgba(20,16,60,0.3); touch-action: none; }
+  #t-steer i { position: absolute; top: 9px; left: 50%; width: 64px; height: 64px; margin-left: -32px; border-radius: 50%; background: rgba(255,255,255,0.75); }
+  body.has-touch #minimap { width: 130px; height: 130px; left: 50%; transform: translateX(-50%); bottom: calc(var(--safe-b) + 6px); }
+  body.has-touch .speedo { right: auto; left: calc(var(--safe-l) + 18px); bottom: calc(var(--safe-b) + 14px); text-align: left; }
+  body.has-touch .speedo .bar { margin-left: 0; }
+
+  #rotate { position: fixed; inset: 0; z-index: 40; background: rgba(12, 10, 40, 0.94); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; padding: 24px; }
+  #rotate svg { width: 84px; height: 84px; stroke: var(--yellow); fill: none; stroke-width: 2; animation: rot 2.4s ease-in-out infinite; }
+  @keyframes rot { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+  #toast { position: fixed; left: 50%; top: calc(var(--safe-t) + 16px); transform: translateX(-50%); z-index: 50; background: rgba(20, 16, 60, 0.92); border: 1px solid var(--line); padding: 10px 16px; border-radius: 12px; font-weight: 700; font-size: 14px; pointer-events: none; transition: opacity .2s; }
+  #loading { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; background: var(--bg); font-weight: 900; font-style: italic; font-size: 28px; }
+  #loading.fade { opacity: 0; transition: opacity .3s; pointer-events: none; }
+  #confetti { position: fixed; inset: 0; z-index: 9; pointer-events: none; }
+
+  @media (max-width: 900px), (max-height: 520px) {
+    .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .card { min-height: 0; padding: 12px; }
+    .card span { font-size: 12px; }
+    .tracks { grid-template-columns: repeat(5, minmax(120px, 1fr)); overflow-x: auto; }
+    .gcol { width: 240px; }
+    .ktype { padding: 7px 10px; } .ktype p { display: none; }
+    .stat { margin: 0; }
+    .pos { font-size: 46px; } .pos sup { font-size: 20px; vertical-align: 16px; } .pos small { font-size: 17px; }
+    .lap { top: calc(var(--safe-t) + 60px); font-size: 16px; }
+    .itembox { width: 64px; height: 64px; border-radius: 14px; } .itembox svg { width: 44px; height: 44px; }
+    .times { right: calc(var(--safe-r) + 92px); } .times div:first-child { font-size: 18px; }
+    .hudbtns { right: calc(var(--safe-r) + 16px); top: calc(var(--safe-t) + 86px); }
+    .banner { font-size: 44px; } .banner.warn { font-size: 32px; }
+    .speedo b { font-size: 32px; } .speedo .bar { width: 110px; }
+    .lobby { grid-template-columns: 1fr 1fr; }
+    .code { font-size: 32px; letter-spacing: 5px; }
+    .logo { font-size: clamp(56px, 16vh, 120px); }
+    .tag { margin: 8px 0 14px; }
+    .menu .btn { padding: 9px 16px; font-size: 16px; }
+  }
+  @media (max-height: 420px) {
+    #t-left, #t-right, #t-steer { bottom: calc(var(--safe-b) + 150px); }
+    #t-back { bottom: calc(var(--safe-b) + 160px); }
+    #t-item { bottom: calc(var(--safe-b) + 176px); right: calc(var(--safe-r) + 24px); }
+    #t-gas { bottom: calc(var(--safe-b) + 60px); }
+    h2 { font-size: 18px; }
+  }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js" } }
+</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+<canvas id="confetti"></canvas>
+<a class="arcade" id="arcade" href="https://open-arcade.up.railway.app">&larr; Arcade</a>
+<div id="loading">Loading&hellip;</div>
+
+<!-- Title -->
+<section class="screen" id="s-title" hidden>
+  <div class="stripes"></div>
+  <div class="logo">KART</div>
+  <div class="tag">Five tracks, drifting, mini-turbos, items and online races for up to eight.</div>
+  <div class="menu">
+    <button class="btn primary" data-go="mode">Play</button>
+    <button class="btn" data-go="online">Online</button>
+    <button class="btn" data-go="garage">Garage</button>
+    <button class="btn" data-go="settings">Settings</button>
+  </div>
+</section>
+
+<!-- Mode -->
+<section class="screen dim" id="s-mode" hidden>
+  <div class="top"><button class="btn small" data-back>&larr; Back</button><h2>Choose a mode</h2></div>
+  <div class="cards">
+    <button class="card" data-mode="race"><div class="ic" style="background:#ff4f8b">1</div><b>Single Race</b><span>Pick a track and race seven bots. Easy, Normal or Hard.</span></button>
+    <button class="card" data-mode="gp"><div class="ic" style="background:#ffbe1a;color:#2a1c00">GP</div><b>Grand Prix</b><span>All five tracks in a row. Points for every finish: 15, 12, 10, 8, 6, 4, 2, 1.</span></button>
+    <button class="card" data-mode="tt"><div class="ic" style="background:#3fd5ff;color:#06263a">&#9201;</div><b>Time Trial</b><span>Just you, three turbos and the clock. Race your best lap's ghost.</span></button>
+    <button class="card" data-mode="online"><div class="ic" style="background:#5ee08a;color:#063018">&#8734;</div><b>Online</b><span>Rooms for up to 8 with a share link, or quick match.</span></button>
+  </div>
+</section>
+
+<!-- Garage -->
+<section class="screen" id="s-garage" hidden>
+  <div class="gtitle"><h2>Garage</h2></div>
+  <div class="gcol" id="g-types"></div>
+  <div class="gcol panel" id="g-custom">
+    <h3 style="margin-top:0">Name</h3>
+    <input class="field" id="g-name" maxlength="14" placeholder="Your name" autocomplete="off" spellcheck="false">
+    <h3>Body colour</h3><div class="swatches" id="g-body"></div>
+    <h3>Accent colour</h3><div class="swatches" id="g-accent"></div>
+    <h3>Wheels</h3><div class="seg" id="g-wheel"></div>
+    <h3>Driver</h3><div class="drv" id="g-driver"></div>
+    <h3>Driver colour</h3><div class="swatches" id="g-suit"></div>
+    <h3>Helmet colour</h3><div class="swatches" id="g-helmet"></div>
+    <h3>Number</h3>
+    <div class="numrow"><button class="btn small" id="g-num-m">&minus;</button><b id="g-num">7</b><button class="btn small" id="g-num-p">+</button><button class="btn small" id="g-rand" style="margin-left:auto">Random look</button></div>
+    <h3>Extras</h3>
+    <div class="col" style="display:flex;flex-direction:column;gap:6px">
+      <button class="toggle" id="g-spoiler">Spoiler <i></i></button>
+      <button class="toggle" id="g-flag">Antenna flag <i></i></button>
+    </div>
+  </div>
+  <div class="gbottom"><button class="btn" data-back>&larr; Back</button><button class="btn primary" id="g-done">Done</button></div>
+</section>
+
+<!-- Tracks -->
+<section class="screen dim" id="s-tracks" hidden>
+  <div class="top"><button class="btn small" data-back>&larr; Back</button><h2 id="t-title">Choose a track</h2></div>
+  <div class="scroller">
+    <div class="tracks" id="t-list"></div>
+  </div>
+  <div class="opts panel" style="padding:10px 14px">
+    <div id="o-laps-wrap"><label>Laps</label><span class="seg" id="o-laps" style="display:inline-flex"></span></div>
+    <div id="o-diff-wrap"><label>Bots</label><span class="seg" id="o-diff" style="display:inline-flex"></span></div>
+    <div class="grow"></div>
+    <button class="btn" data-go="garage">Garage</button>
+    <button class="btn primary" id="t-start">Race!</button>
+  </div>
+</section>
+
+<!-- Results -->
+<section class="screen dim" id="s-results" hidden>
+  <div class="center panel">
+    <h2 id="r-title">Results</h2>
+    <div class="muted" id="r-sub" style="margin:4px 0 10px;font-weight:600"></div>
+    <div class="scroller"><table id="r-table"></table></div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end" id="r-btns"></div>
+  </div>
+</section>
+
+<!-- Pause -->
+<section class="screen dim" id="s-pause" hidden>
+  <div class="center panel" style="width:min(380px,92vw)">
+    <h2>Paused</h2>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
+      <button class="btn primary" id="p-resume">Resume</button>
+      <button class="btn" id="p-restart">Restart race</button>
+      <button class="toggle" id="p-sound">Sound <i></i></button>
+      <button class="toggle" id="p-music">Music <i></i></button>
+      <button class="btn" id="p-quit">Quit to menu</button>
+    </div>
+  </div>
+</section>
+
+<!-- Settings -->
+<section class="screen dim" id="s-settings" hidden>
+  <div class="center panel" style="width:min(460px,94vw)">
+    <h2>Settings</h2>
+    <div class="scroller" style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+      <button class="toggle" id="st-sound">Sound effects <i></i></button>
+      <button class="toggle" id="st-music">Music <i></i></button>
+      <h3>Graphics</h3>
+      <div class="seg" id="st-quality"></div>
+      <h3>Touch controls</h3>
+      <button class="toggle" id="st-auto">Auto-accelerate <i></i></button>
+      <div class="seg" id="st-steer"></div>
+      <button class="toggle" id="st-fps">Show FPS <i></i></button>
+      <h3>Keys</h3>
+      <div class="muted" style="font-size:13px;line-height:1.6">Drive: WASD or arrows &middot; Hop / drift: Space or Shift &middot; Item: E or Ctrl (hold S/&darr; to throw back) &middot; Look back: C &middot; Reset: R &middot; Pause: P or Esc &middot; Mute: M. Gamepads work too.</div>
+    </div>
+    <div class="row" style="margin-top:14px;justify-content:flex-end"><button class="btn primary" data-back>Done</button></div>
+  </div>
+</section>
+
+<!-- Online menu -->
+<section class="screen dim" id="s-online" hidden>
+  <div class="center panel" style="width:min(460px,94vw)">
+    <h2>Online</h2>
+    <div class="muted" id="on-status" style="margin:4px 0 10px;font-weight:600;min-height:20px"></div>
+    <div class="scroller" style="display:flex;flex-direction:column;gap:10px">
+      <input class="field" id="on-name" maxlength="14" placeholder="Your name" autocomplete="off" spellcheck="false">
+      <button class="btn primary" id="on-quick">Quick match</button>
+      <button class="btn" id="on-create">Create a room</button>
+      <div class="row"><input class="field grow" id="on-code" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false" style="text-transform:uppercase;letter-spacing:4px;width:auto"><button class="btn" id="on-join">Join</button></div>
+    </div>
+    <div class="row" style="margin-top:14px"><button class="btn" data-back>&larr; Back</button><div class="grow"></div><button class="btn small" data-go="garage">Garage</button></div>
+  </div>
+</section>
+
+<!-- Lobby -->
+<section class="screen dim" id="s-lobby" hidden>
+  <div class="top"><button class="btn small" id="lb-leave">&larr; Leave</button><h2>Lobby</h2><div class="muted" id="lb-status" style="font-weight:700"></div></div>
+  <div class="lobby">
+    <div class="panel scroller">
+      <h3 style="margin-top:0">Room code</h3>
+      <div class="row"><div class="code" id="lb-code">----</div></div>
+      <div class="row" style="margin:6px 0 4px"><button class="btn small" id="lb-copy">Copy link</button><button class="btn small" id="lb-share">Share</button></div>
+      <h3>Track</h3>
+      <div class="mini-tracks" id="lb-tracks"></div>
+      <div class="row" style="margin-top:10px">
+        <div><label class="muted" style="font-size:12px;font-weight:700">LAPS</label> <span class="seg" id="lb-laps" style="display:inline-flex"></span></div>
+      </div>
+      <div style="margin-top:8px"><button class="toggle" id="lb-bots">Bots fill empty places <i></i></button></div>
+      <div class="muted" id="lb-hostnote" style="font-size:12px;margin-top:6px"></div>
+    </div>
+    <div class="panel scroller">
+      <h3 style="margin-top:0" id="lb-count">Players</h3>
+      <div class="plist" id="lb-players"></div>
+    </div>
+  </div>
+  <div class="row" style="margin-top:12px;justify-content:flex-end">
+    <button class="btn" data-go="garage">Customise kart</button>
+    <button class="btn" id="lb-ready">Ready</button>
+    <button class="btn primary" id="lb-start">Start race</button>
+  </div>
+</section>
+
+<!-- HUD -->
+<div id="hud" hidden>
+  <div class="names" id="h-names"></div>
+  <div class="pos" id="h-pos">1<sup>st</sup><small>/8</small></div>
+  <div class="lap" id="h-lap">LAP 1/3</div>
+  <div class="times"><div id="h-time">0:00.000</div><div id="h-laptime">Lap 0:00.000</div><div id="h-best"></div></div>
+  <div class="itembox" id="h-item"></div>
+  <div class="hudbtns"><button class="ibtn" id="h-mute" aria-label="Mute"></button><button class="ibtn" id="h-pause" aria-label="Pause"><svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg></button></div>
+  <canvas id="minimap" width="340" height="340"></canvas>
+  <div class="speedo"><b id="h-speed">0</b> <small>km/h</small><div class="bar"><i id="h-speedbar" style="width:0%"></i></div></div>
+  <div class="banner" id="h-banner" hidden></div>
+  <div class="banner warn" id="h-warn" hidden>WRONG WAY</div>
+  <div class="hint" id="h-hint" hidden></div>
+  <div class="fps" id="h-fps" hidden></div>
+</div>
+
+<div id="touch" hidden>
+  <div class="tb" id="t-left"><svg viewBox="0 0 24 24"><path d="M15 4 6 12l9 8z"/></svg></div>
+  <div class="tb" id="t-right"><svg viewBox="0 0 24 24"><path d="m9 4 9 8-9 8z"/></svg></div>
+  <div id="t-steer" hidden><i></i></div>
+  <div class="tb" id="t-back">BACK</div>
+  <div class="tb" id="t-gas">GAS</div>
+  <div class="tb" id="t-brake">BRAKE</div>
+  <div class="tb" id="t-drift">DRIFT</div>
+  <div class="tb" id="t-item">ITEM</div>
+</div>
+
+<div id="rotate" hidden>
+  <svg viewBox="0 0 48 48"><rect x="14" y="4" width="20" height="40" rx="4"/><path d="M21 38h6"/></svg>
+  <div style="font-size:20px;font-weight:900;font-style:italic">Turn your phone sideways</div>
+  <div class="muted">Kart plays best in landscape.</div>
+  <button class="btn" id="rotate-ok">Play anyway</button>
+</div>
+<div id="toast" hidden></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
