@@ -188,6 +188,9 @@ button {
 
 .subbar {
   flex: 0 0 auto;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
   height: var(--sub-h);
   display: flex;
   align-items: center;
@@ -307,11 +310,11 @@ button {
 /* ---------- toasts ---------- */
 
 .toaster {
-  position: absolute;
-  top: 6px;
+  position: fixed;
+  top: 96px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 20;
+  z-index: 60;
   display: flex;
   flex-direction: column;
   align-items: center;

@@ -511,9 +511,13 @@
     }
     var key = e.key;
     if (key === 'Enter') {
-      // A keyboard user on a focused button gets the button.
+      // Someone tabbing around the page gets the focused button; anyone
+      // else's Enter submits the guess, whatever was last clicked.
       var a = doc.activeElement;
-      if (a && a !== doc.body && (a.tagName === 'BUTTON' || a.tagName === 'A')) return;
+      if (a && a !== doc.body && (a.tagName === 'BUTTON' || a.tagName === 'A')) {
+        if (keyboardFocus(a)) return;
+        a.blur();
+      }
       e.preventDefault();
       handleKey('enter');
     } else if (key === 'Backspace' || key === 'Delete') {
@@ -525,6 +529,10 @@
       handleKey(key.toLowerCase());
     }
   });
+
+  function keyboardFocus(el) {
+    try { return el.matches(':focus-visible'); } catch (err) { return false; }
+  }
 
   function flashKey(k) {
     var b = keyEls[k];
@@ -621,7 +629,10 @@
     clearToasts();
     if (name === 'stats') renderStats(game.mode);
     if (name === 'settings') renderSettings();
-    lastFocus = doc.activeElement;
+    // Only hand focus back afterwards to someone navigating by keyboard;
+    // otherwise Enter would land on the header button and reopen this.
+    var a = doc.activeElement;
+    lastFocus = a && a !== doc.body && keyboardFocus(a) ? a : null;
     m.hidden = false;
     m.classList.remove('closing');
     openModal = m;
