@@ -1007,11 +1007,29 @@
       if (!st) break;
       if (st.place) {
         if (st.place[1] !== solution[st.place[0]]) break;
-        var text = describeStep(st);
+        if (pre.length > 1) {
+          // Keep only the eliminations this placement depends on: each one is
+          // a true fact on its own, so any subset can be applied.
+          var keep = pre.slice(), x = 0, s2 = null;
+          while (x < keep.length && keep.length > 1) {
+            var trial = keep.slice(0, x).concat(keep.slice(x + 1));
+            s2 = makeState(values);
+            for (var y = 0; y < trial.length; y++) applyStep(s2, trial[y]);
+            var single = singleAt(s2, st.place[0]);
+            if (single && single.place[1] === st.place[1]) keep = trial;
+            else x++;
+          }
+          s2 = makeState(values);
+          for (y = 0; y < keep.length; y++) applyStep(s2, keep[y]);
+          var again = singleAt(s2, st.place[0]);
+          if (again && again.place[1] === st.place[1]) { pre = keep; st = again; }
+        }
+        var text = pre.length && st.tech === 'nakedSingle' ?
+          'Naked single: ' + cellName(st.place[0]) + ' can only be ' + st.place[1] + ' now.' : describeStep(st);
         var cells = st.cells ? st.cells.slice() : [];
         if (pre.length === 1) text = describeStep(pre[0]) + ' Then: ' + lc(text);
         else if (pre.length > 1) {
-          text = 'After ' + list(uniq(pre.map(function (p) { return p.name; }))) + ' eliminations: ' + lc(text);
+          text = 'After ' + list(uniq(pre.map(function (p) { return p.name; }))) + ' (' + pre.length + ' steps): ' + lc(text);
         }
         for (k = 0; k < pre.length; k++) if (pre[k].cells) cells = cells.concat(pre[k].cells);
         return { kind: 'logic', cell: st.place[0], digit: st.place[1], text: text, cells: uniq(cells), tech: st.tech, unit: st.unit, pre: pre.map(function (p) { return p.tech; }) };

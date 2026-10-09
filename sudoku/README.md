@@ -13,7 +13,7 @@ in WebAudio. There are no dependencies, no build step and no network requests.
 ## Features
 
 - Four levels graded by technique. **Easy** needs singles only and has 36–40
-  clues. **Medium** needs pointing/claiming, pairs or triples (30–33 clues).
+  clues. **Medium** needs pointing/claiming, pairs or triples (29–33 clues).
   **Hard** needs X-Wing, Skyscraper, 2-String Kite, XY/XYZ-Wing or quads
   (26–29 clues). **Expert** needs Swordfish, Jellyfish, simple colouring,
   W-Wing or XY-Chains (24–26 clues). Clue patterns are symmetric (rotational,
