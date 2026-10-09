@@ -170,7 +170,9 @@
       const d = LEVELS[this.level - 1];
       return d ? d.name : '';
     }
-    brickTop() { return HUD_H + (this.mode === 'classic' ? 54 : 30) + clamp((this.H - 640) * 0.3, 0, 100); }
+    brickTop() { return HUD_H + (this.mode === 'classic' ? 54 : 30) + clamp((this.H - 640) * 0.22, 0, 80); }
+    // tall portrait playfields get chunkier bricks so the wall fills more of the screen
+    brickScale() { return 1 + 0.3 * clamp((this.H - 640) / 360, 0, 1); }
 
     emit(e) { this.events.push(e); }
     drain() { const e = this.events; this.events = []; return e; }
@@ -204,7 +206,7 @@
       this.breakable = 0;
       const top = this.brickTop();
       if (this.mode === 'classic') {
-        const bw = (this.R - this.L) / CLASSIC_COLS, bh = 15;
+        const bw = (this.R - this.L) / CLASSIC_COLS, bh = 15 * this.brickScale();
         for (let r = 0; r < CLASSIC_ROWS.length; r++) {
           for (let c = 0; c < CLASSIC_COLS; c++) {
             this.addBrick(this.L + c * bw, top + r * bh, bw, bh, CLASSIC_ROWS[r][0], 1, CLASSIC_ROWS[r][1], false, r, c);
@@ -214,7 +216,7 @@
         this.shrunk = false;
       } else {
         const def = LEVELS[this.level - 1];
-        const bw = (this.R - this.L) / ARCADE_COLS, bh = 18;
+        const bw = (this.R - this.L) / ARCADE_COLS, bh = 18 * this.brickScale();
         for (let r = 0; r < def.rows.length; r++) {
           const row = def.rows[r];
           for (let c = 0; c < ARCADE_COLS; c++) {
@@ -678,6 +680,7 @@
       this.timer = 2.2;
       this.capsules = [];
       this.lasers = [];
+      for (const k of TIMED) this.fx[k] = 0;
       const last = this.mode === 'classic' ? this.wall >= 2 : this.level >= LEVELS.length;
       const bonus = this.mode === 'arcade' ? 1000 : 0;
       this.score += bonus;

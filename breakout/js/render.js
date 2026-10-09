@@ -347,7 +347,9 @@
           s.ghosts.push({ x: e.x, y: e.y, w: e.w, h: e.h, color: e.color, t: 0, life: 0.24 });
           burst(cx, cy, P.base, e.maxHp > 1 ? 16 : 11, 230, { jx: e.w * 0.8, jy: e.h * 0.6, up: 60, life: 0.7, size: 3.2 });
           burst(cx, cy, '#ffffff', 4, 320, { kind: 'spark', life: 0.32, g: 0, add: true, size: 1.4 });
-          if (g.mode === 'arcade' || e.pts >= 5) popup(cx, cy, '+' + e.pts, P.hi, e.pts >= 200 ? 14 : 11);
+          let busy = 0;
+          for (const q of s.popups) if (q.brick && q.t < 0.5) busy++;
+          if (busy < 5 && (g.mode === 'arcade' || e.pts >= 5)) { popup(cx, cy, '+' + e.pts, P.hi, e.pts >= 200 ? 14 : 11); s.popups[s.popups.length - 1].brick = true; }
           if (e.maxHp > 1) R.shake(0.22);
           else if (e.fire) R.shake(0.08);
           s.flashes.delete(e.id);
@@ -801,7 +803,8 @@
       c.globalAlpha = k > 0.6 ? 1 - (k - 0.6) / 0.4 : 1;
       c.font = '900 ' + Math.round(p.size * pop * 10) / 10 + 'px ' + FONT;
       const y = p.y - p.rise * (1 - Math.pow(1 - k, 2));
-      const x = Math.max(E.WALL + 40, Math.min(W - E.WALL - 40, p.x));
+      if (p.half == null) p.half = c.measureText(p.text).width / 2 + 4;
+      const x = Math.max(E.WALL + p.half, Math.min(W - E.WALL - p.half, p.x));
       c.lineWidth = 3;
       c.strokeStyle = 'rgba(5,6,20,0.8)';
       c.lineJoin = 'round';
