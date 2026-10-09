@@ -1066,6 +1066,10 @@
   }
   function closeModal(dlg) {
     if (dlg.hidden) return;
+    // Do not leave focus on a control inside the hidden dialog, or keyboard
+    // shortcuts would be swallowed as typing into it.
+    const a = document.activeElement;
+    if (a && dlg.contains(a) && a.blur) a.blur();
     dlg.hidden = true;
   }
   function topModal() {
