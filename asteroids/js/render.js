@@ -83,10 +83,13 @@
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over';
       ctx.shadowBlur = 0;
+      this.bloomAlpha = 0.85;
       if (this.trails && !this.fresh) {
-        const keep = Math.pow(0.42, Math.min(4, dt * 60));
+        const keep = Math.pow(0.45, Math.min(4, dt * 60));
         ctx.fillStyle = 'rgba(0,0,0,' + (1 - keep).toFixed(3) + ')';
         ctx.fillRect(0, 0, this.cv.width, this.cv.height);
+        // The bloom builds up under the fade, so add less of it each frame.
+        this.bloomAlpha = 0.85 * (1 - keep);
       } else {
         ctx.fillStyle = '#000';
         ctx.fillRect(0, 0, this.cv.width, this.cv.height);
@@ -159,13 +162,13 @@
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.globalCompositeOperation = 'lighter';
-      ctx.globalAlpha = 0.85;
+      ctx.globalAlpha = this.bloomAlpha;
       ctx.imageSmoothingEnabled = true;
-      // Only the playfield (plus a margin for the glow) needs compositing.
+      // Only the playfield needs compositing.
       const v = this.view, d = this.dpr / BLOOM_DIV;
-      const x0 = Math.max(0, Math.floor(v.x * d) - 2), y0 = Math.max(0, Math.floor(v.y * d) - 2);
-      const x1 = Math.min(this.bw, Math.ceil((v.x + v.W * v.scale) * d) + 2);
-      const y1 = Math.min(this.bh, Math.ceil((v.y + v.H * v.scale) * d) + 2);
+      const x0 = Math.max(0, Math.floor(v.x * d)), y0 = Math.max(0, Math.floor(v.y * d));
+      const x1 = Math.min(this.bw, Math.ceil((v.x + v.W * v.scale) * d));
+      const y1 = Math.min(this.bh, Math.ceil((v.y + v.H * v.scale) * d));
       if (x1 > x0 && y1 > y0) {
         ctx.drawImage(this.bc, x0, y0, x1 - x0, y1 - y0, x0 * BLOOM_DIV, y0 * BLOOM_DIV, (x1 - x0) * BLOOM_DIV, (y1 - y0) * BLOOM_DIV);
       }

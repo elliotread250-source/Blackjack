@@ -53,15 +53,45 @@
       padRoot.addEventListener('touchend', stop, opt);
     }
 
-    held(name) { return this.keys[name] || this.pad[name]; }
+    held(name) { return this.keys[name] || this.pad[name] || !!(this.gp && this.gp[name]); }
 
     take(name) {
       if (this.edges[name] > 0) { this.edges[name]--; return true; }
       return false;
     }
 
+    /**
+     * Gamepads (standard mapping): d-pad or left stick to rotate, A or X to
+     * fire, B or Y for hyperspace, up, RT or RB to thrust, Start to start/pause.
+     */
+    pollPads() {
+      let pads = null;
+      try { pads = navigator.getGamepads ? navigator.getGamepads() : null; } catch (e) { pads = null; }
+      const now = { left: false, right: false, thrust: false, fire: false, hyper: false, start: false };
+      if (pads) {
+        for (const gp of pads) {
+          if (!gp || !gp.connected) continue;
+          const b = (i) => !!(gp.buttons[i] && (gp.buttons[i].pressed || gp.buttons[i].value > 0.5));
+          const ax = gp.axes[0] || 0, ay = gp.axes[1] || 0;
+          if (b(14) || ax < -0.5) now.left = true;
+          if (b(15) || ax > 0.5) now.right = true;
+          if (b(12) || b(7) || b(5) || ay < -0.6) now.thrust = true;
+          if (b(0) || b(2)) now.fire = true;
+          if (b(1) || b(3) || b(13)) now.hyper = true;
+          if (b(9)) now.start = true;
+        }
+      }
+      const prev = this.gp || {};
+      for (const c of CONTROLS) {
+        if (now[c] && !prev[c]) this.press(c, 'pad');
+      }
+      if (now.start && !prev.start) this.press(this.h.isPlaying && this.h.isPlaying() ? 'pause' : 'start', 'pad');
+      this.gp = now;
+    }
+
     /** Controls for one 60 Hz frame. */
     frame() {
+      this.pollPads();
       return {
         left: this.held('left'), right: this.held('right'), thrust: this.held('thrust'),
         fire: this.take('fire'), hyper: this.take('hyper'),

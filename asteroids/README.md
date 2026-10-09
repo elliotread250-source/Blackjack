@@ -15,7 +15,7 @@ Faithful bits:
 - Attract mode shows drifting rocks and wandering saucers, the title, a blinking PUSH START, "1 COIN 1 PLAY", and the high-score table on rotation.
 - A top-10 table with arcade-style three-letter initials: rotate picks the letter and hyperspace confirms it. The table and your sound and trail settings are saved in your browser.
 
-Controls: Left/Right or A/D rotate, Up or W thrust, Space or K fire, Shift, Down, S or H hyperspace. Enter starts, P or Esc pauses, M mutes and T toggles phosphor trails. On the initials screen you can also type the letters directly. On a phone, tap to start. The on-screen buttons are multi-touch, so you can rotate, thrust and fire at once. They sit at the sides in landscape and under the playfield in portrait. The game pauses itself when you switch tabs.
+Controls: Left/Right or A/D rotate, Up or W thrust, Space or K fire, Shift, Down, S or H hyperspace. Enter starts, P or Esc pauses, M mutes and T toggles phosphor trails. On the initials screen you can also type the letters directly. On a phone, tap to start. The on-screen buttons are multi-touch, so you can rotate, thrust and fire at once. They sit at the sides in landscape and under the playfield in portrait. Gamepads work too: use the d-pad or stick to rotate, A to fire, B for hyperspace, up or RT to thrust, and Start. The game pauses itself when you switch tabs.
 
 ```
 python server.py    # http://localhost:8080

@@ -55,6 +55,7 @@
     onPress,
     onType,
     isTyping: () => state === 'initials',
+    isPlaying: () => state === 'playing' || state === 'paused',
     onTouch: () => { if (!touch) { touch = true; layout(); } },
     padActive: () => body.classList.contains('pad'),
   }, $('pad'));
@@ -477,7 +478,8 @@
     last = now;
     if (!(dt >= 0)) dt = 0;
     if (dt > 250) dt = 250;
-    if (state !== 'paused') {
+    if (state === 'paused') input.pollPads();
+    else {
       acc += dt;
       let n = 0;
       while (acc >= STEP) {

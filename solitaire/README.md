@@ -22,8 +22,8 @@ mouse or a finger. No build step, no dependencies, nothing downloaded.
 - Smooth animations: the deal, cards flying to their destinations, card flips,
   and the bouncing-cards cascade on a win.
 - Unlimited undo, hints that cycle through useful moves, auto-complete once
-  every card is face up, a "no more moves" notice, new deal or restart the same
-  deal (deal numbers are shown so a deal can be replayed).
+  every card is face up, a "no more moves" notice, and New game or Restart this
+  deal from the New menu (the deal number is shown there and on the win screen).
 - Optional "winnable deals only": deals picked from a list that an offline
   solver (`js/solver.js`) has proven solvable.
 - Responsive layout from a 360px phone to a desktop monitor: cards scale, long

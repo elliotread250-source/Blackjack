@@ -248,7 +248,7 @@
       if (e.type === 'gameOver' || e.type === 'win') {
         const newBest = game.score > best[game.mode];
         endInfo = { won: e.type === 'win', newBest };
-        overDelay = e.type === 'win' ? 1.6 : 1.1;
+        overDelay = e.type === 'win' ? 1.6 : 0.6;
       }
     }
   }
@@ -315,6 +315,9 @@
     }
     if (extra.delete(e.pointerId) && extra.size === 0) game.input.fireHeld = false;
   }
+  // iOS only unlocks WebAudio from touchend/click, not pointerdown
+  window.addEventListener('touchend', function () { S.unlock(); }, { passive: true });
+  window.addEventListener('click', function () { S.unlock(); });
   window.addEventListener('pointerup', endPointer);
   window.addEventListener('pointercancel', endPointer);
 
