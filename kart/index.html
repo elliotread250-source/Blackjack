@@ -230,6 +230,19 @@
     .tag { margin: 8px 0 14px; }
     .menu .btn { padding: 9px 16px; font-size: 16px; }
   }
+  @media (max-height: 520px) {
+    .tcard small { display: none; }
+    .tcard { padding: 6px; gap: 3px; } .tcard b { font-size: 13px; }
+    .tracks { gap: 8px; margin: 2px 0 8px; }
+    .opts { gap: 10px; flex-wrap: nowrap; padding: 8px 10px !important; }
+    .opts .seg button { min-width: 30px; padding: 6px 8px; flex: none; white-space: nowrap; }
+    .opts .btn { padding: 8px 14px; font-size: 14px; }
+    .opts label { font-size: 10px; margin-right: 3px; }
+    .top { margin-bottom: 6px; }
+    .screen { padding-top: calc(var(--safe-t) + 10px); padding-bottom: calc(var(--safe-b) + 10px); }
+    #s-garage .ktype .stat { grid-template-columns: 64px 1fr; font-size: 10px; }
+    .gbottom .btn { padding: 9px 16px; }
+  }
   @media (max-height: 420px) {
     #t-left, #t-right, #t-steer { bottom: calc(var(--safe-b) + 150px); }
     #t-back { bottom: calc(var(--safe-b) + 160px); }
@@ -327,6 +340,7 @@
     <h2>Paused</h2>
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
       <button class="btn primary" id="p-resume">Resume</button>
+      <button class="btn" id="p-reset">Reset kart</button>
       <button class="btn" id="p-restart">Restart race</button>
       <button class="toggle" id="p-sound">Sound <i></i></button>
       <button class="toggle" id="p-music">Music <i></i></button>

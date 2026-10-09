@@ -437,9 +437,10 @@ function buildTerrain(tr, th, grid, R, quality) {
   const b = { mnx: 1e9, mxx: -1e9, mnz: 1e9, mxz: -1e9 };
   for (let i = 0; i < tr.N; i++) { b.mnx = Math.min(b.mnx, tr.PX[i]); b.mxx = Math.max(b.mxx, tr.PX[i]); b.mnz = Math.min(b.mnz, tr.PZ[i]); b.mxz = Math.max(b.mxz, tr.PZ[i]); }
   const M = tr.theme === 'city' ? 120 : 260;
-  const x0 = b.mnx - M, x1 = b.mxx + M, z0 = b.mnz - M, z1 = b.mxz + M;
   const cell = quality === 'high' ? 7 : 9.5;
-  const nx = Math.ceil((x1 - x0) / cell), nz = Math.ceil((z1 - z0) / cell);
+  const x0 = b.mnx - M, z0 = b.mnz - M;
+  const nx = Math.ceil((b.mxx + M - x0) / cell), nz = Math.ceil((b.mxz + M - z0) / cell);
+  const x1 = x0 + nx * cell, z1 = z0 + nz * cell;
   const cxm = (b.mnx + b.mxx) / 2, czm = (b.mnz + b.mxz) / 2;
   const heights = new Float32Array((nx + 1) * (nz + 1));
   const kinds = new Uint8Array((nx + 1) * (nz + 1)); // 0 ground, 1 rock/steep, 2 under-road
@@ -535,9 +536,13 @@ function buildTerrain(tr, th, grid, R, quality) {
     extra = far;
   }
   const heightAt = (x, z) => {
-    const i = Math.round((x - x0) / cell), j = Math.round((z - z0) / cell);
-    if (i < 0 || j < 0 || i > nx || j > nz) return themeH(x, z);
-    return heights[j * (nx + 1) + i];
+    const fx = (x - x0) / cell, fz = (z - z0) / cell;
+    const i = Math.floor(fx), j = Math.floor(fz);
+    if (i < 0 || j < 0 || i >= nx || j >= nz) return themeH(x, z);
+    const u = fx - i, v = fz - j, H = (a, b) => heights[b * (nx + 1) + a];
+    // follow the same triangle split as PlaneGeometry (a-b-d / b-c-d)
+    const h00 = H(i, j), h10 = H(i + 1, j), h01 = H(i, j + 1), h11 = H(i + 1, j + 1);
+    return u + v <= 1 ? h00 + (h10 - h00) * u + (h01 - h00) * v : h11 + (h01 - h11) * (1 - u) + (h10 - h11) * (1 - v);
   };
   return { mesh, extra, heightAt, center: [cxm, czm] };
 }
@@ -606,6 +611,9 @@ function buildScenery(tr, th, grid, R, heightAt, quality, anim) {
   const b = { mnx: 1e9, mxx: -1e9, mnz: 1e9, mxz: -1e9 };
   for (let i = 0; i < tr.N; i++) { b.mnx = Math.min(b.mnx, tr.PX[i]); b.mxx = Math.max(b.mxx, tr.PX[i]); b.mnz = Math.min(b.mnz, tr.PZ[i]); b.mxz = Math.max(b.mxz, tr.PZ[i]); }
   const cx = (b.mnx + b.mxx) / 2, cz = (b.mnz + b.mxz) / 2;
+  // lowest ground under a footprint, so things on slopes don't float on the downhill side
+  const groundUnder = (x, z, r) => Math.min(heightAt(x, z), heightAt(x + r, z), heightAt(x - r, z), heightAt(x, z + r), heightAt(x, z - r));
+  const settle = (list, r) => { for (const it of list) it.y = groundUnder(it.x, it.z, r * (it.s || 1)) - 0.15 * (it.s || 1); return list; };
   const scatter = (n, margin, pad = 90, filter) => {
     const out = [];
     for (let t = 0; t < n * 6 && out.length < n; t++) {
@@ -639,7 +647,7 @@ function buildScenery(tr, th, grid, R, heightAt, quality, anim) {
     case 'meadow': {
       const trees = [...scatter(130 * dens, 9), ...trackside(28, 5)];
       trees.forEach(t => { t.c = ['#ffffff', '#d8f0c0', '#c8f0a8', '#f0f8d0'][Math.floor(R() * 4)]; });
-      g.add(placeInstances(treeGeo(), mat, trees, hi));
+      g.add(placeInstances(treeGeo(), mat, settle(trees, 0.6), hi));
       const bushes = scatter(80 * dens, 6).map(t => ({ ...t, s: 0.5 + R() * 0.5 }));
       g.add(placeInstances(merge([part(new THREE.IcosahedronGeometry(1.4, 0), '#4f9e3c', 0, 0.7, 0, 0, 0, 0, 1.3, 0.8, 1.1)]), mat, bushes, false));
       // flowers
@@ -657,9 +665,9 @@ function buildScenery(tr, th, grid, R, heightAt, quality, anim) {
     }
     case 'canyon': {
       const cacti = [...scatter(70 * dens, 8), ...trackside(40, 4)];
-      g.add(placeInstances(cactusGeo(), mat, cacti, hi));
+      g.add(placeInstances(cactusGeo(), mat, settle(cacti, 0.7), hi));
       const rocks = [...scatter(60 * dens, 6), ...trackside(22, 3)].map(t => ({ ...t, s: 0.8 + R() * 1.8, c: ['#ffffff', '#e0c0a0', '#c8a080'][Math.floor(R() * 3)] }));
-      g.add(placeInstances(rockGeo('#b0683e'), mat, rocks, hi));
+      g.add(placeInstances(rockGeo('#b0683e'), mat, settle(rocks, 1.9), hi));
       // mesas in the distance
       const mesas = [];
       for (let k = 0; k < 14; k++) { const a = R() * 6.28, r = 420 + R() * 300; mesas.push({ x: cx + Math.cos(a) * r, z: cz + Math.sin(a) * r, y: 16, ry: R() * 6, s: 1, sy: 0.8 + R() * 1.2 }); }
@@ -687,9 +695,9 @@ function buildScenery(tr, th, grid, R, heightAt, quality, anim) {
     }
     case 'snow': {
       const pines = [...scatter(170 * dens, 8), ...trackside(18, 4)];
-      g.add(placeInstances(pineGeo(true), mat, pines, hi));
+      g.add(placeInstances(pineGeo(true), mat, settle(pines, 0.6), hi));
       const rocks = scatter(40 * dens, 6).map(t => ({ ...t, s: 0.6 + R() * 1.2 }));
-      g.add(placeInstances(rockGeo('#7c8796'), mat, rocks, hi));
+      g.add(placeInstances(rockGeo('#7c8796'), mat, settle(rocks, 1.9), hi));
       // distant mountains
       const mts = [];
       for (let k = 0; k < 16; k++) { const a = (k / 16) * 6.28 + R() * 0.3, r = 520 + R() * 260; mts.push({ x: cx + Math.cos(a) * r, z: cz + Math.sin(a) * r, y: -5, ry: R() * 6, s: 0.8 + R() * 0.7, sy: 0.8 + R() * 0.8 }); }
@@ -707,9 +715,9 @@ function buildScenery(tr, th, grid, R, heightAt, quality, anim) {
     }
     case 'volcano': {
       const palms = trackside(30, 4).filter(t => { const i = tr.idx(t.s0); return (t.side > 0 ? tr.SOR[i] : tr.SOL[i]) !== SURF.LAVA; });
-      g.add(placeInstances(palmGeo(), mat, palms, hi));
+      g.add(placeInstances(palmGeo(), mat, settle(palms, 0.5), hi));
       const rocks = [...scatter(80 * dens, 6), ...trackside(16, 2)].map(t => ({ ...t, s: 0.6 + R() * 1.6 }));
-      g.add(placeInstances(rockGeo('#2f2729'), mat, rocks, hi));
+      g.add(placeInstances(rockGeo('#2f2729'), mat, settle(rocks, 1.9), hi));
       // crater glow + smoke
       const crater = new THREE.Mesh(new THREE.CylinderGeometry(14, 10, 2, 16), new THREE.MeshBasicMaterial({ color: '#ff7a1a' }));
       crater.position.set(cx, heightAt(cx, cz) - 0.5, cz);
@@ -830,15 +838,15 @@ function addSmoke(g, x, y, z, anim) {
 function buildCity(g, tr, th, grid, R, quality, anim, b) {
   // buildings: instanced boxes with a lit-window texture
   const winTex = canvasTex(64, 128, (x, w, h) => {
-    x.fillStyle = '#ffffff'; x.fillRect(0, 0, w, h);
+    x.fillStyle = '#23263a'; x.fillRect(0, 0, w, h);
     for (let j = 0; j < 16; j++) for (let i = 0; i < 4; i++) {
       const r = Math.random();
-      x.fillStyle = r < 0.45 ? '#fff2b0' : r < 0.55 ? '#7ff6ff' : r < 0.62 ? '#ff9ad6' : '#1a1c2c';
+      x.fillStyle = r < 0.4 ? '#ffe9a0' : r < 0.5 ? '#7ff6ff' : r < 0.57 ? '#ff9ad6' : '#121420';
       x.fillRect(4 + i * 15, 4 + j * 8, 10, 5);
     }
   });
   winTex.wrapS = winTex.wrapT = THREE.RepeatWrapping;
-  const mat = new THREE.MeshLambertMaterial({ map: winTex, emissive: 0xffffff, emissiveMap: winTex, emissiveIntensity: 0.9, color: 0x9aa0c0 });
+  const mat = new THREE.MeshLambertMaterial({ map: winTex, emissive: 0xffffff, emissiveMap: winTex, emissiveIntensity: 0.75, color: 0xb0b4d0 });
   const geo = new THREE.BoxGeometry(1, 1, 1);
   geo.translate(0, 0.5, 0);
   // scale UVs so windows tile on big boxes: done per instance via a shader-free trick (uv * 3)

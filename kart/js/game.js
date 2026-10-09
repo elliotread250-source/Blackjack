@@ -10,7 +10,7 @@ import { buildTrackScene } from './trackmesh.js';
 import { Effects, SPARK } from './fx.js';
 import { packState, RemoteBuffer } from './net.js';
 import { store } from './store.js';
-import { Bot } from './bot.js';
+import { Bot, botThink } from './bot.js';
 
 const trackCache = new Map();
 export function getTrack(i) {
@@ -18,7 +18,7 @@ export function getTrack(i) {
   return trackCache.get(i);
 }
 
-const OFF_COLORS = { [SURF.GRASS]: '#6a8f3a', [SURF.SAND]: '#d6b07a', [SURF.SNOW]: '#ffffff', [SURF.DIRT]: '#9a7050', [SURF.LAVA]: '#ff7a2a' };
+const OFF_COLORS = { [SURF.GRASS]: '#8fc85a', [SURF.SAND]: '#d6b07a', [SURF.SNOW]: '#ffffff', [SURF.DIRT]: '#9a7050', [SURF.LAVA]: '#ff7a2a' };
 const tmpV = new THREE.Vector3();
 const lerpAngle = (a, b, t) => { let d = b - a; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2; return a + d * t; };
 
@@ -177,7 +177,11 @@ export class GameSession {
     const r = this.race, p = this.player, app = this.app;
     this.t += dt;
     // input -> player kart
-    if (!p.finished) {
+    if (this.autopilot && !p.finished && r.phase === 'race') {
+      if (!this.autoBot) this.autoBot = new Bot(p, r, { skill: 0.9 });
+      botThink(this.autoBot, r, dt);
+      if (p.in.hop) { this.hopQueued = true; p.in.hop = false; }
+    } else if (!p.finished) {
       p.in.throttle = inp.throttle; p.in.steer = inp.steer; p.in.drift = inp.drift; p.in.hop = false; p.in.item = inp.item;
       p.in.back = inp.back || inp.throttle < -0.5;
       if (inp.hop) this.hopQueued = true;
@@ -247,7 +251,7 @@ export class GameSession {
     // ghost recording (time trial)
     if (this.mode === 'tt' && r.phase === 'race' && !p.finished) {
       const lt = r.time - p.lapStart;
-      if (!this.recLap || this.recLap !== p.lapsDone) { this.recLap = p.lapsDone; this.rec = []; }
+      if (this.recLap !== p.lapsDone) { this.recLap = p.lapsDone; this.rec = []; }
       if (this.rec.length === 0 || lt - this.rec[this.rec.length - 1][0] >= 0.1) this.rec.push([Math.round(lt * 100) / 100, Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10, Math.round(p.z * 10) / 10, Math.round(p.yaw * 100) / 100]);
     }
   }
@@ -477,7 +481,7 @@ export class GameSession {
     for (const k of r.karts) if (!k.gone) karts.push({ x: k.x, z: k.z, color: k.cfg.body, me: k === p });
     karts.sort((a, b) => a.me - b.me);
     let hint = '';
-    if (p.stuckT > 2.5 && r.phase === 'race' && !p.finished) hint = app.touch ? 'Stuck? Pause > or hold BACK + BRAKE' : 'Stuck? Press R to reset';
+    if (p.stuckT > 2.5 && r.phase === 'race' && !p.finished) hint = app.touch ? 'Stuck? Pause, then Reset kart' : 'Stuck? Press R to reset';
     if (r.phase === 'countdown' && r.time > -2.6 && r.time < -0.4 && !this.online && this.firstRace) hint = 'Tip: hold accelerate as "1" appears for a rocket start';
     // labels over other karts (online names)
     const labels = [];

@@ -24,6 +24,7 @@ void main() {
   if (d > 0.5) discard;
   float a = smoothstep(0.5, 0.12, d) * vAlpha;
   gl_FragColor = vec4(vColor, a);
+  #include <colorspace_fragment>
 }`;
 
 export class Particles {
@@ -226,7 +227,7 @@ export class Effects {
     if (k.offCol && sp > 6 && !airborne && Math.random() < 0.7) {
       for (let s = -1; s <= 1; s += 2) {
         const px = k.x + fx * back + rx * wx * s, pz = k.z + fz * back + rz * wx * s;
-        this.norm.emit(px, k.y + 0.2, pz, -fx * 2 + (Math.random() - 0.5) * 2, 1.5 + Math.random() * 2, -fz * 2 + (Math.random() - 0.5) * 2, 0.5 + Math.random() * 0.3, 0.7, k.offCol, { size1: 1.6, grav: 3, drag: 2, alpha: 0.75 });
+        this.norm.emit(px, k.y + 0.2, pz, -fx * 2 + (Math.random() - 0.5) * 2, 1.5 + Math.random() * 2, -fz * 2 + (Math.random() - 0.5) * 2, 0.45 + Math.random() * 0.25, 0.5, k.offCol, { size1: 1.1, grav: 3, drag: 2, alpha: 0.6 });
       }
     }
     // spin-out stars

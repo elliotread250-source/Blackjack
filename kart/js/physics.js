@@ -13,7 +13,7 @@ export function kartParams(type) {
   const k = KART_BY_ID[type] || KART_BY_ID.standard;
   const st = k.stats;
   return {
-    vmax: 26.5 + st.speed * 2.1,
+    vmax: 27.5 + st.speed * 1.8,
     accel: 8 + st.accel * 3.4,
     turn: 1.5 + st.handling * 0.16,
     grip: 15 + st.handling * 1.8,

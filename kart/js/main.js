@@ -59,6 +59,7 @@ try {
   throw e;
 }
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+app.renderer = renderer;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFShadowMap;
 function applyPixelRatio() {
@@ -111,7 +112,8 @@ function go(name, push = true) {
   current = name;
   for (const s of screens) $('s-' + s).hidden = s !== name;
   $('arcade').hidden = !['title', 'mode', 'online', 'settings'].includes(name);
-  if (name === 'garage') buildGarage();
+  if (name === 'garage') { $('g-done').textContent = garageNext ? 'Next: track' : 'Done'; buildGarage(); }
+  else garageNext = null;
   if (name === 'tracks') buildTracks();
   if (name === 'settings') buildSettings();
   if (name === 'online') enterOnline();
@@ -128,7 +130,7 @@ function back() {
 document.addEventListener('click', e => {
   sound.unlock();
   const b = e.target.closest('[data-go]');
-  if (b) { sound.play('click'); go(b.dataset.go); return; }
+  if (b) { sound.play('click'); if (b.dataset.go === 'garage') garageNext = null; go(b.dataset.go); return; }
   if (e.target.closest('[data-back]')) back();
 });
 document.addEventListener('pointerdown', () => sound.unlock(), { capture: true });
@@ -146,7 +148,8 @@ let mode = 'race';
 document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
   sound.play('click');
   mode = b.dataset.mode;
-  if (mode === 'online') go('online'); else go('tracks');
+  if (mode === 'online') go('online');
+  else { garageNext = 'tracks'; go('garage'); }
 }));
 
 // ---------- garage
@@ -207,7 +210,11 @@ $('g-name').addEventListener('input', e => {
   clearTimeout(setCfg.t);
   setCfg.t = setTimeout(() => { if (app.room) sendProfile(); }, 500);
 });
-$('g-done').onclick = () => back();
+let garageNext = null;
+$('g-done').onclick = () => {
+  if (garageNext) { const n = garageNext; garageNext = null; sound.play('click'); go(n); }
+  else back();
+};
 
 // ---------- track select
 const thumbs = [];
@@ -361,7 +368,7 @@ function onRaceOver(s) {
     const myPos = stand.findIndex(e => e[0] === 'me') + 1;
     title = done ? `Grand Prix: ${ordinal(myPos)} overall` : `Race ${gp.round}/5: ${ordinal(p.place)}`;
     sub = done ? (myPos === 1 ? 'Champion! The cup is yours.' : myPos <= 3 ? 'On the podium!' : 'Better luck next cup.') : `Next up: ${TRACK_DEFS[gp.round].name}`;
-    const st = stand.map(([id, pts], i) => `<tr class="${id === 'me' ? 'me' : ''}"><td>${ordinal(i + 1)}</td><td><span class="chip" style="background:${cfgs[id].body}"></span>${esc(names[id])}</td><td class="t-right">${pts} pts</td><td class="t-right muted">+${GP_POINTS[res.findIndex(e => e.id === id)] || 0}</td></tr>`).join('');
+    const st = stand.map(([id, pts], i) => `<tr class="${id === 'me' ? 'me' : ''}"><td>${ordinal(i + 1)}</td><td><span class="chip" style="background:${cfgs[id].body}"></span>${esc(names[id])}</td><td class="t-right">${pts} pt${pts === 1 ? '' : 's'}</td><td class="t-right muted">+${GP_POINTS[res.findIndex(e => e.id === id)] || 0}</td></tr>`).join('');
     $('r-table').innerHTML = `<tr><th>Pos</th><th>Standings</th><th class="t-right">Points</th><th class="t-right">This race</th></tr>${st}`;
     if (done) {
       const stats = store.get('gpstats', {}) || {};
@@ -410,7 +417,7 @@ function pause(on) {
     if (!s.online) s.paused = true;
     sound.enginesOff();
     toggle($('p-sound'), !settings.muted); toggle($('p-music'), settings.music);
-    $('p-restart').textContent = s.online ? 'Reset kart' : 'Restart race';
+    $('p-restart').hidden = !!s.online;
     $('p-quit').textContent = s.online ? 'Leave race' : 'Quit to menu';
     $('s-pause').hidden = false; current = 'pause';
     hud.showTouch(false);
@@ -421,13 +428,13 @@ function pause(on) {
   }
 }
 $('p-resume').onclick = () => pause(false);
+$('p-reset').onclick = () => { const s = app.session; if (!s) return; if (s.race.phase === 'race' && !s.player.finished) startRespawn(s.player, 'manual'); pause(false); };
 $('h-pause').onclick = () => pause(true);
 $('h-mute').onclick = () => setMuted(!settings.muted);
 $('p-sound').onclick = () => setMuted(!settings.muted);
 $('p-music').onclick = () => setMusic(!settings.music);
 $('p-restart').onclick = () => {
   const s = app.session; if (!s) return;
-  if (s.online) { startRespawn(s.player, 'manual'); pause(false); return; }
   pause(false);
   if (s.mode === 'gp') startOffline('gp', app.gp.round, app.gp.bots);
   else startOffline(s.mode, s.opts.trackIndex);
@@ -682,6 +689,7 @@ window.__kart = {
     p.x = pt.x; p.z = pt.z; p.y = pt.y + 0.1; p.yaw = Math.atan2(pt.fx, pt.fz); p.vx = pt.fx * 20; p.vz = pt.fz * 20; p.vy = 0;
     p.progress += ds; p.s = target; p.sPrev = target; p.hint = tr.idx(target); p.grounded = true;
   },
+  autopilot(on = true) { if (app.session) app.session.autopilot = on; },
   give(item, n = 1) { const s = app.session; if (s) { s.player.item = item; s.player.itemCount = n; } },
   state() {
     const s = app.session; if (!s) return { screen: current };
@@ -690,6 +698,9 @@ window.__kart = {
   },
   go, startOffline: (m, i) => { mode = m; startOffline(m, i); },
   get room() { return app.room; },
+  netInfo() { const n = app.net; return n ? { offset: n.offset, rtt: n.rtt, server: n.serverNow(), wall: Date.now() } : null; },
+  kart(id) { const s = app.session; const k = s && s.race.kartById(id); return k ? { x: k.x, y: k.y, z: k.z, local: k.local, spin: k.spinT > 0, finished: k.finished, progress: k.progress, gone: !!k.gone, bot: !!k.meta.bot } : null; },
+  raceTime() { const s = app.session; return s ? { t: s.race.time, wall: Date.now(), phase: s.race.phase } : null; },
   get me() { return app.me; },
   net: () => app.net,
 };
