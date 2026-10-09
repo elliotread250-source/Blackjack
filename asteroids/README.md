@@ -9,7 +9,7 @@ Faithful bits:
 - Hyperspace drops you somewhere random with a small chance of blowing up when you come back, and the chance grows as the screen fills with rocks. After a death you respawn only once the centre is clear, then blink through a short grace period.
 - The four classic rock outlines come in three sizes: large rocks are worth 20, medium 50 and small 100. Large rocks split into two mediums and mediums into two smalls, each piece flying off at a random speed and heading. Wave 1 has 4 large rocks, and each wave adds 2 more up to 11.
 - The large saucer shoots at random and is worth 200. The small saucer aims at you, gets more accurate as your score climbs, and is worth 1000. Small saucers appear more often as the score goes up, and they're the only kind after 40,000. Saucers turn up more often late in a wave. Saucer shots break rocks too, and a saucer that runs into a rock is destroyed.
-- You start with 3 ships and get an extra one every 10,000 points. Your score is drawn top-left in the vector font with your spare ships beneath it, and the high score sits top-centre.
+- You start with 3 ships and get an extra one every 10,000 points. Your score is drawn top-left in the vector font with your remaining ships beneath it, and the high score sits top-centre.
 - The ship breaks apart into tumbling line fragments, while rocks and saucers burst into dots.
 - Sound: the two-note heartbeat thump, which speeds up as the wave thins out; the falling "pew"; the thrust rumble; three sizes of explosion; the low siren of the large saucer and the higher one of the small saucer; and the extra-life chime.
 - Attract mode shows drifting rocks and wandering saucers, the title, a blinking PUSH START, "1 COIN 1 PLAY", and the high-score table on rotation.

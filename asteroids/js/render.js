@@ -144,8 +144,9 @@
       const lw = Math.max(1.7, 1.25 / v.scale);
       if (this.quality > 0 && this.bctx) {
         const kb = k / BLOOM_DIV;
-        // About 2.5 bloom pixels wide, blurred a little more at high quality.
-        this.pass(this.bctx, kb, d * v.x / BLOOM_DIV, d * v.y / BLOOM_DIV, 2.6 / kb, dim, this.quality >= 2 ? 3.5 : 0);
+        // About 2.5 bloom pixels wide (a little less on small screens), blurred at high quality.
+        const bw = 2.6 * Math.min(1, 0.45 + 0.55 * v.scale);
+        this.pass(this.bctx, kb, d * v.x / BLOOM_DIV, d * v.y / BLOOM_DIV, bw / kb, dim, this.quality >= 2 ? 3.5 : 0);
         this.bloomed = true;
       } else {
         // No bloom layer: a wide faint stroke stands in for it.
