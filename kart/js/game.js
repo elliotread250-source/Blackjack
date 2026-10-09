@@ -177,10 +177,8 @@ export class GameSession {
     const r = this.race, p = this.player, app = this.app;
     this.t += dt;
     // input -> player kart
-    if (this.autopilot && !p.finished && r.phase === 'race') {
-      if (!this.autoBot) this.autoBot = new Bot(p, r, { skill: 0.9 });
-      botThink(this.autoBot, r, dt);
-      if (p.in.hop) { this.hopQueued = true; p.in.hop = false; }
+    if (this.autopilot && !p.finished) {
+      // driven per physics step in stepOnce()
     } else if (!p.finished) {
       p.in.throttle = inp.throttle; p.in.steer = inp.steer; p.in.drift = inp.drift; p.in.hop = false; p.in.item = inp.item;
       p.in.back = inp.back || inp.throttle < -0.5;
@@ -243,6 +241,10 @@ export class GameSession {
   stepOnce() {
     const r = this.race, p = this.player;
     if (this.hopQueued) { p.in.hop = true; }
+    if (this.autopilot && !p.finished && r.phase === 'race') {
+      if (!this.autoBot) this.autoBot = new Bot(p, r, { skill: 0.9, speed: 1 });
+      botThink(this.autoBot, r, DT);
+    }
     const prev = this.prevPos || (this.prevPos = new Map());
     for (const k of r.karts) if (k.local) prev.set(k, [k.x, k.y, k.z, k.yaw]);
     r.step(DT);
@@ -483,6 +485,7 @@ export class GameSession {
     let hint = '';
     if (p.stuckT > 2.5 && r.phase === 'race' && !p.finished) hint = app.touch ? 'Stuck? Pause, then Reset kart' : 'Stuck? Press R to reset';
     if (r.phase === 'countdown' && r.time > -2.6 && r.time < -0.4 && !this.online && this.firstRace) hint = 'Tip: hold accelerate as "1" appears for a rocket start';
+    if (this.online && p.finished) hint = 'Finished! Waiting for the others…';
     // labels over other karts (online names)
     const labels = [];
     if (this.online) {

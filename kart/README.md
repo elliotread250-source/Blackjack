@@ -65,7 +65,7 @@ jumps, the racing line the bots use, the checkpoints for lap counting, the minim
 | Hop and drift | Space or Shift (hold while steering) | RB or X | DRIFT |
 | Use item | E or Ctrl (hold brake to throw back) | LB or Y | ITEM |
 | Look back | C | Stick click | BACK |
-| Reset kart | R | Back / Select | Pause > Reset (online) |
+| Reset kart | R | Back / Select | Pause > Reset kart |
 | Pause | P or Esc | Start | Pause button |
 | Mute | M | | Speaker button |
 

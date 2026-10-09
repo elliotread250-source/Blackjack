@@ -125,6 +125,7 @@ function back() {
   sound.play('back');
   const prev = stack.pop();
   if (current === 'garage' && app.room && prev === 'lobby') sendProfile();
+  if (prev === 'garage' && current === 'tracks') garageNext = 'tracks';
   go(prev || 'title', false);
 }
 document.addEventListener('click', e => {
@@ -356,7 +357,7 @@ function onRaceOver(s) {
     title = 'Time Trial';
     const laps = p.lapTimes.map((t, i) => `<tr><td>L${i + 1}</td><td>${fmtTime(t * 1000)}</td><td class="t-right muted">${t === p.bestLap ? 'best' : ''}</td></tr>`).join('');
     $('r-table').innerHTML = `<tr><th>Lap</th><th>Time</th><th></th></tr>${laps}<tr class="me"><td>Total</td><td>${fmtTime(p.finishTime * 1000)}</td><td class="t-right">${rec}</td></tr><tr><td></td><td class="muted">Track record ${fmtTime((best.race || p.finishTime) * 1000)} · best lap ${fmtTime((best.lap || p.bestLap) * 1000)}</td><td></td></tr>`;
-    btns.push(['Retry', 'primary', () => startOffline('tt', settings.track)], ['Tracks', '', () => { endSession(); go('tracks', false); }], ['Menu', '', () => { endSession(); stack.length = 0; go('title', false); }]);
+    btns.push(['Retry', 'primary', () => startOffline('tt', s.opts.trackIndex)], ['Tracks', '', () => { endSession(); go('tracks', false); }], ['Menu', '', () => { endSession(); stack.length = 0; go('title', false); }]);
   } else if (s.mode === 'gp') {
     const gp = app.gp;
     res.forEach((e, i) => { gp.points[e.id] = (gp.points[e.id] || 0) + (GP_POINTS[i] || 0); });
@@ -384,7 +385,7 @@ function onRaceOver(s) {
   } else {
     sub += rec ? ' · ' + rec : '';
     $('r-table').innerHTML = head + rows.join('');
-    btns.push(['Race again', 'primary', () => startOffline('race', settings.track)], ['Tracks', '', () => { endSession(); go('tracks', false); }], ['Menu', '', () => { endSession(); stack.length = 0; go('title', false); }]);
+    btns.push(['Race again', 'primary', () => startOffline('race', s.opts.trackIndex)], ['Tracks', '', () => { endSession(); go('tracks', false); }], ['Menu', '', () => { endSession(); stack.length = 0; go('title', false); }]);
   }
   showResults(title, sub, btns);
 }
