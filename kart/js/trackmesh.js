@@ -754,9 +754,9 @@ function addClouds(g, cx, cz, R, anim) {
   const parts = [];
   for (let k = 0; k < 14; k++) {
     const a = R() * 6.28, r = 250 + R() * 450, x = cx + Math.cos(a) * r, z = cz + Math.sin(a) * r, y = 90 + R() * 70;
-    for (let j = 0; j < 4; j++) parts.push(part(new THREE.IcosahedronGeometry(10 + R() * 9, 0), '#ffffff', x + j * 12 - 18, y + R() * 5, z + R() * 8, 0, 0, 0, 1.2, 0.7, 1));
+    for (let j = 0; j < 5; j++) parts.push(part(new THREE.IcosahedronGeometry(9 + R() * 8, 1), '#ffffff', x + j * 11 - 22, y + R() * 4 - (j % 2) * 3, z + R() * 10, 0, 0, 0, 1.3, 0.55, 1));
   }
-  const m = new THREE.Mesh(merge(parts), new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0x8090a0, fog: false }));
+  const m = new THREE.Mesh(merge(parts), new THREE.MeshLambertMaterial({ vertexColors: true, emissive: 0xc8d4e4, fog: false, transparent: true, opacity: 0.92 }));
   g.add(m);
   anim.push(dt => { m.rotation.y += dt * 0.004; });
 }

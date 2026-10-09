@@ -73,8 +73,8 @@ export class Hud {
     this.set('item', this.item, it, true);
     const kmh = Math.round(Math.abs(s.speed) * 3.6);
     this.set('speed', this.speed, String(kmh));
-    this.set('sbar', this.speedbar, Math.min(100, (Math.abs(s.speed) / (s.vmax * 1.3)) * 100).toFixed(0));
-    if (this.cache.sbarW !== this.cache.sbar) { this.speedbar.style.width = this.cache.sbar + '%'; this.cache.sbarW = this.cache.sbar; }
+    const sb = Math.min(100, (Math.abs(s.speed) / (s.vmax * 1.3)) * 100).toFixed(0);
+    if (this.cache.sbar !== sb) { this.speedbar.style.width = sb + '%'; this.cache.sbar = sb; }
     this.warn.hidden = !s.wrong;
     if (s.hint) { this.hint.hidden = false; this.set('hint', this.hint, s.hint); } else this.hint.hidden = true;
     if (s.fps !== undefined) { this.fps.hidden = false; this.set('fps', this.fps, s.fps + ' fps'); } else this.fps.hidden = true;
