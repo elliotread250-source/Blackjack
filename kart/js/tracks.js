@@ -62,4 +62,46 @@ export const TRACK_DEFS = [
     pads: [{ at: 0.9, d: 0 }, { at: 6.4, lane: true }, { at: 11.25, d: 0 }, { at: 15.0, d: 0 }],
     boxes: [0.4, 3.4, 7.3, 10.6, 13.9],
   },
+  // ---------------- indoor tracks
+  {
+    id: 'hall', name: 'Kart Hall', theme: 'hall', indoor: true, blurb: 'A real indoor karting centre: tyre walls, hairpins and a bridge over itself.',
+    width: 14, off: 3.5, offSurf: 'grass', bank: 0.3,
+    pts: [[-40, -70, 0], [30, -72, 0], [72, -58, 0], [88, -25, 0.5], [66, 0, 3], [32, 15, 6.5], [0, 30, 7.5], [-30, 46, 7], [-58, 62, 5], [-74, 92, 3.5], [-62, 122, 2], [-30, 134, 1], [0, 116, 0.5], [25, 138, 0], [62, 128, 0], [78, 98, 0], [62, 68, 0], [30, 48, 0], [0, 30, 0], [-30, 12, 0], [-62, -2, 0], [-78, -30, 0], [-70, -60, 0]],
+    sections: [
+      { a: 4.6, b: 8.2, bridge: true, off: 1.5 },
+      { a: 18.6, b: 21.2, lane: { side: 'in', div: 2, w: 6 } },
+    ],
+    pads: [{ at: 0.8, d: 0 }, { at: 14.3, d: 0 }, { at: 19.9, lane: true }],
+    boxes: [0.45, 4.2, 10.4, 16.4],
+  },
+  {
+    id: 'arena', name: 'Neon Arena', theme: 'arena', indoor: true, blurb: 'Banked turns under the lights, then up the ramp to the mezzanine and back down.',
+    width: 16, off: 3, offSurf: 'grass', bank: 2.4, maxBank: 0.3,
+    pts: [[-50, -62, 0], [30, -62, 0], [82, -52, 0], [104, -18, 0], [96, 22, 0], [64, 34, 0], [30, 20, 0], [8, 0, 0], [-16, 10, 0.5], [-20, 40, 3], [8, 62, 6.5], [50, 72, 8], [80, 88, 8], [70, 112, 7.5], [20, 118, 7], [-40, 110, 5], [-84, 86, 2], [-100, 40, 0], [-98, -20, 0], [-84, -52, 0]],
+    sections: [
+      { a: 10.4, b: 14.6, bridge: true, off: 1.5 },
+      { a: 16.6, b: 19.4, lane: { side: 'in', div: 2, w: 6.5 } },
+    ],
+    pads: [{ at: 0.9, d: 0 }, { at: 9.6, d: 0 }, { at: 18.0, lane: true }],
+    boxes: [0.5, 5.5, 12.3, 17.3],
+  },
+  {
+    id: 'toy', name: 'Toy Room', theme: 'toy', indoor: true, blurb: 'Race a giant playroom: around the blocks, up the books and off the table.',
+    width: 15, off: 5, offSurf: 'grass', bank: 0.5,
+    pts: [[-57.5, -82.8, 0], [23.0, -85.1, 0], [73.6, -75.9, 0], [101.2, -48.3, 0], [78.2, -16.1, 0], [98.9, 13.8, 0], [78.2, 39.1, 0.5], [46.0, 48.3, 3], [11.5, 52.9, 6.5], [-23.0, 55.2, 8], [-55.2, 55.2, 8], [-69.0, 54.0, 7.8], [-89.7, 50.6, 0], [-115.0, 25.3, 0], [-121.9, -16.1, 0], [-105.8, -57.5, 0]],
+    sections: [
+      { a: 7.0, b: 11.0, bridge: true, off: 2 },
+      { a: 13.2, b: 15.4, lane: { side: 'in', div: 2, w: 6 } },
+    ],
+    ramps: [{ at: 11.0, len: 10, h: 1.2, gap: 17, land: 0 }],
+    pads: [{ at: 0.6, d: 0 }, { at: 10.3, d: 0 }, { at: 14.4, lane: true }],
+    boxes: [1.4, 4.5, 9.4, 14.0],
+  },
+];
+
+// Grand Prix cups (indices into TRACK_DEFS)
+export const CUPS = [
+  { id: 'outdoor', name: 'Outdoor Cup', blurb: 'Five races in the open air.', tracks: [0, 1, 2, 3, 4] },
+  { id: 'indoor', name: 'Indoor Cup', blurb: 'Three races under a roof.', tracks: [5, 6, 7] },
+  { id: 'grand', name: 'Grand Tour', blurb: 'All eight tracks, back to back.', tracks: [0, 1, 2, 3, 4, 5, 6, 7] },
 ];

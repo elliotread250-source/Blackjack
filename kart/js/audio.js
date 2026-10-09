@@ -12,6 +12,10 @@ const THEMES = {
   snow: { bpm: 108, root: 64, scale: [0, 2, 4, 6, 7, 11], prog: [0, 3, 5, 4], lead: 'sine', bass: 'triangle', seed: 37, swing: 0 },
   city: { bpm: 140, root: 57, scale: [0, 3, 5, 7, 10], prog: [0, 5, 3, 6], lead: 'sawtooth', bass: 'square', seed: 41, swing: 0 },
   volcano: { bpm: 150, root: 52, scale: [0, 1, 3, 5, 7, 8, 10], prog: [0, 1, 0, 6], lead: 'square', bass: 'sawtooth', seed: 53, swing: 0 },
+  // indoor: garage rock for the kart hall, four-on-the-floor synthwave for the arena, a swung toy-piano tune for the playroom
+  hall: { bpm: 146, root: 52, scale: [0, 3, 5, 7, 10], prog: [0, 0, 5, 6], lead: 'sawtooth', bass: 'square', seed: 61, swing: 0, kit: 'rock', extra: 'power' },
+  arena: { bpm: 128, root: 57, scale: [0, 2, 3, 5, 7, 8, 10], prog: [0, 5, 3, 6], lead: 'sawtooth', bass: 'sawtooth', seed: 67, swing: 0, kit: 'four', extra: 'arp' },
+  toy: { bpm: 120, root: 72, scale: [0, 2, 4, 5, 7, 9, 11], prog: [0, 3, 4, 0], lead: 'triangle', bass: 'sine', seed: 71, swing: 0.16, kit: 'toy', extra: 'bells' },
 };
 const CHORD_STEPS = { 0: 0, 1: 1, 3: 5, 4: 7, 5: 9, 6: 10 };
 
@@ -207,33 +211,58 @@ export class Sound {
     const chordRoot = T.root + (CHORD_STEPS[T.prog[bar]] ?? 0);
     const when = t - this.ctx.currentTime;
     const sd = this.song.stepDur;
-    // bass on 8ths
-    if (st % 2 === 0) {
-      const n = chordRoot - 24 + (st % 8 === 4 ? 7 : st % 8 === 6 ? 12 : 0);
-      this.tone(T.bass, NOTE(n), 0, sd * 1.8, 0.16, when, this.musicBus);
+    const kit = T.kit || 'std';
+    // bass: 8ths, or off-beat pumping for the four-on-the-floor kit
+    if (kit === 'four' ? st % 4 === 2 : st % 2 === 0) {
+      const n = chordRoot - 24 + (kit === 'four' ? 12 : st % 8 === 4 ? 7 : st % 8 === 6 ? 12 : 0);
+      this.tone(T.bass, NOTE(n), 0, sd * (kit === 'four' ? 1.4 : 1.8), kit === 'toy' ? 0.2 : 0.16, when, this.musicBus);
     }
     // lead
     const m = mel[i];
     if (m !== null && m !== undefined) {
       const oct = Math.floor(m / T.scale.length), dg = m % T.scale.length;
-      const n = T.root + 12 + oct * 12 + T.scale[dg] + (CHORD_STEPS[T.prog[bar]] ?? 0) * 0;
-      this.tone(T.lead, NOTE(n), 0, sd * 1.6, T.lead === 'sine' ? 0.13 : 0.075, when, this.musicBus);
+      const n = T.root + 12 + oct * 12 + T.scale[dg] - (kit === 'toy' ? 12 : 0);
+      this.tone(T.lead, NOTE(n), 0, sd * (kit === 'toy' ? 2.4 : 1.6), T.lead === 'sine' ? 0.13 : T.lead === 'triangle' ? 0.11 : 0.075, when, this.musicBus);
     }
-    // arpeggio sparkle on the city/snow themes
-    if ((this.musicTheme === 'city' || this.musicTheme === 'snow') && st % 2 === 1) {
-      const arp = [0, 4, 7, 12][(st >> 1) % 4];
-      this.tone('triangle', NOTE(chordRoot + 12 + arp), 0, sd * 0.9, 0.04, when, this.musicBus);
+    // arpeggio sparkle (city, snow, arena)
+    if ((this.musicTheme === 'city' || this.musicTheme === 'snow' || T.extra === 'arp') && st % 2 === 1) {
+      const arp = [0, 3, 7, 12][(st >> 1) % 4];
+      this.tone(T.extra === 'arp' ? 'square' : 'triangle', NOTE(chordRoot + 12 + arp), 0, sd * 0.9, T.extra === 'arp' ? 0.03 : 0.04, when, this.musicBus);
+    }
+    // palm-muted power chords (hall)
+    if (T.extra === 'power' && st % 2 === 0) {
+      const v = st % 4 === 0 ? 0.05 : 0.03;
+      this.tone('sawtooth', NOTE(chordRoot - 12), 0, sd * 0.8, v, when, this.musicBus);
+      this.tone('sawtooth', NOTE(chordRoot - 5), 0, sd * 0.8, v * 0.8, when, this.musicBus);
+    }
+    // music-box bells (toy)
+    if (T.extra === 'bells' && st % 4 === 2) {
+      const b2 = [0, 4, 7, 12, 7, 4][(i >> 2) % 6];
+      this.tone('sine', NOTE(chordRoot + 12 + b2), 0, sd * 3, 0.05, when, this.musicBus);
     }
     // drums
-    if (st % 8 === 0) this.kick(when);
-    if (st % 8 === 4) this.snare(when);
-    if (st % 2 === 0) this.hat(when);
+    if (kit === 'rock') {
+      if (st === 0 || st === 6 || st === 8 || st === 11) this.kick(when);
+      if (st % 8 === 4) this.snare(when);
+      if (st % 2 === 0) this.hat(when);
+    } else if (kit === 'four') {
+      if (st % 4 === 0) this.kick(when);
+      if (st % 8 === 4) this.snare(when);
+      if (st % 4 === 2) { this.hat(when); this.hat(when + sd * 0.5); }
+    } else if (kit === 'toy') {
+      if (st % 8 === 0) this.kick(when, 0.2);
+      if (st % 8 === 4 || st === 14) this.tone('sine', 1250, 900, 0.05, 0.08, when, this.musicBus); // woodblock
+    } else {
+      if (st % 8 === 0) this.kick(when);
+      if (st % 8 === 4) this.snare(when);
+      if (st % 2 === 0) this.hat(when);
+    }
   }
-  kick(when) {
+  kick(when, vol = 0.35) {
     const c = this.ctx, t = c.currentTime + when;
     const o = c.createOscillator(); o.type = 'sine';
     o.frequency.setValueAtTime(150, t); o.frequency.exponentialRampToValueAtTime(45, t + 0.12);
-    const g = c.createGain(); g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    const g = c.createGain(); g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
     o.connect(g); g.connect(this.musicBus); o.start(t); o.stop(t + 0.2);
   }
   snare(when) {

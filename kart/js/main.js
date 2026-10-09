@@ -2,7 +2,7 @@
 // render loop. The race itself lives in game.js.
 import * as THREE from 'three';
 import { KART_TYPES, KART_BY_ID, DRIVERS, WHEELS, PALETTE, BOT_NAMES, GP_POINTS, DIFFICULTY, cleanConfig, defaultConfig, fmtTime, ordinal, rng } from './data.js';
-import { TRACK_DEFS } from './tracks.js';
+import { TRACK_DEFS, CUPS } from './tracks.js';
 import { loadKartAssets, KartView } from './kartmodel.js';
 import { THEMES } from './trackmesh.js';
 import { GameSession, getTrack } from './game.js';
@@ -24,12 +24,14 @@ const settings = {
   music: store.get('music', true),
   quality: store.get('quality', 'auto'),
   autoAccel: store.get('autoAccel', isTouch),
-  steerMode: store.get('steerMode', 'buttons'),
+  tilt: store.get('tilt', false),
   fps: store.get('fps', false),
   laps: store.get('laps', 3),
   difficulty: store.get('difficulty', 'normal'),
   track: store.get('track', 0),
+  cup: store.get('cup', 'outdoor'),
 };
+if (!Number.isInteger(settings.track) || settings.track < 0 || settings.track >= TRACK_DEFS.length) settings.track = 0;
 const quality = () => (settings.quality === 'auto' ? (isTouch ? 'low' : 'high') : settings.quality);
 let cfg = cleanConfig(store.get('cfg', null) || defaultConfig('standard'));
 let playerName = String(store.get('name', '') || '').slice(0, 14);
@@ -39,7 +41,7 @@ const input = new Input();
 input.autoAccel = isTouch && settings.autoAccel;
 const sound = new Sound(settings);
 const hud = new Hud(input);
-hud.setSteerMode(settings.steerMode);
+hud.setTilt(isTouch && settings.tilt);
 hud.setMute(settings.muted);
 
 const app = {
@@ -217,24 +219,49 @@ $('g-done').onclick = () => {
   else back();
 };
 
-// ---------- track select
+// ---------- track select (tracks grouped Outdoor / Indoor; in Grand Prix mode, the cups)
 const thumbs = [];
+const cupOf = () => CUPS.find(c => c.id === settings.cup) || CUPS[0];
 function buildTracks() {
   const gp = mode === 'gp', tt = mode === 'tt';
-  $('t-title').textContent = gp ? 'Grand Prix: all five tracks' : tt ? 'Time Trial: choose a track' : 'Choose a track';
+  $('t-title').textContent = gp ? 'Grand Prix: choose a cup' : tt ? 'Time Trial: choose a track' : 'Choose a track';
   const best = id => store.get('best.' + id, null);
-  $('t-list').innerHTML = TRACK_DEFS.map((t, i) => {
-    const b = best(t.id);
-    const bl = b ? (tt && b.lap ? `Best lap ${fmtTime(b.lap * 1000)}` : b.race ? `Best ${fmtTime(b.race * 1000)}` : '') : '';
-    return `<button class="tcard${!gp && settings.track === i ? ' sel' : ''}" data-i="${i}"><canvas width="240" height="180"></canvas><b>${gp ? (i + 1) + '. ' : ''}${t.name}</b><small>${t.blurb}</small><span class="best">${bl}</span></button>`;
-  }).join('');
-  $('t-list').querySelectorAll('canvas').forEach((c, i) => drawTrackThumb(c, getTrack(i), THEMES[TRACK_DEFS[i].theme]));
-  $('t-list').onclick = e => {
-    const b = e.target.closest('[data-i]'); if (!b || gp) return;
-    sound.play('click');
-    settings.track = +b.dataset.i; store.set('track', settings.track);
-    $('t-list').querySelectorAll('.tcard').forEach(x => x.classList.toggle('sel', x === b));
-  };
+  const list = $('t-list');
+  list.classList.toggle('cups', gp);
+  if (gp) {
+    const stats = store.get('gpstats', {}) || {};
+    list.innerHTML = CUPS.map(c => {
+      const st = stats[c.id + '.' + settings.difficulty];
+      const won = st ? (st.cups ? `Won ${st.cups}×` : `Best: ${ordinal(st.best)}`) : '';
+      return `<button class="tcard cup${cupOf().id === c.id ? ' sel' : ''}" data-c="${c.id}"><div class="cupthumbs">${c.tracks.map(() => '<canvas width="120" height="90"></canvas>').join('')}</div><b>${c.name}</b><small>${c.blurb} ${c.tracks.map(i => TRACK_DEFS[i].name).join(' · ')}</small><span class="best">${won}</span></button>`;
+    }).join('');
+    list.querySelectorAll('.cup').forEach(card => {
+      const c = CUPS.find(x => x.id === card.dataset.c);
+      card.querySelectorAll('canvas').forEach((cv, k) => drawTrackThumb(cv, getTrack(c.tracks[k]), THEMES[TRACK_DEFS[c.tracks[k]].theme]));
+    });
+    list.onclick = e => {
+      const b = e.target.closest('[data-c]'); if (!b) return;
+      sound.play('click');
+      settings.cup = b.dataset.c; store.set('cup', settings.cup);
+      list.querySelectorAll('.tcard').forEach(x => x.classList.toggle('sel', x === b));
+    };
+  } else {
+    const card = i => {
+      const t = TRACK_DEFS[i], b = best(t.id);
+      const bl = b ? (tt && b.lap ? `Best lap ${fmtTime(b.lap * 1000)}` : b.race ? `Best ${fmtTime(b.race * 1000)}` : '') : '';
+      return `<button class="tcard${settings.track === i ? ' sel' : ''}" data-i="${i}"><canvas width="240" height="180"></canvas><b>${t.name}</b><small>${t.blurb}</small><span class="best">${bl}</span></button>`;
+    };
+    const idx = TRACK_DEFS.map((t, i) => i);
+    const out = idx.filter(i => !TRACK_DEFS[i].indoor), ind = idx.filter(i => TRACK_DEFS[i].indoor);
+    list.innerHTML = `<h3 class="tgroup">Outdoor</h3>${out.map(card).join('')}<h3 class="tgroup">Indoor</h3>${ind.map(card).join('')}`;
+    list.querySelectorAll('canvas').forEach(c => { const i = +c.parentElement.dataset.i; drawTrackThumb(c, getTrack(i), THEMES[TRACK_DEFS[i].theme]); });
+    list.onclick = e => {
+      const b = e.target.closest('[data-i]'); if (!b) return;
+      sound.play('click');
+      settings.track = +b.dataset.i; store.set('track', settings.track);
+      list.querySelectorAll('.tcard').forEach(x => x.classList.toggle('sel', x === b));
+    };
+  }
   $('o-laps').innerHTML = [1, 2, 3, 4, 5].map(n => `<button class="${settings.laps === n ? 'sel' : ''}" data-l="${n}">${n}</button>`).join('');
   $('o-laps').onclick = e => { const b = e.target.closest('[data-l]'); if (!b) return; settings.laps = +b.dataset.l; store.set('laps', settings.laps); buildTracks(); };
   $('o-diff-wrap').hidden = tt;
@@ -253,7 +280,7 @@ function toggle(el, on) { el.classList.toggle('on', !!on); }
 function buildSettings() {
   toggle($('st-sound'), !settings.muted); toggle($('st-music'), settings.music); toggle($('st-auto'), settings.autoAccel); toggle($('st-fps'), settings.fps);
   $('st-quality').innerHTML = [['auto', 'Auto'], ['low', 'Low'], ['high', 'High']].map(([k, n]) => `<button class="${settings.quality === k ? 'sel' : ''}" data-q="${k}">${n}</button>`).join('');
-  $('st-steer').innerHTML = [['buttons', 'Steer buttons'], ['slider', 'Steer slider']].map(([k, n]) => `<button class="${settings.steerMode === k ? 'sel' : ''}" data-s="${k}">${n}</button>`).join('');
+  toggle($('st-tilt'), settings.tilt);
 }
 function setMuted(m) { settings.muted = m; store.set('muted', m); sound.setMuted(m); hud.setMute(m); toggle($('st-sound'), !m); toggle($('p-sound'), !m); }
 function setMusic(m) { settings.music = m; store.set('music', m); sound.setMusic(m); toggle($('st-music'), m); toggle($('p-music'), m); }
@@ -262,7 +289,17 @@ $('st-music').onclick = () => setMusic(!settings.music);
 $('st-auto').onclick = () => { settings.autoAccel = !settings.autoAccel; store.set('autoAccel', settings.autoAccel); input.autoAccel = isTouch && settings.autoAccel; buildSettings(); };
 $('st-fps').onclick = () => { settings.fps = !settings.fps; store.set('fps', settings.fps); buildSettings(); };
 $('st-quality').onclick = e => { const b = e.target.closest('[data-q]'); if (!b) return; settings.quality = b.dataset.q; store.set('quality', settings.quality); applyPixelRatio(); buildSettings(); toast('Graphics: applies from the next race'); };
-$('st-steer').onclick = e => { const b = e.target.closest('[data-s]'); if (!b) return; settings.steerMode = b.dataset.s; store.set('steerMode', settings.steerMode); hud.setSteerMode(settings.steerMode); buildSettings(); };
+async function setTilt(on) {
+  if (on && typeof DeviceOrientationEvent !== 'undefined' && DeviceOrientationEvent.requestPermission) {
+    try { if (await DeviceOrientationEvent.requestPermission() !== 'granted') { toast('Tilt needs motion access'); return; } } catch { return; }
+  }
+  settings.tilt = on; store.set('tilt', on);
+  hud.setTilt(on && isTouch);
+  toggle($('st-tilt'), on);
+  if (current === 'race') toast(on ? 'Tilt steering on (hold level to centre)' : 'Drag-pad steering');
+}
+$('st-tilt').onclick = () => setTilt(!settings.tilt);
+$('h-tilt').onclick = () => setTilt(!settings.tilt);
 
 // ---------- bots
 function makeBots(seed, n, difficulty) {
@@ -319,9 +356,10 @@ function startOffline(m, trackIndex, gpEntrants) {
 function startGP() {
   const seed = (Date.now() & 0xffffff) + 7;
   const bots = makeBots(seed, 7, settings.difficulty);
-  app.gp = { round: 0, bots, points: { me: 0 }, difficulty: settings.difficulty, laps: settings.laps };
+  const cup = cupOf();
+  app.gp = { cup: cup.id, cupName: cup.name, tracks: cup.tracks.slice(), round: 0, bots, points: { me: 0 }, difficulty: settings.difficulty, laps: settings.laps };
   for (const b of bots) app.gp.points[b.id] = 0;
-  startOffline('gp', 0, bots);
+  startOffline('gp', app.gp.tracks[0], bots);
 }
 function gpGridSlot() {
   // after the first round, start in reverse order of the standings (leader at the back)
@@ -362,25 +400,25 @@ function onRaceOver(s) {
     const gp = app.gp;
     res.forEach((e, i) => { gp.points[e.id] = (gp.points[e.id] || 0) + (GP_POINTS[i] || 0); });
     gp.round++;
-    const done = gp.round >= TRACK_DEFS.length;
+    const done = gp.round >= gp.tracks.length;
     const names = { me: playerName || 'You' }; const cfgs = { me: cfg };
     for (const b of gp.bots) { names[b.id] = b.name; cfgs[b.id] = b.cfg; }
     const stand = Object.entries(gp.points).sort((a, b) => b[1] - a[1]);
     const myPos = stand.findIndex(e => e[0] === 'me') + 1;
-    title = done ? `Grand Prix: ${ordinal(myPos)} overall` : `Race ${gp.round}/5: ${ordinal(p.place)}`;
-    sub = done ? (myPos === 1 ? 'Champion! The cup is yours.' : myPos <= 3 ? 'On the podium!' : 'Better luck next cup.') : `Next up: ${TRACK_DEFS[gp.round].name}`;
+    title = done ? `${gp.cupName}: ${ordinal(myPos)} overall` : `Race ${gp.round}/${gp.tracks.length}: ${ordinal(p.place)}`;
+    sub = done ? (myPos === 1 ? 'Champion! The cup is yours.' : myPos <= 3 ? 'On the podium!' : 'Better luck next cup.') : `Next up: ${TRACK_DEFS[gp.tracks[gp.round]].name}`;
     const st = stand.map(([id, pts], i) => `<tr class="${id === 'me' ? 'me' : ''}"><td>${ordinal(i + 1)}</td><td><span class="chip" style="background:${cfgs[id].body}"></span>${esc(names[id])}</td><td class="t-right">${pts} pt${pts === 1 ? '' : 's'}</td><td class="t-right muted">+${GP_POINTS[res.findIndex(e => e.id === id)] || 0}</td></tr>`).join('');
     $('r-table').innerHTML = `<tr><th>Pos</th><th>Standings</th><th class="t-right">Points</th><th class="t-right">This race</th></tr>${st}`;
     if (done) {
       const stats = store.get('gpstats', {}) || {};
-      const k = gp.difficulty;
+      const k = gp.cup + '.' + gp.difficulty;
       stats[k] = stats[k] || { cups: 0, best: 9 };
       stats[k].cups += myPos === 1 ? 1 : 0; stats[k].best = Math.min(stats[k].best, myPos);
       store.set('gpstats', stats);
       if (myPos <= 3) confetti();
       btns.push(['New cup', 'primary', () => { endSession(); startGP(); }], ['Menu', '', () => { endSession(); app.gp = null; stack.length = 0; go('title', false); }]);
     } else {
-      btns.push(['Next race', 'primary', () => startOffline('gp', gp.round, gp.bots)], ['Quit cup', '', () => { endSession(); app.gp = null; stack.length = 0; go('title', false); }]);
+      btns.push(['Next race', 'primary', () => startOffline('gp', gp.tracks[gp.round], gp.bots)], ['Quit cup', '', () => { endSession(); app.gp = null; stack.length = 0; go('title', false); }]);
     }
   } else {
     sub += rec ? ' · ' + rec : '';
@@ -437,7 +475,7 @@ $('p-music').onclick = () => setMusic(!settings.music);
 $('p-restart').onclick = () => {
   const s = app.session; if (!s) return;
   pause(false);
-  if (s.mode === 'gp') startOffline('gp', app.gp.round, app.gp.bots);
+  if (s.mode === 'gp') startOffline('gp', app.gp.tracks[app.gp.round], app.gp.bots);
   else startOffline(s.mode, s.opts.trackIndex);
 };
 $('p-quit').onclick = () => {
@@ -589,7 +627,7 @@ function startOnline(msg) {
     }
   });
   if (!entrants.some(e => e.player)) return;
-  const trackIndex = Math.max(0, Math.min(4, msg.track | 0));
+  const trackIndex = Math.max(0, Math.min(TRACK_DEFS.length - 1, msg.track | 0));
   startSession({ mode: 'online', trackIndex, laps: Math.max(1, Math.min(5, msg.laps | 0)), difficulty: 'normal', entrants, seed: msg.seed, me: app.me, online: { net: app.net, go: msg.go, me: app.me, host } });
   void R;
 }
@@ -690,6 +728,9 @@ window.__kart = {
     p.x = pt.x; p.z = pt.z; p.y = pt.y + 0.1; p.yaw = Math.atan2(pt.fx, pt.fz); p.vx = pt.fx * 20; p.vz = pt.fz * 20; p.vy = 0;
     p.progress += ds; p.s = target; p.sPrev = target; p.hint = tr.idx(target); p.grounded = true;
   },
+  cam(c) { if (app.session) app.session.debugCam = c || null; },
+  tpoint(frac, d = 0) { const s = app.session; if (!s) return null; const tr = s.track; const p = tr.pointAt(tr.wrapS(frac * tr.L), d); return { x: p.x, y: p.y, z: p.z, fx: p.fx, fz: p.fz }; },
+  room3d() { const w = app.session && app.session.world; return w && w.room ? { ...w.room } : null; },
   autopilot(on = true) { if (app.session) app.session.autopilot = on; },
   give(item, n = 1) { const s = app.session; if (s) { s.player.item = item; s.player.itemCount = n; } },
   state() {

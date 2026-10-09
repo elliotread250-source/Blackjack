@@ -1,7 +1,7 @@
 // Bot drivers: pure pursuit along the track's racing line with per-bot offsets, braking from
 // curvature ahead, drifting through long bends, shortcut lanes, item use and recovery.
 import { DIFFICULTY } from './data.js';
-import { startRespawn } from './physics.js';
+import { startRespawn, steerLimit } from './physics.js';
 
 let botSeed = 1;
 function rnd(b) { b._r = (b._r * 16807) % 2147483647; return (b._r - 1) / 2147483646; }
@@ -113,8 +113,11 @@ export function botThink(b, race, dt) {
     steer = Math.max(-1, Math.min(1, into * k.drift));
     if (into < -1.6) b.wantRelease = true;
   } else {
-    const sf = Math.min(1, vv / 7) * (1 - 0.25 * Math.min(1, Math.max(0, (vv - 18) / 20)));
-    steer = Math.max(-1, Math.min(1, (vv * kap) / (turn0 * sf) + ang * 0.6));
+    // wheel angle for that curvature (bicycle model) plus yaw-rate damping, as a fraction of lock
+    const lim = steerLimit(k.P, vv) * 1.1;
+    const deltaR = Math.atan(k.P.L * kap) * 1.08;
+    const rDes = -vv * kap;
+    steer = Math.max(-1, Math.min(1, (deltaR + 0.05 * (k.yawVel - rDes)) / lim + ang * 0.35));
     if (k.vf < 2 && Math.abs(ang) > 1.2) steer = Math.sign(ang);
   }
   // emergency: about to slide into lava or off an edge
@@ -126,17 +129,16 @@ export function botThink(b, race, dt) {
   }
 
   // ---- speed control from curvature ahead
-  const turn = turn0;
   let throttle = 1;
   let maxK = 0, sumK = 0;
   for (let a = 4; a <= 70; a += 6) {
-    const kk = tr.RLK[tr.idx(k.s + a)];
+    const ia = tr.idx(k.s + a);
+    // racing-line curvature, but never much less than the centre line's: in hairpins the kart rarely holds the ideal line
+    const kk = Math.max(Math.abs(tr.RLK[ia]), Math.abs(tr.K[ia]) * 0.75) * (tr.RLK[ia] < 0 ? -1 : 1);
     if (Math.abs(kk) > Math.abs(maxK)) maxK = kk;
     if (a < 40) sumK += kk;
-    const vv = Math.max(10, k.vf);
-    const sf = 1 - 0.25 * Math.min(1, Math.max(0, (vv - 18) / 20));
-    // tightest radius the kart can hold at this speed is v/(turn*sf)
-    const vc = Math.sqrt((turn * sf * 0.88 * (0.75 + 0.25 * b.skill)) * vv / Math.max(1e-3, Math.abs(kk)));
+    // corner speed from the tyres' lateral grip
+    const vc = Math.sqrt((k.P.A * 0.8 * (0.75 + 0.25 * b.skill)) / Math.max(1e-3, Math.abs(kk)));
     const allow = Math.sqrt(vc * vc + 2 * 18 * a);
     if (k.vf > allow + 1.5) throttle = k.vf > allow + 5 ? -1 : 0;
   }
@@ -150,7 +152,7 @@ export function botThink(b, race, dt) {
     inp.drift = true;
     // hold the steer into the corner until airborne hop lands
     if (!k.drift) steer = b.driftDir;
-    const done = b.wantRelease || (k.drift && k.driftStage >= b.driftWant && bend < 0.5) || (k.drift && bend < 0.2) || k.spinT > 0 || k.vf < 8 || (k.drift && k.drift !== b.driftDir);
+    const done = b.wantRelease || (k.drift && k.driftStage >= b.driftWant) || (k.drift && bend < 0.2) || k.spinT > 0 || k.vf < 8 || (k.drift && k.drift !== b.driftDir);
     b.wantRelease = false;
     if (done || (!k.drift && k.landT > 0.4 && k.grounded)) { b.drifting = false; inp.drift = false; }
   } else inp.drift = false;
@@ -201,4 +203,5 @@ export function botThink(b, race, dt) {
   }
   inp.throttle = throttle;
   inp.steer = steer;
+  inp.analog = true;
 }

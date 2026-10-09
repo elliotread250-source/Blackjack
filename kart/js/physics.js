@@ -1,22 +1,41 @@
-// Arcade kart physics. Pure JS (no three.js) so bots can be simulated headless in tests.
-// Fixed step (DT). Heading yaw: forward = (sin yaw, cos yaw); right = (-cos yaw, sin yaw).
+// Kart physics. Pure JS (no three.js) so bots can be simulated headless in tests.
+// Handling follows the Apex GP model scaled down to karts: a single-track (bicycle) model with
+// slip angles, a Pacejka-style lateral curve, tyre relaxation, a friction ellipse for combined
+// braking/throttle + cornering, longitudinal load transfer, yaw inertia, a speed-sensitive
+// steering limit and a kinematic blend at low speed. On top of that sit the arcade parts: hop +
+// drift with mini-turbos (the drift drops rear grip and adds a controlled yaw bias so it is easy
+// to hold), boosts, items, off-road and ice via surface grip.
+// Fixed step (DT). Heading yaw: forward = (sin yaw, cos yaw); right = (-cos yaw, sin yaw);
+// body frame: u = forward speed, w = leftward speed, r = yaw rate (+ = turning left).
 import { SURF, SURF_PROPS } from './trackgen.js';
-import { KART_BY_ID } from './data.js';
+import { KART_BY_ID, BODY_META } from './data.js';
 
 export const DT = 1 / 120;
 export const G = 30;
 export const DRIFT_STAGES = [1.0, 1.9, 3.0]; // charge needed for blue / orange / purple
 export const MINI_TURBO = [0, 0.55, 1.0, 1.5]; // boost seconds per stage
 const HOP_V = 5.4;
+const PB = 18.5, PC = 1.45;
+const pac = a => Math.sin(PC * Math.atan(PB * a));
+export const PEAK_SLIP = Math.tan(Math.PI / (2 * PC)) / PB;
+const HCG = 0.34;
 
 export function kartParams(type) {
   const k = KART_BY_ID[type] || KART_BY_ID.standard;
   const st = k.stats;
+  const wm = (BODY_META[k.id] || BODY_META.standard).wheels;
+  const L = Math.max(1, wm.fl[2] - wm.bl[2]);
+  const a = L * 0.53, b = L - a; // CG a little behind the middle
   return {
     vmax: 27.5 + st.speed * 1.8,
     accel: 8 + st.accel * 3.4,
-    turn: 1.5 + st.handling * 0.16,
-    grip: 15 + st.handling * 1.8,
+    turn: 1.5 + st.handling * 0.16,          // drift yaw rate
+    A: 46 + st.handling * 3.5,               // tyre grip as lateral acceleration (m/s^2) at nominal load
+    lock: 0.4 + st.handling * 0.02,          // max wheel angle (rad) at low speed
+    rearF: 1.26 - st.handling * 0.035,       // rear/front grip balance: lower = livelier tail
+    Iz: a * b * (0.85 + st.weight * 0.1),    // yaw inertia per kg (radius of gyration^2)
+    relax: 0.3 + st.weight * 0.03,           // tyre relaxation length (m)
+    L, a, b,
     mass: k.mass,
     radius: k.radius,
     offroad: k.offroad,
@@ -24,18 +43,24 @@ export function kartParams(type) {
   };
 }
 
+// Max wheel angle so full lock sits near the tyres' peak slip (keeps it calm at speed)
+export function steerLimit(P, v) {
+  const vv = Math.max(v, 1), k = (P.A * 0.93) / (vv * vv);
+  return Math.min(P.lock, P.L * k + PEAK_SLIP * 1.1);
+}
+
 export function makeKart(type, spawn, opts = {}) {
   const k = {
     type, P: kartParams(type), id: opts.id ?? 0,
     x: spawn.x, y: spawn.y + 0.05, z: spawn.z, vx: 0, vy: 0, vz: 0, yaw: spawn.yaw, yawVel: 0,
     grounded: true, airT: 0, hint: -1, surf: SURF.ROAD, nx: 0, ny: 1, nz: 0,
-    steer: 0, drift: 0, driftT: 0, driftStage: 0, hopping: false, landT: 9, hopCD: 0, driftHeld: false,
+    steer: 0, steerRaw: 0, aF: 0, aR: 0, axS: 0, slide: 0, drift: 0, driftT: 0, driftStage: 0, hopping: false, landT: 9, hopCD: 0, driftHeld: false,
     boostT: 0, boostKind: 0, spinT: 0, spinAng: 0, invulnT: 0, shieldT: 0,
     pitch: 0, roll: 0, speed: 0, vf: 0,
     s: 0, d: 0, sPrev: null, progress: spawn.s ?? 0, safeS: spawn.s ?? 0, safeD: spawn.d ?? 0,
     respawnT: 0, respawnPhase: 0, fallT: 0, stuckT: 0, wrongT: 0, wrongWay: false,
     speedScale: 1, onPad: false,
-    in: { throttle: 0, steer: 0, drift: false, hop: false, item: false, back: false },
+    in: { throttle: 0, steer: 0, analog: false, drift: false, hop: false, item: false, back: false },
     ev: [],
   };
   return k;
@@ -67,7 +92,7 @@ function placeRespawn(k, tr) {
   k.progress += dsd;
   k.s = s; k.sPrev = s; k.d = d;
   k.x = p.x; k.z = p.z; k.y = p.y + 3.2;
-  k.vx = k.vz = k.vy = 0; k.yawVel = 0;
+  k.vx = k.vz = k.vy = 0; k.yawVel = 0; k.aF = 0; k.aR = 0; k.steerRaw = 0; k.steer = 0; k.axS = 0;
   k.yaw = Math.atan2(p.fx, p.fz);
   k.hint = tr.idx(s);
   k.grounded = false;
@@ -93,11 +118,23 @@ export function stepKart(k, tr, dt = DT) {
   const spun = k.spinT > 0;
   if (spun) { k.spinT -= dt; k.spinAng += dt * 13; } else k.spinAng = 0;
   const thr = spun ? 0 : inp.throttle;
-  const steerIn = spun ? 0 : inp.steer;
-  k.steer += (steerIn - k.steer) * Math.min(1, dt * 11);
-
   let fx = fwdX(k), fz = fwdZ(k), rx = -fz, rz = fx;
-  let vf = k.vx * fx + k.vz * fz, vl = k.vx * rx + k.vz * rz;
+  // body-frame state from the world velocity (so wall bounces, bumps and hits count)
+  let u = k.vx * fx + k.vz * fz, w = -(k.vx * rx + k.vz * rz), yr = k.yawVel;
+  const v = Math.abs(u);
+
+  // ---- steering input (Apex GP): keyboard ramps in at a rate that slows with speed, returns
+  // to centre faster and counter-steers fastest, then a curved response; analog skips the ramp.
+  const target = spun ? 0 : Math.max(-1, Math.min(1, inp.steer || 0));
+  if (inp.analog) k.steerRaw += (target - k.steerRaw) * Math.min(1, dt * 12);
+  else {
+    const sr = k.steerRaw, speedK = 1 / (1 + v / 25);
+    const rate = target === 0 ? 2.6 + 3 * speedK : (Math.sign(target) !== Math.sign(sr) && Math.abs(sr) > 0.05 ? 5 : 0.55 + 2.8 * speedK);
+    k.steerRaw = sr + Math.max(-rate * dt, Math.min(rate * dt, target - sr));
+  }
+  const sa = Math.abs(k.steerRaw);
+  k.steer = Math.sign(k.steerRaw) * (inp.analog ? sa : 0.35 * sa + 0.65 * sa * sa);
+
   const sp = SURF_PROPS[k.surf] || SURF_PROPS[0];
   // off-road slows you, less so for karts built for it and while boosting
   let pen = sp.off ? (1 - sp.speed) / P.offroad : 0;
@@ -109,18 +146,20 @@ export function stepKart(k, tr, dt = DT) {
     k.vy = HOP_V; k.grounded = false; k.hopping = true; k.hopCD = 0.3;
     k.ev.push({ type: 'hop' });
   }
-  const canDrift = !spun && vf > 9;
-  if (!k.drift && k.grounded && inp.drift && canDrift && Math.abs(k.steer) > 0.35 && (k.landT < 0.22)) {
-    k.drift = Math.sign(k.steer); k.driftT = 0; k.driftStage = 0;
+  const canDrift = !spun && u > 9;
+  if (!k.drift && k.grounded && inp.drift && canDrift && Math.abs(k.steerRaw) > 0.3 && (k.landT < 0.22)) {
+    k.drift = Math.sign(k.steerRaw); k.driftT = 0; k.driftStage = 0;
     k.ev.push({ type: 'driftStart', dir: k.drift });
   }
   if (k.drift) {
-    if (!inp.drift || vf < 6.5 || spun) {
+    if (!inp.drift || u < 6.5 || spun) {
       if (k.driftStage > 0 && !spun) {
         k.boostT = Math.max(k.boostT, MINI_TURBO[k.driftStage]);
         k.boostKind = k.driftStage;
         k.ev.push({ type: 'miniTurbo', stage: k.driftStage });
       }
+      // settle the slide a little so the exit isn't a tank-slapper
+      w *= 0.6; k.aR *= 0.5;
       k.drift = 0; k.driftT = 0; k.driftStage = 0;
     } else if (k.grounded) {
       const into = k.steer * k.drift;
@@ -130,61 +169,118 @@ export function stepKart(k, tr, dt = DT) {
     }
   }
 
-  // ---- engine
-  if (k.grounded) {
-    if (k.boostT > 0 && thr < 0) {
-      vf = Math.max(0, vf - 20 * -thr * dt);
-    } else if (k.boostT > 0) {
-      const bmax = P.vmax * 1.3 * (1 - pen) * Math.max(1, k.speedScale);
-      if (vf < bmax) vf = Math.min(bmax, vf + 40 * dt);
-    } else if (thr > 0) {
-      if (vf < vmax) vf = Math.min(vmax, vf + P.accel * thr * (1 - 0.62 * Math.max(0, vf) / vmax) * dt);
-      else vf += (vmax - vf) * Math.min(1, 1.4 * dt);
-    } else if (thr < 0) {
-      if (vf > 0.5) vf = Math.max(0, vf - 28 * -thr * dt);
-      else vf = Math.max(-P.vmax * 0.3, vf - 13 * -thr * dt);
-    } else {
-      vf -= Math.sign(vf) * Math.min(Math.abs(vf), 5.5 * dt);
-      if (vf > vmax) vf += (vmax - vf) * Math.min(1, 1.4 * dt);
-    }
-    // gravity along slopes
-    vf += G * (k.nx * fx + k.nz * fz) * 0.55 * dt;
-    vl += G * (k.nx * rx + k.nz * rz) * 0.35 * dt;
+  // ---- longitudinal requests: tyre force (drive/brake) and direct terms (drag, limiter, boost)
+  let axT = 0, axD = 0;
+  if (k.boostT > 0 && thr < 0) axT = -20 * -thr;
+  else if (k.boostT > 0) {
+    const bmax = P.vmax * 1.3 * (1 - pen) * Math.max(1, k.speedScale);
+    axD = u < bmax ? Math.min(40, (bmax - u) / dt) : (bmax - u) * 1.4;
+  } else if (thr > 0) {
+    if (u < vmax) axT = P.accel * thr * (1 - 0.62 * Math.max(0, u) / vmax);
+    else axD = (vmax - u) * 1.4;
+  } else if (thr < 0) {
+    if (u > 0.5) axT = -28 * -thr;
+    else if (u > -P.vmax * 0.3) axT = -13 * -thr;
+  } else {
+    axD = -Math.sign(u) * Math.min(Math.abs(u) / dt, 5.5);
+    if (u > vmax) axD = (vmax - u) * 1.4;
   }
   if (k.boostT > 0) { k.boostT -= dt; if (k.boostT <= 0) { k.boostT = 0; k.boostKind = 0; } }
 
-  // ---- steering
-  const asp = Math.abs(vf);
-  let yawTarget;
-  if (k.drift) {
-    const into = k.steer * k.drift;
-    yawTarget = -k.drift * P.turn * (0.6 + 0.5 * into) * Math.min(1, asp / 10);
+  let nu = u, nw = w, nr = yr;
+  if (k.grounded) {
+    // ---- per-axle surface grip (front and rear axle may be on different surfaces)
+    const iH = k.hint >= 0 ? k.hint : 0;
+    const side = fx * tr.RX[iH] + fz * tr.RZ[iH];
+    const sF = tr.surfaceAt(iH, 0, k.s, k.d + P.a * side), sR = tr.surfaceAt(iH, 0, k.s, k.d - P.b * side);
+    let muF = (SURF_PROPS[sF] || SURF_PROPS[0]).grip, muR = (SURF_PROPS[sR] || SURF_PROPS[0]).grip;
+    if (spun) { muF *= 0.3; muR *= 0.3; }
+    // ---- loads with longitudinal transfer (braking loads the front: sharper turn-in)
+    // (from the driver's requested accel, smoothed: a slide's own scrub must not feed back into it)
+    k.axS += (axT + axD - k.axS) * Math.min(1, dt * 10);
+    const tr_ = Math.max(-0.09, Math.min(0.09, (k.axS * HCG) / (P.L * G)));
+    const nf = Math.max(0.15, P.b / P.L - tr_), nrr = Math.max(0.15, P.a / P.L + tr_);
+    const capF = P.A * nf * muF;
+    let capR = P.A * nrr * muR * P.rearF;
+    if (k.drift) capR *= 0.5; // the drift: the rear lets go
+    // ---- steering angle and slip angles (with tyre relaxation)
+    const delta = -k.steer * steerLimit(P, v) * (inp.analog ? 1.1 : 1); // + = left
+    const sgn = u >= 0 ? 1 : -1, ua = Math.max(v, 1.5);
+    const aF0 = Math.atan2(w + P.a * yr, ua) - delta * sgn, aR0 = Math.atan2(w - P.b * yr, ua);
+    const relax = Math.min(1, (Math.max(v, 3) * dt) / P.relax);
+    k.aF += (aF0 - k.aF) * relax; k.aR += (aR0 - k.aR) * relax;
+    const fy0F = capF * pac(k.aF), fy0R = capR * pac(k.aR);
+    const cd = Math.cos(delta), sd = Math.sin(delta);
+    const vLatF = (w + P.a * yr) * cd - u * sd, vLatR = w - P.b * yr;
+    let FxF = 0, FxR = 0;
+    if (axT >= 0) FxR = axT; else { FxF = axT * 0.6; FxR = axT * 0.4; }
+    // friction ellipse: if the axle is asked for more than it has, it slides
+    const axle = (Fxd, cap, fy0, vLat, mA) => {
+      let Fx = Fxd, Fy = -fy0;
+      if (Math.abs(Fxd) > cap) { Fx = Math.sign(Fxd) * cap * 0.85; Fy = -fy0 * 0.35; }
+      else { const hh = Math.hypot(Fx, Fy); if (hh > cap) { const q = cap / hh; Fx *= q; Fy *= q; } }
+      const lim = (mA * Math.abs(vLat)) / dt; if (Math.abs(Fy) > lim) Fy = Math.sign(Fy) * lim;
+      return [Fx, Fy];
+    };
+    const [fxF, fyF] = axle(FxF, capF, fy0F, vLatF, (P.b / P.L) * 0.9);
+    const [fxR, fyR] = axle(FxR, capR, fy0R, vLatR, (P.a / P.L) * 0.9);
+    k.slide = Math.max(0, Math.abs(k.aR) - PEAK_SLIP * 1.3) + Math.max(0, Math.abs(k.aF) - PEAK_SLIP * 1.3);
+    const FX = fxF * cd - fyF * sd + fxR + axD;
+    const FY = fxF * sd + fyF * cd + fyR;
+    const MZ = P.a * (fxF * sd + fyF * cd) - P.b * fyR;
+    nu = u + (FX + w * yr) * dt;
+    nw = w + (FY - u * yr) * dt;
+    nr = Math.max(-6, Math.min(6, yr + (MZ / P.Iz) * dt));
+    { const spd = Math.max(Math.hypot(u, w), 3); if (Math.abs(nw) > spd) nw = Math.sign(nw) * spd; }
+    // stop cleanly instead of oscillating around zero
+    if (axT < 0 && u > 0 && nu < 0 && thr < 0) nu = 0;
+    if (thr === 0 && u > 0 && nu < 0) nu = 0;
+    // low speed: blend to the kinematic model (the tyre model is singular at standstill)
+    const kb = Math.max(0, Math.min(1, (Math.abs(nu) - 1.5) / 3));
+    if (kb < 1) { const rk = (nu * Math.tan(delta)) / P.L; nr = rk + (nr - rk) * kb; nw = rk * P.b + (nw - rk * P.b) * kb; }
+    // ---- stability: never yaw faster than the tyres can carry, so steering alone can't spin you
+    if (!k.drift && !spun && v > 8) {
+      const rmax = (P.A * Math.min(muF, muR) * 0.86) / v;
+      if (Math.abs(nr) > rmax) nr = Math.sign(nr) * rmax;
+    }
+    // ---- drift: controlled yaw bias + body slip so the slide is easy to hold and steer within
+    if (k.drift && !spun) {
+      // the drift is driven by the arcade controller (it replaces the tyre yaw/lateral response):
+      // steer into the drift for a tighter arc, away from it to open it up
+      const into = k.steer * k.drift;
+      const rT = -k.drift * P.turn * (0.6 + 0.5 * into) * Math.min(1, v / 10);
+      nr = yr + (rT - yr) * (1 - Math.exp(-dt * 8));
+      const spd0 = Math.hypot(u, w);
+      const spd = Math.max(0, spd0 + (Math.max(0, axT) + axD) * dt - 0.8 * dt);
+      const beta = 0.3 + 0.12 * into;
+      const wT = k.drift * spd * Math.sin(beta);
+      nw = w + (wT - w) * (1 - Math.exp(-dt * 4));
+      if (Math.abs(nw) > spd * 0.95) nw = Math.sign(nw) * spd * 0.95;
+      nu = Math.sqrt(Math.max(0, spd * spd - nw * nw)) * (u < 0 ? -1 : 1);
+    }
+    if (spun) nu *= Math.exp(-2.2 * dt);
+    // gravity along slopes
+    nu += G * (k.nx * fx + k.nz * fz) * 0.55 * dt;
+    nw -= G * (k.nx * rx + k.nz * rz) * 0.35 * dt;
+    // sliding never beats driving straight
+    const cap = (k.boostT > 0 ? P.vmax * 1.32 : Math.max(vmax, P.vmax * 0.5)) * 1.02;
+    const hs = Math.hypot(nu, nw);
+    if (hs > cap) { const f = cap / hs + (1 - cap / hs) * Math.exp(-3 * dt); nu *= f; nw *= f; }
   } else {
-    const sf = Math.min(1, asp / 7) * (1 - 0.25 * Math.min(1, Math.max(0, (asp - 18) / 20)));
-    yawTarget = -k.steer * P.turn * sf * (vf < -0.5 ? -1 : 1);
+    // airborne: a little air control, momentum carries
+    nu = u + axD * dt * 0.5;
+    nw = w * Math.exp(-0.6 * dt);
+    nr += (-k.steer * P.turn * 0.55 - nr) * Math.min(1, dt * 4);
+    k.slide = 0;
   }
-  if (!k.grounded) yawTarget *= 0.55;
-  if (spun) yawTarget = 0;
-  k.yawVel += (yawTarget - k.yawVel) * Math.min(1, dt * 12);
-  k.yaw += k.yawVel * dt;
+  if (spun) nr = 0;
+  k.yawVel = nr;
+  k.yaw += nr * dt;
   if (k.yaw > Math.PI) k.yaw -= Math.PI * 2; else if (k.yaw < -Math.PI) k.yaw += Math.PI * 2;
-
-  // recompose velocity in the new heading frame (this is what makes the kart slide)
-  const hx = vf * fx + vl * rx, hz = vf * fz + vl * rz;
   fx = fwdX(k); fz = fwdZ(k); rx = -fz; rz = fx;
-  vf = hx * fx + hz * fz; vl = hx * rx + hz * rz;
-  let grip = P.grip * sp.grip;
-  if (k.drift) grip = 5.2 * (sp.grip < 0.5 ? 0.6 : 1);
-  if (spun) grip = 3;
-  if (!k.grounded) grip = 0.6;
-  vl *= Math.exp(-grip * dt);
-  if (spun) vf *= Math.exp(-2.2 * dt);
-  // cap total speed so sliding never beats driving straight
-  const cap = (k.boostT > 0 ? P.vmax * 1.32 : Math.max(vmax, P.vmax * 0.5)) * 1.02;
-  const hs = Math.hypot(vf, vl);
-  if (hs > cap && k.grounded) { const f = cap / hs + (1 - cap / hs) * Math.exp(-3 * dt); vf *= f; vl *= f; }
-  k.vx = vf * fx + vl * rx;
-  k.vz = vf * fz + vl * rz;
+  k.vx = nu * fx - nw * rx;
+  k.vz = nu * fz - nw * rz;
+  let vf = nu;
 
   // ---- move
   const prevY = k.y;
@@ -210,6 +306,7 @@ export function stepKart(k, tr, dt = DT) {
       k.vx *= fr; k.vz *= fr;
       if (imp > 2.5) k.ev.push({ type: 'wall', impact: imp, x: k.x - nx * r, y: k.y + 0.4, z: k.z - nz * r });
       if (imp > 9 && k.drift) { k.drift = 0; k.driftT = 0; k.driftStage = 0; }
+      if (imp > 5) k.yawVel *= 0.6;
     }
     g = tr.ground(k.x, k.z, k.hint);
     k.hint = g.i;

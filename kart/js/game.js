@@ -53,7 +53,7 @@ export class GameSession {
     sc.add(this.world.group);
     const th = this.world.theme;
     sc.fog = new THREE.Fog(th.fog, th.fogNear, th.fogFar);
-    sc.background = new THREE.Color(th.skyHorizon);
+    sc.background = new THREE.Color(th.indoor ? th.bg : th.skyHorizon);
     this.hemi = new THREE.HemisphereLight(th.hemiSky, th.hemiGround, th.hemiI);
     sc.add(this.hemi);
     this.sun = new THREE.DirectionalLight(th.sun, th.sunI);
@@ -67,6 +67,15 @@ export class GameSession {
       this.sun.shadow.normalBias = 0.04;
     }
     sc.add(this.sun, this.sun.target);
+    // indoor: parked karts in the pit area (decoration only)
+    this.parked = [];
+    (this.world.pitSpots || []).forEach((p, i) => {
+      const types = ['standard', 'speedster', 'drifter', 'heavy', 'rally'];
+      const cols = ['#e8473c', '#3f7cf0', '#ffc93c', '#2a9d74', '#d14fd6'];
+      const v = new KartView({ type: types[i % 5], body: cols[(i * 2) % 5], accent: '#f5f2ea', num: 10 + i * 7 }, q === 'high' ? 'medium' : q);
+      v.root.position.set(p.x, p.y + 0.02, p.z); v.root.rotation.y = p.yaw;
+      sc.add(v.root); this.parked.push(v);
+    });
     // race + karts
     const race = new Race(tr, { laps: this.opts.laps, mode: this.mode, difficulty: this.opts.difficulty, seed: this.opts.seed, ownerId: this.opts.me, noItems: this.mode === 'tt', countdown: 3 });
     this.race = race;
@@ -180,7 +189,7 @@ export class GameSession {
     if (this.autopilot && !p.finished) {
       // driven per physics step in stepOnce()
     } else if (!p.finished) {
-      p.in.throttle = inp.throttle; p.in.steer = inp.steer; p.in.drift = inp.drift; p.in.hop = false; p.in.item = inp.item;
+      p.in.throttle = inp.throttle; p.in.steer = inp.steer; p.in.analog = !!inp.analog; p.in.drift = inp.drift; p.in.hop = false; p.in.item = inp.item;
       p.in.back = inp.back || inp.throttle < -0.5;
       if (inp.hop) this.hopQueued = true;
       if (inp.resetPress && r.phase === 'race' && p.respawnT <= 0) startRespawn(p, 'manual');
@@ -356,7 +365,7 @@ export class GameSession {
       const air = !k.grounded;
       let airH = 0;
       if (air || k.respawnT > 0) { const g = this.track.ground(x, z, k.hint); airH = Math.max(0, y - g.h); }
-      v.update(dt, { speed: k.speed, steer: k.steer, driftYaw: k.drift ? -k.drift * 0.38 : 0, spin: k.spinAng || 0, pitch: k.pitch, roll: k.roll, air, airH, hop: 0 });
+      v.update(dt, { speed: k.speed, steer: k.steer, driftYaw: k.drift ? -k.drift * 0.12 : 0, spin: k.spinAng || 0, pitch: k.pitch, roll: k.roll, air, airH, hop: 0 });
       // effects
       const sf = k.surf;
       const fxState = {
@@ -440,6 +449,7 @@ export class GameSession {
     }
     tmpV.set(px + Math.sin(this.camYaw) * look, py + 1.3, pz + Math.cos(this.camYaw) * look);
     cam.lookAt(tmpV);
+    if (this.debugCam) { const c = this.debugCam; cam.position.set(c[0], c[1], c[2]); cam.lookAt(c[3], c[4], c[5]); }
     const boost = p.boostT > 0 ? 11 : 0;
     const fovT = this.baseFov + boost + Math.min(4, Math.abs(p.speed) * 0.08);
     this.fov += (fovT - this.fov) * Math.min(1, dt * 5);
@@ -515,6 +525,7 @@ export class GameSession {
     this.fx.dispose();
     for (const v of this.views.values()) v.dispose();
     if (this.ghostView) this.ghostView.dispose();
+    for (const v of this.parked || []) v.dispose();
     this.world.dispose();
     this.scene.clear();
   }

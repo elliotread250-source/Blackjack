@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from '../vendor/BufferGeometryUtils.js';
 import { SURF, SHOULDER } from './trackgen.js';
 import { rng } from './data.js';
+import { buildIndoor, INDOOR_THEMES } from './indoor.js';
 
 export const THEMES = {
   meadow: {
@@ -43,8 +44,9 @@ export const THEMES = {
   },
 };
 
+Object.assign(THEMES, INDOOR_THEMES);
 const tmpC = new THREE.Color();
-function colorGeo(geo, hex) {
+export function colorGeo(geo, hex) {
   const n = geo.attributes.position.count;
   const c = new Float32Array(n * 3);
   tmpC.set(hex);
@@ -53,17 +55,17 @@ function colorGeo(geo, hex) {
   if (geo.index) return geo.toNonIndexed();
   return geo;
 }
-function part(geo, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) {
+export function part(geo, hex, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = 1, sz = 1) {
   geo.rotateX(rx); geo.rotateY(ry); geo.rotateZ(rz);
   geo.scale(sx, sy, sz);
   geo.translate(x, y, z);
   if (geo.attributes.uv) geo.deleteAttribute('uv');
   return colorGeo(geo, hex);
 }
-const merge = parts => { const g = mergeGeometries(parts, false); g.computeVertexNormals(); return g; };
+export const merge = parts => { const g = mergeGeometries(parts, false); g.computeVertexNormals(); return g; };
 
 // ---------- geometry builder for ribbons (flat-shaded quads with per-quad colour)
-class Builder {
+export class Builder {
   constructor() { this.p = []; this.c = []; }
   quad(a, b, c, d, col, col2) {
     // a-b-c-d counter-clockwise seen from the visible side
@@ -81,7 +83,7 @@ class Builder {
   }
 }
 
-function canvasTex(w, h, draw, opts = {}) {
+export function canvasTex(w, h, draw, opts = {}) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
   draw(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c);
@@ -100,7 +102,7 @@ export function softTexture() {
 }
 
 // Spatial hash of centre-line samples for "how far from the track is this point"
-class SampleGrid {
+export class SampleGrid {
   constructor(tr, cell = 16) {
     this.tr = tr; this.cell = cell; this.map = new Map();
     for (let i = 0; i < tr.N; i++) {
@@ -161,6 +163,7 @@ export function buildTrackScene(tr, quality = 'high') {
   const road = new Builder(), off = new Builder(), kerb = new Builder(), wall = new Builder(), line = new Builder(), lava = new Builder();
   const cRoad = col(th.road), cRoad2 = col(th.roadAlt), cLine = col(th.line), cK1 = col(th.kerb[0]), cK2 = col(th.kerb[1]);
   const cW1 = col(th.wall[0]), cW2 = col(th.wall[1]);
+  const cyc = (th.wallCycle || []).map(col);
   const cIce = col(th.ice || '#bfe6ff'), cShoulder = col('#2a2224');
   const offCol = sf => col(th.off[sf] || th.off[SURF.GRASS] || th.ground);
   const rampCol = [col('#ffd23f'), col('#2a2a33')];
@@ -169,7 +172,7 @@ export function buildTrackScene(tr, quality = 'high') {
     if (s1 - s0 < 1e-3) continue;
     const sm = (s0 + s1) / 2;
     const i = iOf(sm);
-    if (tr.inPit(sm)) continue;
+    if (tr.pitRamp(sm)) continue; // jump gaps (indoor floor gaps get their walls in indoor.js)
     const f0 = tr.frame(s0), f1 = tr.frame(s1);
     const hw0 = f0.hw, hw1 = f1.hw;
     const stripe = Math.floor(sm / 2.5) % 2;
@@ -220,7 +223,7 @@ export function buildTrackScene(tr, quality = 'high') {
       if (hasWall) {
         const h = th.wallH;
         const a = P(s0, side * ext0), b = P(s1, side * ext1);
-        const c = Math.floor(sm / 5) % 2 ? cW1 : cW2;
+        const c = th.wallCycle ? cyc[Math.floor(sm / 2.5) % cyc.length] : Math.floor(sm / 5) % 2 ? cW1 : cW2;
         const t = 0.5;
         const a2 = P(s0, side * (ext0 + t)), b2 = P(s1, side * (ext1 + t));
         if (side < 0) {
@@ -348,18 +351,24 @@ export function buildTrackScene(tr, quality = 'high') {
   boxMesh.castShadow = quality === 'high';
   root.add(boxMesh);
 
-  // ---- terrain heightfield
-  const terrain = buildTerrain(tr, th, grid, R, quality);
-  root.add(terrain.mesh);
-  if (terrain.extra) root.add(terrain.extra);
-
-  // ---- sky + lights handled by the renderer, but the sky dome lives with the track
-  const sky = buildSky(th);
-  root.add(sky);
-
-  // ---- scenery
-  const scen = buildScenery(tr, th, grid, R, terrain.heightAt, quality, anim);
-  root.add(scen);
+  let pitSpots = [], room = null;
+  if (th.indoor) {
+    // ---- enclosed building: floor, walls, roof, lights, supports and themed props
+    const ind = buildIndoor(tr, th, grid, R, quality, anim);
+    root.add(ind.group);
+    pitSpots = ind.pitSpots || []; room = ind.room;
+  } else {
+    // ---- terrain heightfield
+    const terrain = buildTerrain(tr, th, grid, R, quality);
+    root.add(terrain.mesh);
+    if (terrain.extra) root.add(terrain.extra);
+    // ---- sky + lights handled by the renderer, but the sky dome lives with the track
+    const sky = buildSky(th);
+    root.add(sky);
+    // ---- scenery
+    const scen = buildScenery(tr, th, grid, R, terrain.heightAt, quality, anim);
+    root.add(scen);
+  }
 
   // obstacles (rocks / pillars on the course)
   if (tr.obstacles.length) {
@@ -377,7 +386,7 @@ export function buildTrackScene(tr, quality = 'high') {
   for (let i = 0; i < tr.N; i++) { mnx = Math.min(mnx, tr.PX[i]); mxx = Math.max(mxx, tr.PX[i]); mnz = Math.min(mnz, tr.PZ[i]); mxz = Math.max(mxz, tr.PZ[i]); }
 
   return {
-    group: root, theme: th, boxMesh, bounds: { mnx, mxx, mnz, mxz },
+    group: root, theme: th, boxMesh, bounds: { mnx, mxx, mnz, mxz }, pitSpots, room,
     update(dt, t) { for (const f of anim) f(dt, t); },
     dispose() {
       root.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) { if (m.map) m.map.dispose(); if (m.emissiveMap && m.emissiveMap !== m.map) m.emissiveMap.dispose(); m.dispose(); } } });
@@ -589,7 +598,7 @@ function lampGeo(th) {
   ]);
 }
 
-function placeInstances(geo, mat, list, castShadow) {
+export function placeInstances(geo, mat, list, castShadow) {
   const m = new THREE.InstancedMesh(geo, mat, Math.max(1, list.length));
   const o = new THREE.Object3D();
   list.forEach((it, i) => {
@@ -769,7 +778,7 @@ function addClouds(g, cx, cz, R, anim) {
   anim.push(dt => { m.rotation.y += dt * 0.004; });
 }
 
-function addGrandstand(g, tr, th, mat, quality) {
+export function addGrandstand(g, tr, th, mat, quality, at = 25, sideOverride = 0, len0 = 34) {
   // a stand of spectators beside the start straight
   const f = tr.frame(25);
   const side = tr.EXT_L[tr.idx(25)] > tr.EXT_R[tr.idx(25)] ? -1 : 1;

@@ -127,29 +127,53 @@ export class Hud {
       el.addEventListener('pointercancel', off);
       el.addEventListener('lostpointercapture', off);
     };
-    bind('t-left', 'left'); bind('t-right', 'right'); bind('t-gas', 'accel'); bind('t-brake', 'brake');
+    bind('t-gas', 'accel'); bind('t-brake', 'brake');
     bind('t-drift', 'drift'); bind('t-item', 'item'); bind('t-back', 'back');
-    // slider steering
-    const sl = $('t-steer'), knob = sl.querySelector('i');
-    let pid = null;
-    const move = e => {
-      const r = sl.getBoundingClientRect();
-      const v = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / (r.width / 2 - 34)));
-      T.steer = Math.abs(v) < 0.08 ? 0.0001 * Math.sign(v) : v;
-      knob.style.transform = `translateX(${v * (r.width / 2 - 34)}px)`;
-    };
-    sl.addEventListener('pointerdown', e => { e.preventDefault(); pid = e.pointerId; try { sl.setPointerCapture(pid); } catch {} move(e); });
-    sl.addEventListener('pointermove', e => { if (e.pointerId === pid) move(e); });
-    const end = e => { if (e.pointerId !== pid) return; pid = null; T.steer = 0; knob.style.transform = ''; };
-    sl.addEventListener('pointerup', end); sl.addEventListener('pointercancel', end);
+    // steering pad (Apex GP): put your thumb anywhere in the zone, then drag left/right from there
+    const pad = $('t-pad'), base = $('t-base'), knob = $('t-knob');
+    let pid = null, x0 = 0;
+    const RANGE = () => Math.min(110, window.innerWidth * 0.12);
+    pad.addEventListener('pointerdown', e => {
+      if (T.tilt || pid !== null) return;
+      e.preventDefault(); pid = e.pointerId; x0 = e.clientX;
+      try { pad.setPointerCapture(e.pointerId); } catch {}
+      const r = pad.getBoundingClientRect();
+      base.style.left = (e.clientX - r.left) + 'px'; base.style.top = (e.clientY - r.top) + 'px';
+      base.classList.add('on');
+      knob.style.transform = 'translate(-50%,-50%)';
+      T.steer = 0;
+    });
+    pad.addEventListener('pointermove', e => {
+      if (e.pointerId !== pid) return;
+      const R = RANGE(), dx = Math.max(-R, Math.min(R, e.clientX - x0));
+      knob.style.transform = `translate(calc(-50% + ${dx}px),-50%)`;
+      const v = dx / R;
+      T.steer = Math.sign(v) * Math.abs(v) ** 1.25;
+    });
+    const end = e => { if (e.pointerId !== pid) return; pid = null; base.classList.remove('on'); if (!T.tilt) T.steer = null; };
+    pad.addEventListener('pointerup', end); pad.addEventListener('pointercancel', end); pad.addEventListener('lostpointercapture', end);
+    // tilt steering: hold the phone like a wheel (level = straight on)
+    this.tiltZero = null;
+    window.addEventListener('deviceorientation', e => {
+      if (!T.tilt || e.beta == null) return;
+      const ang = (screen.orientation && screen.orientation.angle) ?? window.orientation ?? 0;
+      const roll = ang === 90 ? e.beta : (ang === -90 || ang === 270) ? -e.beta : e.gamma;
+      if (this.tiltZero === null) this.tiltZero = roll;
+      T.steer = Math.max(-1, Math.min(1, (roll - this.tiltZero) / 28));
+    });
   }
-  setSteerMode(mode) {
-    const slider = mode === 'slider';
-    $('t-steer').hidden = !slider;
-    $('t-left').hidden = slider; $('t-right').hidden = slider;
-    $('t-back').style.left = slider ? 'calc(var(--safe-l) + 274px)' : '';
+  setTilt(on) {
+    const T = this.input.touch;
+    T.tilt = !!on; this.tiltZero = null;
+    T.steer = on ? 0 : null;
+    document.body.classList.toggle('tilt', !!on);
+    $('h-tilt').classList.toggle('on', !!on);
   }
-  showTouch(on) { this.touchEl.hidden = !on; if (!on) { const T = this.input.touch; for (const k in T) T[k] = typeof T[k] === 'boolean' ? false : 0; } }
+  showTouch(on) {
+    this.touchEl.hidden = !on;
+    $('h-tilt').hidden = !on;
+    if (!on) { const T = this.input.touch; for (const k of ['accel', 'brake', 'drift', 'item', 'back']) T[k] = false; if (!T.tilt) T.steer = null; $('t-base').classList.remove('on'); }
+  }
 }
 
 // Mini-map drawing for track cards
@@ -158,6 +182,10 @@ export function drawTrackThumb(canvas, track, theme) {
   const g = c.createLinearGradient(0, 0, 0, H);
   g.addColorStop(0, theme.skyTop); g.addColorStop(1, theme.ground);
   c.fillStyle = g; c.fillRect(0, 0, W, H);
+  if (theme.indoor) { // the building's walls
+    c.strokeStyle = theme.neon ? 'rgba(255,63,164,0.7)' : 'rgba(255,255,255,0.35)'; c.lineWidth = Math.max(2, W * 0.015);
+    c.strokeRect(W * 0.03, H * 0.04, W * 0.94, H * 0.92);
+  }
   let mnx = 1e9, mxx = -1e9, mnz = 1e9, mxz = -1e9;
   for (let i = 0; i < track.N; i++) { mnx = Math.min(mnx, track.PX[i]); mxx = Math.max(mxx, track.PX[i]); mnz = Math.min(mnz, track.PZ[i]); mxz = Math.max(mxz, track.PZ[i]); }
   const pad = W * 0.1;
@@ -167,7 +195,7 @@ export function drawTrackThumb(canvas, track, theme) {
   c.lineJoin = 'round'; c.lineCap = 'round';
   const path = () => { c.beginPath(); for (let i = 0; i <= track.N; i++) { const [a, b] = T(track.PX[i % track.N], track.PZ[i % track.N]); if (i) c.lineTo(a, b); else c.moveTo(a, b); } };
   path(); c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = Math.max(6, track.HW[0] * 2 * sc + 6); c.stroke();
-  path(); c.strokeStyle = theme.road === '#2c2f3c' ? '#9aa0ff' : '#f4f4f4'; c.lineWidth = Math.max(3, track.HW[0] * 2 * sc); c.stroke();
+  path(); c.strokeStyle = theme.neon ? '#20e3ff' : theme.road === '#2c2f3c' ? '#9aa0ff' : '#f4f4f4'; c.lineWidth = Math.max(3, track.HW[0] * 2 * sc); c.stroke();
   path(); c.strokeStyle = theme.kerb[0]; c.lineWidth = Math.max(1.5, sc * 2); c.setLineDash([sc * 6, sc * 6]); c.stroke(); c.setLineDash([]);
   const [sx, sz] = T(track.PX[0], track.PZ[0]);
   c.fillStyle = '#111'; c.fillRect(sx - 5, sz - 5, 10, 10); c.fillStyle = '#fff'; c.fillRect(sx - 5, sz - 5, 5, 5); c.fillRect(sx, sz, 5, 5);

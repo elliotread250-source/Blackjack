@@ -79,6 +79,8 @@ export class Track {
       S[i] = target;
     }
     S[N] = L0;
+    // indoors the floor is at 0: never dip under it
+    if (def.indoor) for (let i = 0; i < N; i++) PY[i] = Math.max(0, PY[i]);
     Object.assign(this, { PX, PY, PZ, U, S });
     // frames
     const FX = new Float32Array(N), FZ = new Float32Array(N), RX = new Float32Array(N), RZ = new Float32Array(N), SL = new Float32Array(N), K = new Float32Array(N);
@@ -194,13 +196,14 @@ export class Track {
     // banking
     const BK = new Float32Array(N);
     const bankK = (def.bank ?? 1) * 5;
-    for (let i = 0; i < N; i++) BK[i] = Math.max(-0.17, Math.min(0.17, -this.K[i] * bankK * HW[i] / 8));
+    const mb = def.maxBank ?? 0.17;
+    for (let i = 0; i < N; i++) BK[i] = Math.max(-mb, Math.min(mb, -this.K[i] * bankK * HW[i] / 8));
     const BKs = new Float32Array(N);
     for (let i = 0; i < N; i++) { let s = 0; for (let k = -4; k <= 4; k++) s += BK[(i + k + N) % N]; BKs[i] = s / 9; }
     this.BK = BKs;
 
     // ---- features
-    this.ramps = (def.ramps || []).map(r => ({ lip: sOfU(r.at), len: r.len || 12, h: r.h || 2.5, gap: r.gap || 0 }));
+    this.ramps = (def.ramps || []).map(r => ({ lip: sOfU(r.at), len: r.len || 12, h: r.h || 2.5, gap: r.gap || 0, land: r.land }));
     this.pads = (def.pads || []).map(p => {
       const s = sOfU(p.at);
       let d = p.d || 0;
@@ -261,13 +264,15 @@ export class Track {
     }
     return y;
   }
-  inPit(s) {
+  // the gap after a jump: void (fall and get rescued) unless the ramp says there is a floor below
+  inPit(s) { const r = this.pitRamp(s); return !!r && r.land === undefined; }
+  pitRamp(s) {
     for (const r of this.ramps) {
       if (!r.gap) continue;
       let x = s - r.lip; if (x < -this.L / 2) x += this.L; if (x > this.L / 2) x -= this.L;
-      if (x > 0 && x < r.gap) return true;
+      if (x > 0 && x < r.gap) return r;
     }
-    return false;
+    return null;
   }
 
   // Nearest point on the centre line. hint: last known segment index (or -1).
@@ -342,6 +347,7 @@ export class Track {
     const dd = d < -hw ? -hw : d > hw ? hw : d;
     let h = base + bk * dd + Math.max(0, Math.abs(d) - hw) * OFF_RISE;
     if (surf === SURF.VOID) h = base - 60;
+    else if (this.ramps.length) { const pr = this.pitRamp(s); if (pr && pr.land !== undefined) h = pr.land; }
     // slope of the ramp at s for the normal
     let rs = 0;
     for (const r of this.ramps) {
