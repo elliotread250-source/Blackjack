@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#1f3a73"/>
+  <rect x="7" y="8.5" width="23" height="23" rx="4.5" fill="#c47414"/>
+  <rect x="7" y="7" width="23" height="22.5" rx="4.5" fill="#ffb43a"/>
+  <rect x="34" y="8.5" width="23" height="23" rx="4.5" fill="#c47414"/>
+  <rect x="34" y="7" width="23" height="22.5" rx="4.5" fill="#ffb43a"/>
+  <rect x="7" y="35.5" width="23" height="23" rx="4.5" fill="#c47414"/>
+  <rect x="7" y="34" width="23" height="22.5" rx="4.5" fill="#ffb43a"/>
+  <rect x="34" y="35.5" width="23" height="23" rx="4.5" fill="#c7bb9e"/>
+  <rect x="34" y="34" width="23" height="22.5" rx="4.5" fill="#fbf6ea"/>
+  <path d="M18.5 18.3H45.5L18.5 45.3" fill="none" stroke="#d66200" stroke-opacity="0.6" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <g font-family="'Arial Black','Helvetica Neue',Helvetica,Arial,sans-serif" font-weight="900" font-size="17" text-anchor="middle" fill="#1b2a4a">
+    <text x="18.5" y="24.6">B</text>
+    <text x="45.5" y="24.6">O</text>
+    <text x="18.5" y="51.6">G</text>
+    <text x="45.5" y="51.6" font-size="14">Qu</text>
+  </g>
+</svg>
