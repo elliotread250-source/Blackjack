@@ -269,8 +269,9 @@
         // push along the swing, the way the stickman pumps on the rope
         var tx = -ry / rl, ty = rx / rl, vt = sim.vx * tx + sim.vy * ty;
         var sp = Math.hypot(sim.vx, sim.vy);
-        if (sp < C.SWING_CAP) {
-          var dir = Math.abs(vt) > 20 ? (vt > 0 ? 1 : -1) : (tx * 1 >= 0 ? 1 : -1);
+        if (sp < C.SWING_CAP && Math.abs(vt) > 20) {
+          // (no push when nearly still, so it never balances against gravity)
+          var dir = vt > 0 ? 1 : -1;
           sim.vx += tx * dir * sim.assist * dt; sim.vy += ty * dir * sim.assist * dt;
         }
       }

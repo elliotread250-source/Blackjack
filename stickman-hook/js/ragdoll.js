@@ -84,11 +84,24 @@
   }
 
   /* Swinging: the right hand holds the rope end. */
-  function stepHang(r, hx, hy, hvx, hvy, dt, g) {
+  function stepHang(r, hx, hy, hvx, hvy, dt, g, ux, uy) {
     for (var i = 0; i < 11; i++) {
       var vx = (r.px[i] - r.ox[i]) * 0.995, vy = (r.py[i] - r.oy[i]) * 0.995;
       r.ox[i] = r.px[i]; r.oy[i] = r.py[i];
       r.px[i] += vx; r.py[i] += vy + g * dt * dt;
+    }
+    if (ux !== undefined) {
+      // The rope is stiff and the body swings with it: pull the shoulders
+      // and hips gently onto the line running out from the hook, leaving
+      // the free arm and the legs to flail.
+      var arm = 24 * K, torso = 27 * K;
+      var tgt = [[NECK, arm, 0.22], [PELVIS, arm + torso, 0.16], [HEAD, arm - 4 * K, 0.05]];
+      for (var t = 0; t < tgt.length; t++) {
+        var j = tgt[t][0], d = tgt[t][1], k = tgt[t][2];
+        var side = j === HEAD ? 9 * K : 0;
+        var txp = hx + ux * d - uy * side, typ = hy + uy * d + ux * side;
+        r.px[j] += (txp - r.px[j]) * k; r.py[j] += (typ - r.py[j]) * k;
+      }
     }
     r.px[HAND_R] = hx; r.py[HAND_R] = hy;
     r.ox[HAND_R] = hx - hvx * dt; r.oy[HAND_R] = hy - hvy * dt;

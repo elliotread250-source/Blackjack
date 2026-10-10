@@ -319,6 +319,7 @@
       }
       if (sim.state === 'dead') {
         RD.stepFree(G.rag, STEP, C.G);
+        if (G.trail.length) G.trail.shift();
         G.deadTimer -= STEP;
         if (G.deadTimer <= 0) { resetLevel(); showHint('', 0); }
       }
@@ -333,7 +334,7 @@
       if (sim.hook >= 0) {
         var hp = P.hookPos(sim, sim.hook);
         var dx = hp[0] - sim.x, dy = hp[1] - sim.y, dl = Math.hypot(dx, dy) || 1;
-        RD.stepHang(G.rag, sim.x + dx / dl * 24, sim.y + dy / dl * 24, sim.vx, sim.vy, STEP, C.G);
+        RD.stepHang(G.rag, sim.x + dx / dl * 24, sim.y + dy / dl * 24, sim.vx, sim.vy, STEP, C.G, -dx / dl, -dy / dl);
       } else {
         RD.stepFly(G.rag, sim.x, sim.y, STEP, 0.9985);
       }
@@ -380,7 +381,7 @@
     d.lv.deathY = 1e9;
     P.step(d, true); d.events.length = 0; d.idle = 0;
     var dx = -d.x, dy = -d.y, dl = Math.hypot(dx, dy) || 1;
-    RD.stepHang(G.demoRag, d.x + dx / dl * 20, d.y + dy / dl * 20, d.vx, d.vy, STEP, C.G);
+    RD.stepHang(G.demoRag, d.x + dx / dl * 24, d.y + dy / dl * 24, d.vx, d.vy, STEP, C.G, -dx / dl, -dy / dl);
   }
 
   // ---------- render ----------
