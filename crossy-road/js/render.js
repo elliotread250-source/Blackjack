@@ -67,6 +67,23 @@ export class Renderer {
       this.scene.add(m);
       this.particles.push({ m, life: 0 });
     }
+    // falling snow / leaves for the snowy and autumn worlds
+    const N = 260;
+    const wg = new THREE.BufferGeometry();
+    this.wPos = new Float32Array(N * 3);
+    this.wSeed = new Float32Array(N);
+    for (let i = 0; i < N; i++) {
+      this.wPos[i * 3] = (Math.random() - 0.5) * 26;
+      this.wPos[i * 3 + 1] = Math.random() * 9;
+      this.wPos[i * 3 + 2] = (Math.random() - 0.5) * 30;
+      this.wSeed[i] = Math.random() * 100;
+    }
+    wg.setAttribute('position', new THREE.BufferAttribute(this.wPos, 3));
+    this.weatherMat = new THREE.PointsMaterial({ color: 0xffffff, size: 4, sizeAttenuation: false, fog: false });
+    this.weather = new THREE.Points(wg, this.weatherMat);
+    this.weather.frustumCulled = false;
+    this.weather.visible = false;
+    this.scene.add(this.weather);
     this.coinGeo = M.mergeBoxes(M.coinBoxes());
     this.lightOn = new THREE.MeshBasicMaterial({ color: 0xff3020 });
     this.lightOff = new THREE.MeshBasicMaterial({ color: 0x4a1a18 });
@@ -104,6 +121,24 @@ export class Renderer {
     this.sun.intensity = th.sun;
     this.clearLanes();
     this.updateFog();
+    this.weather.visible = !!(th.ice || name === 'autumn');
+    this.weatherMat.color.setHex(th.ice ? 0xffffff : 0xe8742c);
+    this.weatherMat.size = (th.ice ? 4 : 5) * Math.min(2, window.devicePixelRatio || 1) * 0.75;
+    this.weatherFall = th.ice ? 1.1 : 0.8;
+  }
+
+  stepWeather(dt) {
+    if (!this.weather.visible) return;
+    const P = this.wPos, T = this.target, t = performance.now() / 1000;
+    for (let i = 0; i < P.length; i += 3) {
+      const sd = this.wSeed[i / 3];
+      P[i + 1] -= this.weatherFall * dt * (0.7 + (sd % 1) * 0.6);
+      P[i] += Math.sin(t * 1.3 + sd) * dt * 0.5;
+      if (P[i + 1] < -0.2) P[i + 1] += 9;
+      if (P[i] - T.x > 13) P[i] -= 26; else if (P[i] - T.x < -13) P[i] += 26;
+      if (P[i + 2] - T.z > 15) P[i + 2] -= 30; else if (P[i + 2] - T.z < -15) P[i + 2] += 30;
+    }
+    this.weather.geometry.attributes.position.needsUpdate = true;
   }
 
   setCharacter(id) {
@@ -143,10 +178,11 @@ export class Renderer {
     const w = window.innerWidth, h = window.innerHeight;
     this.gl.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
     this.gl.setSize(w, h, false);
+    if (this.weatherMat) this.weatherMat.size = (this.themeName === 'snow' ? 4 : 5) * Math.min(2, window.devicePixelRatio || 1) * 0.75;
     const aspect = w / h;
     this.portrait = aspect < 0.77;
     let halfW, halfH;
-    if (this.portrait) { halfW = 5.3; halfH = halfW / aspect; } else { halfH = 5.9; halfW = halfH * aspect; }
+    if (this.portrait) { halfW = 5.0; halfH = halfW / aspect; } else { halfH = 5.9; halfW = halfH * aspect; }
     this.halfH = halfH;
     const c = this.camera;
     c.left = -halfW; c.right = halfW; c.top = halfH; c.bottom = -halfH;
@@ -325,6 +361,7 @@ export class Renderer {
     // player
     this.updatePlayer(g, pose, t, dt);
     this.stepParticles(dt);
+    this.stepWeather(dt);
   }
 
   updateLane(v, t) {
@@ -482,9 +519,10 @@ export class Renderer {
       c.m.rotation.y = on ? t * 1.3 : lerp(c.m.rotation.y, -0.5, 1 - Math.exp(-dt * 4));
       c.m.position.y = on ? Math.abs(Math.sin(t * 3)) * 0.12 : 0;
     }
-    const portrait = this.pCam.aspect < 1;
-    this.pCam.position.set(this.pPos, portrait ? 2.3 : 2.0, portrait ? 9.5 : 11);
-    this.pCam.lookAt(this.pPos, portrait ? 0.8 : 0.5, 0);
+    const portrait = this.pCam.aspect < 1, short = window.innerHeight < 560;
+    if (portrait) { this.pCam.position.set(this.pPos, 2.4, 11); this.pCam.lookAt(this.pPos, 0.2, 0); }
+    else if (short) { this.pCam.position.set(this.pPos, 1.6, 13); this.pCam.lookAt(this.pPos, -0.25, 0); }
+    else { this.pCam.position.set(this.pPos, 2.0, 11); this.pCam.lookAt(this.pPos, 0.3, 0); }
     this.gl.render(this.pScene, this.pCam);
   }
 }

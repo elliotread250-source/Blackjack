@@ -371,4 +371,4 @@ requestAnimationFrame(frame);
 if (autopilot) { startPlaying(); }
 
 // test hook
-window.__crossy = { get state() { return state; }, get game() { return game; }, profile, renderer };
+window.__crossy = { get state() { return state; }, get game() { return game; }, profile, renderer, sound };

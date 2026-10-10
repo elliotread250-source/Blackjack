@@ -12,7 +12,7 @@ sound is synthesised, and there is no build step: the folder is the game.
   and stationary lily pads, and train tracks with a flashing signal and bell before a very fast train.
 - **Always passable**: tree rows and lily pads only ever leave openings that connect to where you can
   be standing, with no dead-end pockets; traffic gaps grow with speed and logs stay close enough to ride.
-  An autopilot that plans with the real rules gets past row 600 on every tested seed.
+  An autopilot that plans with the real rules reaches row 1000 on all 60 tested seeds.
 - **Gets harder as you go**: faster traffic, wider roads, shorter logs, more trains, and the camera
   creeps forward faster.
 - **Classic deaths**: flattened by a car, hit by a train, drowned, swept off the edge on a log, or

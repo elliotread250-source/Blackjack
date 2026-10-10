@@ -284,7 +284,11 @@ export class LaneGen {
     }
     const shift = -HALF + r.range(0, WRAP);
     for (const v of items) v.x0 = wrapX(v.x0 + shift);
-    this.reach = null;
+    // Logs only carry you downstream, so where you can hop off depends on where you got on:
+    // anywhere downstream of the entry columns (or one hop upstream).
+    const entry = this.reach ? [...this.reach] : ALL_COLS;
+    const lim = dir > 0 ? Math.min(...entry) - 1 : Math.max(...entry) + 1;
+    this.reach = new Set(ALL_COLS.filter(c => (dir > 0 ? c >= lim : c <= lim)));
     return { row, type: 'river', dir, speed, items, coin: null, blocked: null };
   }
 
@@ -525,9 +529,9 @@ export class Game {
     p.x = h.toX;
     p.landTick = this.tick;
     const lane = this.lane(p.row);
+    if (p.row > p.maxRow) { p.maxRow = p.row; this.emit('score', { score: p.maxRow }); }
     if (h.water) { this.die('drown'); return; }
     if (h.float) p.onLog = { row: p.row, idx: h.float.idx, offset: h.float.offset };
-    if (p.row > p.maxRow) { p.maxRow = p.row; this.emit('score', { score: p.maxRow }); }
     if (!this.readonly && lane.coin !== null && lane.coin !== undefined && lane.type !== 'river') {
       const key = p.row + ':' + lane.coin;
       if (Math.round(p.x) === lane.coin && !this.taken.has(key)) {

@@ -76,7 +76,7 @@ export const THEMES = {
     sky: 0x1d2a4a, grass: [0x3d7a55, 0x37704e], grassSide: 0x24503a, road: 0x3c3f4c, roadSide: 0x2a2c36, line: 0xd8d8a0,
     water: 0x2a5f9e, waterDeep: 0x1f4d85, rail: 0x5f5a66, tie: 0x3f3030, steel: 0x9aa0b4,
     trunk: 0x4f3a2a, leaves: [0x2f6e5a, 0x2a6152, 0x377a66, 0x2b5f4d], rock: [0x6e7486, 0x5f6577],
-    log: 0x6e4a32, logEnd: 0xb08a62, pad: 0x3f8f5a, hemi: [0xb8c8ff, 0x4a4a6a, 1.1], sun: 1.6, fog: 0x1d2a4a,
+    log: 0x7a5236, logEnd: 0xb08a62, pad: 0x3f8f5a, hemi: [0xb8c8ff, 0x55557a, 1.35], sun: 1.9, fog: 0x1d2a4a,
   },
   candy: {
     sky: 0xffd6ec, grass: [0xffc4e1, 0xffb8da], grassSide: 0xe58fbc, road: 0x8a76b8, roadSide: 0x6c5a99, line: 0xfff6a8,
@@ -104,20 +104,20 @@ export function laneBoxes(lane, next, prev, th) {
     B.push([-(edge + (HALF - edge) / 2), y0, 0, HALF - edge, h, 1 + extra, cDark]);
     B.push([edge + (HALF - edge) / 2, y0, 0, HALF - edge, h, 1 + extra, cDark]);
   };
-  const dark = 0.78;
+  const dark = 0.66;
   if (lane.type === 'grass') {
     const g = th.grass[((lane.row % 2) + 2) % 2];
     span(-0.7, 0.7, g, shadeHex(g, dark));
     for (const d of lane.deco) treeOrRock(B, d, th, Math.abs(d.c) > COLS ? dark : 1);
   } else if (lane.type === 'road') {
-    span(-0.8, 0.68, th.road, shadeHex(th.road, 0.85));
+    span(-0.8, 0.68, th.road, shadeHex(th.road, 0.72));
     if (next && next.type === 'road') {
-      for (let x = -HALF + 0.6; x < HALF; x += 1.7) B.push([x, -0.12, -0.5, 0.8, 0.02, 0.09, th.line, Math.abs(x) > edge ? 0.8 : 1]);
+      for (let x = -HALF + 0.6; x < HALF; x += 1.7) B.push([x, -0.12, -0.5, 0.8, 0.02, 0.09, th.line, Math.abs(x) > edge ? 0.66 : 1]);
     }
     if (!prev || prev.type !== 'road') B.push([0, -0.12, 0.46, HALF * 2, 0.03, 0.06, shadeHex(th.road, 1.25)]);
     if (!next || next.type !== 'road') B.push([0, -0.12, -0.46, HALF * 2, 0.03, 0.06, shadeHex(th.road, 1.25)]);
   } else if (lane.type === 'river') {
-    span(-0.9, 0.58, th.water, shadeHex(th.water, 0.82));
+    span(-0.9, 0.58, th.water, shadeHex(th.water, 0.7));
     // a few lighter ripple streaks
     let seed = (lane.row * 7919) >>> 0;
     const rnd = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296);
@@ -126,8 +126,8 @@ export function laneBoxes(lane, next, prev, th) {
       B.push([x, -0.32, -0.35 + rnd() * 0.7, 0.4 + rnd() * 0.6, 0.01, 0.05, shadeHex(th.water, 1.18)]);
     }
   } else if (lane.type === 'rail') {
-    span(-0.75, 0.66, th.rail, shadeHex(th.rail, 0.85));
-    for (let x = -HALF + 0.3; x < HALF; x += 0.7) B.push([x, -0.09, 0, 0.26, 0.06, 0.92, th.tie, Math.abs(x) > edge ? 0.85 : 1]);
+    span(-0.75, 0.66, th.rail, shadeHex(th.rail, 0.72));
+    for (let x = -HALF + 0.3; x < HALF; x += 0.7) B.push([x, -0.09, 0, 0.26, 0.06, 0.92, th.tie, Math.abs(x) > edge ? 0.7 : 1]);
     B.push([0, -0.06, -0.27, HALF * 2, 0.1, 0.07, th.steel]);
     B.push([0, -0.06, 0.27, HALF * 2, 0.1, 0.07, th.steel]);
     // signal post on the left of the playable strip
