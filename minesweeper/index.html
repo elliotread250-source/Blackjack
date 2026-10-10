@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#008080">
+<meta name="description" content="Classic Windows-style Minesweeper in the browser: Beginner, Intermediate, Expert and Custom fields, chording, best times, sound and touch controls.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Minesweeper">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Minesweeper</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="desk">
+  <div id="wrap">
+    <a class="arcade" href="https://open-arcade.up.railway.app">&larr; Arcade</a>
+    <div class="row" id="row">
+      <div class="window" id="win">
+        <div class="titlebar">
+          <img class="ticon" src="icon.svg" alt="" width="16" height="16">
+          <span class="ttext">Minesweeper</span>
+        </div>
+        <div class="menubar" role="menubar">
+          <div class="menu">
+            <button class="menu-btn" id="mb-game" aria-haspopup="menu" aria-expanded="false"><u>G</u>ame</button>
+            <div class="dropdown" id="dd-game" role="menu" hidden>
+              <button role="menuitem" data-act="new"><span class="ck"></span><span class="lbl"><u>N</u>ew</span><span class="acc">F2</span></button>
+              <hr>
+              <button role="menuitemradio" data-act="level" data-level="beginner"><span class="ck radio"></span><span class="lbl"><u>B</u>eginner</span><span class="acc">1</span></button>
+              <button role="menuitemradio" data-act="level" data-level="intermediate"><span class="ck radio"></span><span class="lbl"><u>I</u>ntermediate</span><span class="acc">2</span></button>
+              <button role="menuitemradio" data-act="level" data-level="expert"><span class="ck radio"></span><span class="lbl"><u>E</u>xpert</span><span class="acc">3</span></button>
+              <button role="menuitemradio" data-act="custom" data-level="custom"><span class="ck radio"></span><span class="lbl"><u>C</u>ustom&hellip;</span><span class="acc"></span></button>
+              <hr>
+              <button role="menuitemcheckbox" data-act="marks"><span class="ck"></span><span class="lbl"><u>M</u>arks (?)</span><span class="acc"></span></button>
+              <button role="menuitemcheckbox" data-act="sound"><span class="ck"></span><span class="lbl"><u>S</u>ound</span><span class="acc">M</span></button>
+              <hr>
+              <button role="menuitem" data-act="best"><span class="ck"></span><span class="lbl">Best <u>T</u>imes&hellip;</span><span class="acc"></span></button>
+            </div>
+          </div>
+          <div class="menu">
+            <button class="menu-btn" id="mb-help" aria-haspopup="menu" aria-expanded="false"><u>H</u>elp</button>
+            <div class="dropdown" id="dd-help" role="menu" hidden>
+              <button role="menuitem" data-act="howto"><span class="ck"></span><span class="lbl">How to <u>P</u>lay</span><span class="acc"></span></button>
+              <hr>
+              <button role="menuitem" data-act="about"><span class="ck"></span><span class="lbl"><u>A</u>bout Minesweeper&hellip;</span><span class="acc"></span></button>
+            </div>
+          </div>
+          <span class="spacer"></span>
+          <button class="mute" id="mute" type="button" title="Sound (M)" aria-label="Mute sound" aria-pressed="false"></button>
+        </div>
+        <div class="client" id="client">
+          <div class="panel" id="panel">
+            <canvas class="lcd" id="lcd-mines" role="img" aria-label="Mines left"></canvas>
+            <button class="face" id="face" type="button" aria-label="New game (F2)" title="New game (F2)"><canvas id="face-cv"></canvas></button>
+            <canvas class="lcd" id="lcd-time" role="img" aria-label="Time"></canvas>
+          </div>
+          <div class="field" id="field">
+            <canvas id="board" role="img" aria-label="Minefield"></canvas>
+          </div>
+        </div>
+        <div class="statusbar">
+          <span id="st-left" aria-live="polite"></span>
+          <span id="st-right"></span>
+        </div>
+      </div>
+      <div class="modebar" id="modebar">
+        <div class="seg" role="group" aria-label="Tap action">
+          <button class="btn98" id="m-dig" type="button" aria-pressed="true">
+            <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2.6 13.4 9.6 6.4" stroke="#6b3f17" stroke-width="2.4" stroke-linecap="round"/><path d="M2.6 13.4 9.6 6.4" stroke="#a8692e" stroke-width="0.9" stroke-linecap="round"/><path d="M4.2 2.6Q12.6 1.4 13.4 11.8Q11.2 5 4.2 2.6Z" fill="#555" stroke="#222" stroke-width="0.8" stroke-linejoin="round"/></svg>
+            <span>Dig</span>
+          </button>
+          <button class="btn98" id="m-flag" type="button" aria-pressed="false">
+            <span class="flag-ico"></span>
+            <span>Flag</span>
+          </button>
+        </div>
+        <div class="seg" role="group" aria-label="Zoom">
+          <button class="btn98 zoom" id="z-out" type="button" aria-label="Zoom out">&minus;</button>
+          <button class="btn98 zoom" id="z-in" type="button" aria-label="Zoom in">+</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="backdrop" id="backdrop" hidden>
+  <div class="window dialog" id="dlg-custom" role="dialog" aria-modal="true" aria-labelledby="t-custom" hidden>
+    <div class="titlebar"><span class="ttext" id="t-custom">Custom Field</span><button class="xbtn" type="button" data-close aria-label="Close"></button></div>
+    <form class="dbody" id="custom-form" autocomplete="off" novalidate>
+      <div class="cf">
+        <div class="cf-fields">
+          <label for="cf-h"><u>H</u>eight:</label><input id="cf-h" type="number" inputmode="numeric" min="9" max="24" step="1">
+          <label for="cf-w"><u>W</u>idth:</label><input id="cf-w" type="number" inputmode="numeric" min="9" max="30" step="1">
+          <label for="cf-m"><u>M</u>ines:</label><input id="cf-m" type="number" inputmode="numeric" min="10" step="1">
+        </div>
+        <div class="cf-buttons">
+          <button class="btn98" type="submit">OK</button>
+          <button class="btn98" type="button" data-close>Cancel</button>
+        </div>
+      </div>
+      <p class="hint" id="cf-hint">Width 9&ndash;30, height 9&ndash;24, mines 10 to (width&minus;1)&times;(height&minus;1).</p>
+    </form>
+  </div>
+
+  <div class="window dialog" id="dlg-best" role="dialog" aria-modal="true" aria-labelledby="t-best" hidden>
+    <div class="titlebar"><span class="ttext" id="t-best">Fastest Mine Sweepers</span><button class="xbtn" type="button" data-close aria-label="Close"></button></div>
+    <div class="dbody">
+      <table class="best" id="best-table"></table>
+      <div class="dbuttons">
+        <button class="btn98" type="button" id="best-reset">Reset Scores</button>
+        <button class="btn98" type="button" data-close>OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="window dialog" id="dlg-win" role="dialog" aria-modal="true" aria-labelledby="t-win" hidden>
+    <div class="titlebar"><span class="ttext" id="t-win">Minesweeper</span><button class="xbtn" type="button" data-close aria-label="Close"></button></div>
+    <div class="dbody">
+      <div class="win-msg">
+        <canvas id="win-face" width="52" height="52"></canvas>
+        <div>
+          <p class="big">New best time!</p>
+          <p id="win-text"></p>
+        </div>
+      </div>
+      <div class="dbuttons">
+        <button class="btn98" type="button" data-close id="win-ok">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="window dialog" id="dlg-howto" role="dialog" aria-modal="true" aria-labelledby="t-howto" hidden>
+    <div class="titlebar"><span class="ttext" id="t-howto">How to Play</span><button class="xbtn" type="button" data-close aria-label="Close"></button></div>
+    <div class="dbody text">
+      <p>Open every square that is not a mine. A number tells you how many of the eight squares around it hide mines. The first click is always safe.</p>
+      <h3>Mouse</h3>
+      <ul>
+        <li><b>Left click</b> opens a square.</li>
+        <li><b>Right click</b> plants a flag (and a <b>?</b> with Marks on).</li>
+        <li><b>Click a number</b> whose flags are all placed, or <b>middle click</b>, or press <b>both buttons</b>, to open all its other neighbours.</li>
+      </ul>
+      <h3>Touch</h3>
+      <ul>
+        <li><b>Tap</b> opens, <b>long-press</b> flags, <b>tap a number</b> to open around it.</li>
+        <li><b>Flag</b> mode makes a tap plant flags instead; long-press then opens.</li>
+        <li>Use <b>&minus; / +</b> to zoom big boards.</li>
+      </ul>
+      <h3>Keys</h3>
+      <p><b>F2</b> or <b>N</b> new game &middot; <b>1 2 3</b> Beginner / Intermediate / Expert &middot; <b>M</b> sound &middot; <b>+ &minus; 0</b> zoom</p>
+      <div class="dbuttons"><button class="btn98" type="button" data-close>OK</button></div>
+    </div>
+  </div>
+
+  <div class="window dialog" id="dlg-about" role="dialog" aria-modal="true" aria-labelledby="t-about" hidden>
+    <div class="titlebar"><span class="ttext" id="t-about">About Minesweeper</span><button class="xbtn" type="button" data-close aria-label="Close"></button></div>
+    <div class="dbody text">
+      <div class="about">
+        <img src="icon.svg" alt="" width="48" height="48">
+        <div>
+          <p><b>Minesweeper</b></p>
+          <p>A remake of the Windows 3.1 / XP game for Open Arcade. Every sprite is hand-placed pixel art and every sound is synthesised live. Free, no ads, nothing to install.</p>
+          <p><a href="https://open-arcade.up.railway.app">More games at Open Arcade</a></p>
+        </div>
+      </div>
+      <div class="dbuttons"><button class="btn98" type="button" data-close>OK</button></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/board.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

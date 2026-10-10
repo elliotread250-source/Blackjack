@@ -1,0 +1,414 @@
+/* Minesweeper: Windows 3.1 / 98 / XP-classic look. Sizes that scale with the
+   board (--cb, --pad, --fb, --pb, --ppx, --ppy) are set by js/game.js. */
+:root {
+  --face: #c0c0c0;
+  --hi: #ffffff;
+  --lo: #808080;
+  --lite: #dfdfdf;
+  --dark: #0a0a0a;
+  --desk: #008080;
+  --title1: #000080;
+  --title2: #1084d0;
+  --cb: 3px;
+  --pad: 6px;
+  --fb: 3px;
+  --pb: 2px;
+  --ppx: 5px;
+  --ppy: 4px;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--desk);
+}
+
+body {
+  position: fixed;
+  inset: 0;
+  font: 12px/1.25 Tahoma, "MS Sans Serif", "Segoe UI", Verdana, Geneva, "DejaVu Sans", sans-serif;
+  color: #000;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+#desk {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
+    max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+}
+html.narrow #desk {
+  padding: max(4px, env(safe-area-inset-top)) max(0px, env(safe-area-inset-right))
+    max(4px, env(safe-area-inset-bottom)) max(0px, env(safe-area-inset-left));
+}
+
+#wrap {
+  display: flex;
+  flex-direction: column;
+  max-width: 100%;
+  max-height: 100%;
+  min-width: 0;
+}
+
+.arcade {
+  align-self: flex-start;
+  height: 20px;
+  line-height: 20px;
+  margin-bottom: 2px;
+  padding: 0 2px;
+  color: #fff;
+  font-size: 12px;
+  text-decoration: none;
+  opacity: 0.8;
+  touch-action: manipulation;
+}
+.arcade:hover, .arcade:focus-visible { opacity: 1; text-decoration: underline; }
+html.narrow .arcade { padding: 0 8px; }
+
+.row { display: flex; flex-direction: column; align-items: center; min-width: 0; }
+html.side .row { flex-direction: row; align-items: center; }
+
+/* ---- window chrome ---- */
+.window {
+  background: var(--face);
+  box-shadow: inset -1px -1px var(--dark), inset 1px 1px var(--lite),
+    inset -2px -2px var(--lo), inset 2px 2px var(--hi);
+  padding: 3px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.titlebar {
+  height: 18px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 0 2px 0 3px;
+  background: linear-gradient(90deg, var(--title1), var(--title2));
+  color: #fff;
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.titlebar .ticon { width: 14px; height: 14px; flex: none; image-rendering: pixelated; }
+.titlebar .ttext { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+html.short #win > .titlebar, html.short .statusbar { display: none; }
+
+.menubar {
+  height: 20px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 5;
+}
+.menubar .spacer { flex: 1; }
+.menu { position: relative; }
+.menu-btn {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  height: 18px;
+  padding: 0 6px;
+  margin: 0;
+  cursor: default;
+  touch-action: manipulation;
+}
+.menu-btn:hover { box-shadow: inset -1px -1px var(--lo), inset 1px 1px var(--hi); }
+.menu-btn.open { box-shadow: inset 1px 1px var(--lo), inset -1px -1px var(--hi); }
+.menu-btn:focus-visible { outline: 1px dotted #000; outline-offset: -2px; }
+
+.dropdown {
+  position: absolute;
+  top: 19px;
+  left: 0;
+  min-width: 190px;
+  padding: 3px;
+  background: var(--face);
+  box-shadow: inset -1px -1px var(--dark), inset 1px 1px var(--lite),
+    inset -2px -2px var(--lo), inset 2px 2px var(--hi), 2px 2px 0 rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+}
+.dropdown[hidden] { display: none; }
+.dropdown button {
+  font: inherit;
+  color: #000;
+  background: none;
+  border: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 14px 0 2px;
+  text-align: left;
+  cursor: default;
+  white-space: nowrap;
+  touch-action: manipulation;
+}
+.dropdown button:hover, .dropdown button:focus-visible { background: var(--title1); color: #fff; outline: none; }
+.dropdown .ck { width: 18px; height: 22px; flex: none; position: relative; }
+.dropdown [aria-checked="true"] .ck::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  width: 4px;
+  height: 7px;
+  border: solid currentColor;
+  border-width: 0 2px 2px 0;
+  transform: rotate(40deg);
+}
+.dropdown [aria-checked="true"] .ck.radio::after {
+  left: 6px;
+  top: 8px;
+  width: 6px;
+  height: 6px;
+  border: 0;
+  border-radius: 50%;
+  background: currentColor;
+  transform: none;
+}
+.dropdown .lbl { flex: 1; }
+.dropdown .acc { margin-left: 24px; min-width: 14px; }
+.dropdown hr {
+  width: calc(100% - 4px);
+  margin: 3px 2px;
+  border: 0;
+  border-top: 1px solid var(--lo);
+  border-bottom: 1px solid var(--hi);
+}
+
+.mute {
+  width: 26px;
+  height: 18px;
+  padding: 0;
+  margin: 0 1px 0 4px;
+  border: 0;
+  background: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  touch-action: manipulation;
+}
+.mute svg { width: 20px; height: 17px; display: block; }
+.mute:hover { box-shadow: inset -1px -1px var(--lo), inset 1px 1px var(--hi); }
+.mute:active { box-shadow: inset 1px 1px var(--lo), inset -1px -1px var(--hi); }
+.mute:focus-visible { outline: 1px dotted #000; outline-offset: -2px; }
+
+/* ---- game client: the part that scales with the board ---- */
+.client {
+  border: var(--cb) solid;
+  border-color: var(--hi) var(--lo) var(--lo) var(--hi);
+  padding: var(--pad);
+  display: flex;
+  flex-direction: column;
+  gap: var(--pad);
+  min-width: 0;
+}
+.panel {
+  flex: none;
+  border: var(--pb) solid;
+  border-color: var(--lo) var(--hi) var(--hi) var(--lo);
+  padding: var(--ppy) var(--ppx);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.lcd { display: block; image-rendering: pixelated; }
+.face {
+  display: block;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+  cursor: default;
+  touch-action: manipulation;
+}
+.face canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+.face:focus-visible { outline: 1px dotted #000; outline-offset: 2px; }
+
+.field {
+  flex: none;
+  align-self: center;
+  border: var(--fb) solid;
+  border-color: var(--lo) var(--hi) var(--hi) var(--lo);
+  box-sizing: content-box;
+  overflow: hidden;
+  touch-action: none;
+  background: var(--face);
+}
+.field.scroll {
+  overflow: auto;
+  touch-action: pan-x pan-y;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+#board { display: block; image-rendering: pixelated; cursor: default; }
+
+.statusbar {
+  flex: none;
+  display: flex;
+  gap: 2px;
+  height: 20px;
+  margin-top: 2px;
+  width: 0;
+  min-width: 100%;
+}
+.statusbar span {
+  display: block;
+  min-width: 0;
+  padding: 2px 4px;
+  line-height: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: inset 1px 1px var(--lo), inset -1px -1px var(--hi);
+}
+#st-left { flex: 1 1 auto; }
+#st-right { flex: 0 0 auto; max-width: 50%; }
+
+/* ---- buttons ---- */
+.btn98 {
+  font: inherit;
+  color: #000;
+  background: var(--face);
+  border: 0;
+  min-width: 75px;
+  min-height: 23px;
+  padding: 0 12px;
+  box-shadow: inset -1px -1px var(--dark), inset 1px 1px var(--hi),
+    inset -2px -2px var(--lo), inset 2px 2px var(--lite);
+  cursor: default;
+  touch-action: manipulation;
+}
+.btn98:active, .btn98[aria-pressed="true"] {
+  box-shadow: inset -1px -1px var(--hi), inset 1px 1px var(--dark),
+    inset -2px -2px var(--lite), inset 2px 2px var(--lo);
+}
+.btn98[aria-pressed="true"] {
+  background-color: #d4d4d4;
+  background-image: linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%),
+    linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%);
+  background-size: 2px 2px;
+  background-position: 0 0, 1px 1px;
+}
+.btn98:focus-visible { outline: 1px dotted #000; outline-offset: -5px; }
+
+/* ---- touch mode bar ---- */
+.modebar { display: none; margin-top: 8px; gap: 10px; justify-content: center; flex: none; }
+html.touch .modebar { display: flex; }
+html.side .modebar { flex-direction: column; margin: 0 0 0 8px; align-items: stretch; }
+.modebar .seg { display: flex; }
+html.side .modebar .seg:first-child { flex-direction: column; }
+html.side .modebar .zoom { flex: 1; width: auto; }
+.modebar .btn98 {
+  min-width: 0;
+  height: 44px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: bold;
+}
+.modebar .btn98 > * { pointer-events: none; }
+.modebar .btn98[aria-pressed="true"] > * { transform: translate(1px, 1px); }
+.modebar svg, .modebar .flag-ico svg { width: 22px; height: 22px; display: block; }
+.modebar .zoom { width: 46px; font-size: 22px; padding: 0; }
+
+/* ---- dialogs ---- */
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.12);
+}
+.backdrop[hidden], .dialog[hidden] { display: none; }
+.dialog { width: max-content; max-width: min(420px, 100%); max-height: 100%; }
+.dialog .titlebar { height: 20px; }
+.xbtn {
+  width: 16px;
+  height: 14px;
+  flex: none;
+  padding: 0;
+  border: 0;
+  background: var(--face);
+  box-shadow: inset -1px -1px var(--dark), inset 1px 1px var(--hi),
+    inset -2px -2px var(--lo), inset 2px 2px var(--lite);
+  position: relative;
+  touch-action: manipulation;
+}
+.xbtn::before, .xbtn::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 6px;
+  width: 8px;
+  height: 2px;
+  background: #000;
+  transform: rotate(45deg);
+}
+.xbtn::after { transform: rotate(-45deg); }
+.xbtn:active { box-shadow: inset 1px 1px var(--dark), inset -1px -1px var(--hi), inset 2px 2px var(--lo), inset -2px -2px var(--lite); }
+.dbody { padding: 12px 12px 10px; overflow: auto; }
+.dbody p { margin: 0 0 8px; }
+.dbody.text { max-width: 400px; line-height: 1.4; }
+.dbody h3 { font-size: 12px; margin: 10px 0 4px; }
+.dbody ul { margin: 0 0 6px; padding-left: 18px; }
+.dbody li { margin: 2px 0; }
+.dbuttons { display: flex; justify-content: center; gap: 8px; margin-top: 12px; }
+.hint { color: #333; font-size: 11px; margin: 10px 0 0 !important; max-width: 300px; }
+
+.cf { display: flex; gap: 16px; align-items: flex-start; }
+.cf-fields { display: grid; grid-template-columns: auto 64px; gap: 8px 8px; align-items: center; }
+.cf-fields input {
+  font: inherit;
+  width: 64px;
+  height: 22px;
+  padding: 2px 4px;
+  border: 0;
+  background: #fff;
+  box-shadow: inset -1px -1px var(--hi), inset 1px 1px var(--lo),
+    inset -2px -2px var(--lite), inset 2px 2px var(--dark);
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: manipulation;
+}
+.cf-fields input:focus { outline: none; }
+.cf-buttons { display: flex; flex-direction: column; gap: 8px; }
+
+.best { border-collapse: collapse; margin: 2px 0; }
+.best td { padding: 3px 8px 3px 0; white-space: nowrap; }
+.best td.t { text-align: right; padding-right: 14px; font-variant-numeric: tabular-nums; }
+.best td.s { color: #444; }
+.best tr.cur td:first-child { font-weight: bold; }
+
+.win-msg { display: flex; gap: 12px; align-items: center; }
+.win-msg canvas { width: 52px; height: 52px; image-rendering: pixelated; flex: none; }
+.win-msg .big { font-size: 16px; font-weight: bold; margin: 0 0 4px; }
+.about { display: flex; gap: 12px; align-items: flex-start; }
+.about img { flex: none; }
+.dbody a { color: #0000ee; }

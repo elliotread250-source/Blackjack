@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#7cc8f5">
+<meta name="description" content="Stickman Hook: hold to grab a hook, swing, let go and fly. 30 hand-made levels with bounce pads, moving hooks and spinning bars. Works on phones and desktop.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Stickman Hook</title>
+<link rel="icon" href="icon.svg">
+<style>
+  :root { --ui: #2d8fd5; --ink: #2a2740; --card: rgba(255,255,255,0.92); }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; background: #bfe6fb;
+    overscroll-behavior: none; touch-action: none;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    position: fixed; inset: 0; color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  #game { position: absolute; left: 0; top: 0; display: block; touch-action: none; }
+  button { font: inherit; color: inherit; cursor: pointer; border: 0; -webkit-tap-highlight-color: transparent; }
+  button:focus-visible, a:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+
+  #arcade {
+    position: absolute; z-index: 30; display: none; left: max(10px, env(safe-area-inset-left)); top: max(10px, env(safe-area-inset-top));
+    padding: 7px 11px; border-radius: 999px; background: rgba(255,255,255,0.55);
+    color: var(--ink); font-size: 13px; font-weight: 700; line-height: 1; text-decoration: none; opacity: .75;
+  }
+  #arcade:hover { opacity: 1; background: rgba(255,255,255,0.85); }
+  body.show-arcade #arcade { display: block; }
+
+  .iconbtn {
+    width: 44px; height: 44px; border-radius: 14px; background: rgba(255,255,255,0.78);
+    display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 3px 0 rgba(0,0,0,0.08);
+  }
+  .iconbtn:active { transform: translateY(2px); box-shadow: none; }
+  .iconbtn svg { width: 22px; height: 22px; fill: var(--ink); }
+  #topright { position: absolute; z-index: 25; right: max(10px, env(safe-area-inset-right)); top: max(10px, env(safe-area-inset-top)); display: flex; gap: 8px; }
+  #btnPause { display: none; }
+  body.mode-play #btnPause { display: inline-flex; }
+
+  #hud { position: absolute; z-index: 20; left: 0; right: 0; top: 0; pointer-events: none; display: none; }
+  body.mode-play #hud, body.mode-finish #hud { display: block; }
+  #hudLevel {
+    position: absolute; left: max(12px, env(safe-area-inset-left)); top: max(12px, env(safe-area-inset-top));
+    background: rgba(255,255,255,0.78); border-radius: 14px; padding: 7px 12px; font-weight: 800; font-size: 15px;
+  }
+  #hudLevel small { display: block; font-weight: 600; font-size: 11px; opacity: .65; }
+  #hudTime {
+    position: absolute; left: 50%; top: max(10px, env(safe-area-inset-top)); transform: translateX(-50%);
+    font-size: 28px; font-weight: 900; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,0.18), 0 0 12px rgba(0,0,0,0.12);
+    font-variant-numeric: tabular-nums; text-align: center; line-height: 1.05;
+  }
+  #hudTime small { display: block; font-size: 12px; font-weight: 700; opacity: .9; }
+  #hint {
+    position: absolute; z-index: 20; left: 50%; bottom: max(22px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+    background: rgba(255,255,255,0.85); border-radius: 999px; padding: 10px 18px; font-weight: 700; font-size: 16px;
+    pointer-events: none; white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis;
+    opacity: 0; transition: opacity .4s;
+  }
+  #hint.on { opacity: 1; }
+  #toast {
+    position: absolute; z-index: 40; left: 50%; top: 70px; transform: translate(-50%, -20px);
+    background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 14px; font-weight: 700; font-size: 15px;
+    opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none; white-space: nowrap;
+  }
+  #toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+  .screen {
+    position: absolute; inset: 0; z-index: 10; display: none; flex-direction: column; align-items: center;
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+    box-sizing: border-box; overflow-y: auto; touch-action: pan-y;
+  }
+  .screen.on { display: flex; }
+  .modal { background: rgba(40,30,70,0.22); justify-content: center; }
+  .panel {
+    background: var(--card); border-radius: 26px; padding: 22px 24px; box-shadow: 0 10px 40px rgba(40,20,80,0.25);
+    text-align: center; width: min(360px, 100%); box-sizing: border-box;
+  }
+  .panel h2 { margin: 0 0 12px; font-size: 28px; font-weight: 900; }
+  .btn {
+    display: block; width: 100%; margin: 10px 0 0; padding: 13px 18px; border-radius: 16px; font-size: 18px; font-weight: 800;
+    background: #fff; box-shadow: 0 4px 0 rgba(0,0,0,0.12);
+  }
+  .btn.primary { background: var(--ui); color: #fff; box-shadow: 0 4px 0 rgba(0,0,0,0.22); }
+  .btn:active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.15); }
+  .row { display: flex; gap: 10px; }
+  .row .btn { flex: 1; }
+
+  /* title */
+  #scrTitle { justify-content: space-between; }
+  .logo { margin-top: 5vh; text-align: center; pointer-events: none; }
+  .logo .l1, .logo .l2 {
+    display: block; font-weight: 900; font-style: italic; letter-spacing: 1px; line-height: .9; color: #fff;
+    text-shadow: 0 4px 0 var(--ui), 0 8px 0 rgba(0,0,0,0.12);
+  }
+  .logo .l1 { font-size: clamp(40px, 9vw, 84px); }
+  .logo .l2 { font-size: clamp(56px, 13vw, 120px); color: #ff3f8e; text-shadow: 0 4px 0 #fff, 0 8px 0 rgba(0,0,0,0.12); }
+  .titlebtns { width: min(340px, 100%); margin-bottom: 4vh; }
+  .titlebtns .row .btn { font-size: 16px; }
+  .totals { margin-top: 10px; text-align: center; font-weight: 800; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.3); font-size: 14px; }
+  @media (max-height: 460px) {
+    .logo { margin-top: 2vh; }
+    .logo .l1 { font-size: 40px; } .logo .l2 { font-size: 58px; }
+    .titlebtns { margin-bottom: 1vh; }
+    .btn { padding: 10px 16px; margin-top: 8px; }
+  }
+
+  /* level select + skins */
+  .head { width: min(760px, 100%); display: flex; align-items: center; gap: 10px; margin: 46px 0 12px; }
+  .head h2 { margin: 0; flex: 1; text-align: center; font-size: 28px; font-weight: 900; color: #fff; text-shadow: 0 2px 0 rgba(0,0,0,0.18); }
+  .head .spacer { width: 44px; }
+  #grid { width: min(760px, 100%); display: grid; grid-template-columns: repeat(auto-fill, minmax(98px, 1fr)); gap: 10px; padding-bottom: 20px; }
+  .group { grid-column: 1 / -1; color: #fff; font-weight: 900; font-size: 15px; text-shadow: 0 1px 2px rgba(0,0,0,0.3); margin: 8px 2px 0; }
+  .tile {
+    position: relative; border-radius: 18px; padding: 10px 6px 8px; min-height: 84px; background: var(--card);
+    box-shadow: 0 4px 0 rgba(0,0,0,0.12); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  }
+  .tile .n { font-size: 26px; font-weight: 900; line-height: 1; }
+  .tile .st { font-size: 15px; letter-spacing: 1px; color: #ffb400; line-height: 1; }
+  .tile .st i { font-style: normal; color: rgba(0,0,0,0.15); }
+  .tile .bt { font-size: 11px; font-weight: 700; opacity: .6; font-variant-numeric: tabular-nums; }
+  .tile.locked { background: rgba(255,255,255,0.45); cursor: default; }
+  .tile.locked svg { width: 22px; height: 22px; fill: rgba(40,30,70,0.4); }
+  .tile.current { outline: 3px solid #fff; }
+  .tile:not(.locked):active { transform: translateY(3px); box-shadow: 0 1px 0 rgba(0,0,0,0.12); }
+  #skinGrid { width: min(760px, 100%); display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding-bottom: 20px; }
+  .skin { border-radius: 20px; background: var(--card); padding: 8px; box-shadow: 0 4px 0 rgba(0,0,0,0.12); text-align: center; }
+  .skin canvas { width: 100%; height: 110px; display: block; }
+  .skin b { display: block; font-size: 16px; }
+  .skin span { display: block; font-size: 12px; opacity: .65; font-weight: 600; min-height: 15px; }
+  .skin.sel { outline: 4px solid var(--ui); }
+  .skin.locked { background: rgba(255,255,255,0.5); cursor: default; }
+
+  #finishStars { font-size: 44px; letter-spacing: 6px; line-height: 1.1; margin: 4px 0 6px; }
+  #finishStars i { font-style: normal; color: rgba(0,0,0,0.12); display: inline-block; transform: scale(.4); transition: transform .25s cubic-bezier(.3,1.8,.5,1), color .2s; }
+  #finishStars i.on { color: #ffb400; transform: scale(1); }
+  #finishTime { font-size: 34px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  #finishBest { font-size: 14px; font-weight: 700; opacity: .7; min-height: 18px; }
+  #finishBest.new { color: #e0336f; opacity: 1; }
+  #finishUnlock { font-size: 14px; font-weight: 800; color: #6f5ce0; min-height: 0; margin-top: 6px; }
+  noscript { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+</style>
+</head>
+<body class="mode-title show-arcade">
+<canvas id="game" aria-label="Stickman Hook game"></canvas>
+<a id="arcade" href="https://open-arcade.up.railway.app">&larr; Arcade</a>
+
+<div id="topright">
+  <button id="btnMute" class="iconbtn" aria-label="Mute (M)" title="Mute (M)">
+    <svg id="icoSound" viewBox="0 0 24 24"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="#2a2740" stroke-width="2" stroke-linecap="round"/></svg>
+    <svg id="icoMute" viewBox="0 0 24 24" style="display:none"><path d="M4 9h4l5-4v14l-5-4H4z"/><path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="#2a2740" stroke-width="2" stroke-linecap="round"/></svg>
+  </button>
+  <button id="btnPause" class="iconbtn" aria-label="Pause (P)" title="Pause (P)">
+    <svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.5"/><rect x="14" y="5" width="4" height="14" rx="1.5"/></svg>
+  </button>
+</div>
+
+<div id="hud">
+  <div id="hudLevel">Level 1<small></small></div>
+  <div id="hudTime">0.00<small></small></div>
+</div>
+<div id="hint"></div>
+<div id="toast"></div>
+
+<section id="scrTitle" class="screen on">
+  <div class="logo"><span class="l1">STICKMAN</span><span class="l2">HOOK</span></div>
+  <div class="titlebtns">
+    <button class="btn primary" id="btnPlay">Play</button>
+    <div class="row">
+      <button class="btn" id="btnLevels">Levels</button>
+      <button class="btn" id="btnSkins">Skins</button>
+    </div>
+    <div class="totals" id="totals"></div>
+  </div>
+</section>
+
+<section id="scrSelect" class="screen">
+  <div class="head">
+    <button class="iconbtn" id="selBack" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="#2a2740" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <h2>Levels</h2><div class="spacer"></div>
+  </div>
+  <div id="grid"></div>
+</section>
+
+<section id="scrSkins" class="screen">
+  <div class="head">
+    <button class="iconbtn" id="skinBack" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7" fill="none" stroke="#2a2740" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <h2>Skins</h2><div class="spacer"></div>
+  </div>
+  <div id="skinGrid"></div>
+</section>
+
+<section id="scrPause" class="screen modal">
+  <div class="panel">
+    <h2>Paused</h2>
+    <button class="btn primary" id="btnResume">Resume</button>
+    <div class="row">
+      <button class="btn" id="btnRestart">Restart</button>
+      <button class="btn" id="btnPauseLevels">Levels</button>
+    </div>
+  </div>
+</section>
+
+<section id="scrFinish" class="screen modal">
+  <div class="panel">
+    <h2 id="finishTitle">Level Complete!</h2>
+    <div id="finishStars"><i>&#9733;</i><i>&#9733;</i><i>&#9733;</i></div>
+    <div id="finishTime">0.00s</div>
+    <div id="finishBest"></div>
+    <div id="finishUnlock"></div>
+    <button class="btn primary" id="btnNext">Next Level</button>
+    <div class="row">
+      <button class="btn" id="btnRetry">Retry</button>
+      <button class="btn" id="btnFinLevels">Levels</button>
+    </div>
+  </div>
+</section>
+
+<noscript>Stickman Hook needs JavaScript.</noscript>
+<script src="js/physics.js"></script>
+<script src="js/levels.js"></script>
+<script src="js/ragdoll.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

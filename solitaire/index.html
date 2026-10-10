@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0a5a2f">
+<meta name="description" content="Klondike Solitaire in the browser: Draw 1 or Draw 3, drag and drop or tap to move, unlimited undo, hints, auto-complete, Windows scoring, the bouncing-cards finale, sound and saved stats.">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Solitaire">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Solitaire</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="felt-green">
+<div id="app">
+  <div id="brand">
+    <a class="arcade" href="https://open-arcade.up.railway.app" title="More games at Open Arcade">&larr; Arcade</a>
+    <h1 class="title">Solitaire</h1>
+  </div>
+
+  <div id="hud" aria-live="off">
+    <div class="stat"><span class="k">Score</span><span class="v" id="score">0</span></div>
+    <div class="stat"><span class="k">Time</span><span class="v" id="time">0:00</span></div>
+    <div class="stat"><span class="k">Moves</span><span class="v" id="moves">0</span></div>
+  </div>
+
+  <div id="tools">
+    <button class="icon-btn" id="btn-mute" type="button" title="Sound (M)" aria-label="Mute sound" aria-pressed="false">
+      <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.8 5.2a9.5 9.5 0 0 1 0 13.6"/></svg>
+      <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4z"/><path d="m23 9-6 6"/><path d="m17 9 6 6"/></svg>
+    </button>
+    <button class="icon-btn" id="btn-menu" type="button" title="Options and statistics" aria-label="Options and statistics" aria-haspopup="dialog">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M1 14h6"/><path d="M9 8h6"/><path d="M17 16h6"/></svg>
+    </button>
+  </div>
+
+  <nav id="actions" aria-label="Game actions">
+    <button class="act" id="btn-new" type="button" title="New game (N)" aria-haspopup="menu">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 3h5v5"/><path d="M4 20 21 3"/><path d="M21 16v5h-5"/><path d="m15 15 6 6"/><path d="m4 4 5 5"/></svg>
+      <span>New</span>
+    </button>
+    <button class="act" id="btn-undo" type="button" title="Undo (U or Ctrl+Z)" disabled>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>
+      <span>Undo</span>
+    </button>
+    <button class="act" id="btn-hint" type="button" title="Hint (H)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6"/><path d="M10 21.5h4"/><path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.5.4.8 1 .8 1.7v.5h6V16c0-.7.3-1.3.8-1.7A6.5 6.5 0 0 0 12 2.5z"/></svg>
+      <span>Hint</span>
+    </button>
+    <button class="act accent" id="btn-auto" type="button" title="Auto-complete (A)" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>
+      <span>Finish</span>
+    </button>
+  </nav>
+
+  <main id="table" aria-label="Card table"></main>
+</div>
+
+<div id="toast" role="status" aria-live="polite" hidden></div>
+
+<!-- New game menu -->
+<div id="newmenu" class="popover" role="menu" aria-label="New game" hidden>
+  <button role="menuitem" type="button" data-new="1"><b>New game</b><small>Draw 1</small></button>
+  <button role="menuitem" type="button" data-new="3"><b>New game</b><small>Draw 3</small></button>
+  <hr>
+  <button role="menuitem" type="button" data-new="restart"><b>Restart this deal</b><small id="deal-no"></small></button>
+</div>
+
+<!-- Options / statistics -->
+<div id="dlg-options" class="modal" role="dialog" aria-modal="true" aria-labelledby="opt-title" hidden>
+  <div class="sheet">
+    <div class="sheet-head">
+      <h2 id="opt-title">Options</h2>
+      <button class="close" type="button" data-close aria-label="Close">&times;</button>
+    </div>
+    <div class="sheet-body">
+      <section>
+        <h3>Game</h3>
+        <div class="row">
+          <span class="lbl">Draw</span>
+          <div class="seg" role="radiogroup" aria-label="Draw" data-setting="draw">
+            <button type="button" role="radio" data-value="1">1 card</button>
+            <button type="button" role="radio" data-value="3">3 cards</button>
+          </div>
+        </div>
+        <div class="row">
+          <span class="lbl">Scoring</span>
+          <div class="seg" role="radiogroup" aria-label="Scoring" data-setting="scoring">
+            <button type="button" role="radio" data-value="standard">Standard</button>
+            <button type="button" role="radio" data-value="vegas">Vegas</button>
+            <button type="button" role="radio" data-value="none">Off</button>
+          </div>
+        </div>
+        <p class="note" id="next-note" hidden>Draw and scoring changes start with your next deal. <button type="button" class="link" id="deal-now">Deal now</button></p>
+        <label class="row switch-row">
+          <span class="lbl">Winnable deals only<small>Every deal has a known solution</small></span>
+          <input type="checkbox" class="switch" data-setting="winnable">
+        </label>
+        <label class="row switch-row">
+          <span class="lbl">Tap to move<small>Tap a card to send it to the best spot</small></span>
+          <input type="checkbox" class="switch" data-setting="tapMove">
+        </label>
+        <label class="row switch-row">
+          <span class="lbl">Sound</span>
+          <input type="checkbox" class="switch" data-setting="sound">
+        </label>
+      </section>
+      <section>
+        <h3>Look</h3>
+        <div class="row">
+          <span class="lbl">Table</span>
+          <div class="swatches" id="felt-swatches" role="radiogroup" aria-label="Table colour"></div>
+        </div>
+        <div class="row">
+          <span class="lbl">Card back</span>
+          <div class="swatches backs" id="back-swatches" role="radiogroup" aria-label="Card back"></div>
+        </div>
+      </section>
+      <section>
+        <h3>Statistics</h3>
+        <table class="stats" id="stats-table">
+          <thead><tr><th></th><th>Draw 1</th><th>Draw 3</th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <p class="note"><button type="button" class="link danger" id="reset-stats">Reset statistics</button></p>
+      </section>
+      <section class="keys">
+        <h3>Controls</h3>
+        <p>Drag cards, or tap a card to send it to the best spot. Double-click sends a card to the foundations. Click the stock to turn cards.</p>
+        <p class="kbd-line"><kbd>N</kbd> new game <kbd>U</kbd>/<kbd>Ctrl</kbd>+<kbd>Z</kbd> undo <kbd>H</kbd> hint <kbd>Space</kbd>/<kbd>D</kbd> draw <kbd>A</kbd> auto-complete <kbd>M</kbd> sound</p>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Win -->
+<div id="dlg-win" class="modal win" role="dialog" aria-modal="true" aria-labelledby="win-title" hidden>
+  <div class="sheet">
+    <div class="win-burst" aria-hidden="true">
+      <svg viewBox="0 0 64 64"><path d="M32 4l7.6 17.2L58 23l-14 12.6L48 54 32 44.6 16 54l4-18.4L6 23l18.4-1.8z"/></svg>
+    </div>
+    <h2 id="win-title">You won!</h2>
+    <p class="win-sub" id="win-sub"></p>
+    <div class="win-grid">
+      <div><span class="k">Time</span><span class="v" id="win-time"></span></div>
+      <div><span class="k">Moves</span><span class="v" id="win-moves"></span></div>
+      <div><span class="k">Score</span><span class="v" id="win-score"></span></div>
+    </div>
+    <p class="win-bonus" id="win-bonus"></p>
+    <p class="win-badges" id="win-badges"></p>
+    <p class="win-record" id="win-record"></p>
+    <div class="win-buttons">
+      <button type="button" class="primary" id="win-new">Play again</button>
+      <button type="button" class="secondary" data-close>View table</button>
+    </div>
+  </div>
+</div>
+
+<canvas id="cascade" hidden></canvas>
+
+<script src="js/rules.js"></script>
+<script src="js/cards.js"></script>
+<script src="js/sound.js"></script>
+<script src="js/deals.js"></script>
+<script src="js/game.js"></script>
+</body>
+</html>

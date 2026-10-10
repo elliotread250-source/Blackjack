@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <radialGradient id="felt" cx="0.5" cy="0.4" r="0.75">
+      <stop offset="0" stop-color="#1a9a56"/>
+      <stop offset="1" stop-color="#06502a"/>
+    </radialGradient>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="url(#felt)"/>
+  <g transform="rotate(-14 24 34)">
+    <rect x="9" y="15" width="26" height="36" rx="3.5" fill="#fbfaf6" stroke="#0b2f63" stroke-width="1"/>
+    <rect x="12" y="18" width="20" height="30" rx="2" fill="#1d4f9e"/>
+    <path d="M12 26l8-8M12 34l16-16M12 42l20-20M16 48l16-16M24 48l8-8" stroke="#5f8fdc" stroke-width="1.4" opacity=".7"/>
+  </g>
+  <g transform="rotate(10 40 34)">
+    <rect x="25" y="13" width="28" height="39" rx="3.5" fill="#fffefa" stroke="#9c9a94" stroke-width="1"/>
+    <text x="29.5" y="23" font-family="Helvetica, Arial, sans-serif" font-size="9" font-weight="700" fill="#17191e">A</text>
+    <path transform="translate(31 25) scale(.16)" fill="#17191e" d="M50 3C57 17 70 28 82 38C94 48 99 56 99 66C99 79 90 87 78 87C68 87 60 82 55 74C56 85 61 93 70 98H30C39 93 44 85 45 74C40 82 32 87 22 87C10 87 1 79 1 66C1 56 6 48 18 38C30 28 43 17 50 3Z"/>
+  </g>
+</svg>

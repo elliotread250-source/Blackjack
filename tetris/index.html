@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0e1c">
+<meta name="description" content="Tetris in the browser: SRS rotation with wall kicks, hold, ghost piece, 5-piece preview, T-spins, Marathon and 40 Lines sprint.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Tetris</title>
+<link rel="icon" href="icon.svg">
+<style>
+  :root {
+    --bg: #070912;
+    --card: rgba(14, 18, 38, 0.88);
+    --line: rgba(255, 255, 255, 0.09);
+    --text: #eef1ff;
+    --muted: #8d96bf;
+    --accent: #8b5cf6;
+    --accent2: #22d3ee;
+    --gold: #ffd76a;
+    --bar-h: 64px;
+    --btn: 56px;
+    --icon: 40px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--text); font-family: var(--font);
+    overscroll-behavior: none; touch-action: none;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    -webkit-text-size-adjust: 100%;
+  }
+  body { position: fixed; inset: 0; }
+  button { font: inherit; color: inherit; }
+  [hidden] { display: none !important; }
+  #safe-probe {
+    position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+
+  /* ---------- pause / mute ---------- */
+  #hud { position: fixed; display: flex; gap: 8px; z-index: 30; }
+  .icon {
+    width: var(--icon); height: var(--icon); padding: 0; border-radius: 12px; cursor: pointer;
+    border: 1px solid var(--line); background: rgba(255, 255, 255, 0.05); color: var(--muted);
+    display: grid; place-items: center; transition: background .15s, color .15s;
+  }
+  .icon:hover { background: rgba(255, 255, 255, 0.1); color: var(--text); }
+  .icon:focus-visible, .card button:focus-visible, .arcade:focus-visible { outline: 2px solid var(--accent2); outline-offset: 2px; }
+  .icon svg { width: 52%; height: 52%; }
+  body:not([data-screen="playing"]):not([data-screen="ready"]):not([data-screen="paused"]) #btn-pause { display: none; }
+  #btn-pause .i-play { display: none; }
+  body[data-screen="paused"] #btn-pause .i-play { display: block; }
+  body[data-screen="paused"] #btn-pause .i-pause { display: none; }
+  #btn-mute .i-off { display: none; }
+  body.muted #btn-mute .i-on { display: none; }
+  body.muted #btn-mute .i-off { display: block; }
+
+  /* ---------- touch controls ---------- */
+  #touch {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: none; gap: 6px;
+    padding: 6px max(8px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+  }
+  body.touch #touch { display: flex; }
+  #touch .cluster { display: contents; }
+  .tb {
+    flex: 1 1 0; min-width: 0; height: var(--bar-h); padding: 0; border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.03));
+    color: #dfe4ff; display: grid; place-items: center; touch-action: none;
+    font-weight: 800; font-size: 12px; letter-spacing: .08em;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+  }
+  .tb svg { width: 26px; height: 26px; }
+  .tb.on { background: rgba(139, 92, 246, 0.45); border-color: rgba(190, 160, 255, 0.6); transform: translateY(1px); box-shadow: none; }
+  .tb.drop { background: linear-gradient(180deg, rgba(139, 92, 246, 0.42), rgba(139, 92, 246, 0.18)); border-color: rgba(170, 140, 255, 0.4); }
+  .o1 { order: 1; } .o2 { order: 2; } .o3 { order: 3; } .o4 { order: 4; } .o5 { order: 5; } .o6 { order: 6; } .o7 { order: 7; }
+  body.touch.land #touch {
+    top: 0; align-items: flex-end; justify-content: space-between; pointer-events: none;
+    padding: 10px max(10px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  }
+  body.touch.land #touch .cluster {
+    display: grid; grid-template-columns: repeat(2, var(--btn)); gap: 8px; pointer-events: auto;
+  }
+  body.touch.land .tb { width: var(--btn); height: var(--btn); }
+  body.touch.land .tb.wide { grid-column: span 2; width: auto; }
+
+  /* ---------- overlay screens ---------- */
+  #overlay {
+    position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    background: rgba(4, 6, 14, 0.62);
+  }
+  #overlay.is-title { background: radial-gradient(120% 80% at 50% 45%, rgba(4, 6, 14, 0.25), rgba(4, 6, 14, 0.72)); }
+  #overlay.hidden { display: none; }
+  .arcade {
+    position: absolute; top: max(10px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left));
+    color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 600;
+    padding: 6px 11px; border-radius: 999px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line);
+  }
+  .arcade:hover { color: var(--text); }
+  .card {
+    position: relative; width: min(370px, 100%); max-height: 100%; overflow: auto;
+    touch-action: pan-y; overscroll-behavior: contain;
+    background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+    padding: 22px 20px 18px; text-align: center;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    animation: pop .22s ease-out;
+  }
+  @keyframes pop { from { transform: translateY(8px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  #logo { display: block; margin: 4px auto 18px; filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.5)); }
+  h2 { margin: 2px 0 14px; font-size: 26px; letter-spacing: .06em; text-transform: uppercase; font-weight: 900; }
+  .seg { display: flex; padding: 4px; gap: 4px; border-radius: 14px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line); }
+  .seg button {
+    flex: 1; padding: 10px 6px; border: 0; border-radius: 10px; background: transparent; cursor: pointer;
+    color: var(--muted); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; font-size: 13px;
+  }
+  .seg button[aria-pressed="true"] { background: linear-gradient(135deg, var(--accent), #6d4ce0); color: #fff; box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35); }
+  .mode-desc { margin: 10px 0 12px; color: var(--muted); font-size: 13px; }
+  .stepper { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 0 12px; }
+  .stepper span { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin-right: 4px; }
+  .stepper button {
+    width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.06);
+    font-size: 20px; font-weight: 700; cursor: pointer; line-height: 1;
+  }
+  .stepper button:hover { background: rgba(255, 255, 255, 0.12); }
+  .stepper output { min-width: 40px; font-size: 24px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .best { color: var(--gold); font-weight: 800; letter-spacing: .06em; margin: 4px 0 14px; font-variant-numeric: tabular-nums; }
+  .primary {
+    display: block; width: 100%; padding: 15px; border: 0; border-radius: 14px; cursor: pointer;
+    background: linear-gradient(135deg, #22d3ee, #8b5cf6); color: #fff;
+    font-size: 18px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase;
+    box-shadow: 0 8px 24px rgba(80, 120, 255, 0.35);
+  }
+  .primary:hover { filter: brightness(1.08); }
+  .primary:active { transform: translateY(1px); }
+  .secondary {
+    display: block; width: 100%; margin-top: 10px; padding: 12px; border-radius: 14px; cursor: pointer;
+    border: 1px solid var(--line); background: rgba(255, 255, 255, 0.05);
+    font-size: 15px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  }
+  .secondary:hover { background: rgba(255, 255, 255, 0.1); }
+  .chip {
+    margin-top: 12px; padding: 7px 14px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); color: var(--muted);
+    font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .chip:hover { color: var(--text); }
+  .hint { margin: 12px 0 0; color: #6c7499; font-size: 12px; line-height: 1.5; }
+  .keys { margin: 14px 0 0; padding: 12px 4px 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; text-align: left; font-size: 12px; color: var(--muted); }
+  .keys b { color: #c8cdf0; font-weight: 700; white-space: nowrap; text-align: right; }
+  body.touch .kb { display: none !important; }
+  body:not(.touch) .tc { display: none !important; }
+  .newbest {
+    display: inline-block; margin: -4px 0 12px; padding: 5px 12px; border-radius: 999px;
+    background: rgba(255, 215, 106, 0.14); color: var(--gold); border: 1px solid rgba(255, 215, 106, 0.4);
+    font-weight: 900; letter-spacing: .14em; font-size: 12px; text-transform: uppercase;
+    animation: glow 1.2s ease-in-out infinite alternate;
+  }
+  @keyframes glow { to { box-shadow: 0 0 18px rgba(255, 215, 106, 0.45); } }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 16px; }
+  .stat { padding: 9px 10px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line); text-align: left; }
+  .stat span { display: block; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+  .stat strong { font-size: 18px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .stat.big { grid-column: span 2; text-align: center; }
+  .stat.big strong { font-size: 32px; }
+  @media (max-height: 560px) {
+    .card { padding: 14px 16px 12px; }
+    #logo { margin-bottom: 10px; }
+    .keys { display: none; }
+  }
+</style>
+</head>
+<body data-screen="title">
+<div id="safe-probe"></div>
+<canvas id="game" aria-label="Tetris playfield"></canvas>
+
+<div id="hud">
+  <button id="btn-pause" class="icon" type="button" aria-label="Pause" title="Pause (P)">
+    <svg class="i-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4.5" width="4" height="15" rx="1.2"/><rect x="14" y="4.5" width="4" height="15" rx="1.2"/></svg>
+    <svg class="i-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg>
+  </button>
+  <button id="btn-mute" class="icon" type="button" aria-label="Mute" title="Mute (M)">
+    <svg class="i-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+    <svg class="i-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+  </button>
+</div>
+
+<div id="touch" aria-hidden="true">
+  <div class="cluster">
+    <button class="tb o1" type="button" data-act="left" aria-label="Move left"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M16 4.5 6.5 12l9.5 7.5z"/></svg></button>
+    <button class="tb o2" type="button" data-act="right" aria-label="Move right"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 4.5 17.5 12 8 19.5z"/></svg></button>
+    <button class="tb o5 wide" type="button" data-act="soft" aria-label="Soft drop"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M4.5 8h15L12 17.5z"/></svg></button>
+  </div>
+  <div class="cluster">
+    <button class="tb o3" type="button" data-act="ccw" aria-label="Rotate left"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 4.5v5h5"/><path d="M5 9.5A7.5 7.5 0 1 1 6.2 17"/></svg></button>
+    <button class="tb o4" type="button" data-act="cw" aria-label="Rotate right"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 4.5v5h-5"/><path d="M19 9.5A7.5 7.5 0 1 0 17.8 17"/></svg></button>
+    <button class="tb o6" type="button" data-act="hold" aria-label="Hold">HOLD</button>
+    <button class="tb o7 drop" type="button" data-act="hard" aria-label="Hard drop">DROP</button>
+  </div>
+</div>
+
+<div id="overlay" class="is-title">
+  <a class="arcade" href="https://open-arcade.up.railway.app">&larr; Arcade</a>
+
+  <section class="card" id="scr-title" aria-labelledby="title-h">
+    <h1 class="sr" id="title-h">Tetris</h1>
+    <canvas id="logo" aria-hidden="true"></canvas>
+    <div class="seg" role="group" aria-label="Mode">
+      <button type="button" data-mode="marathon" aria-pressed="true">Marathon</button>
+      <button type="button" data-mode="sprint" aria-pressed="false">40 Lines</button>
+    </div>
+    <p class="mode-desc" id="mode-desc">Endless. Speed rises every 10 lines.</p>
+    <div class="stepper" id="level-row">
+      <span>Start level</span>
+      <button type="button" id="lvl-dn" aria-label="Lower start level">&minus;</button>
+      <output id="lvl" aria-live="polite">1</output>
+      <button type="button" id="lvl-up" aria-label="Higher start level">+</button>
+    </div>
+    <div class="best" id="title-best">Best 0</div>
+    <button class="primary" type="button" id="btn-start">Start</button>
+    <button class="chip music-chip" type="button" aria-pressed="true">Music: On</button>
+    <p class="hint kb">Enter to start &middot; &larr; &rarr; level &middot; &uarr; &darr; mode</p>
+    <div class="keys kb">
+      <b>&larr; &rarr;</b><span>Move</span>
+      <b>&darr; / Space</b><span>Soft drop / hard drop</span>
+      <b>&uarr; X / Z Ctrl</b><span>Rotate right / left (A = 180&deg;)</span>
+      <b>C / Shift</b><span>Hold</span>
+      <b>P Esc / M</b><span>Pause / mute</span>
+    </div>
+    <div class="keys tc">
+      <b>Tap</b><span>Rotate</span>
+      <b>Drag &larr; &rarr;</b><span>Move one cell per cell dragged</span>
+      <b>Drag down</b><span>Soft drop</span>
+      <b>Flick down</b><span>Hard drop</span>
+      <b>Swipe up</b><span>Hold</span>
+    </div>
+  </section>
+
+  <section class="card" id="scr-pause" hidden aria-labelledby="pause-h">
+    <h2 id="pause-h">Paused</h2>
+    <button class="primary" type="button" id="btn-resume">Resume</button>
+    <button class="secondary" type="button" id="btn-restart">Restart</button>
+    <button class="secondary" type="button" id="btn-pause-menu">Quit to menu</button>
+    <button class="chip music-chip" type="button" aria-pressed="true">Music: On</button>
+    <p class="hint kb">P / Esc to resume &middot; M to mute</p>
+  </section>
+
+  <section class="card" id="scr-over" hidden aria-labelledby="over-title">
+    <h2 id="over-title">Game Over</h2>
+    <div class="newbest" id="over-newbest" hidden>New best!</div>
+    <div class="stats" id="over-stats"></div>
+    <button class="primary" type="button" id="btn-again">Play again</button>
+    <button class="secondary" type="button" id="btn-over-menu">Menu</button>
+    <p class="hint kb">Enter to play again &middot; Esc for menu</p>
+  </section>
+</div>
+
+<script src="js/engine.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/render.js"></script>
+<script src="js/input.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0a1410">
+<meta name="description" content="English pool (8-ball / blackball) in the browser: reds and yellows on a 7ft pub table with real physics, pub rules or WPA blackball rules, bots from Easy to Pro, pass-and-play and online rooms.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Pool</title>
+<link rel="icon" href="icon.svg">
+<style>
+  :root {
+    --bg: #070c0a;
+    --card: rgba(14, 22, 19, 0.92);
+    --card2: rgba(255, 255, 255, 0.05);
+    --line: rgba(255, 255, 255, 0.1);
+    --text: #eef3ef;
+    --muted: #93a39a;
+    --gold: #f2c45a;
+    --accent: #3ccf7e;
+    --red: #d6202e;
+    --yellow: #f6c21a;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --safe-t: env(safe-area-inset-top, 0px);
+    --safe-b: env(safe-area-inset-bottom, 0px);
+    --safe-l: env(safe-area-inset-left, 0px);
+    --safe-r: env(safe-area-inset-right, 0px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: var(--font);
+    overscroll-behavior: none; touch-action: none; -webkit-user-select: none; user-select: none;
+    -webkit-touch-callout: none; -webkit-text-size-adjust: 100%;
+  }
+  body { position: fixed; inset: 0; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  input { font: inherit; }
+  [hidden] { display: none !important; }
+  #safe-probe { position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none;
+    padding: var(--safe-t) var(--safe-r) var(--safe-b) var(--safe-l); }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+  /* ---------- HUD ---------- */
+  #hud { position: fixed; left: 0; right: 0; top: 0; padding: calc(var(--safe-t) + 6px) calc(var(--safe-r) + 8px) 0 calc(var(--safe-l) + 8px);
+    display: grid; grid-template-columns: auto 1fr minmax(120px, 1.1fr) 1fr auto; align-items: center; gap: 8px; pointer-events: none; z-index: 5; }
+  #hud > * { pointer-events: auto; }
+  #hud.portrait { grid-template-columns: auto 1fr 1fr auto; grid-template-rows: auto auto; row-gap: 4px; }
+  #hud.portrait #center { grid-column: 1 / -1; grid-row: 2; }
+  #hud.portrait #p1 { grid-column: 3; grid-row: 1; }
+  #hud.portrait #btn-mute { grid-column: 4; grid-row: 1; }
+  .icon { width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--card);
+    display: grid; place-items: center; padding: 0; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+  .icon svg { width: 20px; height: 20px; fill: none; stroke: var(--text); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .icon:hover { border-color: rgba(255,255,255,0.25); }
+  .pcard { display: flex; align-items: center; gap: 8px; min-width: 0; padding: 5px 10px 5px 6px; border-radius: 14px;
+    background: var(--card); border: 1px solid var(--line); transition: border-color .2s, box-shadow .2s, opacity .2s; opacity: 0.72; }
+  .pcard.turn { opacity: 1; border-color: rgba(242, 196, 90, 0.7); box-shadow: 0 0 0 1px rgba(242,196,90,0.35), 0 0 18px rgba(242,196,90,0.18); }
+  #p1 { flex-direction: row-reverse; text-align: right; padding: 5px 6px 5px 10px; }
+  .chip { flex: none; width: 28px; height: 28px; border-radius: 50%; position: relative;
+    background: conic-gradient(var(--red) 0 50%, var(--yellow) 50% 100%); box-shadow: inset -3px -4px 6px rgba(0,0,0,0.45), inset 2px 2px 4px rgba(255,255,255,0.35); }
+  .chip.red { background: radial-gradient(circle at 35% 30%, #ff7a7f, var(--red) 55%, #7a0c13); }
+  .chip.yellow { background: radial-gradient(circle at 35% 30%, #fff1a8, var(--yellow) 55%, #8f6a00); }
+  .chip.black { background: radial-gradient(circle at 35% 30%, #777, #151515 55%, #000); }
+  .chip.black::after { content: '8'; position: absolute; inset: 7px; border-radius: 50%; background: #f6f3ea; color: #111; font: 700 10px/14px var(--font); text-align: center; }
+  .pinfo { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+  .pname { font-size: 14px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+  .pmeta { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  #p1 .pmeta { justify-content: flex-end; }
+  .pips { display: flex; gap: 2px; }
+  .pip { width: 7px; height: 7px; border-radius: 50%; background: rgba(255,255,255,0.14); }
+  .pip.on.red { background: var(--red); } .pip.on.yellow { background: var(--yellow); }
+  .visits { font-size: 10.5px; font-weight: 700; padding: 2px 6px; border-radius: 999px; background: rgba(242,196,90,0.16); color: var(--gold); white-space: nowrap; }
+  .frames { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  #center { text-align: center; min-width: 0; }
+  #status { font-size: 14px; font-weight: 600; line-height: 1.25; text-shadow: 0 1px 2px rgba(0,0,0,0.6); }
+  #substatus { font-size: 11.5px; color: var(--muted); margin-top: 2px; min-height: 14px; display: flex; gap: 8px; justify-content: center; align-items: center; }
+  .net { display: inline-flex; align-items: center; gap: 4px; }
+  .net i { width: 8px; height: 8px; border-radius: 50%; background: #666; display: inline-block; }
+  .net.q3 i { background: #3ccf7e; box-shadow: 0 0 6px #3ccf7e; } .net.q2 i { background: #f2c45a; } .net.q1 i { background: #ef5b4c; }
+  .thinking::after { content: ''; display: inline-block; width: 1.2em; text-align: left; animation: dots 1.2s steps(4) infinite; }
+  @keyframes dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75% { content: '...'; } }
+
+  /* ---------- shot controls ---------- */
+  .ctrl { position: fixed; z-index: 4; touch-action: none; }
+  .ctrl-label { position: absolute; font-size: 10.5px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; pointer-events: none; }
+  #power { border-radius: 16px; background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.35)); border: 1px solid var(--line); overflow: hidden; cursor: grab; }
+  #power .fill { position: absolute; left: 0; top: 0; right: 0; bottom: 0; background: linear-gradient(var(--pdir, 180deg), #3ccf7e, #f2c45a 55%, #ef5b4c); clip-path: inset(0 0 100% 0); }
+  #power .ticks { position: absolute; inset: 0; background-image: repeating-linear-gradient(var(--pdir, 180deg), rgba(255,255,255,0.12) 0 1px, transparent 1px 10%); }
+  #power .knob { position: absolute; border-radius: 10px; background: linear-gradient(135deg, #fbe7bf, #c99e5e); box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+  #power .pct { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.85); text-shadow: 0 1px 2px #000; pointer-events: none; }
+  #power.disabled, #fine.disabled, #spin.disabled { opacity: 0.35; pointer-events: none; }
+  #spin { border-radius: 50%; cursor: pointer; border: 2px solid rgba(255,255,255,0.15); box-shadow: 0 3px 10px rgba(0,0,0,0.5); background: #111; }
+  #spin canvas, #spin-big { display: block; width: 100%; height: 100%; border-radius: 50%; }
+  #fine { border-radius: 14px; overflow: hidden; border: 1px solid var(--line); background: #1b1b1b; cursor: ns-resize; }
+  #fine canvas { display: block; width: 100%; height: 100%; }
+
+  /* ---------- toast ---------- */
+  #toast { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0.96); z-index: 6; pointer-events: none;
+    background: rgba(8, 12, 10, 0.86); border: 1px solid var(--line); border-radius: 14px; padding: 10px 16px; max-width: min(92vw, 520px);
+    font-size: 15px; font-weight: 600; text-align: center; line-height: 1.35; opacity: 0; transition: opacity .25s, transform .25s; }
+  #toast.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #toast.foul { border-color: rgba(239,91,76,0.6); }
+  #toast.good { border-color: rgba(60,207,126,0.55); }
+
+  /* ---------- screens ---------- */
+  .screen { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: calc(var(--safe-t) + 16px) 16px calc(var(--safe-b) + 16px);
+    background: radial-gradient(ellipse at 50% 35%, rgba(18, 40, 29, 0.78), rgba(4, 7, 6, 0.9)); overflow-y: auto; touch-action: pan-y; }
+  .screen.clear { background: rgba(3, 6, 5, 0.55); }
+  .card { width: min(100%, 430px); background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 22px 20px 18px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.55); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+  .card.wide { width: min(100%, 560px); }
+  .logo { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 2px 0 14px; }
+  .logo h1 { margin: 0; font-size: 40px; letter-spacing: .02em; font-weight: 800; background: linear-gradient(180deg, #fff, #cfe6d6); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .logo .balls { display: flex; gap: 0; }
+  .logo .balls span { width: 24px; height: 24px; border-radius: 50%; margin-left: -5px; box-shadow: inset -3px -4px 6px rgba(0,0,0,0.45), 0 2px 4px rgba(0,0,0,0.4); }
+  .sub { text-align: center; color: var(--muted); font-size: 13px; margin: -8px 0 14px; }
+  .arcade { position: fixed; left: calc(var(--safe-l) + 12px); top: calc(var(--safe-t) + 10px); z-index: 11; color: var(--muted); text-decoration: none; font-size: 13px;
+    padding: 6px 10px; border-radius: 10px; background: rgba(0,0,0,0.25); }
+  .arcade:hover { color: var(--text); }
+  label.field { display: block; font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  label.field input { display: block; width: 100%; margin-top: 5px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: rgba(0,0,0,0.3); color: var(--text); outline: none; -webkit-user-select: text; user-select: text; }
+  label.field input:focus { border-color: rgba(242,196,90,0.6); }
+  .seg { display: flex; padding: 3px; border-radius: 12px; background: rgba(0,0,0,0.3); border: 1px solid var(--line); margin-bottom: 12px; }
+  .seg button { flex: 1; padding: 8px 6px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font-size: 13px; font-weight: 600; }
+  .seg button[aria-pressed="true"] { background: rgba(242,196,90,0.17); color: var(--gold); }
+  .group-title { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 4px 0 6px; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 13px 14px; border-radius: 14px; border: 1px solid var(--line);
+    background: var(--card2); font-weight: 650; font-size: 15px; margin-bottom: 10px; transition: background .15s, border-color .15s, transform .08s; }
+  .btn:hover { background: rgba(255,255,255,0.09); border-color: rgba(255,255,255,0.2); }
+  .btn:active { transform: scale(0.985); }
+  .btn.primary { background: linear-gradient(180deg, #2aa865, #1c7a48); border-color: rgba(120, 255, 180, 0.35); }
+  .btn.primary:hover { background: linear-gradient(180deg, #31b56f, #208452); }
+  .btn.gold { background: linear-gradient(180deg, #e2b24a, #b98522); border-color: rgba(255,230,160,0.4); color: #1d1405; }
+  .btn small { font-weight: 500; color: var(--muted); font-size: 12px; }
+  .row .btn { flex-direction: column; gap: 1px; line-height: 1.2; }
+  .btn.primary small, .btn.gold small { color: rgba(255,255,255,0.75); }
+  .btn.gold small { color: rgba(0,0,0,0.6); }
+  .row { display: flex; gap: 10px; }
+  .row > * { flex: 1; }
+  .stats { text-align: center; font-size: 12px; color: var(--muted); margin: -4px 0 12px; min-height: 15px; }
+  .opts { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; justify-content: center; font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  .opts label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .opts input[type=checkbox] { accent-color: #2aa865; width: 16px; height: 16px; }
+  .link { background: none; border: 0; color: var(--muted); text-decoration: underline; font-size: 12.5px; padding: 4px; }
+  .link:hover { color: var(--text); }
+  .code { font: 800 46px/1.1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .18em; text-align: center; color: var(--gold); margin: 6px 0 4px; }
+  .sharelink { font-size: 12px; color: var(--muted); text-align: center; word-break: break-all; margin-bottom: 12px; -webkit-user-select: text; user-select: text; }
+  .wait { text-align: center; color: var(--muted); font-size: 13px; margin: 6px 0 14px; }
+  .err { color: #ff8a7a; font-size: 13px; text-align: center; min-height: 18px; margin: 4px 0 6px; }
+  .help { font-size: 13.5px; line-height: 1.5; color: #d5dfd8; max-height: min(70vh, 640px); overflow-y: auto; padding-right: 4px; touch-action: pan-y; -webkit-user-select: text; user-select: text; }
+  .help h2 { font-size: 15px; margin: 14px 0 4px; color: var(--gold); }
+  .help h2:first-child { margin-top: 0; }
+  .help ul { margin: 4px 0; padding-left: 18px; }
+  .help li { margin: 2px 0; }
+  .over-title { font-size: 30px; font-weight: 800; text-align: center; margin: 4px 0 6px; }
+  .over-sub { text-align: center; color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+  #spin-pop { z-index: 12; }
+  #spin-pop .card { width: min(92vw, 320px); text-align: center; }
+  #spin-big { width: min(70vw, 230px); height: min(70vw, 230px); margin: 4px auto 14px; touch-action: none; cursor: crosshair; }
+  .spin-hint { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+  @media (max-width: 480px) { .pname { font-size: 13px; max-width: 110px; } .pcard { gap: 6px; } .visits:not([hidden]) + .frames { display: none; } #status { font-size: 13px; }
+    .pmeta { flex-wrap: wrap; row-gap: 3px; } .pip { width: 6px; height: 6px; } .frames { white-space: nowrap; } .visits { font-size: 10px; } }
+  @media (max-height: 560px) {
+    .card { padding: 14px 16px 10px; }
+    .logo { margin-bottom: 8px; } .logo h1 { font-size: 30px; }
+    .btn { padding: 10px 12px; margin-bottom: 7px; }
+  }
+</style>
+</head>
+<body>
+<div id="safe-probe"></div>
+<canvas id="game" aria-label="Pool table"></canvas>
+
+<div id="hud" hidden>
+  <button class="icon" id="btn-menu" type="button" aria-label="Menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <div class="pcard" id="p0"><div class="chip"></div><div class="pinfo"><div class="pname">Player 1</div><div class="pmeta"><div class="pips"></div><span class="visits" hidden></span><span class="frames"></span></div></div></div>
+  <div id="center"><div id="status"></div><div id="substatus"><span class="net" id="net" hidden><i></i><span id="net-label"></span></span><span id="hint"></span></div></div>
+  <div class="pcard" id="p1"><div class="chip"></div><div class="pinfo"><div class="pname">Player 2</div><div class="pmeta"><div class="pips"></div><span class="visits" hidden></span><span class="frames"></span></div></div></div>
+  <button class="icon" id="btn-mute" type="button" aria-label="Mute"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="wave" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/><path class="x" d="M17 9l5 6M22 9l-5 6" hidden/></svg></button>
+</div>
+
+<div class="ctrl" id="power" hidden aria-label="Power: drag to pull back, release to shoot"><div class="fill"></div><div class="ticks"></div><div class="knob"></div><div class="pct"></div></div>
+<div class="ctrl-label" id="power-label" hidden>Pull to shoot</div>
+<div class="ctrl" id="spin" hidden role="button" aria-label="Spin"><canvas id="spin-mini"></canvas></div>
+<div class="ctrl-label" id="spin-label" hidden>Spin</div>
+<div class="ctrl" id="fine" hidden aria-label="Fine aim"><canvas id="fine-wheel"></canvas></div>
+<div class="ctrl-label" id="fine-label" hidden>Fine aim</div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<a class="arcade" id="arcade" href="https://open-arcade.up.railway.app">&larr; Arcade</a>
+
+<!-- main menu -->
+<div class="screen" id="menu">
+  <div class="card">
+    <div class="logo">
+      <div class="balls"><span style="background:radial-gradient(circle at 35% 30%,#ff7a7f,#d6202e 55%,#7a0c13)"></span><span style="background:radial-gradient(circle at 35% 30%,#777,#151515 55%,#000)"></span><span style="background:radial-gradient(circle at 35% 30%,#fff1a8,#f6c21a 55%,#8f6a00)"></span></div>
+      <h1>Pool</h1>
+    </div>
+    <div class="sub">English 8-ball &middot; reds and yellows</div>
+    <label class="field">Your name<input id="name" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Player"></label>
+    <div class="group-title">Rules</div>
+    <div class="seg" id="rules-seg"><button type="button" data-rules="pub" aria-pressed="true">Pub rules</button><button type="button" data-rules="wpa" aria-pressed="false">Blackball (WPA)</button></div>
+    <div class="group-title">Vs bot</div>
+    <div class="seg" id="level-seg"><button type="button" data-level="0">Easy</button><button type="button" data-level="1" aria-pressed="true">Medium</button><button type="button" data-level="2">Hard</button><button type="button" data-level="3">Pro</button></div>
+    <button class="btn primary" id="btn-bot" type="button">Play vs Bot</button>
+    <div class="stats" id="bot-stats"></div>
+    <div class="row">
+      <button class="btn" id="btn-local" type="button">2 Players<small>same device</small></button>
+      <button class="btn gold" id="btn-online" type="button">Online<small>vs a friend</small></button>
+    </div>
+    <div class="opts">
+      <label><input type="checkbox" id="opt-call"> Call the black's pocket</label>
+      <label><input type="checkbox" id="opt-blue"> Blue cloth</label>
+      <button class="link" id="btn-help" type="button">How to play</button>
+    </div>
+  </div>
+</div>
+
+<!-- online -->
+<div class="screen" id="online" hidden>
+  <div class="card">
+    <div class="logo"><h1 style="font-size:30px">Play online</h1></div>
+    <label class="field">Your name<input id="name2" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Player"></label>
+    <button class="btn primary" id="btn-quick" type="button">Quick match<small id="quick-rules">pub rules</small></button>
+    <button class="btn" id="btn-create" type="button">Create a room<small>share a code or link</small></button>
+    <div class="row">
+      <label class="field" style="margin:0"><input id="join-code" maxlength="4" autocomplete="off" spellcheck="false" placeholder="CODE" style="text-transform:uppercase;text-align:center;letter-spacing:.3em;font-weight:700;margin-top:0"></label>
+      <button class="btn" id="btn-join" type="button" style="margin:0">Join</button>
+    </div>
+    <div class="err" id="online-err"></div>
+    <button class="btn" id="btn-online-back" type="button">Back</button>
+  </div>
+</div>
+
+<!-- waiting room -->
+<div class="screen" id="lobby" hidden>
+  <div class="card">
+    <div id="lobby-room">
+      <div class="group-title" style="text-align:center">Room code</div>
+      <div class="code" id="room-code">----</div>
+      <div class="sharelink" id="room-link"></div>
+      <div class="row">
+        <button class="btn" id="btn-copy" type="button">Copy link</button>
+        <button class="btn" id="btn-share" type="button">Share</button>
+      </div>
+    </div>
+    <div class="wait" id="lobby-wait"><span class="thinking">Waiting for an opponent</span></div>
+    <div class="err" id="lobby-err"></div>
+    <button class="btn" id="btn-lobby-cancel" type="button">Cancel</button>
+  </div>
+</div>
+
+<!-- how to play -->
+<div class="screen" id="help" hidden>
+  <div class="card wide">
+    <div class="help">
+      <h2>English pool (blackball)</h2>
+      <p>Seven reds, seven yellows and the black. Break from anywhere behind the baulk line (the line near the bottom/left of the table). A legal break needs at least two balls to reach a cushion or a ball potted. If the black goes down on the break, the balls are re-racked and the same player breaks again.</p>
+      <p>The table is open after the break: the first player to legally pot a red or a yellow takes that colour. Keep shooting while you pot your own balls. Clear all seven of your colour, then pot the black to win the frame.</p>
+      <h2>Fouls</h2>
+      <ul>
+        <li>In-off: the cue ball goes in a pocket (or leaves the table).</li>
+        <li>Missing every ball, or hitting your opponent's ball or the black first (you may only hit the black first once you are on it).</li>
+        <li>Potting one of your opponent's balls.</li>
+        <li>No ball reaching a cushion after contact when nothing is potted.</li>
+      </ul>
+      <p>You lose the frame if you pot the black before your colour is cleared, or pot the black and foul on the same shot (for example an in-off on the black). With "Call the black's pocket" on, the black must go in the pocket you chose.</p>
+      <h2>Pub rules (default)</h2>
+      <ul>
+        <li>After a foul your opponent gets <b>two shots</b> (two visits). The first is a <b>free shot</b>: they may hit any ball first without fouling.</li>
+        <li>Potting one of your own balls keeps you at the table and you still have the remaining visit.</li>
+        <li>Two shots are never carried onto the black: a player on the black gets one visit.</li>
+        <li>After an in-off the cue ball is in hand behind the baulk line and must be played out of baulk (not at a ball in baulk first, unless it is the free shot).</li>
+      </ul>
+      <h2>Blackball (WPA/EPA)</h2>
+      <ul><li>After any foul your opponent gets the cue ball in hand anywhere on the table and one visit. No two shots.</li></ul>
+      <h2>Controls</h2>
+      <ul>
+        <li><b>Aim:</b> move the mouse over the table, or drag anywhere on the table with a finger (tap a ball to aim straight at it). Hold Shift for fine mouse aim; arrow keys or the fine-aim wheel nudge the aim.</li>
+        <li><b>Shoot:</b> press on the table and pull the mouse back, then release. On touch, drag the power bar and let go. Space shoots at the power set with Up/Down.</li>
+        <li><b>Spin:</b> tap the cue-ball button and place the tip: top for follow, bottom for draw, left/right for side.</li>
+        <li><b>Ball in hand:</b> drag the cue ball to a free spot.</li>
+        <li><b>Call pocket:</b> when on the black with calling on, click/tap a pocket.</li>
+        <li>M mutes, Esc opens the menu.</li>
+      </ul>
+    </div>
+    <button class="btn" id="btn-help-close" type="button" style="margin-top:14px">Got it</button>
+  </div>
+</div>
+
+<!-- pause -->
+<div class="screen clear" id="pause" hidden>
+  <div class="card">
+    <div class="logo"><h1 style="font-size:28px">Paused</h1></div>
+    <button class="btn primary" id="btn-resume" type="button">Resume</button>
+    <button class="btn" id="btn-restart" type="button">Restart frame</button>
+    <button class="btn" id="btn-pause-help" type="button">How to play</button>
+    <button class="btn" id="btn-quit" type="button">Quit to menu</button>
+  </div>
+</div>
+
+<!-- game over -->
+<div class="screen clear" id="over" hidden>
+  <div class="card">
+    <div class="over-title" id="over-title">You win!</div>
+    <div class="over-sub" id="over-sub"></div>
+    <button class="btn primary" id="btn-again" type="button">Play again</button>
+    <button class="btn" id="btn-over-menu" type="button">Menu</button>
+  </div>
+</div>
+
+<!-- generic dialog -->
+<div class="screen clear" id="dialog" hidden>
+  <div class="card">
+    <div class="over-title" id="dialog-title" style="font-size:24px"></div>
+    <div class="over-sub" id="dialog-text"></div>
+    <div id="dialog-buttons"></div>
+  </div>
+</div>
+
+<!-- spin picker -->
+<div class="screen clear" id="spin-pop" hidden>
+  <div class="card">
+    <div class="group-title">Cue ball spin</div>
+    <canvas id="spin-big"></canvas>
+    <div class="spin-hint">Top: follow &middot; bottom: draw &middot; sides: english</div>
+    <div class="row"><button class="btn" id="btn-spin-reset" type="button">Centre</button><button class="btn primary" id="btn-spin-done" type="button">Done</button></div>
+  </div>
+</div>
+
+<script src="js/physics.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/bot.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/render.js"></script>
+<script src="js/net.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
