@@ -165,11 +165,11 @@
     font: 900 11px var(--font); letter-spacing: 0.5px; text-transform: uppercase; touch-action: none; }
   .tb.on { background: rgba(255, 207, 90, 0.55); border-color: #fff; color: #2a1a00; }
   .tb.hl { border-color: var(--gold); box-shadow: 0 0 14px rgba(255, 207, 90, 0.6); }
-  .tb[data-b=use] { right: calc(var(--safe-r) + 108px); bottom: calc(var(--safe-b) + 112px); width: 72px; height: 72px; font-size: 13px; }
+  .tb[data-b=use] { right: calc(var(--safe-r) + 110px); bottom: calc(var(--safe-b) + 122px); width: 72px; height: 72px; font-size: 13px; }
   .tb[data-b=throw] { right: calc(var(--safe-r) + 22px); bottom: calc(var(--safe-b) + 128px); width: 72px; height: 72px; font-size: 12px; }
   .tb[data-b=jump] { right: calc(var(--safe-r) + 26px); bottom: calc(var(--safe-b) + 36px); width: 76px; height: 76px; font-size: 13px; }
   .tb[data-b=crouch] { right: calc(var(--safe-r) + 118px); bottom: calc(var(--safe-b) + 26px); width: 62px; height: 62px; }
-  .tb[data-b=drop] { right: calc(var(--safe-r) + 196px); bottom: calc(var(--safe-b) + 40px); width: 54px; height: 54px; }
+  .tb[data-b=drop] { right: calc(var(--safe-r) + 202px); bottom: calc(var(--safe-b) + 40px); width: 54px; height: 54px; }
   body.touch .hotbar { bottom: calc(var(--safe-b) + 10px); left: calc(var(--safe-l) + 50%); transform: translateX(-62%); }
   body.touch .slot { width: 50px; height: 50px; } body.touch .slot svg { width: 32px; height: 32px; }
   body.touch #charge { bottom: calc(var(--safe-b) + 70px); }
@@ -177,7 +177,7 @@
   body.touch .topl { max-width: 40vw; }
   body.touch #notes { display: none; }
   body.touch #hint { top: calc(50% + 22px); font-size: 14px; }
-  @media (max-height: 430px) { .tb[data-b=use] { bottom: calc(var(--safe-b) + 100px); } .tb[data-b=throw] { bottom: calc(var(--safe-b) + 112px); } }
+  @media (max-height: 430px) { .tb[data-b=use] { bottom: calc(var(--safe-b) + 108px); } .tb[data-b=throw] { bottom: calc(var(--safe-b) + 112px); } }
 
   #rotate { position: fixed; inset: 0; z-index: 60; background: rgba(14, 10, 26, 0.97); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; padding: 24px; }
   #rotate svg { width: 84px; height: 84px; stroke: var(--gold); fill: none; stroke-width: 2; animation: rot 2.4s ease-in-out infinite; }

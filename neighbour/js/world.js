@@ -890,7 +890,7 @@ export class World {
           if (Math.abs(q[1] - y) > 1.2) continue;
           if (existing.some(e => Math.hypot(e[0] - q[0], e[2] - q[2]) < 2.2)) continue;
           if (this.doors.some(d => boxesOverlap({ x0: q[0] - 0.3, x1: q[0] + 0.3, y0: q[1], y1: q[1] + 1, z0: q[2] - 0.3, z1: q[2] + 0.3 }, d.opening, 0))) continue;
-          if (this.atHome(q[0], q[2]) || q[2] > 5.5) continue;
+          if (this.atHome(q[0], q[2]) || q[2] > -6.9 || Math.abs(q[0]) > 25.5) continue;  // only on his property
           return q;
         }
         return null;
