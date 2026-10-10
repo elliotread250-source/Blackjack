@@ -5,6 +5,7 @@ import { Sound } from './audio.js';
 import { Input } from './input.js';
 import { store } from './store.js';
 import { Autopilot } from './autopilot.js';
+import { Leaderboard } from './leaderboard.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -19,6 +20,8 @@ try {
   throw err;
 }
 const autopilot = params.has('autopilot') ? new Autopilot() : null;
+// test runs (?autopilot, ?seed=) never post scores
+const board = new Leaderboard(!params.has('autopilot') && !params.has('seed'));
 const touchUI = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
 
 const THEME_NOTE = { snow: 'Comes with a snowy world', autumn: 'Comes with an autumn world', night: 'Comes with a night world', candy: 'Comes with a candy world' };
@@ -31,7 +34,7 @@ const DEATH_TEXT = {
 };
 
 let game = null;
-let state = 'title';           // title | playing | dying | over | paused | chars
+let state = 'title';           // title | playing | dying | over | paused | chars | board
 let pausedFrom = null;
 let deathTime = 0;
 let runSeed = params.has('seed') ? Number(params.get('seed')) >>> 0 : null;
@@ -46,14 +49,15 @@ function newGame() {
   renderer.setTheme(charById(profile.selected).theme);
   renderer.setCharacter(profile.selected);
   renderer.reset(game);
+  board.startRun();
   updateHud();
   prevPhase.clear(); passed.clear();
 }
 
 function show(id) {
-  for (const s of ['s-title', 's-pause', 's-over', 's-chars']) $(s).hidden = s !== id;
+  for (const s of ['s-title', 's-pause', 's-over', 's-chars', 's-board']) $(s).hidden = s !== id;
   $('arcade').hidden = !(id === 's-title' || id === 's-over');
-  $('hud').hidden = id === 's-title' || id === 's-chars';
+  $('hud').hidden = id === 's-title' || id === 's-chars' || id === 's-board';
   $('hud').classList.toggle('over', id === 's-over');
 }
 
@@ -64,6 +68,7 @@ function toTitle() {
   $('t-best').hidden = profile.best <= 0;
   show('s-title');
   setThemeColor();
+  showWorldBest();
 }
 
 function startPlaying() {
@@ -109,9 +114,86 @@ function gameOver() {
   $('o-coins').textContent = '+' + game.coins;
   show('s-over');
   updateHud();
+  postScore(score);
   if (isBest) sound.best(); else sound.over();
   sound.rumble(0);
 }
+
+// ------------------------------------------------------------ global leaderboard
+let lastScore = 0;
+let boardFrom = 'title';
+function setRank(text, gold) {
+  $('o-rank').textContent = text;
+  $('o-rank').classList.toggle('gold', !!gold);
+  $('o-rank').hidden = !text;
+}
+function postScore(score) {
+  lastScore = score;
+  $('o-form').hidden = true;
+  setRank('');
+  if (!board.enabled || score <= 0) return;
+  if (!board.name) {
+    $('o-name').value = '';
+    $('o-form').hidden = false;
+    setRank('Post your score worldwide');
+    return;
+  }
+  setRank('Posting…');
+  board.submit(score, profile.selected).then(d => {
+    if (state !== 'over') return;
+    if (d.rank && d.rank <= 20) setRank(`World #${d.rank}!`, true);
+    else if (d.rank) setRank(`World rank #${d.rank}`);
+    else setRank(`World best ${d.best}`);
+  }).catch(e => {
+    if (state !== 'over') return;
+    if (/name/i.test(e.message)) { $('o-name').value = board.name; $('o-form').hidden = false; }
+    setRank(e.message);
+  });
+}
+$('o-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const n = $('o-name').value.replace(/\s+/g, ' ').trim();
+  if (!n) { $('o-name').focus(); return; }
+  board.setName(n);
+  $('o-name').blur();
+  postScore(lastScore);
+});
+for (const ev of ['pointerdown', 'keydown']) $('o-form').addEventListener(ev, e => e.stopPropagation());
+
+const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+function renderBoard(rows, msg) {
+  const me = board.name.toLowerCase();
+  $('b-list').innerHTML = msg ? `<li class="msg">${esc(msg)}</li>` : rows.length
+    ? rows.map((r, i) => `<li class="${r.name.toLowerCase() === me ? 'me' : ''}"><span class="rk">${i + 1}</span><span class="nm">${esc(r.name)}</span><span class="sc">${r.score}</span></li>`).join('')
+    : '<li class="msg">No scores yet. Be the first!</li>';
+  $('b-name').textContent = board.name ? `Playing as ${board.name} · change` : 'Set your name';
+}
+function openBoard() {
+  boardFrom = state;
+  state = 'board';
+  show('s-board');
+  renderBoard(board.top, board.top.length ? '' : 'Loading…');
+  board.fetchTop().then(rows => { if (state === 'board') renderBoard(rows); })
+    .catch(() => { if (state === 'board' && !board.top.length) renderBoard([], 'Leaderboard offline. Try again soon.'); });
+}
+function closeBoard() {
+  state = boardFrom;
+  show(boardFrom === 'over' ? 's-over' : 's-title');
+  if (boardFrom === 'title') showWorldBest();
+}
+function showWorldBest() {
+  if (!board.enabled) return;
+  board.fetchTop().then(rows => {
+    const w = rows[0];
+    $('t-world').textContent = w ? `World best ${w.score} · ${w.name}` : '';
+    $('t-world').hidden = !w;
+  }).catch(() => {});
+}
+$('b-name').addEventListener('click', e => {
+  e.stopPropagation();
+  const n = (window.prompt('Name for the leaderboard (max 14 letters):', board.name) || '').replace(/\s+/g, ' ').trim().slice(0, 14);
+  if (n) { board.setName(n); renderBoard(board.top); }
+});
 
 // ------------------------------------------------------------ HUD
 function updateHud() {
@@ -219,6 +301,10 @@ function onKey(e) {
   if (e.target && e.target.tagName === 'BUTTON' && (e.code === 'Space' || e.code === 'Enter')) return false;
   const k = e.code;
   if (k === 'KeyM') { toggleMute(); return true; }
+  if (state === 'board') {
+    if (k === 'Escape' || k === 'Space' || k === 'Enter') { closeBoard(); return true; }
+    return false;
+  }
   if (k === 'KeyP' || k === 'Escape') {
     if (state === 'playing' || state === 'dying') pause();
     else if (state === 'paused') resume();
@@ -247,6 +333,9 @@ click('p-menu', () => { sound.click(); toTitle(); });
 click('o-retry', () => { sound.click(); retry(); });
 click('o-chars', () => { sound.click(); openChars(); });
 click('t-chars', () => { sound.click(); openChars(); });
+click('t-board', () => { sound.click(); openBoard(); });
+click('o-board', () => { sound.click(); openBoard(); });
+click('b-back', () => { sound.click(); closeBoard(); });
 click('c-back', closeChars);
 click('c-prev', () => charsStep(-1));
 click('c-next', () => charsStep(1));

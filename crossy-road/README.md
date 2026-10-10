@@ -22,6 +22,11 @@ sound is synthesised, and there is no build step: the folder is the game.
 - **Ten characters** bought with coins: Chicken, Duck, Frog, Pig, Cat, Penguin, Fox, Panda, Robot and
   Unicorn, shown on a rotating carousel. Penguin brings a snowy world, Fox an autumn one, Robot a night
   world and Unicorn a candy world.
+- **Global leaderboard**: after a run, post your score under a name (saved for next time) and see your
+  world rank; the trophy button shows the world top 20, and the title screen shows the world best. The
+  server keeps each name's best score in a JSON file on a Railway volume at `/data` (`DATA_DIR`), checks
+  that a score was physically reachable in the time since the run started, filters rude names and rate
+  limits posts. `?autopilot` and `?seed=` runs never post.
 - **Sound**: synthesised hops, coins, car horns and whooshes, splashes, train bells, horn and rumble,
   the eagle's screech and the squish.
 - Score (furthest row) and best score, coins, owned and selected characters and mute are saved on your

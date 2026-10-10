@@ -123,6 +123,31 @@
   .dots i.lock.on { background: #2b3045; }
   .chars-row { display: flex; gap: 12px; align-items: center; width: 100%; justify-content: center; }
   #c-action { min-width: 190px; }
+
+  /* leaderboard */
+  .title-world { font-weight: 800; font-size: 13px; letter-spacing: 0.5px; margin-top: -8px; opacity: 0.95; }
+  .lb-entry { display: flex; gap: 8px; margin-top: 6px; }
+  .lb-entry input { width: 170px; font-family: inherit; font-weight: 800; font-size: 18px; padding: 10px 14px; border-radius: 12px; border: 3px solid #2c3448;
+    background: #fff; color: #2c3448; outline: none; text-transform: none; }
+  .lb-entry input:focus { border-color: #ffd23f; }
+  .lb-entry .btn { padding: 10px 18px; }
+  .lb-status { font-size: 17px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; text-align: center; min-height: 22px; }
+  .lb-status.gold { color: #ffd23f; }
+  .board-card { margin: auto 0; width: min(420px, 100%); max-height: 100%; display: flex; flex-direction: column; gap: 10px; animation: rise .3s ease-out; }
+  .board-top { display: flex; align-items: center; justify-content: space-between; }
+  .board-top h2 { margin: 0; font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
+  .board-spacer { width: 54px; }
+  .board-list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; background: rgba(255, 255, 255, 0.94); border-radius: 18px;
+    box-shadow: 0 6px 0 rgba(20, 28, 48, 0.45); color: #2c3448; min-height: 120px; }
+  .board-list li { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 12px; font-weight: 800; font-size: 17px; }
+  .board-list li:nth-child(even) { background: rgba(44, 52, 72, 0.06); }
+  .board-list li.me { background: #ffe27a; }
+  .board-list .rk { font-weight: 900; color: #7a8299; }
+  .board-list li:nth-child(1) .rk { color: #e0a800; } .board-list li:nth-child(2) .rk { color: #8f9bb3; } .board-list li:nth-child(3) .rk { color: #c97b3a; }
+  .board-list .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .board-list .sc { font-weight: 900; font-size: 19px; }
+  .board-list .msg { display: block; text-align: center; padding: 30px 10px; color: #7a8299; }
+  .board-name { align-self: center; color: #fff; font-weight: 800; font-size: 14px; text-decoration: underline; opacity: 0.9; padding: 6px; }
 </style>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 </head>
@@ -147,7 +172,9 @@
   <div class="tap outline pass" id="tap">Tap to play</div>
   <div class="title-bottom">
     <div class="title-best outline pass" id="t-best">Best 0</div>
+    <div class="title-world outline pass" id="t-world" hidden></div>
     <div class="row">
+      <button class="btn" id="t-board"><svg viewBox="0 0 24 24"><path d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 14.9V17h3v3H8v-3h3v-2.1A5 5 0 0 1 8.3 12H8a4 4 0 0 1-4-4V5h3zm0 4H6v1a2 2 0 0 0 1 1.7zm10 0v2.7A2 2 0 0 0 18 8V7z"/></svg>Top 20</button>
       <button class="btn orange" id="t-chars"><svg viewBox="0 0 24 24"><path d="M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm0 10c4.4 0 8 2 8 4.5V21H4v-3.5C4 15 7.6 13 12 13z"/></svg>Characters</button>
       <button class="btn round mute" aria-label="Mute"></button>
     </div>
@@ -168,11 +195,29 @@
     <div class="badge" id="o-new" hidden>New best!</div>
     <div class="sub outline" id="o-best">Best 0</div>
     <div class="run-coins outline"><span class="coin-ic"></span><span id="o-coins">+0</span></div>
+    <form class="lb-entry" id="o-form" hidden autocomplete="off">
+      <input id="o-name" maxlength="14" placeholder="Your name" aria-label="Name for the leaderboard" enterkeyhint="send">
+      <button class="btn green" id="o-send" type="submit">Post</button>
+    </form>
+    <div class="lb-status outline" id="o-rank" hidden></div>
     <div class="over-btns">
       <button class="btn orange round" id="o-chars" aria-label="Characters"><svg viewBox="0 0 24 24"><path d="M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm0 10c4.4 0 8 2 8 4.5V21H4v-3.5C4 15 7.6 13 12 13z"/></svg></button>
+      <button class="btn round" id="o-board" aria-label="Leaderboard"><svg viewBox="0 0 24 24"><path d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 14.9V17h3v3H8v-3h3v-2.1A5 5 0 0 1 8.3 12H8a4 4 0 0 1-4-4V5h3zm0 4H6v1a2 2 0 0 0 1 1.7zm10 0v2.7A2 2 0 0 0 18 8V7z"/></svg></button>
       <button class="btn green" id="o-retry"><svg viewBox="0 0 24 24"><path d="M7 4.5v15a1 1 0 0 0 1.5.86l12-7.5a1 1 0 0 0 0-1.72l-12-7.5A1 1 0 0 0 7 4.5z"/></svg>Retry</button>
       <button class="btn round mute" aria-label="Mute"></button>
     </div>
+  </div>
+</div>
+
+<div id="s-board" class="screen dim" hidden>
+  <div class="board-card">
+    <div class="board-top">
+      <button class="btn round" id="b-back" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15.4 4.6a1.5 1.5 0 0 1 0 2.1L10.1 12l5.3 5.3a1.5 1.5 0 1 1-2.1 2.1l-6.4-6.4a1.5 1.5 0 0 1 0-2.1l6.4-6.4a1.5 1.5 0 0 1 2.1 0z"/></svg></button>
+      <h2 class="outline">World Top 20</h2>
+      <span class="board-spacer"></span>
+    </div>
+    <ol class="board-list" id="b-list"></ol>
+    <button class="board-name" id="b-name" type="button"></button>
   </div>
 </div>
 

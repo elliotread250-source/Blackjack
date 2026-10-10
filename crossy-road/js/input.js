@@ -13,6 +13,7 @@ export class Input {
     this.touch = null;
     window.addEventListener('keydown', e => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return; // typing a name
       const dir = KEYS[e.code];
       if (dir) {
         e.preventDefault();
