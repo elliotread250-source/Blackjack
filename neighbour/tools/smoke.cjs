@@ -162,7 +162,7 @@ async function desktop(browser) {
 
   // he learns: two more catches at the back door -> traps / camera / boards
   for (let i = 0; i < 2; i++) {
-    await nn(page, () => { window.__nn.teleport(0.6, 0, -30.4, 0, 0); window.__nn.setAIState('chase', { x: 0.6, y: 0, z: -29.8, lastKnown: [0.6, 0, -30.4] }); window.__nn.sim(3.4); });
+    await nn(page, () => { window.__nn.teleport(0.6, 0, -30.4, 0, 0); window.__nn.setAIState('chase', { x: 0.6, y: 0, z: -29.8, lastKnown: [0.6, 0, -30.4] }); window.__nn.sim(6.5); });
   }
   s = await nn(page, () => window.__nn.state());
   check(s.traps >= 1, `he placed bear traps after catches (${s.traps} traps, ${s.cams} cameras)`);

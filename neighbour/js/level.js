@@ -164,7 +164,7 @@ export function buildLevel() {
     // lawn path, mailbox, fence, car
     vis(-0.8, 0.0, 6, 0.8, 0.02, 10, 'paving', 0xb9b2a6);
     decor.push({ t: 'mailbox', x: 1.6, y: 0, z: 6.6, ry: Math.PI, c: 0x2f5a8a });
-    box(5.6, 0, 6.6, 9.8, 1.3, 9.2, 'paint', 0xb83a32, { tag: 'car' });
+    box(5.6, 0, 6.6, 9.8, 1.3, 9.2, null, 0, { vis: false, tag: 'car' });
     decor.push({ t: 'car', x: 7.7, y: 0, z: 7.9, ry: Math.PI / 2, c: 0xb83a32 });
     for (const xs of [[-10, -1], [1, 10]]) picket(xs[0], xs[1], 6.35, 0.85, 0xf0ece2);
   }
@@ -325,11 +325,11 @@ export function buildLevel() {
   for (let x = -4.5; x <= 4.5; x += 1.5) vis(x - 0.08, A1 - 0.22, -27, x + 0.08, A1, -17, 'wood', 0x4a3424);
   // the rest of the roof space is sealed off
   inv(X0, F2, Z0, X1, 10, -27.1); inv(X0, F2, -16.9, X1, 10, Z1); inv(X0, F2, -27.1, -5.1, 10, -16.9); inv(5.1, F2, -27.1, X1, 10, -16.9);
-  roofs.push({ x0: X0 - 0.6, x1: X1 + 0.6, z0: Z0 - 0.7, z1: Z1 + 0.7, y: F2 - 0.05, h: 3.8, ridge: 'x', tint: 0x5a3a4a, gable: SIDC });
+  roofs.push({ x0: X0 - 0.6, x1: X1 + 0.6, z0: Z0 - 0.7, z1: Z1 + 0.7, y: F2 - 0.05, h: 5.0, ridge: 'z', tint: 0x5a3a4a, gable: SIDC });
   // chimney + odd bits on the roof
   box(-7.5, F2, -26, -6.3, 11.2, -24.8, 'brick', 0x8a5a48);
   decor.push({ t: 'dish', x: 6.5, y: 8.4, z: -15.2 });
-  decor.push({ t: 'weathervane', x: 0, y: F2 + 3.75, z: -20 });
+  decor.push({ t: 'weathervane', x: 0, y: F2 + 4.95, z: -12.4 });
 
   // the odd tower on the west side (solid, decorative)
   box(-13.6, 0, -24.2, -10, 9.6, -19.8, 'siding', 0x7f8f78);
@@ -390,10 +390,10 @@ export function buildLevel() {
   win('garageW', 'z', -16, 17.8, 18, 1.0, { entry: 'garageWindow', name: 'Garage window', boards: true, outside: 1 });
   zone(10, -1, -20.5, 18, 3, -12, 0.35);
   // woodpile by the garage (a step up toward the roof)
-  box(18.1, 0, -20.4, 19.3, 1.2, -18.4, 'wood', 0x8a6040, { tag: 'woodpile' });
+  box(18.1, 0, -20.4, 19.3, 1.2, -18.4, null, 0, { vis: false, tag: 'woodpile' });
   decor.push({ t: 'logs', x: 18.7, y: 0, z: -19.4 });
   // garage contents: car, workbench (the fuse), shelves, locker (hide)
-  box(12.2, 0, -18.8, 14.6, 1.35, -13.4, 'paint', 0x37506e, { tag: 'car' });
+  box(12.2, 0, -18.8, 14.6, 1.35, -13.4, null, 0, { vis: false, tag: 'car' });
   decor.push({ t: 'car', x: 13.4, y: 0, z: -16.1, ry: 0, c: 0x37506e });
   box(15.3, 0, -20.3, 17.8, 0.95, -19.4, 'wood', 0x8a6a48);
   box(17.3, 0, -18.5, 17.8, 2.2, -17.2, 'metal', 0x5d6470);

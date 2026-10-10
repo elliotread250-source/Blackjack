@@ -322,12 +322,23 @@ export function addRoof(B, r) {
     // soffit
     B.quad('plaster', [[r.x0, r.y - 0.02, r.z0], [r.x1, r.y - 0.02, r.z0], [r.x1, r.y - 0.02, r.z1], [r.x0, r.y - 0.02, r.z1]], [0, -1, 0], [[0, 0], [1, 0], [1, 1], [0, 1]], [[0.35, 0.3, 0.3]]);
   } else {
+    // ridge along z: slopes face +-x, gables face the street and the back yard
     const xm = (r.x0 + r.x1) / 2, yt = r.y + r.h, slope = Math.hypot(xm - r.x0, r.h);
-    const n1 = new THREE.Vector3(xm - r.x0, r.h, 0).normalize();
-    B.quad('shingle', [[r.x1, r.y, r.z1], [r.x1, r.y, r.z0], [xm, yt, r.z0], [xm, yt, r.z1]], [n1.x / 1, n1.y, 0], [[0, 0], [5 / sc, 0], [5 / sc, slope / sc], [0, slope / sc]], [rc]);
-    B.quad('shingle', [[r.x0, r.y, r.z0], [r.x0, r.y, r.z1], [xm, yt, r.z1], [xm, yt, r.z0]], [-n1.x, n1.y, 0], [[0, 0], [5 / sc, 0], [5 / sc, slope / sc], [0, slope / sc]], [rc]);
-    B.tri('siding', [[r.x0 + 0.4, r.y, r.z1 - 0.4], [r.x1 - 0.4, r.y, r.z1 - 0.4], [xm, yt - 0.3, r.z1 - 0.4]], [0, 0, 1], [[0, 0], [1, 0], [0.5, 1]], gc);
-    B.tri('siding', [[r.x1 - 0.4, r.y, r.z0 + 0.4], [r.x0 + 0.4, r.y, r.z0 + 0.4], [xm, yt - 0.3, r.z0 + 0.4]], [0, 0, -1], [[0, 0], [1, 0], [0.5, 1]], gc);
+    const n1 = new THREE.Vector3(r.h, xm - r.x0, 0).normalize();
+    B.quad('shingle', [[r.x1, r.y, r.z1], [r.x1, r.y, r.z0], [xm, yt, r.z0], [xm, yt, r.z1]], [n1.x, n1.y, 0],
+      [[r.z1 / sc, 0], [r.z0 / sc, 0], [r.z0 / sc, slope / sc], [r.z1 / sc, slope / sc]], [rc]);
+    B.quad('shingle', [[r.x0, r.y, r.z0], [r.x0, r.y, r.z1], [xm, yt, r.z1], [xm, yt, r.z0]], [-n1.x, n1.y, 0],
+      [[r.z0 / sc, 0], [r.z1 / sc, 0], [r.z1 / sc, slope / sc], [r.z0 / sc, slope / sc]], [rc]);
+    const ix = r.spire ? 0.4 : 0.6, iz = r.spire ? 0.4 : 0.7;
+    const gx0 = r.x0 + ix, gx1 = r.x1 - ix, gy = r.y + 0.02, gt = r.y + r.h * ((xm - gx0) / (xm - r.x0));
+    const ss = TEX_SCALE.siding;
+    B.tri('siding', [[gx0, gy, r.z1 - iz], [gx1, gy, r.z1 - iz], [xm, gt, r.z1 - iz]], [0, 0, 1], [[gx0 / ss, gy / ss], [gx1 / ss, gy / ss], [xm / ss, gt / ss]], gc);
+    B.tri('siding', [[gx1, gy, r.z0 + iz], [gx0, gy, r.z0 + iz], [xm, gt, r.z0 + iz]], [0, 0, -1], [[-gx1 / ss, gy / ss], [-gx0 / ss, gy / ss], [-xm / ss, gt / ss]], gc);
+    // round attic window on the front gable
+    if (r.h > 4) B.geom('emissive', geo('cyl'), new THREE.Matrix4().compose(new THREE.Vector3(xm, r.y + r.h * 0.45, r.z1 - iz + 0.02), new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, 0, 0)), new THREE.Vector3(0.55, 0.02, 0.55)), 0x7a5a30);
+    B.box('trim', r.x1 - 0.02, r.y - 0.12, r.z0, r.x1 + 0.04, r.y + 0.02, r.z1, 0xf1ead8);
+    B.box('trim', r.x0 - 0.04, r.y - 0.12, r.z0, r.x0 + 0.02, r.y + 0.02, r.z1, 0xf1ead8);
+    B.quad('plaster', [[r.x0, r.y - 0.02, r.z0], [r.x1, r.y - 0.02, r.z0], [r.x1, r.y - 0.02, r.z1], [r.x0, r.y - 0.02, r.z1]], [0, -1, 0], [[0, 0], [1, 0], [1, 1], [0, 1]], [[0.35, 0.3, 0.3]]);
   }
 }
 
