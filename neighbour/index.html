@@ -244,6 +244,11 @@
 
 <div id="s-diff" class="screen dim" hidden>
   <div class="panel">
+    <h2>Choose your mission</h2>
+    <label for="mission-select">Level</label>
+    <select id="mission-select" style="width:100%;padding:12px;margin:10px 0;background:#231d27;color:#fff;font:inherit">
+      <option value="0">1 — The Basement</option><option value="1">2 — Paper Trail</option><option value="2">3 — Dead Air</option>
+    </select><p id="mission-brief"></p>
     <h2>How nosy is he?</h2>
     <div class="dpick" id="dpick">
       <button data-d="easy"><b>Easy</b><span>Slower, a bit deaf, learns slowly. Short traps.</span></button>
@@ -296,15 +301,15 @@
 </div>
 
 <div id="s-win" class="screen" hidden>
-  <h1>You got in.</h1>
-  <h2>What's he hiding?</h2>
+  <h1 id="w-heading">You got in.</h1>
+  <h2 id="w-sub">What's he hiding?</h2>
   <div class="wstats">
     <div><b id="w-time">0:00</b><span>Time</span></div>
     <div><b id="w-caught">0</b><span>Times caught</span></div>
     <div><b id="w-diff">Normal</b><span>Difficulty</span></div>
   </div>
   <div class="tag" style="text-align:center;margin:0 0 18px" id="w-best"></div>
-  <div class="row"><button class="btn primary" id="w-again">Play again</button><button class="btn" id="w-menu">Title</button></div>
+  <div class="row"><button class="btn primary" id="w-next">Next level</button><button class="btn" id="w-again">Play again</button><button class="btn" id="w-menu">Title</button></div>
 </div>
 
 <div id="rotate" hidden>

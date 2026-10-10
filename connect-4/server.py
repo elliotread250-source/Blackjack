@@ -500,6 +500,7 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.split("?")[0] == "/ws" and self.headers.get("Upgrade", "").lower() == "websocket":
             key = self.headers.get("Sec-WebSocket-Key", "")
             accept = base64.b64encode(hashlib.sha1((key + WS_GUID).encode()).digest()).decode()
+            self.protocol_version = "HTTP/1.1"
             self.send_response_only(101, "Switching Protocols")
             self.send_header("Upgrade", "websocket")
             self.send_header("Connection", "Upgrade")

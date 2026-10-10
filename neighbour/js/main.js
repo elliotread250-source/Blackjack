@@ -7,7 +7,7 @@ import { Input } from './input.js';
 import { store } from './store.js';
 import { STEPS } from './puzzle.js';
 import { DIFFICULTY } from './ai.js';
-import { ITEM_TYPES, doorCenter, windowCenter } from './level.js';
+import { ITEM_TYPES, doorCenter, windowCenter, MISSIONS } from './level.js';
 
 const $ = id => document.getElementById(id);
 const isTouch = (('ontouchstart' in window) || navigator.maxTouchPoints > 0) && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
@@ -16,6 +16,7 @@ if (isTouch) document.body.classList.add('touch');
 const settings = Object.assign({ sens: 1, invertY: false, volume: 0.8, quality: isTouch ? 'low' : 'high', difficulty: 'normal' }, store.get('settings', {}));
 const saveSettings = () => store.set('settings', settings);
 
+let selectedMission = 0;
 let world = new World({ difficulty: settings.difficulty, seed: (Math.random() * 1e9) | 0 });
 let renderer;
 try {
@@ -88,13 +89,14 @@ const fmt = s => { s = Math.max(0, s | 0); return `${(s / 60) | 0}:${String(s % 
 function openOverlay(id) { overlay = id; show(id, true); if (id === 's-settings') syncSettings(); }
 function closeOverlay() { if (overlay) show(overlay, false); overlay = null; }
 
-function newGame(diff) {
+function newGame(diff, mission = selectedMission) {
+  selectedMission = mission;
   settings.difficulty = diff; saveSettings();
   store.del('save');
   startWorld(null);
 }
 function startWorld(save) {
-  world = new World({ difficulty: save ? save.diff : settings.difficulty, seed: (Math.random() * 1e9) | 0 });
+  world = new World({ mission: save ? (save.mission || 0) : selectedMission, difficulty: save ? save.diff : settings.difficulty, seed: (Math.random() * 1e9) | 0 });
   if (save) world.load(save);
   renderer.setWorld(world);
   hudReset();
@@ -102,7 +104,7 @@ function startWorld(save) {
   setMode('play');
   sound.unlock(); sound.play('wake');
   if (!isTouch) input.lock();
-  toast(save ? 'Back at your window. His house is still there.' : 'Get into his basement. Don\'t get caught.', 'step');
+  toast(MISSIONS[world.level.mission || 0].brief, 'step');
 }
 function rebuildRenderer() {
   const old = renderer;
@@ -129,8 +131,11 @@ $('b-pause').onclick = pause;
 $('p-resume').onclick = resume;
 $('p-settings').onclick = () => openOverlay('s-settings');
 $('p-help').onclick = () => openOverlay('s-help');
-$('p-restart').onclick = () => { closeOverlay(); newGame(world.diffKey); };
+$('p-restart').onclick = () => { closeOverlay(); newGame(world.diffKey, world.level.mission || 0); };
 $('p-quit').onclick = quitToTitle;
+$('w-next').onclick = () => newGame(world.diffKey, (world.level.mission || 0) + 1);
+$('mission-select').onchange = e => { selectedMission = +e.target.value; $('mission-brief').textContent = MISSIONS[selectedMission].brief; };
+$('mission-brief').textContent = MISSIONS[0].brief;
 $('w-again').onclick = () => { setMode('title'); openOverlay('s-diff'); pickDiff(world.diffKey); };
 $('w-menu').onclick = () => setMode('title');
 
@@ -190,7 +195,7 @@ function refreshNotes() {
 
 function updateHud() {
   const p = world.player, ai = world.ai;
-  setText('obj', world.objective());
+  setText('obj', `Level ${(world.level.mission || 0) + 1}: ${world.objective()}`);
   setText('stats', `${fmt(world.stats.time)} &middot; caught ${world.stats.caught}${world.traps.length ? ` &middot; traps ${world.traps.length}` : ''}${world.cams.length ? ` &middot; cameras ${world.cams.length}` : ''}`);
   // look hint
   const h = !p.hiding && !p.caught ? world.hint() : null;
@@ -297,11 +302,16 @@ function showWin() {
   setMode('win');
   const s = world.stats;
   $('w-time').textContent = fmt(s.time); $('w-caught').textContent = s.caught; $('w-diff').textContent = world.diff.name;
-  const best = store.get('best', null);
+  const mission = world.level.mission || 0;
+  $('w-heading').textContent = MISSIONS[mission].name + ' complete';
+  $('w-sub').textContent = mission === 2 ? 'You made it home with the radio.' : mission === 1 ? 'The evidence is safe.' : 'What’s he hiding?';
+  $('w-next').hidden = mission >= 2;
+  const bestKey = 'best.' + mission + '.' + world.diffKey;
+  const best = store.get(bestKey, null);
   let msg = '';
-  if (!best || s.time < best.time) { store.set('best', { time: s.time, caught: s.caught, diff: world.diff.name }); msg = best ? 'A new best time.' : 'Act 1 complete.'; }
+  if (!best || s.time < best.time) { store.set(bestKey, { time: s.time, caught: s.caught, diff: world.diff.name }); msg = best ? 'A new best time.' : 'Level complete.'; }
   else msg = `Best: ${fmt(best.time)} (${best.diff}).`;
-  $('w-best').textContent = msg + ' The basement stairs go down into the dark…';
+  $('w-best').textContent = msg + (mission < 2 ? ' Your next mission awaits.' : ' All three missions are available from New game.');
   store.del('save');
   sound.play('win');
 }

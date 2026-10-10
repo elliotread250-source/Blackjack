@@ -21,7 +21,7 @@ const SAVE_VERSION = 1;
 
 export class World {
   constructor(opts = {}) {
-    this.level = opts.level || buildLevel();
+    this.level = opts.level || buildLevel(opts.mission);
     this.diffKey = opts.difficulty || 'normal';
     this.diff = DIFFICULTY[this.diffKey];
     this.rng = mkRng(opts.seed || 12345);
@@ -70,7 +70,7 @@ export class World {
     const def = ITEM_TYPES[it.type];
     const [w, h, d] = def.size;
     return {
-      id: it.id, type: it.type, def, x: it.x, y: it.y, z: it.z, vx: 0, vy: 0, vz: 0,
+      id: it.id, type: it.type, missionName: it.missionName, def, x: it.x, y: it.y, z: it.z, vx: 0, vy: 0, vz: 0,
       hx: Math.max(0.07, w / 2), hy: Math.max(0.06, h), hz: Math.max(0.07, d / 2),
       ry: ((it.x * 13.7 + it.z * 7.3) % 6.28), spin: 0, rest: false, held: false, thrown: false, gone: false,
     };
@@ -148,7 +148,12 @@ export class World {
     this.trackEntry();
     this.checkSteps();
     const tb = this.level.basementTrigger;
-    if (!this.doorById.basement.locked && boxesOverlap(this.playerBox(), tb)) {
+    const mission = this.level.mission || 0;
+    const home = Math.hypot(this.player.x - this.level.spawn.x, this.player.z - this.level.spawn.z) < 3 && this.player.y < 1;
+    const complete = mission === 1 ? this.level.targets.every(id => this.steps[id] !== undefined) && home
+      : mission === 2 ? this.flags.power && this.player.inv.includes('missionRadio') && home
+      : !this.doorById.basement.locked && boxesOverlap(this.playerBox(), tb);
+    if (complete && !this.player.caught) {
       this.flags.won = true; this.markStep('basement'); this.emit('win'); this.dirty = true;
     }
   }
@@ -359,7 +364,7 @@ export class World {
     if (!look) return null;
     const r = look.ref;
     switch (look.kind) {
-      case 'prop': return { act: 'take', text: 'Take ' + r.def.name };
+      case 'prop': return { act: 'take', text: 'Take ' + (r.missionName || r.def.name) };
       case 'hide': return { act: 'hide', text: 'Hide in ' + r.name.toLowerCase() };
       case 'fusebox':
         if (this.flags.power) return { act: 'none', text: 'Fuse box (power on)' };
@@ -512,6 +517,10 @@ export class World {
     const p = this.player;
     if (pr.held || pr.gone) return false;
     if (p.groundProp === pr) { this.say("You're standing on it."); return false; }
+    if (this.level.mission === 1 && this.level.targets.includes(pr.id)) {
+      pr.gone = true; this.markStep(pr.id); this.emit('pickup', { item: pr.type });
+      this.say(pr.missionName + ' recovered.'); this.dirty = true; return true;
+    }
     let slot = p.inv[p.sel] ? p.inv.findIndex(s => !s) : p.sel;
     if (slot < 0) { this.say('Your hands are full (4 items). Drop something first.'); return false; }
     p.inv[slot] = pr.id;
@@ -958,6 +967,15 @@ export class World {
 
   objective() {
     const s = this.steps;
+    if (this.level.mission === 1) {
+      const remaining = this.level.targets.filter(id => s[id] === undefined);
+      return remaining.length ? `Evidence ${3 - remaining.length}/3 — find: ${remaining.map(id => this.propById[id].missionName.replace(' evidence', '')).join(', ')}.` : 'All evidence recovered. Return to your front door across the road.';
+    }
+    if (this.level.mission === 2) {
+      if (!this.flags.power) return 'Dead Air: find the fuse in the garage and restore power in the pantry.';
+      if (!this.player.inv.includes('missionRadio')) return 'Power restored. Take the radio from the attic (top floor).';
+      return 'Carry the attic radio home across the road. Keep it in your inventory!';
+    }
     if (s.basement) return 'You got in.';
     if (s.redkey || this.hasItem('redkey')) return 'Use the red key on the basement door.';
     if (s.study) return 'Search the study.';
@@ -971,7 +989,7 @@ export class World {
   serialize() {
     const p = this.player;
     return {
-      v: SAVE_VERSION, diff: this.diffKey,
+      v: SAVE_VERSION, mission: this.level.mission || 0, diff: this.diffKey,
       stats: Object.assign({}, this.stats), flags: Object.assign({}, this.flags), steps: Object.assign({}, this.steps), clues: Object.assign({}, this.clues),
       doors: this.doors.map(d => [d.id, d.target > 0.5 ? 1 : 0, d.locked ? 1 : 0, d.chained ? 1 : 0]),
       windows: this.windows.map(w => [w.id, w.glass ? 1 : 0, w.boards ? 1 : 0, w.learned ? 1 : 0]),

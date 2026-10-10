@@ -32,7 +32,13 @@ export const ITEM_TYPES = {
   plate:   { name: 'Plate', size: [0.24, 0.03, 0.24], mass: 0.3, throwMul: 1, noise: 12 },
 };
 
-export function buildLevel() {
+export const MISSIONS = [
+  { name: 'The Basement', brief: 'Find the red key and get into his basement.' },
+  { name: 'Paper Trail', brief: 'Recover evidence books from the living room, bedroom and study, then return home.' },
+  { name: 'Dead Air', brief: 'Restore power, recover the attic radio, then carry it home. Watch the boarded windows.' },
+];
+
+export function buildLevel(mission = 0) {
   const boxes = [];      // static boxes
   const doors = [];
   const windows = [];
@@ -620,12 +626,32 @@ export function buildLevel() {
     storageWindow: { name: 'storage window', kind: 'window', ref: 'storeW', x: 6, z: -28.8, high: true },
   };
 
+  // Later missions revisit the house with new goals and patrol priorities.
+  mission = Math.max(0, Math.min(2, mission | 0));
+  const targets = [];
+  if (mission === 1) {
+    for (const [i, pos] of [[-6.5, 0.75, -14.2], [-8.3, F1 + 0.6, -17.6], [5.5, F1 + 0.8, -20.1]].entries()) {
+      const it = items.find(it => it.type === 'book' && it.x === pos[0] && it.z === pos[2]);
+      it.id = 'evidence' + i; it.missionName = ['Living-room evidence', 'Bedroom evidence', 'Study evidence'][i];
+      targets.push(it.id);
+    }
+    for (const p of pois) if (['study', 'bedroom', 'tv'].includes(p.id)) p.w *= 3;
+    pois.unshift(pois.splice(pois.findIndex(p => p.id === 'bedroom'), 1)[0]);
+  }
+  if (mission === 2) {
+    const radio = items.find(it => it.type === 'radio');
+    radio.id = 'missionRadio'; radio.missionName = 'Attic radio'; targets.push(radio.id);
+    for (const w of windows) if (['livingW', 'kitchenW', 'bedW'].includes(w.id)) w.boards = true;
+    for (const p of pois) if (['attic', 'garage', 'frontyard'].includes(p.id)) p.w *= 4;
+    pois.unshift(pois.splice(pois.findIndex(p => p.id === 'attic'), 1)[0]);
+  }
+
   // where you wake up after being caught
   const spawn = { x: -1.6, y: 0, z: 15.4, yaw: Math.atan2(-1.6, 5.2) };  // facing your front door
 
   return {
     boxes, doors, windows, items, decor, lights, lightZones, hides, pois, camMounts, roofs, regions, holes,
-    entries, spawn, fusebox,
+    entries, spawn, fusebox, mission, targets,
     navBounds: { x0: -28, z0: -57.5, x1: 28, z1: 8 },
     reachBounds: { x0: -34, z0: -59.5, x1: 34, z1: 22 },
     basementTrigger: makeBox(10.45, -1, -25.3, 12.8, 2.5, -23.7),
