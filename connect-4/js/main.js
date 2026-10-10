@@ -108,6 +108,7 @@
     g.fillStyle = sheen; roundRect(g, 0, 0, w, h * 0.5, 0.3 * s); g.fill();
     var hr = 0.395 * s;
     g.globalCompositeOperation = 'destination-out';
+    g.fillStyle = '#000'; // Opaque mask: the transparent sheen must not weaken hole cutouts.
     for (var r = 0; r < 6; r++) for (var col = 0; col < 7; col++) {
       g.beginPath(); g.arc(pad + s * (col + 0.5), pad + s * (r + 0.5), hr, 0, Math.PI * 2); g.fill();
     }
