@@ -152,7 +152,8 @@
       var hp = P.hookPos(sim, i);
       if (!visible(view, hp[0] - 40, hp[1] - 40, hp[0] + 40, hp[1] + 40)) continue;
       var lit = i === cand || i === sim.hook;
-      var r = 13;
+      // hooks stay easy to see when the world is zoomed out on small screens
+      var r = 13 * Math.max(1, Math.min(1.6, 0.8 / view.scale));
       if (lit) {
         var pulse = 0.5 + 0.5 * Math.sin(time * 9);
         c.fillStyle = 'rgba(255,60,140,' + (0.18 + 0.12 * pulse) + ')';
@@ -162,10 +163,10 @@
       c.beginPath(); c.arc(hp[0] + 2, hp[1] + 4, r, 0, TAU); c.fill();
       c.fillStyle = lit ? '#ff2f86' : '#ff9cc4';
       c.beginPath(); c.arc(hp[0], hp[1], r, 0, TAU); c.fill();
-      c.lineWidth = 3.5; c.strokeStyle = lit ? '#ffffff' : 'rgba(255,255,255,0.75)';
-      c.beginPath(); c.arc(hp[0], hp[1], r - 4.5, 0, TAU); c.stroke();
+      c.lineWidth = r * 0.27; c.strokeStyle = lit ? '#ffffff' : 'rgba(255,255,255,0.75)';
+      c.beginPath(); c.arc(hp[0], hp[1], r * 0.65, 0, TAU); c.stroke();
       c.fillStyle = '#ffffff';
-      c.beginPath(); c.arc(hp[0] - 3.5, hp[1] - 4, 2.6, 0, TAU); c.fill();
+      c.beginPath(); c.arc(hp[0] - r * 0.27, hp[1] - r * 0.3, r * 0.2, 0, TAU); c.fill();
     }
   }
 

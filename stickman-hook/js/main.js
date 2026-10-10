@@ -65,10 +65,10 @@
     DPR = Math.min(3, window.devicePixelRatio || 1);
     canvas.width = Math.round(W * DPR); canvas.height = Math.round(H * DPR);
     canvas.style.width = W + 'px'; canvas.style.height = H + 'px';
-    // Show about 1.1M square world units, but never less than 900 wide or
-    // 640 tall, so phones in portrait still see the next hook coming.
+    // Show about 1.1M square world units, but never less than 900 wide (760
+    // in portrait) or 640 tall, so phones still see the next hook coming.
     var s = Math.sqrt(W * H / 1.1e6);
-    s = Math.min(s, W / 900, H / 640);
+    s = Math.min(s, W / (H > W ? 760 : 900), H / 640);
     baseScale = Math.max(0.2, s);
   }
 
@@ -89,6 +89,7 @@
   }
   function resetLevel() {
     var L = LEVELS[G.levelIdx];
+    G.acc = 0;
     G.sim = P.createSim(L);
     var st = G.sim.lv.start;
     G.rag = RD.create(st[0], st[1] - RD.FOOT);
@@ -246,6 +247,7 @@
         case 'release': {
           var sp = Math.hypot(e.vx, e.vy);
           A.play('release', { speed: sp });
+          if (G.levelIdx === 0 && G.hintTimer > 0) G.hintTimer = Math.min(G.hintTimer, 0.6);
           // somersault: the faster you let go, the more you flip
           var dir = e.vx >= 0 ? 1 : -1;
           var cur = RD.spinRate(G.rag, STEP);
@@ -312,6 +314,7 @@
     if (G.mode === 'play') {
       var h = held() || input.latch;
       input.latch = false;
+      if (G.autoplan) h = planHeld(G.autoplan, sim.state === 'ready' ? 0 : sim.steps);
       G.prevX = sim.x; G.prevY = sim.y;
       if (sim.state === 'ready' || sim.state === 'play') {
         P.step(sim, h);
@@ -361,6 +364,12 @@
     }
     updateParts(STEP);
   }
+  /* Debug/tests: is the button held at step n of a solver plan? */
+  function planHeld(plan, n) {
+    if (n === 0) return true;
+    for (var i = 0; i < plan.length; i++) if (n >= plan[i][0] && n < plan[i][1]) return true;
+    return false;
+  }
   function revealStars() {
     var els = $('finishStars').querySelectorAll('i'), n = G.pendingStars || 0;
     for (var k = 0; k < n; k++) (function (k) {
@@ -394,9 +403,11 @@
       scale = baseScale * G.cam.z;
       view = { W: W, H: H, scale: scale, cx: G.cam.x, cy: G.cam.y };
     } else {
-      scale = baseScale * 1.25;
+      // menu backdrop: the demo hook sits beside / below the logo
       var portrait = H > W;
-      view = { W: W, H: H, scale: scale, cx: 0, cy: portrait ? 200 : 120 };
+      scale = Math.max(0.45, Math.min(W, H) / (portrait ? 560 : 520));
+      var sx = portrait ? W * 0.5 : W * 0.17, sy = portrait ? H * 0.3 : H * 0.22;
+      view = { W: W, H: H, scale: scale, cx: -(sx - W / 2) / scale, cy: -(sy - H / 2) / scale };
     }
     R.drawBackground(ctx, W, H, view, th, G.time);
     ctx.setTransform(DPR * scale, 0, 0, DPR * scale, DPR * (W / 2 - view.cx * scale), DPR * (H / 2 - view.cy * scale));
@@ -610,8 +621,10 @@
       if (s.state === 'ready') P.start(s);
       s.hook = -1; s.x = s.lv.finish.x + s.lv.finish.w / 2; s.y = s.lv.finish.y - 40; s.vx = 0; s.vy = 0;
     },
-    /* Play a plan from tools/solve.cjs ([[press, release], ...] step indices). */
-    plan: null,
+    /* Play a plan from tools/solve.cjs ([[press, release], ...] step indices)
+     * through the real game loop; null hands control back. */
+    autoplay: function (plan) { G.autoplan = plan || null; },
+    get trail() { return G.trail.length; },
     unlockAll: function () { save.unlocked = LEVELS.length; persist(); },
     setMode: setMode
   };

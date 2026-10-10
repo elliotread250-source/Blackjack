@@ -222,7 +222,7 @@
     if (d > R || d < -R - 16) return false;
     var vn = sim.vx * p.nx + sim.vy * p.ny;
     if (vn >= 0) return false;
-    var out = Math.max(-vn * 0.85, p.power);
+    var out = Math.max(-vn * 0.6, p.power);
     sim.vx += (out - vn) * p.nx; sim.vy += (out - vn) * p.ny;
     sim.x += (R - d) * p.nx; sim.y += (R - d) * p.ny;
     sim.padSquash[i] = 1;
