@@ -405,8 +405,8 @@
     } else {
       // menu backdrop: the demo hook sits beside / below the logo
       var portrait = H > W;
-      scale = Math.max(0.45, Math.min(W, H) / (portrait ? 560 : 520));
-      var sx = portrait ? W * 0.5 : W * 0.17, sy = portrait ? H * 0.3 : H * 0.22;
+      scale = Math.max(0.45, Math.min(1.2, Math.min(W, H) / (portrait ? 560 : 560)));
+      var sx = portrait ? W * 0.5 : Math.max(W * 0.17, 260 * scale), sy = portrait ? H * 0.3 : H * 0.22;
       view = { W: W, H: H, scale: scale, cx: -(sx - W / 2) / scale, cy: -(sy - H / 2) / scale };
     }
     R.drawBackground(ctx, W, H, view, th, G.time);
