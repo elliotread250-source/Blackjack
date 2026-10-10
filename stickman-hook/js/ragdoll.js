@@ -14,17 +14,19 @@
   // index: 0 head, 1 neck, 2 pelvis, 3 elbowL, 4 handL, 5 elbowR, 6 handR,
   //        7 kneeL, 8 footL, 9 kneeR, 10 footR
   var HEAD = 0, NECK = 1, PELVIS = 2, HAND_R = 6;
+  var K = 1.25; // overall size
   var STAND = [
     [0, -37], [0, -27], [0, 0], [-7, -15], [-10, -3], [7, -15], [10, -3],
     [-5, 13], [-7, 27], [5, 13], [7, 27]
-  ];
+  ].map(function (p) { return [p[0] * K, p[1] * K]; });
   var STICKS = [
     [0, 1, 1], [1, 2, 1], [0, 2, 1],
     [1, 3, 1], [3, 4, 1], [1, 5, 1], [5, 6, 1],
     [2, 7, 1], [7, 8, 1], [2, 9, 1], [9, 10, 1]
   ];
   // keep limbs from folding flat: [a, b, minimum length]
-  var MINS = [[1, 4, 11], [1, 6, 11], [2, 8, 17], [2, 10, 17], [7, 9, 4], [4, 2, 6], [6, 2, 6], [0, 8, 30], [0, 10, 30]];
+  var MINS = [[1, 4, 11], [1, 6, 11], [2, 8, 17], [2, 10, 17], [7, 9, 4], [4, 2, 6], [6, 2, 6], [0, 8, 30], [0, 10, 30]]
+    .map(function (m) { return [m[0], m[1], m[2] * K]; });
 
   function create(x, y) {
     var r = { px: new Float64Array(11), py: new Float64Array(11), ox: new Float64Array(11), oy: new Float64Array(11), len: [] };
@@ -47,10 +49,10 @@
         if (i === 4 || i === 6) dy += b * 0.5;
       } else if (kind === 'cheer') {
         var w = Math.sin(t * 9);
-        if (i === 3) { dx = -10; dy = -36; }
-        if (i === 4) { dx = -16 + w * 3; dy = -48; }
-        if (i === 5) { dx = 10; dy = -36; }
-        if (i === 6) { dx = 16 - w * 3; dy = -48; }
+        if (i === 3) { dx = -10 * K; dy = -36 * K; }
+        if (i === 4) { dx = (-16 + w * 3) * K; dy = -48 * K; }
+        if (i === 5) { dx = 10 * K; dy = -36 * K; }
+        if (i === 6) { dx = (16 - w * 3) * K; dy = -48 * K; }
       }
       r.px[i] = r.ox[i] = x + dx;
       r.py[i] = r.oy[i] = y + dy;
@@ -159,6 +161,6 @@
   return {
     create: create, setPose: setPose, stepHang: stepHang, stepFly: stepFly, stepFree: stepFree,
     spin: spin, spinRate: spinRate, recentre: recentre, translate: translate,
-    HEAD: HEAD, NECK: NECK, PELVIS: PELVIS, HAND_R: HAND_R
+    FOOT: 27 * K, HEAD: HEAD, NECK: NECK, PELVIS: PELVIS, HAND_R: HAND_R
   };
 });

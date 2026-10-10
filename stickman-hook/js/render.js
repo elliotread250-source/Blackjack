@@ -314,7 +314,7 @@
       c.beginPath(); c.moveTo(ropeFrom[0], ropeFrom[1]); c.lineTo(X(RD.HAND_R), Y(RD.HAND_R)); c.stroke();
     }
     if (skin.glow) { c.shadowColor = skin.glow; c.shadowBlur = 16; }
-    c.lineCap = 'round'; c.lineJoin = 'round'; c.lineWidth = 6.5;
+    c.lineCap = 'round'; c.lineJoin = 'round'; c.lineWidth = 8;
     for (var l = 0; l < LIMBS.length; l++) {
       var L = LIMBS[l];
       c.strokeStyle = skin.body === 'rainbow' ? skinColor(skin, time, l + 1) : col;
@@ -326,19 +326,19 @@
     var hx = X(0), hy = Y(0);
     var ax = X(0) - X(1), ay = Y(0) - Y(1), al = Math.hypot(ax, ay) || 1;
     ax /= al; ay /= al;
-    var cx = hx + ax * 2, cy = hy + ay * 2;
+    var cx = hx + ax * 3, cy = hy + ay * 3;
     c.fillStyle = col;
-    c.beginPath(); c.arc(cx, cy, 9, 0, TAU); c.fill();
+    c.beginPath(); c.arc(cx, cy, 11, 0, TAU); c.fill();
     c.shadowBlur = 0;
     if (skin.acc === 'band') {
       var px = -ay, py = ax;
       c.strokeStyle = '#ff3b4e'; c.lineWidth = 3.5;
-      c.beginPath(); c.moveTo(cx + px * 9 + ax, cy + py * 9 + ay); c.lineTo(cx - px * 9 + ax, cy - py * 9 + ay); c.stroke();
+      c.beginPath(); c.moveTo(cx + px * 11 + ax, cy + py * 11 + ay); c.lineTo(cx - px * 11 + ax, cy - py * 11 + ay); c.stroke();
       var w = Math.sin(time * 14) * 3;
-      c.beginPath(); c.moveTo(cx - px * 9 + ax, cy - py * 9 + ay);
-      c.lineTo(cx - px * 18 - ax * 4 + w, cy - py * 18 - ay * 4 + w); c.stroke();
+      c.beginPath(); c.moveTo(cx - px * 11 + ax, cy - py * 11 + ay);
+      c.lineTo(cx - px * 21 - ax * 4 + w, cy - py * 21 - ay * 4 + w); c.stroke();
     } else if (skin.acc === 'crown') {
-      var bx = cx + ax * 8, by = cy + ay * 8, qx = -ay, qy = ax;
+      var bx = cx + ax * 10, by = cy + ay * 10, qx = -ay, qy = ax;
       c.fillStyle = '#ffd23f';
       c.beginPath();
       c.moveTo(bx + qx * 8, by + qy * 8);
@@ -353,7 +353,7 @@
     // a bright eye so you can see which way he faces
     var face = (r.px[6] + r.px[4]) / 2 - r.px[2] >= 0 ? 1 : -1;
     c.fillStyle = '#ffffff';
-    c.beginPath(); c.arc(cx + (-ay) * 3.5 * face + ax * 1.5, cy + ax * 3.5 * face + ay * 1.5, 2, 0, TAU); c.fill();
+    c.beginPath(); c.arc(cx + (-ay) * 4.5 * face + ax * 2, cy + ax * 4.5 * face + ay * 2, 2.4, 0, TAU); c.fill();
   }
 
   // ---------- trail ----------
