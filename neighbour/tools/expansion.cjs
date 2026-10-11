@@ -37,3 +37,25 @@ for(const mission of [3,4]) {
  console.log(MISSIONS[mission].name+': puzzle, patrol, stairs, recovery, saves and escape passed');
 }
 console.log(count+' expansion checks passed');
+
+// Enclosures must block sight, including the stair shaft above the basement ceiling.
+const {rayBox}=require('../js/geom.js');
+function blocked(l,o,d){return l.boxes.some(b=>b.vis&&b.op&&rayBox(...o,...d,b,1)>=0);}
+const cellar=buildLevel(3);
+for(const y of [1,3.15,4.5,5.7]) {
+ assert(blocked(cellar,[0,y,1],[-2,0,0]),'left stair shaft wall at '+y);
+ assert(blocked(cellar,[0,y,1],[2,0,0]),'right stair shaft wall at '+y);
+}
+assert(blocked(cellar,[0,4.5,0],[0,0,-5]),'stairwell upper end closed');
+for(const mission of [3,4]) {
+ const l=buildLevel(mission), edge=mission===3?12:11, z=mission===3?-20:-18;
+ for(const y of [.5,1.7,2.9])for(const sign of [-1,1])assert(blocked(l,[0,y,z],[sign*(edge+1),0,0]),'basement side enclosure');
+}
+const house=buildLevel(4);
+for(const d of [[-5,0,0],[5,0,0],[0,0,5],[0,4,0]])assert(blocked(house,[5,4.7,9],d),'player home wall / ceiling');
+assert(!blocked(house,[5,4.7,9],[0,0,-4]),'player home doorway remains open');
+assert(house.roofs.length===2,'both houses have roofs');
+const homeWorld=new World({mission:4});homeWorld.ai.update=()=>{};
+for(let i=0;i<180;i++)homeWorld.step(1/60,{mz:1});
+assert(homeWorld.player.z<5.8,'player can walk out of own house');
+console.log('Enclosure rays, two house roofs and player-home exit checks passed');
