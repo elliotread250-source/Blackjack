@@ -8,7 +8,7 @@ class El{constructor(){this.style={};this.children=[];this.value='';this.classLi
 const source=fs.readFileSync(new URL('../games/play.js',import.meta.url),'utf8').replace(/^import .*;\n/,'');
 for(const id of ['tic-tac-toe','memory-match','simon','whack-a-mole','hangman']){
  const els={};const get=s=>els[s]??=new El();let time=0,q=[],key;
- const context={...rules,document:{querySelector:get,addEventListener:(n,f)=>key=f,createElement:()=>new El()},location:{search:'?game='+id},URLSearchParams,localStorage:{getItem:()=>null,setItem(){}},performance:{now:()=>time},Math,setTimeout:(f,ms)=>{q.push({f,t:time+ms});return q.length;},clearTimeout:()=>{},console};
+ const context={...rules,document:{body:{dataset:{}},querySelector:get,addEventListener:(n,f)=>key=f,createElement:()=>new El()},location:{search:'?game='+id},URLSearchParams,localStorage:{getItem:()=>null,setItem(){}},performance:{now:()=>time},Math,setTimeout:(f,ms)=>{q.push({f,t:time+ms});return q.length;},clearTimeout:()=>{},console};
  vm.runInNewContext(source,context);
  const tick=ms=>{const end=time+ms;let guard=0;while(q.some(x=>x.t<=end)&&guard++<1000){q.sort((a,b)=>a.t-b.t);const x=q.shift();time=x.t;x.f();}time=end;};
  assert(get('#title').textContent.length);
