@@ -142,6 +142,10 @@ export class Neighbour {
     if (this.state === 'grab') { this.anim = 'grab'; this.speed = 0; return; }
     if (this.stunT > 0) { this.stunT -= dt; this.anim = 'stunned'; this.speed = 0; return; }
 
+    // Reaching a refuge ends pursuit. Noise and path checks also protect the boundary.
+    if (W.isSafe?.(W.player.x,W.player.y,W.player.z) && this.state !== 'patrol') {
+      this.setState('patrol'); this.lastKnown=null; this.aware=0;
+    }
     // ---------------- senses
     const rate = W.sightRate(this);
     this.seen = rate > 0;

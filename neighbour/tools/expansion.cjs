@@ -59,3 +59,19 @@ const homeWorld=new World({mission:4});homeWorld.ai.update=()=>{};
 for(let i=0;i<180;i++)homeWorld.step(1/60,{mz:1});
 assert(homeWorld.player.z<5.8,'player can walk out of own house');
 console.log('Enclosure rays, two house roofs and player-home exit checks passed');
+for(const mission of [3,4]) {
+ const w=new World({mission,seed:11});
+ for(const zone of w.level.safeZones){
+  const x=(zone.x0+zone.x1)/2,z=(zone.z0+zone.z1)/2,y=zone.y0<0?0:zone.y0===0?0:3.2;
+  Object.assign(w.player,{x,y,z});
+  assert(w.isSafe(x,y,z),'safe zone is height aware');
+  assert.equal(w.path(w.ai.x,w.ai.y,w.ai.z,x,y,z),null,'neighbour cannot target refuge');
+  assert.equal(w.hear(w.ai,{x,y,z,radius:100,player:true}),0,'refuge noise ignored');
+  w.ai.setState('chase');w.ai.lastKnown=[x,y,z];
+  for(let i=0;i<300;i++)w.step(1/60,{});
+  assert(!w.player.caught,'protected during live chase');
+  assert(!w.isSafe(w.ai.x,w.ai.y,w.ai.z),'neighbour never enters refuge');
+  w.catchPlayer();assert(!w.player.caught,'contact cannot catch protected player');
+ }
+}
+console.log('Safe-zone pursuit, navigation, noise and catch checks passed');

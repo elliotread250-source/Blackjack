@@ -170,6 +170,26 @@ export function buildExpansion(mission) {
     roomRegion(-11,0,-22,11,3,-2,.32);roomRegion(-11,H,-22,11,6.2,-2,.65);
     L.entries.frontDoor={name:'front door',kind:'door',ref:'front',x:5,z:-1,y:H};
   }
+  // Green-lit refuge bays are player-only; AI navigation excludes their full volume.
+  const refuge=cellar?makeBox(4,0,-14,6.5,2.8,-11.5):makeBox(-7,0,-10,-4,2.8,-7);
+  L.safeZones=[refuge];
+  const sx=(refuge.x0+refuge.x1)/2, sz=(refuge.z0+refuge.z1)/2;
+  detail(refuge.x0,.008,refuge.z0,refuge.x1,.025,refuge.z1,'fabric',0x3baf91);
+  box(refuge.x0,.05,refuge.z0,refuge.x1,.45,refuge.z0+.4,'wood',0x658e81);
+  lamp('refuge',sx,2.65,sz,0x72ffd0);
+  // Bright cross plaque distinguishes a safe resting spot from an ordinary hiding locker.
+  detail(sx-.5,.45,refuge.z0-.1,sx+.5,2.1,refuge.z0,'metal',0x29483f);
+  detail(sx-.12,1.2,refuge.z0+.01,sx+.12,1.95,refuge.z0+.09,'emissive',0x72ffd0);
+  detail(sx-.36,1.46,refuge.z0+.01,sx+.36,1.69,refuge.z0+.09,'emissive',0x72ffd0);
+  if(!cellar) {
+    // A road, both pavements and dashed centre line separate the two properties.
+    detail(-19.7,H+.024,3.25,19.7,H+.04,5.25,'asphalt',0x464c54);
+    for(const z of [3,5.25])detail(-19.7,H+.025,z,19.7,H+.06,z+.25,'paving',0xc3c4bb);
+    for(let x=-18;x<19;x+=4)detail(x,H+.041,4.2,x+1.8,H+.046,4.3,'trim',0xefdfaa);
+    L.safeZones.push(makeBox(-20,H-.1,5.25,20,20,14));
+    // The garden patrol remains on the neighbour's side of the road.
+    const garden=L.pois.find(p=>p.id==='garden');garden.z=1;
+  }
   // Industrial wall bands and ceiling beams give both cellars a finished enclosure.
   const edge=cellar?12:11, back=cellar?-24:-22, front=cellar?3.8:-2.2;
   for(const x of [-edge+.21,edge-.3]) {

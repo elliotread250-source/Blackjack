@@ -35,7 +35,7 @@ export class World {
     this.winById = Object.fromEntries(this.windows.map(w => [w.id, w]));
     // navigation for the neighbour (the basement door is never his way)
     const base = this.doorById.basement;
-    this.nav = opts.nav || buildGrid(L.boxes, { bounds: L.navBounds, radius: 0.3, clear: 1.9, extra: [base.closed] });
+    this.nav = opts.nav || buildGrid(L.boxes, { bounds: L.navBounds, radius: 0.3, clear: 1.9, extra: [base.closed, ...(L.safeZones || [])] });
     this.astar = makePather(this.nav);
     this.hides = L.hides.map(h => Object.assign({}, h, {
       yaw: Math.atan2(-(h.face[0] - h.x), -(h.face[1] - h.z)),
@@ -124,7 +124,8 @@ export class World {
   invIndex(type) { return this.player.inv.findIndex(id => id && this.propById[id].type === type); }
   selected() { const id = this.player.inv[this.player.sel]; return id ? this.propById[id] : null; }
   inside(x, y, z) { return this.level.regions.some(r => pointInBox(r, x, y, z)); }
-  atHome(x, z) { if (this.level.exit) { const e = this.level.exit; return x > e.x0 && x < e.x1 && z > e.z0 && z < e.z1; } return x > -5.2 && x < 5.2 && z > 10 && z < 18.2; }
+  isSafe(x, y, z) { return (this.level.safeZones || []).some(b => pointInBox(b,x,y,z)); }
+  atHome(x, z) { if (this.isSafe(x,this.player.y,z)) return true; if (this.level.exit) { const e = this.level.exit; return x > e.x0 && x < e.x1 && z > e.z0 && z < e.z1; } return x > -5.2 && x < 5.2 && z > 10 && z < 18.2; }
 
   // ------------------------------------------------------------------ main step
   step(dt, inp = {}) {
@@ -137,6 +138,9 @@ export class World {
     if (p.caught) { this.updateCaught(dt); this.ai.update(dt, this); this.flushAI(); return; }
     this.stats.time += dt;
     this.updatePlayer(dt, inp);
+    const safe=this.isSafe(p.x,p.y,p.z);
+    if(safe && !this.wasSafe) this.say('Safe area — the neighbour cannot enter. Take a breather.', 'good');
+    this.wasSafe=safe;
     this.rebuildDyn();
     this.updateProps(dt);
     this.updateTraps(dt);
@@ -806,8 +810,9 @@ export class World {
       { x: ai.x, y: ai.y + EYE, z: ai.z, yaw: ai.yaw + ai.head, range: this.diff.range },
       { x: p.x, y: p.y, z: p.z, height: p.height, crouch: p.crouch, speed: p.speed, light: lightAt(this.level, p.x, p.y + 1, p.z) });
   }
-  hear(ai, n) { return hearNoise(this.hash, this.dynOpaque, { x: ai.x, y: ai.y + 1.6, z: ai.z }, n, this.diff.hear); }
+  hear(ai, n) { if(this.isSafe(n.x,n.y,n.z)) return 0; return hearNoise(this.hash, this.dynOpaque, { x: ai.x, y: ai.y + 1.6, z: ai.z }, n, this.diff.hear); }
   path(ax, ay, az, bx, by, bz) {
+    if(this.isSafe(bx,by,bz)) return null;
     const s = findNode(this.nav, ax, ay, az, 3), g = findNode(this.nav, bx, by, bz, 6);
     if (s < 0 || g < 0) return null;
     const r = this.astar(s, g);
@@ -824,7 +829,7 @@ export class World {
   // ------------------------------------------------------------------ caught
   catchPlayer() {
     const p = this.player;
-    if (p.caught || this.flags.won) return;
+    if (p.caught || this.flags.won || this.isSafe(p.x,p.y,p.z)) return;
     if (p.hiding) { this.emit('dragged'); p.hiding = null; }
     p.vault = null;
     p.caught = { t: 0, x: p.x, y: p.y, z: p.z };
