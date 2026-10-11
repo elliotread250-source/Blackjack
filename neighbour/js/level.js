@@ -9,6 +9,7 @@
 // has a full cell column through it.
 
 import { makeBox } from './geom.js';
+import { buildExpansion } from './expansion.js';
 
 export const T = 0.2;          // wall thickness
 export const F1 = 3.2;         // upper floor height
@@ -36,9 +37,12 @@ export const MISSIONS = [
   { name: 'The Basement', brief: 'Find the red key and get into his basement.' },
   { name: 'Paper Trail', brief: 'Recover evidence books from the living room, bedroom and study, then return home.' },
   { name: 'Dead Air', brief: 'Restore power, recover the attic radio, then carry it home. Watch the boarded windows.' },
+  { name: 'Below the Floorboards', brief: 'Descend into the basement. Restore workshop power, find the red key, recover the archive records and escape up the entrance stairs.' },
+  { name: 'The House on the Hill', brief: 'Explore a different house. Find its key and fuse, descend into the cellar vault, recover the ledger and escape to the garden gate.' },
 ];
 
 export function buildLevel(mission = 0) {
+  if (mission === 3 || mission === 4) return buildExpansion(mission);
   const boxes = [];      // static boxes
   const doors = [];
   const windows = [];

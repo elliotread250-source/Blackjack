@@ -94,3 +94,14 @@ phone landscape (touch) and fails on any console error.
 - `js/render.js`, `js/models.js`, `js/textures.js`: three.js view, code-built models, canvas textures
 - `js/audio.js`, `js/input.js`, `js/store.js`, `js/main.js`: sound, controls, saving, screens and the debug hook
 - `vendor/`: three.js r170 (MIT, see `vendor/LICENSE-three.txt`); credits in `CREDITS.md`
+
+## Expansion maps
+
+Choose **New game → Level** to select all five missions. Existing saves remain compatible.
+
+- **4 — Below the Floorboards:** a separate basement map with entrance stairs, boiler/storage areas, a powered workshop and a red-key archive. Find the storage fuse, restore corridor power, get the workshop key, collect the records and climb back to the green entrance light.
+- **5 — The House on the Hill:** a new teal hillside house with a kitchen, bedroom, living room, garden and a lower cellar. Find the upstairs fuse and key, restore cellar power, unlock the vault and recover the ledger, then return to the garden gate.
+
+The original three missions still use the original house. Map selection, items and puzzle progress are preserved by saves. Returning to the title screen and changing maps rebuilds static geometry and lighting as well as the simulation.
+
+Run `node tools/expansion.cjs` for physical reachability, lock dependencies, patrol routes, stairs in both directions, caught recovery, save/load and extraction checks.

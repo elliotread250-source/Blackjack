@@ -1,0 +1,39 @@
+const assert=require('node:assert/strict');
+const {buildLevel,MISSIONS}=require('../js/level.js');
+const {World}=require('../js/world.js');
+const {solveLevel}=require('../js/puzzle.js');
+const {buildGrid,findNode,playerReach,MAX_L}=require('../js/nav.js');
+const {boxesOverlap}=require('../js/geom.js');
+let count=0;
+const ok=(v,msg)=>{assert(v,msg);count++;};
+for(const mission of [3,4]) {
+ const l=buildLevel(mission);
+ ok(l.mission===mission && l.exit,'map identity and extraction zone');
+ ok(l.boxes.length!==buildLevel(0).boxes.length,'separate geometry');
+ const solved=solveLevel(l);
+ ok(solved.have.has('archive'),'full puzzle is physically reachable');
+ for(const disable of [['power'],['item:redkey']])ok(!solveLevel(l,{disable}).have.has('archive'),'cannot bypass required lock '+disable);
+ let w=new World({mission,seed:7});
+ for(const p of w.pois)ok(w.path(w.ai.x,w.ai.y,w.ai.z,p.x,p.y,p.z)?.complete,'patrol can reach '+p.id);
+ w.ai.update=()=>{};
+ w.step(1/60,{});ok(!w.flags.won,'no instant win at spawn');
+ ok(!w.level.boxes.some(b=>b.col && boxesOverlap(w.playerBox(),b,.005)),'spawn has full standing clearance');
+ // Move both directions using the actual 60 Hz player physics, rather than teleporting between stair steps.
+ Object.assign(w.player,mission===3?{x:0,y:3.2,z:3.1,yaw:0}:{x:-1,y:3.2,z:-3.3,yaw:0});
+ for(let i=0;i<180;i++)w.step(1/60,{mz:1});
+ ok(w.player.y<.3,'player descends into basement');
+ w.player.yaw=Math.PI;
+ for(let i=0;i<180;i++)w.step(1/60,{mz:1});
+ ok(w.player.y>3.15,'player climbs back up stairs');
+ // Key items remain available after being caught.
+ w.pickUp(w.propById.fuse); w.catchPlayer();for(let i=0;i<170;i++)w.step(1/60,{});
+ ok(!w.player.caught && !w.propById.fuse.gone,'caught recovery retains fuse');
+ w.pickUp(w.propById.archive);w.setPower(true);
+ const saved=w.serialize();w=new World({mission:saved.mission});ok(w.load(saved),'save reloads');w.ai.update=()=>{};
+ ok(w.propById.archive.gone && w.steps.archive!==undefined && w.flags.power,'saved puzzle progress');
+ Object.assign(w.player,{x:0,y:0,z:-10});w.step(1/60,{});ok(!w.flags.won,'records alone do not win away from escape');
+ Object.assign(w.player,l.spawn);w.flags.power=false;w.step(1/60,{});ok(!w.flags.won,'power also required');
+ w.setPower(true);w.step(1/60,{});ok(w.flags.won,'records plus power plus extraction wins');
+ console.log(MISSIONS[mission].name+': puzzle, patrol, stairs, recovery, saves and escape passed');
+}
+console.log(count+' expansion checks passed');

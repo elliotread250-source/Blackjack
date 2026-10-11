@@ -98,6 +98,7 @@ function newGame(diff, mission = selectedMission) {
 function startWorld(save) {
   world = new World({ mission: save ? (save.mission || 0) : selectedMission, difficulty: save ? save.diff : settings.difficulty, seed: (Math.random() * 1e9) | 0 });
   if (save) world.load(save);
+  selectedMission = world.level.mission || 0;
   renderer.setWorld(world);
   hudReset();
   nStepDist = 0; lastAi = null; winT = -1;
@@ -121,7 +122,7 @@ $('t-new').onclick = () => { sound.unlock(); openOverlay('s-diff'); pickDiff(set
 $('t-settings').onclick = () => openOverlay('s-settings');
 $('t-help').onclick = () => openOverlay('s-help');
 let chosenDiff = settings.difficulty;
-function pickDiff(d) { chosenDiff = d; for (const b of $('dpick').children) b.classList.toggle('on', b.dataset.d === d); }
+function pickDiff(d) { $('mission-select').value = String(selectedMission); $('mission-brief').textContent = MISSIONS[selectedMission].brief; chosenDiff = d; for (const b of $('dpick').children) b.classList.toggle('on', b.dataset.d === d); }
 for (const b of $('dpick').children) b.onclick = () => pickDiff(b.dataset.d);
 $('d-back').onclick = closeOverlay;
 $('d-go').onclick = () => { closeOverlay(); newGame(chosenDiff); };
@@ -188,6 +189,7 @@ const CLUES = {
 };
 function refreshNotes() {
   const out = [];
+  if (world.level.exit) { $('notes').textContent = MISSIONS[world.level.mission].brief; return; }
   for (const id in CLUES) if (world.clues[id]) out.push(`<li${(id === 'basement' && world.steps.basement) || (id === 'studyLock' && world.flags.power) || (id === 'fusebox' && world.flags.power) || (id === 'garageBoards' && world.steps.garageWindow) || (id === 'redkey' && world.steps.redkey) ? ' class="done"' : ''}>${CLUES[id]}</li>`);
   for (const id of ['crowbar', 'fuse', 'power', 'garageRoof', 'studyWindow', 'redkey']) if (world.steps[id] !== undefined && !(id === 'redkey' && world.clues.redkey)) out.push(`<li class="done">${STEPS[id].label}</li>`);
   $('notes').innerHTML = out.slice(-6).join('');
@@ -304,14 +306,14 @@ function showWin() {
   $('w-time').textContent = fmt(s.time); $('w-caught').textContent = s.caught; $('w-diff').textContent = world.diff.name;
   const mission = world.level.mission || 0;
   $('w-heading').textContent = MISSIONS[mission].name + ' complete';
-  $('w-sub').textContent = mission === 2 ? 'You made it home with the radio.' : mission === 1 ? 'The evidence is safe.' : 'What’s he hiding?';
-  $('w-next').hidden = mission >= 2;
+  $('w-sub').textContent = mission >= 3 ? 'You escaped with the records.' : mission === 2 ? 'You made it home with the radio.' : mission === 1 ? 'The evidence is safe.' : 'What’s he hiding?';
+  $('w-next').hidden = mission >= MISSIONS.length - 1;
   const bestKey = 'best.' + mission + '.' + world.diffKey;
   const best = store.get(bestKey, null);
   let msg = '';
   if (!best || s.time < best.time) { store.set(bestKey, { time: s.time, caught: s.caught, diff: world.diff.name }); msg = best ? 'A new best time.' : 'Level complete.'; }
   else msg = `Best: ${fmt(best.time)} (${best.diff}).`;
-  $('w-best').textContent = msg + (mission < 2 ? ' Your next mission awaits.' : ' All three missions are available from New game.');
+  $('w-best').textContent = msg + (mission < MISSIONS.length - 1 ? ' Your next mission awaits.' : ' All five missions are available from New game.');
   store.del('save');
   sound.play('win');
 }
@@ -378,7 +380,7 @@ window.__nn = {
   get renderer() { return renderer; },
   get input() { return input; },
   get mode() { return mode; },
-  start(diff = 'normal') { closeOverlay(); newGame(diff); return true; },
+  start(diff = 'normal', mission = 0) { closeOverlay(); newGame(diff, mission); return true; },
   teleport(x, y, z, yaw = world.player.yaw, pitch = 0) { Object.assign(world.player, { x, y, z, yaw, pitch, vx: 0, vy: 0, vz: 0, onGround: true, fallFrom: y, hiding: null }); renderer.eyeY = null; return true; },
   look(yaw, pitch = 0) { world.player.yaw = yaw; world.player.pitch = pitch; },
   lookAt(x, y, z) {
@@ -435,7 +437,7 @@ window.__nn = {
   state() {
     const p = world.player, ai = world.ai;
     return {
-      mode, x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), inv: p.inv.slice(), hiding: p.hiding, caught: !!p.caught, stuck: p.stuck,
+      mode, mission: world.level.mission || 0, x: +p.x.toFixed(2), y: +p.y.toFixed(2), z: +p.z.toFixed(2), inv: p.inv.slice(), hiding: p.hiding, caught: !!p.caught, stuck: p.stuck,
       ai: { state: ai.state, x: +ai.x.toFixed(2), y: +ai.y.toFixed(2), z: +ai.z.toFixed(2), aware: +ai.aware.toFixed(2) },
       steps: Object.keys(world.steps), won: world.flags.won, caughtN: world.stats.caught, traps: world.traps.length, cams: world.cams.length,
       look: world.look ? world.look.kind + ':' + (world.look.ref.id || world.look.ref.type) : null,

@@ -124,7 +124,7 @@ export class World {
   invIndex(type) { return this.player.inv.findIndex(id => id && this.propById[id].type === type); }
   selected() { const id = this.player.inv[this.player.sel]; return id ? this.propById[id] : null; }
   inside(x, y, z) { return this.level.regions.some(r => pointInBox(r, x, y, z)); }
-  atHome(x, z) { return x > -5.2 && x < 5.2 && z > 10 && z < 18.2; }
+  atHome(x, z) { if (this.level.exit) { const e = this.level.exit; return x > e.x0 && x < e.x1 && z > e.z0 && z < e.z1; } return x > -5.2 && x < 5.2 && z > 10 && z < 18.2; }
 
   // ------------------------------------------------------------------ main step
   step(dt, inp = {}) {
@@ -150,7 +150,8 @@ export class World {
     const tb = this.level.basementTrigger;
     const mission = this.level.mission || 0;
     const home = Math.hypot(this.player.x - this.level.spawn.x, this.player.z - this.level.spawn.z) < 3 && this.player.y < 1;
-    const complete = mission === 1 ? this.level.targets.every(id => this.steps[id] !== undefined) && home
+    const complete = this.level.exit ? this.level.targets.every(id => this.steps[id] !== undefined) && (!this.level.requirePower || this.flags.power) && boxesOverlap(this.playerBox(), this.level.exit)
+      : mission === 1 ? this.level.targets.every(id => this.steps[id] !== undefined) && home
       : mission === 2 ? this.flags.power && this.player.inv.includes('missionRadio') && home
       : !this.doorById.basement.locked && boxesOverlap(this.playerBox(), tb);
     if (complete && !this.player.caught) {
@@ -402,7 +403,7 @@ export class World {
           const i = this.invIndex('fuse'), pr = this.propById[p.inv[i]];
           p.inv[i] = null; pr.gone = true; pr.held = false;
           this.setPower(true);
-          this.say('The lights buzz. Somewhere upstairs a lock clicks.', 'good');
+          this.say(this.level.exit ? 'Power restored. The electric door is unlocked.' : 'The lights buzz. Somewhere upstairs a lock clicks.', 'good');
         } else this.say('One fuse slot is empty.');
         break;
       case 'door': this.useDoor(r); break;
@@ -517,7 +518,7 @@ export class World {
     const p = this.player;
     if (pr.held || pr.gone) return false;
     if (p.groundProp === pr) { this.say("You're standing on it."); return false; }
-    if (this.level.mission === 1 && this.level.targets.includes(pr.id)) {
+    if ((this.level.mission === 1 || this.level.collectTargets) && this.level.targets.includes(pr.id)) {
       pr.gone = true; this.markStep(pr.id); this.emit('pickup', { item: pr.type });
       this.say(pr.missionName + ' recovered.'); this.dirty = true; return true;
     }
@@ -960,6 +961,7 @@ export class World {
   }
 
   checkSteps() {
+    if (this.level.exit) return; // Original house coordinate landmarks do not apply to other maps.
     const p = this.player;
     if (p.y > 3.05 && p.x > 10 && p.x < 18.3 && p.z > -20.7 && p.z < -11.8 && p.onGround && !p.groundProp) this.markStep('garageRoof');
     if (p.y > F1 - 0.2 && p.y < 6 && p.x > 2.1 && p.x < 9.9 && p.z > -20.9 && p.z < -12.1) this.markStep('study');
@@ -967,6 +969,13 @@ export class World {
 
   objective() {
     const s = this.steps;
+    if (this.level.exit) {
+      if (this.level.targets.every(id => s[id] !== undefined)) return this.level.mission === 3 ? 'Records secured. Escape UP the entrance stairs to the green light.' : 'Ledger secured. Go upstairs, out the front door and back to the garden gate.';
+      if (!this.flags.power) return this.level.mission === 3 ? 'Find the fuse in the east storage room. Restore power at the corridor fuse box.' : 'Find the fuse in the kitchen and the red key in the bedroom. The fuse box is downstairs on the east cellar wall.';
+      if (!this.hasItem('redkey') && this.doorById.basement.locked) return this.level.mission === 3 ? 'The workshop is powered. Find the red key on its workbench.' : 'Find the red key on the bedroom desk upstairs.';
+      if (this.doorById.basement.locked) return 'Unlock the red padlock on the archive door.';
+      return this.level.mission === 3 ? 'Recover the records from the desk in the north archive room.' : 'Enter the powered records room in the west cellar and take the ledger.';
+    }
     if (this.level.mission === 1) {
       const remaining = this.level.targets.filter(id => s[id] === undefined);
       return remaining.length ? `Evidence ${3 - remaining.length}/3 — find: ${remaining.map(id => this.propById[id].missionName.replace(' evidence', '')).join(', ')}.` : 'All evidence recovered. Return to your front door across the road.';

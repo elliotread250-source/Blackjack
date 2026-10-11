@@ -92,8 +92,10 @@ export class Renderer {
   buildLights() {
     const s = this.scene, high = this.quality === 'high';
     this.hemi = new THREE.HemisphereLight(0xb4b8ff, 0x5a5468, 1.55);
+    this.hemi.intensity = this.world.level.indoor ? 0.75 : 1.55;
     s.add(this.hemi);
     this.sunLight = new THREE.DirectionalLight(0xffb27a, 2.6);
+    this.sunLight.intensity = this.world.level.indoor ? 0 : 2.6;
     this.sunLight.position.copy(SUN_DIR).multiplyScalar(60).add(new THREE.Vector3(0, 0, -20));
     this.sunLight.target.position.set(0, 0, -20);
     if (high) {
@@ -140,13 +142,13 @@ export class Renderer {
       if (holes.some(([x0, z0, x1, z1]) => cx > x0 && cx < x1 && cz > z0 && cz < z1)) continue;
       const yard = cz < -6.5 && Math.abs(cx) < 26;
       cg.setHex(yard ? 0x6f8a46 : 0x7a9a4c);
-      const x0 = X[i], x1 = X[i + 1], z0 = Z[j], z1 = Z[j + 1], y = -0.02;
+      const x0 = X[i], x1 = X[i + 1], z0 = Z[j], z1 = Z[j + 1], y = L.groundVisualY ?? -0.02;
       B.quad('grass', [[x0, y, z1], [x1, y, z1], [x1, y, z0], [x0, y, z0]], [0, 1, 0], [[x0 / gsc, -z1 / gsc], [x1 / gsc, -z1 / gsc], [x1 / gsc, -z0 / gsc], [x0 / gsc, -z0 / gsc]], [[cg.r, cg.g, cg.b]]);
     }
     for (const r of L.roofs) addRoof(B, r);
     for (const d of L.decor) addDecor(B, d);
     this.addOpeningTrim(B);
-    this.addBackdrop(B);
+    if (!L.exit) this.addBackdrop(B);
     this.staticGroup = B.build(this.mats, { shadows: this.quality === 'high' });
     this.scene.add(this.staticGroup);
   }
@@ -206,6 +208,14 @@ export class Renderer {
   // ------------------------------------------------------------------ dynamic objects
   setWorld(world) {
     this.world = world;
+    // Static layout and lighting must change along with collision data on a map switch.
+    this.scene.remove(this.staticGroup);
+    this.staticGroup.traverse(o => { if (o.isMesh && o.geometry) o.geometry.dispose(); });
+    for (const p of this.points) this.scene.remove(p);
+    this.scene.remove(this.hemi, this.sunLight, this.sunLight.target);
+    if (this.sunLight.shadow.map) this.sunLight.shadow.map.dispose();
+    this.buildLights();
+    this.buildStatic();
     this.scene.remove(this.dynGroup);
     this.dynGroup.traverse(o => { if (o.isMesh) { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); } });
     this.buildDynamic();
@@ -253,10 +263,12 @@ export class Renderer {
     const gt = new THREE.CanvasTexture(glowCv); gt.colorSpace = THREE.SRGBColorSpace;
     this.glow = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 1.3), new THREE.MeshBasicMaterial({ map: gt, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     this.glow.rotation.x = -Math.PI / 2; this.glow.position.set(9.1, 0.012, -24.5);
+    if (W.level.exit) { const d = W.doorById.basement, c = doorCenter(d); this.glow.position.set(c[0], d.y + 0.012, c[2] + 0.65); }
     s.add(this.glow);
     const strip = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.03, 1.2), new THREE.MeshBasicMaterial({ color: 0xff3020 }));
-    strip.position.set(9.79, 0.015, -24.5); s.add(strip);
-    this.lockLed = this.ledBox(1.88, F1 + 1.3, -15.1, -1, 0x30303a);   // study lock, hall side
+    strip.position.set(9.79, 0.015, -24.5); strip.visible = !W.level.exit; s.add(strip);
+    const ld = W.level.exit ? doorCenter(W.doorById.study) : [1.88, F1 + 1.3, -15.1];
+    this.lockLed = this.ledBox(ld[0], ld[1], ld[2], -1, 0x30303a);   // study lock, hall side
     this.fuseView = this.ledBox(W.fusebox.x - 0.05, W.fusebox.y, W.fusebox.z, -1, 0x6a6e74, true);
     // windows
     this.winViews = [];
@@ -418,7 +430,7 @@ export class Renderer {
     // lights
     for (const p of this.points) {
       const u = p.userData;
-      let k = 1;
+      let k = u.power && !W.flags.power ? 0.1 : 1;
       if (u.flicker) {
         const n = Math.sin(t * 13 + u.seed) * Math.sin(t * 7.3 + u.seed * 2) * Math.sin(t * 2.1 + u.seed);
         k = n > 0.55 ? 0.15 : 1 - u.flicker * 0.25 * Math.abs(Math.sin(t * 31 + u.seed));
@@ -499,6 +511,7 @@ export class Renderer {
     const W = this.world, p = W.player, cam = this.camera, t = this.t;
     this.hand.visible = false;
     if (view.mode === 'title') {
+      if (W.level.titleCamera) { cam.position.set(...W.level.titleCamera.from); cam.lookAt(...W.level.titleCamera.to); return; }
       const a = t * 0.04;
       cam.position.set(-6 + Math.sin(a) * 9, 2.1 + Math.sin(a * 1.7) * 0.4, 8.5 + Math.cos(a) * 1.5);
       cam.lookAt(2 + Math.sin(a * 0.7) * 3, 4.2, -20);
