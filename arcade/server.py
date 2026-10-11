@@ -16,6 +16,7 @@ class Handler(SimpleHTTPRequestHandler):
     extensions_map = {
         **SimpleHTTPRequestHandler.extensions_map,
         ".js": "text/javascript",
+        ".mjs": "text/javascript",
         ".css": "text/css",
         ".svg": "image/svg+xml",
         ".json": "application/json",
