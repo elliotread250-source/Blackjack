@@ -17,7 +17,7 @@ export const PLAYER = {
   walk: 3.3, sprint: 5.7, crouch: 1.7, jumpV: 6.3, g: 18, step: 0.45, mantle: 0.42, reach: 2.4,
 };
 const GRAV = 18;
-const SAVE_VERSION = 1;
+const SAVE_VERSION = 2;  // 2: levels 2-5 were removed; older saves may point at maps that no longer exist
 
 export class World {
   constructor(opts = {}) {
@@ -152,11 +152,7 @@ export class World {
     this.trackEntry();
     this.checkSteps();
     const tb = this.level.basementTrigger;
-    const mission = this.level.mission || 0;
-    const home = Math.hypot(this.player.x - this.level.spawn.x, this.player.z - this.level.spawn.z) < 3 && this.player.y < 1;
     const complete = this.level.exit ? this.level.targets.every(id => this.steps[id] !== undefined) && (!this.level.requirePower || this.flags.power) && boxesOverlap(this.playerBox(), this.level.exit)
-      : mission === 1 ? this.level.targets.every(id => this.steps[id] !== undefined) && home
-      : mission === 2 ? this.flags.power && this.player.inv.includes('missionRadio') && home
       : !this.doorById.basement.locked && boxesOverlap(this.playerBox(), tb);
     if (complete && !this.player.caught) {
       this.flags.won = true; this.markStep('basement'); this.emit('win'); this.dirty = true;
@@ -522,7 +518,7 @@ export class World {
     const p = this.player;
     if (pr.held || pr.gone) return false;
     if (p.groundProp === pr) { this.say("You're standing on it."); return false; }
-    if ((this.level.mission === 1 || this.level.collectTargets) && this.level.targets.includes(pr.id)) {
+    if (this.level.collectTargets && this.level.targets.includes(pr.id)) {
       pr.gone = true; this.markStep(pr.id); this.emit('pickup', { item: pr.type });
       this.say(pr.missionName + ' recovered.'); this.dirty = true; return true;
     }
@@ -974,22 +970,6 @@ export class World {
 
   objective() {
     const s = this.steps;
-    if (this.level.exit) {
-      if (this.level.targets.every(id => s[id] !== undefined)) return this.level.mission === 3 ? 'Records secured. Escape UP the entrance stairs to the green light.' : 'Ledger secured. Go upstairs, out the front door and back to the garden gate.';
-      if (!this.flags.power) return this.level.mission === 3 ? 'Find the fuse in the east storage room. Restore power at the corridor fuse box.' : 'Find the fuse in the kitchen and the red key in the bedroom. The fuse box is downstairs on the east cellar wall.';
-      if (!this.hasItem('redkey') && this.doorById.basement.locked) return this.level.mission === 3 ? 'The workshop is powered. Find the red key on its workbench.' : 'Find the red key on the bedroom desk upstairs.';
-      if (this.doorById.basement.locked) return 'Unlock the red padlock on the archive door.';
-      return this.level.mission === 3 ? 'Recover the records from the desk in the north archive room.' : 'Enter the powered records room in the west cellar and take the ledger.';
-    }
-    if (this.level.mission === 1) {
-      const remaining = this.level.targets.filter(id => s[id] === undefined);
-      return remaining.length ? `Evidence ${3 - remaining.length}/3 — find: ${remaining.map(id => this.propById[id].missionName.replace(' evidence', '')).join(', ')}.` : 'All evidence recovered. Return to your front door across the road.';
-    }
-    if (this.level.mission === 2) {
-      if (!this.flags.power) return 'Dead Air: find the fuse in the garage and restore power in the pantry.';
-      if (!this.player.inv.includes('missionRadio')) return 'Power restored. Take the radio from the attic (top floor).';
-      return 'Carry the attic radio home across the road. Keep it in your inventory!';
-    }
     if (s.basement) return 'You got in.';
     if (s.redkey || this.hasItem('redkey')) return 'Use the red key on the basement door.';
     if (s.study) return 'Search the study.';

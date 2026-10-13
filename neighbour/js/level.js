@@ -9,7 +9,6 @@
 // has a full cell column through it.
 
 import { makeBox } from './geom.js';
-import { buildExpansion } from './expansion.js';
 
 export const T = 0.2;          // wall thickness
 export const F1 = 3.2;         // upper floor height
@@ -35,14 +34,9 @@ export const ITEM_TYPES = {
 
 export const MISSIONS = [
   { name: 'The Basement', brief: 'Find the red key and get into his basement.' },
-  { name: 'Paper Trail', brief: 'Recover evidence books from the living room, bedroom and study, then return home.' },
-  { name: 'Dead Air', brief: 'Restore power, recover the attic radio, then carry it home. Watch the boarded windows.' },
-  { name: 'Below the Floorboards', brief: 'Descend into the basement. Restore workshop power, find the red key, recover the archive records and escape up the entrance stairs.' },
-  { name: 'The House on the Hill', brief: 'Explore a different house. Find its key and fuse, descend into the cellar vault, recover the ledger and escape to the garden gate.' },
 ];
 
 export function buildLevel(mission = 0) {
-  if (mission === 3 || mission === 4) return buildExpansion(mission);
   const boxes = [];      // static boxes
   const doors = [];
   const windows = [];
@@ -630,25 +624,8 @@ export function buildLevel(mission = 0) {
     storageWindow: { name: 'storage window', kind: 'window', ref: 'storeW', x: 6, z: -28.8, high: true },
   };
 
-  // Later missions revisit the house with new goals and patrol priorities.
-  mission = Math.max(0, Math.min(2, mission | 0));
+  mission = 0;
   const targets = [];
-  if (mission === 1) {
-    for (const [i, pos] of [[-6.5, 0.75, -14.2], [-8.3, F1 + 0.6, -17.6], [5.5, F1 + 0.8, -20.1]].entries()) {
-      const it = items.find(it => it.type === 'book' && it.x === pos[0] && it.z === pos[2]);
-      it.id = 'evidence' + i; it.missionName = ['Living-room evidence', 'Bedroom evidence', 'Study evidence'][i];
-      targets.push(it.id);
-    }
-    for (const p of pois) if (['study', 'bedroom', 'tv'].includes(p.id)) p.w *= 3;
-    pois.unshift(pois.splice(pois.findIndex(p => p.id === 'bedroom'), 1)[0]);
-  }
-  if (mission === 2) {
-    const radio = items.find(it => it.type === 'radio');
-    radio.id = 'missionRadio'; radio.missionName = 'Attic radio'; targets.push(radio.id);
-    for (const w of windows) if (['livingW', 'kitchenW', 'bedW'].includes(w.id)) w.boards = true;
-    for (const p of pois) if (['attic', 'garage', 'frontyard'].includes(p.id)) p.w *= 4;
-    pois.unshift(pois.splice(pois.findIndex(p => p.id === 'attic'), 1)[0]);
-  }
 
   // where you wake up after being caught
   const spawn = { x: -1.6, y: 0, z: 15.4, yaw: Math.atan2(-1.6, 5.2) };  // facing your front door

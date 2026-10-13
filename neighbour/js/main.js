@@ -306,14 +306,14 @@ function showWin() {
   $('w-time').textContent = fmt(s.time); $('w-caught').textContent = s.caught; $('w-diff').textContent = world.diff.name;
   const mission = world.level.mission || 0;
   $('w-heading').textContent = MISSIONS[mission].name + ' complete';
-  $('w-sub').textContent = mission >= 3 ? 'You escaped with the records.' : mission === 2 ? 'You made it home with the radio.' : mission === 1 ? 'The evidence is safe.' : 'What’s he hiding?';
+  $('w-sub').textContent = 'What’s he hiding?';
   $('w-next').hidden = mission >= MISSIONS.length - 1;
   const bestKey = 'best.' + mission + '.' + world.diffKey;
   const best = store.get(bestKey, null);
   let msg = '';
   if (!best || s.time < best.time) { store.set(bestKey, { time: s.time, caught: s.caught, diff: world.diff.name }); msg = best ? 'A new best time.' : 'Level complete.'; }
   else msg = `Best: ${fmt(best.time)} (${best.diff}).`;
-  $('w-best').textContent = msg + (mission < MISSIONS.length - 1 ? ' Your next mission awaits.' : ' All five missions are available from New game.');
+  $('w-best').textContent = msg + (mission < MISSIONS.length - 1 ? ' Your next mission awaits.' : ' Every level is available from New game.');
   store.del('save');
   sound.play('win');
 }
