@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0a1f">
+<title>Tic Tac Toe</title>
+<meta name="description" content="Noughts and crosses. Play the computer on Easy, Medium or Impossible, or a friend on the same device.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="app">
+  <header class="top">
+    <h1><span class="x">Tic</span> <span class="o">Tac</span> <span class="t">Toe</span></h1>
+    <button id="mute" class="icon-btn" aria-label="Mute sound" title="Sound">🔊</button>
+  </header>
+
+  <section class="scores" aria-label="Scores">
+    <div class="score x-side"><span class="who" id="name-x">You</span><span class="mark">✕</span><b id="score-x">0</b></div>
+    <div class="score draws"><span class="who">Draws</span><span class="mark">=</span><b id="score-d">0</b></div>
+    <div class="score o-side"><span class="who" id="name-o">Computer</span><span class="mark">◯</span><b id="score-o">0</b></div>
+  </section>
+
+  <p id="status" class="status" role="status" aria-live="polite">Your move</p>
+
+  <div class="board-wrap">
+    <div id="board" class="board" role="grid" aria-label="Tic Tac Toe board"></div>
+    <svg id="strike" class="strike" viewBox="0 0 300 300" aria-hidden="true"><line id="strike-line" x1="0" y1="0" x2="0" y2="0"/></svg>
+  </div>
+
+  <section class="controls">
+    <div class="seg" role="radiogroup" aria-label="Opponent">
+      <button data-mode="bot" role="radio">vs Computer</button>
+      <button data-mode="friend" role="radio">2 Players</button>
+    </div>
+    <div class="row bot-only">
+      <label>Level
+        <select id="level">
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="impossible">Impossible</option>
+        </select>
+      </label>
+      <label>You play
+        <select id="side">
+          <option value="X">✕ (X)</option>
+          <option value="O">◯ (O)</option>
+        </select>
+      </label>
+    </div>
+    <div class="row">
+      <button id="next" class="primary">New round</button>
+      <button id="reset">Reset scores</button>
+    </div>
+  </section>
+
+  <p class="hint">Tap a square, or use keys 1–9 (top-left to bottom-right). Who goes first swaps every round.</p>
+</main>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
