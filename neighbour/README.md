@@ -109,5 +109,11 @@ Choose **New game → Level**.
    storage hatch for the fuse, restore power in the boiler room, take the red key from his study, steal his photo
    album from the basement vault and get back home.
 
-Both new maps are in `js/maps.js`. Run `node tools/maps.cjs` for reachability, locks that can't be bypassed, patrol
+4. **The Mansion** (huge house) — a three-storey mansion with an attic and a basement on its own walled estate
+   across your street: grand hall with a sweeping staircase and gallery, library, dining room, ballroom, kitchen,
+   study, bedrooms, trophy room, wine cellar and vault, a fountain out front and a hedge maze behind. Get the crowbar
+   from the middle of the maze, pry open the boarded attic hatch for the fuse, restore power in the wine cellar, take
+   the red key from his study and steal his golden trophy from the vault.
+
+The new maps are in `js/maps.js`. Run `node tools/maps.cjs` for reachability, locks that can't be bypassed, patrol
 routes on every floor, stairs both ways, safe zones, caught recovery, save/load and escape checks.

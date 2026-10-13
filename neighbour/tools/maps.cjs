@@ -9,8 +9,9 @@ const ok = (v, msg) => { assert(v, msg); count++; };
 const STAIRS = {
   1: { top: { x: 10, y: 3.2, z: 1.2, yaw: 0 }, downTo: 0.3, upFrom: 3.15 },                 // hatch stairs, north = down
   2: { top: { x: 10.8, y: 3.2, z: -13.2, yaw: 0 }, downTo: 0.3, upFrom: 3.15 },             // garage -> basement
+  3: { top: { x: 16.8, y: 3.2, z: -30.8, yaw: 0 }, downTo: 0.3, upFrom: 3.15 },             // mansion kitchen -> cellar
 };
-for (const mission of [1, 2]) {
+for (const mission of [1, 2, 3]) {
   const l = buildLevel(mission), name = MISSIONS[mission].name;
   ok(l.mission === mission && l.exit, name + ': map identity and exit');
   ok(l.boxes.length !== buildLevel(0).boxes.length, name + ': its own geometry');
@@ -19,6 +20,7 @@ for (const mission of [1, 2]) {
   for (const id of [...l.targets, 'fuse', 'redkey']) ok(solved.have.has(id), name + ': ' + id + ' physically reachable');
   for (const disable of [['power'], ['item:redkey'], ['item:fuse']]) ok(!solveLevel(l, { disable }).have.has(l.targets[0]), name + ': cannot bypass ' + disable);
   if (mission === 1) ok(!solveLevel(l, { disable: ['break:laundryW'] }).have.has('fuse'), name + ': laundry needs its window broken first');
+  if (mission === 3) for (const disable of [['boards:atticHatch'], ['item:crowbar']]) ok(!solveLevel(l, { disable }).have.has('fuse'), name + ': attic needs the hatch pried open (' + disable + ')');
   if (mission === 2) for (const disable of [['boards:storeHatch'], ['item:crowbar']]) ok(!solveLevel(l, { disable }).have.has('fuse'), name + ': storage needs the hatch pried open (' + disable + ')');
 
   let w = new World({ mission, seed: 7 });
@@ -58,5 +60,18 @@ for (const mission of [1, 2]) {
   for (let i = 0; i < 300; i++) w.step(1 / 60, { mz: 1 });
   ok(w.player.z < 9.5, 'Mulberry Close: player walks out of their front door (z=' + w.player.z.toFixed(2) + ')');
   ok(w.level.doors.some(d => d.id === 'home' && d.open), 'Mulberry Close: your front door from level 1');
+}
+// The Mansion: every floor connects for him, and the player can climb the grand stairs and the attic stairs.
+{
+  const w = new World({ mission: 3, seed: 4 });
+  for (const [x, y, z] of [[6, 0, -35], [0, 3.2, -26], [13.5, 3.2, -37], [0, 6.4, -37], [12, 6.4, -25], [12, 9.6, -35], [-5, 3.2, -45], [11, 3.2, -53]]) ok(w.path(w.ai.x, w.ai.y, w.ai.z, x, y, z)?.complete, `Mansion: he reaches ${x},${y},${z}`);
+  w.ai.update = () => {};
+  Object.assign(w.player, { x: 0, y: 3.2, z: -26.4, yaw: 0 });
+  for (let i = 0; i < 200; i++) w.step(1 / 60, { mz: 1 });
+  ok(w.player.y > 6.3, 'Mansion: grand staircase reaches the gallery (y=' + w.player.y.toFixed(2) + ')');
+  Object.assign(w.player, { x: 6.6, y: 6.4, z: -38.6, yaw: -Math.PI / 2 });
+  for (let i = 0; i < 200; i++) w.step(1 / 60, { mz: 1 });
+  ok(w.player.y > 9.5, 'Mansion: attic stairs reach the attic (y=' + w.player.y.toFixed(2) + ')');
+  ok(w.level.boxes.length > 800, 'Mansion: it really is huge (' + w.level.boxes.length + ' boxes)');
 }
 console.log(count + ' map checks passed');

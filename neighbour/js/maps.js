@@ -75,7 +75,15 @@ function kit(L) {
   }
   function room(x0, y0, z0, x1, y1, z1, light = 0.4) { L.regions.push(makeBox(x0, y0, z0, x1, y1, z1)); L.lightZones.push({ box: makeBox(x0, y0, z0, x1, y1, z1), level: light }); }
   const mount = (id, x, y, z, tx, tz, name) => L.camMounts.push({ id, x, y, z, yaw: Math.atan2(-(tx - x), -(tz - z)), name });
-  return { box, detail, wall, door, win, lamp, table, shelves, item, hide, poi, stairs, room, mount };
+  // The same stairs running along x, rising from y0 at xStart towards dir.
+  function stairsX(z0, z1, xStart, dir, y0, tint = 0x858b90, mat = 'concrete') {
+    for (let i = 0; i < 16; i++) {
+      const xa = xStart + dir * i * 0.4, xb = xStart + dir * (i + 1) * 0.4;
+      box(Math.min(xa, xb), y0, z0, Math.max(xa, xb), y0 + (i + 1) * 0.2, z1, mat, tint, { tag: 'stair' });
+      detail(Math.min(xa, xb) + (dir > 0 ? 0 : 0.34), y0 + (i + 1) * 0.2, z0 + 0.02, Math.min(xa, xb) + (dir > 0 ? 0.06 : 0.4), y0 + (i + 1) * 0.2 + 0.012, z1 - 0.02, 'trim', 0xd9bc72);
+    }
+  }
+  return { box, detail, wall, door, win, lamp, table, shelves, item, hide, poi, stairs, stairsX, room, mount };
 }
 
 function base(mission, extra) {
@@ -227,7 +235,7 @@ function buildCellar() {
 const SIDING = 0x4d6b58, TRIM = 0xece6d6, ROOF = 0x2c333c;
 
 // Level 1's street and your house, lifted to ground height y.
-function street(L, K, y) {
+function street(L, K, y, back = -50.5) {
   const { box } = K;
   const vis = (x0, y0, z0, x1, y1, z1, m, c) => box(x0, y0, z0, x1, y1, z1, m, c, { col: false, op: false });
   const inv = (x0, y0, z0, x1, y1, z1) => box(x0, y0, z0, x1, y1, z1, null, 0, { vis: false, op: false });
@@ -323,8 +331,8 @@ function street(L, K, y) {
   filler(-34, -46, -25, -32, 3.2, 0xd1c2a4, 0x4a3b36);
   filler(25, -46, 34, -32, 5.6, 0xa9b7a8, 0x3a3f44);
   // map edges
-  inv(-35, -1, -50.5, -34.5, 14, 23); inv(34.5, -1, -50.5, 35, 14, 23);
-  inv(-35, -1, 22.5, 35, 14, 23); inv(-35, -1, -51, 35, 14, -50.5);
+  inv(-35, -1, back, -34.5, 14, 23); inv(34.5, -1, back, 35, 14, 23);
+  inv(-35, -1, 22.5, 35, 14, 23); inv(-35, -1, back - 0.5, 35, 14, back);
   return { picket, inv };
 }
 
@@ -550,6 +558,287 @@ function buildMulberry() {
   return L;
 }
 
+// ------------------------------------------------------------------------------------------------
+// Level 4: The Mansion. A huge three-storey house with an attic and a basement, on its own walled
+// estate across your street, with a fountain out front and a hedge maze in the back garden.
+//   crowbar (centre of the hedge maze) -> attic stairs in the trophy room -> pry the boarded attic
+//   hatch -> fuse -> fuse box in the wine cellar (stairs in the kitchen) -> his study's electric door
+//   opens (first floor, off the gallery) -> red key -> basement vault -> golden trophy -> home.
+function buildMansion() {
+  const A = 9.6;
+  const L = base(3, {
+    targets: ['trophy'], indoor: false, outdoorLight: 0.58, groundVisualY: H - 0.02,
+    titleCamera: { from: [-28, H + 15, 4], to: [0, H + 4, -32] },
+  });
+  const K = kit(L);
+  const { box, detail, wall, door, win, lamp, table, shelves, item, hide, poi, stairs, stairsX, room, mount } = K;
+  const STONE = 0xd8cdb8, STONE2 = 0xc4b79e, SLATE = 0x2f3440, WOOD = 0x5b3a26, GOLD = 0xd4a53a;
+
+  // ---- ground: lawn at y=H everywhere, open over the basement (under the centre and east wing)
+  for (const [a0, b0, a1, b1] of [[-34.5, -70.5, -18, 23], [18, -70.5, 34.5, 23], [-18, -70.5, 18, -40], [-18, -20, 18, 23]]) box(a0, 0, b0, a1, H, b1, 'grass', 0x5f8a48);
+  box(-18, 0, -40, -6, 3, -20, 'concrete', 0x8a8478);              // no cellar under the west wing
+  L.holes = [[-18, -40, 18, -20]];
+  const { inv } = street(L, K, H, -70.5);
+
+  // ---- the estate: low iron railings and gate at the front, tall walls around the rest
+  for (const [x0, x1] of [[-24, -2.5], [2.5, 24]]) {
+    inv(x0, H, -8, x1, H + 1.3, -7.8);
+    for (let x = x0 + 0.2; x < x1; x += 0.35) detail(x - 0.03, H, -7.93, x + 0.03, H + 1.3, -7.87, 'metal', 0x26282e);
+    detail(x0, H + 1.05, -7.95, x1, H + 1.12, -7.85, 'metal', 0x26282e);
+  }
+  for (const x of [-2.9, 2.5]) box(x, H, -8.2, x + 0.4, H + 2.6, -7.6, 'block', STONE2);
+  box(-24.2, H, -66, -24, H + 2.6, -7.8, 'brick', 0x8a6a56); box(24, H, -66, 24.2, H + 2.6, -7.8, 'brick', 0x8a6a56);
+  box(-24.2, H, -66.2, 24.2, H + 2.6, -66, 'brick', 0x8a6a56);
+  inv(-24.6, H + 2.6, -66.4, -24, 14, -7.8); inv(24, H + 2.6, -66.4, 24.6, 14, -7.8); inv(-24.6, H + 2.6, -66.6, 24.6, 14, -66);
+  // drive, front court and fountain
+  detail(-2.5, H, -20, 2.5, H + 0.02, -7.8, 'paving', 0xcfc6b4);
+  detail(-9, H, -20, 9, H + 0.02, -16, 'paving', 0xcfc6b4);
+  box(-2.2, H, -15.2, 2.2, H + 0.6, -11.8, 'block', STONE);
+  detail(-1.9, H + 0.6, -14.9, 1.9, H + 0.62, -12.1, 'glass', 0x5ab4e0);
+  box(-0.3, H + 0.6, -13.8, 0.3, H + 1.9, -13.2, 'block', STONE); box(-0.7, H + 1.9, -14.2, 0.7, H + 2.1, -12.8, 'block', STONE);
+  for (const x of [-11, 11]) { box(x - 0.4, H, -12.4, x + 0.4, H + 4.6, -11.6, 'bark', 0x5a4030, { tag: 'tree' }); L.decor.push({ t: 'tree', x, y: H + 4.2, z: -12, s: 1.3 }); }
+  for (const x of [-20, 20]) { box(x - 0.4, H, -30.4, x + 0.4, H + 4.6, -29.6, 'bark', 0x5a4030, { tag: 'tree' }); L.decor.push({ t: 'tree', x, y: H + 4.2, z: -30, s: 1.4 }); }
+
+  // ---- basement (y 0..3) under the centre and east wing
+  box(-6, -0.25, -40, 18, 0, -20, 'concrete', 0x6c6a66);
+  const bw = (axis, t, a, b, ops = []) => wall(axis, t, a, b, 0, 3, ops, 'block', 0x7d756a);
+  bw('x', -40, -6, 18); bw('x', -20.2, -6, 18); bw('z', -6, -40, -20); bw('z', 17.8, -40, -20);
+  bw('x', -30.2, -5.8, 17.8, [door('basement', 'x', -30.2, -1, 0, 'red', 'Vault door'), door('cellarStore', 'x', -30.2, 11, 0, null, 'Store-room door')]);
+  bw('z', 4, -30, -20.2);
+  stairs(15.8, 17.8, -38, 1, 0, 0x6d5a45, 'wood');
+  L.fusebox = { x: 17.6, y: 1.35, z: -39.1 };
+  // wine cellar: racks and barrels
+  for (const z of [-39.2, -36.4]) for (const x of [-4, 0, 4]) { shelves(x, 0, z, 'x', 0x5c3a2e); for (const dy of [0.25, 0.9, 1.6]) detail(x - 0.7, dy, z - 0.25, x + 0.7, dy + 0.12, z + 0.25, 'glass', 0x3c5a3a); }
+  for (const x of [8, 9.4, 10.8]) box(x - 0.6, 0, -39.6, x + 0.6, 1.1, -38.4, 'wood', 0x7a5232);
+  hide('cellarLocker', 13, 0, -31, '-z');
+  item('bottle1', 'bottle', 6, 0, -33); item('bottle2', 'bottle', 2, 0, -33.5);
+  lamp('cellar', 4, 2.85, -35, 0xffc890); lamp('cellar2', 12, 2.85, -35, 0xffc890, false, 2.6);
+  poi('cellar', 8, 0, -34, 2);
+  // vault (red padlock): the golden trophy on a velvet plinth, paintings, safe
+  box(-1.6, 0, -24.6, 1.6, 0.9, -22.6, 'wood', 0x3a2418); detail(-1.5, 0.9, -24.5, 1.5, 0.92, -22.7, 'fabric', 0x7a1f2a);
+  item('trophy', 'vase', 0, 0.92, -23.6, 'His golden trophy');
+  box(-5.6, 0, -21.4, -4.2, 1.3, -20.4, 'metal', 0x4a4f56);
+  for (const x of [-4, 0, 2.5]) detail(x - 0.6, 1.2, -20.42, x + 0.6, 2.1, -20.4, 'paper1', 0xd8c89a);
+  lamp('basement', 0, 2.85, -25, 0xe0604a);
+  // store room
+  shelves(16.8, 0, -24, 'z'); shelves(16.8, 0, -27.5, 'z');
+  item('crate1', 'crate', 8, 0, -24); item('crate2', 'crate', 10, 0, -22); item('paint1', 'paint', 6, 0, -27);
+  lamp('store', 11, 2.85, -25, 0xffe6b0, false, 2.6);
+
+  // ---- ground floor (y 3.2..6.2); the slab has the kitchen's cellar stairwell cut out
+  box(-18, 3, -40, 15.6, H, -20, 'woodfloor', 0x8a6440);
+  box(15.6, 3, -40, 18, H, -38, 'woodfloor', 0x8a6440); box(15.6, 3, -31.6, 18, H, -20, 'woodfloor', 0x8a6440);
+  box(15.5, H, -38, 15.6, H + 0.95, -31.6, 'trim', 0xe9e2cf); box(15.5, H, -38.2, 17.8, H + 0.95, -38, 'trim', 0xe9e2cf);
+  detail(-5.8, H + 0.005, -32, 5.8, H + 0.02, -21, 'carpet', 0x7a1f2a);                    // red carpet in the hall
+  const ext = (axis, t, a, b, y, ops) => wall(axis, t, a, b, y, 3, ops, 'block', STONE);
+  ext('x', -20.2, -18, 18, H, [
+    win('libraryW', 'x', -20.2, -12, H + 0.9, 1.8, 'Library window', { entry: 'libraryWindow' }),
+    door('front', 'x', -20.2, 0, H, null, 'Front doors', -1, 0x3a2418),
+    win('ballroomW', 'x', -20.2, 12, H + 0.9, 1.8, 'Ballroom window', { entry: 'ballroomWindow' }),
+  ]);
+  ext('x', -40, -18, 18, H, [
+    win('diningW', 'x', -40, -12, H + 0.9, 1.8, 'Dining-room window', { entry: 'diningWindow', outside: -1 }),
+    door('back', 'x', -40, 10, H, null, 'Back door', 1, 0x3a2418),
+    win('kitchenW', 'x', -40, 14, H + 1, 1.2, 'Kitchen window', { entry: 'kitchenWindow', outside: -1 }),
+  ]);
+  ext('z', -18, -40, -20, H, [win('libSideW', 'z', -18, -25, H + 0.9, 1.6, 'Library window', { outside: -1, breakable: false })]);
+  ext('z', 17.8, -40, -20, H, [win('ballSideW', 'z', 17.8, -25, H + 0.9, 1.6, 'Ballroom window', { breakable: false })]);
+  const iw = (axis, t, a, b, y, ops = [], m = 'paper1', c = 0xd8ccb0) => wall(axis, t, a, b, y, 3, ops, m, c);
+  iw('z', -6.2, -39.8, -20.2, H, [door('libDoor', 'z', -6.2, -25, H, null, 'Library door'), door('dinDoor', 'z', -6.2, -35, H, null, 'Dining-room door')], 'paper2', 0xc9b48e);
+  iw('z', 6, -39.8, -20.2, H, [door('ballDoor', 'z', 6, -25, H, null, 'Ballroom door'), door('kitDoor', 'z', 6, -35, H, null, 'Kitchen door')], 'paper2', 0xc9b48e);
+  iw('x', -30.2, -17.8, -6.2, H, [door('libDin', 'x', -30.2, -12, H, null, 'Door')]);
+  iw('x', -30.2, 6.2, 17.8, H, [door('ballKit', 'x', -30.2, 9, H, null, 'Door')]);
+  // grand hall: staircase up to the gallery, chandelier, tall clock, portraits, statues
+  stairs(-1.5, 1.5, -27, -1, H, 0x6b4430, 'wood');
+  detail(-1.4, H + 0.01, -27, 1.4, H + 0.02, -21, 'carpet', 0x7a1f2a);
+  for (const x of [-1.6, 1.5]) box(x, H, -33.4, x + 0.1, H + 0.9, -27, 'wood', WOOD);
+  L.decor.push({ t: 'chandelier', x: 0, y: 9.2, z: -27, hang: true });
+  L.decor.push({ t: 'clock', x: -5.75, y: H + 1.9, z: -30, ry: Math.PI / 2, tall: true });
+  for (const z of [-24, -36]) { L.decor.push({ t: 'portrait', x: 5.78, y: H + 2, z, ry: -Math.PI / 2 }); L.decor.push({ t: 'portrait', x: -5.98, y: H + 2, z: z + 1, ry: Math.PI / 2 }); }
+  for (const x of [-4.6, 4.6]) { box(x - 0.4, H, -21.4, x + 0.4, H + 0.9, -20.6, 'block', STONE); box(x - 0.25, H + 0.9, -21.25, x + 0.25, H + 2.2, -20.75, 'block', 0xeeeae0); }
+  item('vase1', 'vase', -4.6, H + 0.9, -23); item('vase2', 'vase', 4, H, -38);
+  lamp('hall', 0, 9.1, -24, 0xffe1b0, false, 4.5); lamp('hall2', 0, 6, -37, 0xffe1b0);
+  poi('hall', 0, H, -23, 3); poi('hallBack', 3, H, -37, 1);
+  // library: bookcases, reading chairs, a fireplace, wardrobe
+  for (const x of [-16.5, -14, -11.5, -9]) shelves(x, H, -29.6, 'x', 0x6b4430);
+  for (let i = 0; i < 12; i++) detail(-17.3 + i * 0.7, H + 0.95, -29.75, -16.9 + i * 0.7, H + 1.45, -29.7, 'paper1', [0x8a2a2a, 0x2a4a8a, 0x2a6a3a, 0x8a6a2a][i % 4]);
+  box(-17.8, H, -24, -17.2, H + 1.3, -22, 'brick', 0x7a4a3a); detail(-17.25, H + 0.2, -23.6, -17.2, H + 0.9, -22.4, 'emissive', 0xff8a3a);
+  box(-12.5, H, -23.5, -11.3, H + 0.5, -22.3, 'fabric', 0x6a2a3a); box(-9.5, H, -23.5, -8.3, H + 0.5, -22.3, 'fabric', 0x6a2a3a);
+  table(-10.4, H, -25.5, 0x5b3a26, 0.8, 0.5); item('book1', 'book', -10.4, H + 0.86, -25.5);
+  hide('libWardrobe', -7, H, -28.6, '-x', WOOD);
+  lamp('library', -12, H + 2.85, -25, 0xffd59a);
+  poi('library', -11, H, -26.5, 2);
+  // dining room: long table, chairs, sideboard
+  box(-15.5, H + 0.72, -36, -8.5, H + 0.86, -34, 'woodfloor', 0x5b3a26);
+  for (const x of [-15, -8.9]) for (const z of [-35.8, -34.2]) box(x, H, z, x + 0.12, H + 0.72, z + 0.12, 'wood', WOOD);
+  for (let x = -14.6; x <= -9.4; x += 1.3) for (const z of [-36.9, -33.1]) box(x - 0.25, H, z - 0.25, x + 0.25, H + 0.5, z + 0.25, 'wood', 0x6b4430);
+  for (const x of [-14, -12, -10]) item('plate' + x, 'plate', x, H + 0.86, -35);
+  box(-17.8, H, -38.4, -17.2, H + 0.9, -33.6, 'wood', WOOD);
+  lamp('dining', -12, H + 2.85, -35, 0xffd59a);
+  // ballroom: polished floor, piano, curtains, chandelier
+  detail(6.4, H + 0.005, -29.8, 17.6, H + 0.02, -20.4, 'checker', 0xffffff);
+  box(14.2, H, -29.2, 16.8, H + 1, -27.4, 'wood', 0x1d1d22); box(14.2, H + 1, -29.2, 15, H + 1.4, -27.4, 'wood', 0x1d1d22);
+  L.decor.push({ t: 'chandelier', x: 12, y: 6.0, z: -25, hang: true });
+  hide('ballCurtain', 7, H, -21.1, '+x', 0x7a1f2a);
+  item('ball1', 'ball', 10, H, -23);
+  lamp('ballroom', 12, H + 2.6, -25, 0xffe8c0);
+  poi('ballroom', 11, H, -24, 2);
+  // kitchen: counters, range, big table, pantry; the cellar stairs are in the east corner
+  box(6.4, H, -39.8, 9.2, H + 0.9, -39, 'counter', 0xb7c2b0); box(10.8, H, -39.8, 15.4, H + 0.9, -39, 'counter', 0xb7c2b0);
+  box(6.4, H, -38, 7.2, H + 0.92, -36.4, 'metal', 0x2a2c2f); L.decor.push({ t: 'hood', x: 6.8, y: H + 1.9, z: -37.2 });
+  table(11, H, -34.5, 0x8a6a48, 1.4, 0.6);
+  item('can1', 'can', 10.4, H + 0.86, -34.4); item('apple1', 'apple', 11.6, H + 0.86, -34.6);
+  hide('pantry', 6.9, H, -31.4, '+x', 0x6b5136);
+  lamp('kitchen', 11, H + 2.85, -35, 0xfff0d0);
+  poi('stove', 7.9, H, -37.2, 3);
+
+  // ---- first floor (y 6.4..9.4): wings plus the gallery across the back of the hall
+  box(-18, 6.2, -40, -6, U, -20, 'carpet', 0x6a4a5a); box(6, 6.2, -40, 18, U, -20, 'carpet', 0x4a5a6a);
+  box(-6, 6.2, -40, 6, U, -33.4, 'woodfloor', 0x7a5636);
+  box(-6, U, -33.5, -1.5, U + 0.95, -33.4, 'wood', WOOD); box(1.5, U, -33.5, 6, U + 0.95, -33.4, 'wood', WOOD);
+  for (let x = -5.6; x < 5.8; x += 0.5) if (Math.abs(x) > 1.6) detail(x, U, -33.46, x + 0.06, U + 0.95, -33.44, 'wood', WOOD);
+  ext('x', -20.2, -18, -6, U, [win('bedWW', 'x', -20.2, -12, U + 0.9, 1.6, 'Bedroom window', { breakable: false })]);
+  ext('x', -20.2, -6, 6, U, [win('hallW', 'x', -20.2, 0, U + 0.4, 3, 'Great window', { breakable: false, h: 2.2 })]);
+  ext('x', -20.2, 6, 18, U, [win('bedEW', 'x', -20.2, 12, U + 0.9, 1.6, 'Bedroom window', { breakable: false })]);
+  ext('x', -40, -18, 18, U, [win('studyW', 'x', -40, -12, U + 0.9, 1.6, 'Study window', { breakable: false, outside: -1 })]);
+  ext('z', -18, -40, -20, U, []); ext('z', 17.8, -40, -20, U, []);
+  iw('z', -6.2, -39.8, -20.2, U, [door('study', 'z', -6.2, -36.5, U, 'power', 'Study electric door', -1)], 'paper3', 0xcfc6d9);
+  iw('z', 6, -39.8, -20.2, U, [door('trophyDoor', 'z', 6, -34.5, U, null, 'Trophy-room door')], 'paper3', 0xcfc6d9);
+  iw('x', -30.2, -17.8, -6.2, U, [door('studyBed', 'x', -30.2, -12, U, null, 'Door')], 'paper3', 0xcfc6d9);
+  iw('x', -30.2, 6.2, 17.8, U, [door('trophyBed', 'x', -30.2, 9, U, null, 'Door')], 'paper3', 0xcfc6d9);
+  lamp('gallery', 0, U + 2.85, -37, 0xffe1b0);
+  poi('gallery', 0, U, -37, 2);
+  // the study (electric lock): desk with the red key, globe, filing cabinets, corkboard
+  table(-12, U, -38.4, 0x3a2418, 1.4, 0.6);
+  item('redkey', 'redkey', -12, U + 0.87, -38.4, 'Red key');
+  L.decor.push({ t: 'desklamp', x: -11.2, y: U + 0.86, z: -38.6 });
+  for (const x of [-17.2, -16.2]) box(x - 0.4, U, -39.7, x + 0.4, U + 1.4, -38.9, 'metal', 0x6d7a6f);
+  box(-9, U, -32, -7.6, U + 0.9, -31, 'wood', WOOD); detail(-8.7, U + 0.9, -31.8, -7.9, U + 1.5, -31.2, 'glass', 0x5ab4e0);
+  L.decor.push({ t: 'corkboard', x: -17.76, y: U + 1.6, z: -34.5, ry: Math.PI / 2 });
+  lamp('study', -12, U + 2.85, -35, 0xc8e0ff, true);
+  // bedrooms
+  box(-16.5, U, -25.6, -13.5, U + 0.5, -21.4, 'wood', WOOD); box(-16.5, U + 0.5, -25.6, -13.5, U + 0.75, -21.4, 'fabric', 0x8a3a5a); box(-16.5, U, -21.6, -13.5, U + 1.4, -21.4, 'wood', WOOD);
+  hide('bedWWardrobe', -7, U, -24, '-x', WOOD); item('ballW', 'ball', -10, U, -26);
+  lamp('bedW', -12, U + 2.85, -25, 0xffd2a0);
+  box(13.5, U, -25.6, 16.5, U + 0.5, -21.4, 'wood', WOOD); box(13.5, U + 0.5, -25.6, 16.5, U + 0.75, -21.4, 'fabric', 0x3a5a8a); box(13.5, U, -21.6, 16.5, U + 1.4, -21.4, 'wood', WOOD);
+  hide('bedEWardrobe', 7, U, -24, '+x', WOOD);
+  L.decor.push({ t: 'rockingchair', x: 9, y: U, z: -22, ry: 0.4 });
+  lamp('bedE', 12, U + 2.85, -25, 0xffd2a0);
+  poi('bedroom', 11, U, -26, 1);
+  // trophy room: cabinets of cups and the stairs up to the attic along the north wall
+  stairsX(-39.6, -37.6, 7, 1, U, 0x6b4430, 'wood');
+  for (const x of [10, 14]) { box(x - 0.9, U, -31.2, x + 0.9, U + 1.8, -30.4, 'wood', WOOD); for (const dx of [-0.5, 0, 0.5]) detail(x + dx - 0.12, U + 1.0, -31.25, x + dx + 0.12, U + 1.35, -31.2, 'metal', GOLD); }
+  for (const z of [-36, -33]) L.decor.push({ t: 'portrait', x: 17.78, y: U + 1.9, z, ry: -Math.PI / 2 });
+  lamp('trophy', 12, U + 2.85, -35, 0xffe1b0);
+
+  // ---- ceiling over the first floor, with the attic stairwell cut out
+  box(-18, 9.4, -40, 6.8, A, -20, 'plaster', 0xe8e3d6); box(13.6, 9.4, -40, 18, A, -20, 'plaster', 0xe8e3d6);
+  box(6.8, 9.4, -37.4, 13.6, A, -20, 'plaster', 0xe8e3d6); box(6.8, 9.4, -40, 13.6, A, -39.8, 'plaster', 0xe8e3d6);
+  box(6.8, A, -37.5, 13.6, A + 0.95, -37.4, 'wood', WOOD);
+  // ---- attic over the east wing (y 9.6..12.4): the store behind the boarded hatch has the fuse
+  const aw = (axis, t, a, b, ops = []) => wall(axis, t, a, b, A, 2.8, ops, 'board', 0x7a6248);
+  aw('x', -20.2, 6, 18); aw('x', -40, 6, 18); aw('z', 6, -40, -20); aw('z', 17.8, -40, -20);
+  aw('x', -30.2, 6.2, 17.8, [win('atticHatch', 'x', -30.2, 12, A + 0.5, 1.4, 'Boarded attic hatch', { boards: true, glass: false, h: 1.2, outside: 1 })]);
+  box(6, 12.4, -40, 18, 12.6, -20, 'board', 0x6a5238);
+  for (const [x, z] of [[9, -34], [15, -35], [11, -32]]) box(x - 0.6, A, z - 0.5, x + 0.6, A + 0.8, z + 0.5, 'cardboard', 0xb08a5c);
+  L.decor.push({ t: 'rockinghorse', x: 15.5, y: A, z: -24 }); L.decor.push({ t: 'mannequin', x: 8, y: A, z: -22 });
+  table(12, A, -21.4, 0x6b5136, 1, 0.45);
+  item('fuse', 'fuse', 12, A + 0.87, -21.4, 'Fuse');
+  hide('atticTrunk', 16.9, A, -32.5, '-x', 0x6b5136);
+  lamp('attic', 12, A + 2.5, -35, 0xffd9a0, false, 2.4); lamp('atticStore', 12, A + 2.5, -25, 0xffd9a0, false, 2);
+  poi('attic', 15, A, -38.6, 1);
+
+  // ---- roofs, chimneys, porch columns
+  L.roofs.push({ x0: -18.8, x1: 6, z0: -40.8, z1: -19.4, y: A, h: 4.2, ridge: 'x', tint: SLATE, gable: STONE });
+  L.roofs.push({ x0: 6, x1: 18.8, z0: -40.8, z1: -19.4, y: 12.6, h: 2.6, ridge: 'x', tint: SLATE, gable: STONE });
+  for (const x of [-15, 15]) box(x - 0.6, A, -31, x + 0.6, A + 5.6, -29.8, 'brick', 0x7a4a3a);
+  for (const x of [-3, 3]) box(x - 0.25, H, -17.6, x + 0.25, H + 3.1, -17.1, 'block', 0xeeeae0);
+  detail(-3.6, H + 3.1, -20, 3.6, H + 3.3, -16.8, 'block', STONE);
+  detail(-3.6, H, -20, 3.6, H + 0.15, -16.8, 'paving', 0xe2dccd);
+  lamp('porch', 0, H + 2.9, -18.4, 0xffe2a8, false, 3);
+  for (const x of [-18.1, 17.9]) for (const y of [H, U]) detail(x, y + 3, -40.1, x + 0.2, y + 3.2, -19.9, 'trim', 0xeeeae0);
+
+  // ---- the hedge maze behind the house (9 x 9 cells of 2 m); the crowbar waits in the middle
+  const MX = -23, MZ = -64, N = 9, CELL = 2, hh = 2.2;
+  {
+    let seed = 20261013;
+    const rnd = () => ((seed = (seed * 1103515245 + 12345) >>> 0) / 4294967296);
+    const right = [], down = [], seen = [];
+    for (let i = 0; i < N; i++) { right.push(Array(N).fill(true)); down.push(Array(N).fill(true)); seen.push(Array(N).fill(false)); }
+    const stack = [[4, 4]]; seen[4][4] = true;
+    while (stack.length) {
+      const [cx, cz] = stack[stack.length - 1];
+      const nb = [[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dz]) => [cx + dx, cz + dz, dx, dz]).filter(([x, z]) => x >= 0 && z >= 0 && x < N && z < N && !seen[x][z]);
+      if (!nb.length) { stack.pop(); continue; }
+      const [nx, nz, dx, dz] = nb[Math.floor(rnd() * nb.length)];
+      if (dx === 1) right[cx][cz] = false; if (dx === -1) right[nx][nz] = false;
+      if (dz === 1) down[cx][cz] = false; if (dz === -1) down[nx][nz] = false;
+      seen[nx][nz] = true; stack.push([nx, nz]);
+    }
+    const hedge = (x0, z0, x1, z1) => box(x0, H, z0, x1, H + hh, z1, 'hedge', 0x3f6b3a);
+    hedge(MX - 0.2, MZ - 0.2, MX + N * CELL + 0.2, MZ + 0.2);                                  // north edge
+    hedge(MX - 0.2, MZ, MX + 0.2, MZ + N * CELL); hedge(MX + N * CELL - 0.2, MZ, MX + N * CELL + 0.2, MZ + N * CELL);
+    for (let i = 0; i < N; i++) if (i !== 4) hedge(MX + i * CELL - 0.2, MZ + N * CELL - 0.2, MX + (i + 1) * CELL + 0.2, MZ + N * CELL + 0.2); // south edge, gap at the entrance
+    for (let x = 0; x < N; x++) for (let z = 0; z < N; z++) {
+      if (x < N - 1 && right[x][z]) hedge(MX + (x + 1) * CELL - 0.2, MZ + z * CELL - 0.2, MX + (x + 1) * CELL + 0.2, MZ + (z + 1) * CELL + 0.2);
+      if (z < N - 1 && down[x][z]) hedge(MX + x * CELL - 0.2, MZ + (z + 1) * CELL - 0.2, MX + (x + 1) * CELL + 0.2, MZ + (z + 1) * CELL + 0.2);
+    }
+    const cxm = MX + 4.5 * CELL, czm = MZ + 4.5 * CELL;
+    box(cxm - 0.5, H, czm - 0.5, cxm + 0.5, H + 0.7, czm + 0.5, 'block', STONE);
+    item('crowbar', 'crowbar', cxm, H + 0.7, czm, 'Crowbar');
+    lamp('maze', cxm, H + 2.6, czm, 0xd8ffd0, false, 2);
+    poi('maze', MX + 4.5 * CELL, H, MZ + N * CELL + 1.5, 1, 'stare');
+  }
+  // garden: gazebo, pond, washing line, benches
+  for (const [x, z] of [[8, -50], [14, -50], [8, -56], [14, -56]]) box(x - 0.15, H, z - 0.15, x + 0.15, H + 2.6, z + 0.15, 'trim', 0xeeeae0);
+  detail(7.4, H + 2.6, -56.6, 14.6, H + 2.8, -49.4, 'roofflat', SLATE);
+  detail(15, H + 0.005, -62, 21, H + 0.02, -58, 'glass', 0x5ab4e0);
+  L.decor.push({ t: 'clothesline', x: 4, y: H + 2.1, z: -62 });
+  item('crate3', 'crate', 3, H, -45); item('crate4', 'crate', 18, H, -44);
+  poi('garden', 11, H, -53, 1);
+  poi('court', 5, H, -10, 1, 'stare');
+
+  // ---- rules
+  L.spawn = { x: -1.6, y: H, z: 15.4, yaw: Math.atan2(-1.6, 5.2) };
+  L.exit = makeBox(-4.6, H - 0.15, 10.4, 4.6, H + 2.5, 17.6);
+  L.safeZones.push(makeBox(-34.5, H - 0.2, 6, 34.5, 30, 23));
+  room(-6, 0, -40, 18, 3, -20, 0.3);
+  room(-18, H, -40, 18, 6.2, -20, 0.6);
+  room(-18, U, -40, 18, 9.4, -20, 0.6);
+  room(6, A, -40, 18, 12.4, -20, 0.4);
+  L.entries = {
+    frontDoor: { name: 'front doors', kind: 'door', ref: 'front', x: 0, z: -19 },
+    backDoor: { name: 'back door', kind: 'door', ref: 'back', x: 10, z: -41 },
+    libraryWindow: { name: 'library window', kind: 'window', ref: 'libraryW', x: -12, z: -19 },
+    ballroomWindow: { name: 'ballroom window', kind: 'window', ref: 'ballroomW', x: 12, z: -19 },
+    diningWindow: { name: 'dining-room window', kind: 'window', ref: 'diningW', x: -12, z: -41 },
+    kitchenWindow: { name: 'kitchen window', kind: 'window', ref: 'kitchenW', x: 14, z: -41 },
+  };
+  L.places = [['the wine cellar', 6, 0, -35], ['the vault door', -1, 0, -31], ['the store room', 11, 0, -25], ['the grand hall', 0, H, -26],
+    ['the library', -12, H, -25], ['the dining room', -12, H, -35], ['the ballroom', 12, H, -25], ['the kitchen', 11, H, -35],
+    ['the gallery', 0, U, -37], ['the study door', -5, U, -36.5], ['the bedroom', 12, U, -25], ['the trophy room', 12, U, -35],
+    ['the attic', 12, A, -35], ['the front court', 0, H, -12], ['the hedge maze', -14, H, -55], ['the garden', 11, H, -53], ['the street', 0, H, 0]];
+  mount('hallCam', -5.6, H + 2.8, -20.6, 0, -30, 'the grand hall');
+  mount('galleryCam', 5.6, U + 2.6, -39.4, -3, -35, 'the gallery');
+  mount('cellarCam', -5.6, 2.6, -39.4, 6, -34, 'the wine cellar');
+  mount('mazeCam', -24.6, H + 2.4, -44, -14, -46, 'the hedge maze');
+  mount('courtCam', 3.2, H + 2.6, -17, 0, -10, 'the front court');
+  L.navBounds = { x0: -34.2, z0: -70.2, x1: 34.2, z1: 22.2 }; L.reachBounds = L.navBounds;
+  for (const d of L.decor) if (d.y >= H - 0.01) d.lift = H;
+  L.objective = w => {
+    if (w.steps.trophy !== undefined) return 'You have his golden trophy! Get out and run home across the road.';
+    if (!w.flags.power) {
+      if (w.hasItem('fuse')) return 'Put the fuse in the fuse box in the wine cellar (stairs in the kitchen).';
+      if (!w.hasItem('crowbar') && w.windows.find(x => x.id === 'atticHatch').boards) return 'The fuse is behind a boarded hatch in the attic. Find a crowbar — try the middle of the hedge maze out back.';
+      return 'Climb to the attic (stairs in the trophy room, first floor east) and pry open the hatch.';
+    }
+    if (!w.hasItem('redkey') && w.doorById.basement.locked) return 'Power is on: his study (first floor, off the gallery, west) is unlocked. Take the red key.';
+    if (w.doorById.basement.locked) return 'Unlock the red vault door in the wine cellar.';
+    return 'Take the golden trophy from the vault.';
+  };
+  return L;
+}
+
 export function buildMap(mission) {
-  return mission === 1 ? buildCellar() : buildMulberry();
+  return mission === 1 ? buildCellar() : mission === 3 ? buildMansion() : buildMulberry();
 }
