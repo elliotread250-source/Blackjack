@@ -306,9 +306,9 @@ function showWin() {
   $('w-time').textContent = fmt(s.time); $('w-caught').textContent = s.caught; $('w-diff').textContent = world.diff.name;
   const mission = world.level.mission || 0;
   $('w-heading').textContent = MISSIONS[mission].name + ' complete';
-  $('w-sub').textContent = 'What’s he hiding?';
+  $('w-sub').textContent = MISSIONS[mission].win;
   $('w-next').hidden = mission >= MISSIONS.length - 1;
-  const bestKey = 'best.' + mission + '.' + world.diffKey;
+  const bestKey = (mission ? 'best.v2.' : 'best.') + mission + '.' + world.diffKey;  // v2: levels 2-3 were replaced
   const best = store.get(bestKey, null);
   let msg = '';
   if (!best || s.time < best.time) { store.set(bestKey, { time: s.time, caught: s.caught, diff: world.diff.name }); msg = best ? 'A new best time.' : 'Level complete.'; }

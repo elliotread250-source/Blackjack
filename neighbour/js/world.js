@@ -884,7 +884,7 @@ export class World {
     const L = this.level, nav = this.nav, msgs = [];
     const where = (x, y, z) => {
       let best = 'his yard', bd = Infinity;
-      const named = [['the front door', 0, 0, -12], ['the back door', 0.5, 0, -28], ['the kitchen', 6, 0, -16.5], ['the living room', -6, 0, -16.5],
+      const named = L.places || [['the front door', 0, 0, -12], ['the back door', 0.5, 0, -28], ['the kitchen', 6, 0, -16.5], ['the living room', -6, 0, -16.5],
         ['the hallway', 0, 0, -20], ['the pantry', 6, 0, -24.5], ['the dining room', -5, 0, -23], ['the garage', 14, 0, -16], ['the landing', 0, F1, -20],
         ['the bedroom', -6, F1, -16.5], ['the study', 6, F1, -16.5], ['the nursery', -6, F1, -24.5], ['the attic', 0, 6.4, -22], ['the back yard', 0, 0, -40],
         ['the front yard', 0, 0, -9], ['the shed', 17, 0, -43.5], ['the garden', -8, 0, -39], ['the side passage', -15, 0, -20], ['the street', 0, 0, 0]];
@@ -970,6 +970,7 @@ export class World {
 
   objective() {
     const s = this.steps;
+    if (this.level.objective) return this.level.objective(this);
     if (s.basement) return 'You got in.';
     if (s.redkey || this.hasItem('redkey')) return 'Use the red key on the basement door.';
     if (s.study) return 'Search the study.';

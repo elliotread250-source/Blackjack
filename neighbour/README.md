@@ -94,3 +94,19 @@ phone landscape (touch) and fails on any console error.
 - `js/render.js`, `js/models.js`, `js/textures.js`: three.js view, code-built models, canvas textures
 - `js/audio.js`, `js/input.js`, `js/store.js`, `js/main.js`: sound, controls, saving, screens and the debug hook
 - `vendor/`: three.js r170 (MIT, see `vendor/LICENSE-three.txt`); credits in `CREDITS.md`
+
+## Levels
+
+Choose **New game → Level**.
+
+1. **The Basement** — the original house: find the red key and get into his basement.
+2. **The Cold Cellar** (new map) — you start on the hatch landing above his cellar. The laundry is bolted: break its
+   corridor window (or slide the bolt from inside) to get the fuse, restore power in the pump room, take the red key
+   from the cold room, open the vault and steal the jar, then escape back up the stairs.
+3. **Hollow Lane** (new house) — a two-storey house with a basement, across the road from yours. Find the fuse in
+   the upstairs bedroom, restore power at the fuse box in the basement rec room (stairs in the lounge), take the red
+   key from his upstairs office, steal his tape recorder from the basement vault and get home. A crowbar in the
+   garden shed removes any boards he puts up.
+
+Both new maps are in `js/maps.js`. Run `node tools/maps.cjs` for reachability, locks that can't be bypassed, patrol
+routes on every floor, stairs both ways, safe zones, caught recovery, save/load and escape checks.
