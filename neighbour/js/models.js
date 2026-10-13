@@ -144,6 +144,12 @@ function local(ox, oz, ry) { const c = Math.cos(ry), s = Math.sin(ry); return (x
 
 // ---------------------------------------------------------------- decor
 export function addDecor(B, d) {
+  // `lift` raises the whole model, for props whose parts are placed from ground level y=0
+  if (d.lift) {
+    const T = new THREE.Matrix4().makeTranslation(0, d.lift, 0), raised = Object.create(B);
+    raised.geom = (m, g, matrix, c) => B.geom(m, g, new THREE.Matrix4().multiplyMatrices(T, matrix), c);
+    return addDecor(raised, Object.assign({}, d, { lift: 0, y: d.y - d.lift }));
+  }
   const ry = d.ry || 0, L = local(d.x, d.z, ry);
   const at = (x, z) => L(x, z);
   switch (d.t) {

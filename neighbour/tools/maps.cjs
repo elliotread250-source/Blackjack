@@ -1,4 +1,4 @@
-// Levels 2 (The Cold Cellar) and 3 (Hollow Lane): reachability, locks, patrols, stairs, safety, saves, escape.
+// Levels 2 (The Cold Cellar) and 3 (Mulberry Close): reachability, locks, patrols, stairs, safety, saves, escape.
 const assert = require('node:assert/strict');
 const { buildLevel, MISSIONS } = require('../js/level.js');
 const { World } = require('../js/world.js');
@@ -8,7 +8,7 @@ let count = 0;
 const ok = (v, msg) => { assert(v, msg); count++; };
 const STAIRS = {
   1: { top: { x: 10, y: 3.2, z: 1.2, yaw: 0 }, downTo: 0.3, upFrom: 3.15 },                 // hatch stairs, north = down
-  2: { top: { x: 8.8, y: 3.2, z: -4.8, yaw: 0 }, downTo: 0.3, upFrom: 3.15 },               // lounge -> basement
+  2: { top: { x: 10.8, y: 3.2, z: -13.2, yaw: 0 }, downTo: 0.3, upFrom: 3.15 },             // garage -> basement
 };
 for (const mission of [1, 2]) {
   const l = buildLevel(mission), name = MISSIONS[mission].name;
@@ -19,6 +19,7 @@ for (const mission of [1, 2]) {
   for (const id of [...l.targets, 'fuse', 'redkey']) ok(solved.have.has(id), name + ': ' + id + ' physically reachable');
   for (const disable of [['power'], ['item:redkey'], ['item:fuse']]) ok(!solveLevel(l, { disable }).have.has(l.targets[0]), name + ': cannot bypass ' + disable);
   if (mission === 1) ok(!solveLevel(l, { disable: ['break:laundryW'] }).have.has('fuse'), name + ': laundry needs its window broken first');
+  if (mission === 2) for (const disable of [['boards:storeHatch'], ['item:crowbar']]) ok(!solveLevel(l, { disable }).have.has('fuse'), name + ': storage needs the hatch pried open (' + disable + ')');
 
   let w = new World({ mission, seed: 7 });
   for (const p of w.pois) ok(w.path(w.ai.x, w.ai.y, w.ai.z, p.x, p.y, p.z)?.complete, name + ': patrol reaches ' + p.id);
@@ -47,16 +48,15 @@ for (const mission of [1, 2]) {
   ok(typeof w.objective() === 'string', name + ': objective text');
   console.log(name + ': passed');
 }
-// Hollow Lane: all three floors connect for him, and you can walk out of your own house.
+// Mulberry Close: he reaches every part of his property, never your side, and you can walk out of your house.
 {
   const w = new World({ mission: 2, seed: 3 });
-  for (const [x, y, z] of [[4, 0, -14], [-6.5, 3.2, -17.5], [4, 6.4, -8], [-5, 6.4, -15]]) ok(w.path(w.ai.x, w.ai.y, w.ai.z, x, y, z)?.complete, `Hollow Lane: he reaches ${x},${y},${z}`);
+  for (const [x, y, z] of [[-7.5, 0, -15.5], [-1.5, 0, -22.5], [7.5, 0, -20], [2.6, 3.2, -14.6], [-5, 3.2, -38], [8.5, 3.2, -14]]) ok(w.path(w.ai.x, w.ai.y, w.ai.z, x, y, z)?.complete, `Mulberry Close: he reaches ${x},${y},${z}`);
+  ok(!w.path(w.ai.x, w.ai.y, w.ai.z, 0, 3.2, 14)?.complete, 'Mulberry Close: he cannot path into your house');
   w.ai.update = () => {};
-  for (let i = 0; i < 240; i++) w.step(1 / 60, { mz: 1 });
-  ok(w.player.z < 6, 'Hollow Lane: player walks out of their house');
-  // upstairs from the hall
-  Object.assign(w.player, { x: -8.8, y: 3.2, z: -5.2, yaw: 0 });
-  for (let i = 0; i < 220; i++) w.step(1 / 60, { mz: 1 });
-  ok(w.player.y > 6.3, 'Hollow Lane: hall stairs reach the first floor (y=' + w.player.y.toFixed(2) + ')');
+  Object.assign(w.player, { x: 0, z: 14, yaw: 0 });
+  for (let i = 0; i < 300; i++) w.step(1 / 60, { mz: 1 });
+  ok(w.player.z < 9.5, 'Mulberry Close: player walks out of their front door (z=' + w.player.z.toFixed(2) + ')');
+  ok(w.level.doors.some(d => d.id === 'home' && d.open), 'Mulberry Close: your front door from level 1');
 }
 console.log(count + ' map checks passed');

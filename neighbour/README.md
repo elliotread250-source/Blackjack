@@ -103,10 +103,11 @@ Choose **New game → Level**.
 2. **The Cold Cellar** (new map) — you start on the hatch landing above his cellar. The laundry is bolted: break its
    corridor window (or slide the bolt from inside) to get the fuse, restore power in the pump room, take the red key
    from the cold room, open the vault and steal the jar, then escape back up the stairs.
-3. **Hollow Lane** (new house) — a two-storey house with a basement, across the road from yours. Find the fuse in
-   the upstairs bedroom, restore power at the fuse box in the basement rec room (stairs in the lounge), take the red
-   key from his upstairs office, steal his tape recorder from the basement vault and get home. A crowbar in the
-   garden shed removes any boards he puts up.
+3. **Mulberry Close** (new house) — back on your street: the same road, your same brick house and the houses
+   either side, but a new neighbour lives opposite in a single-storey house with an attached garage and a basement
+   under all of it. Take the crowbar from his greenhouse, go down the stairs in his garage, pry open the boarded
+   storage hatch for the fuse, restore power in the boiler room, take the red key from his study, steal his photo
+   album from the basement vault and get back home.
 
 Both new maps are in `js/maps.js`. Run `node tools/maps.cjs` for reachability, locks that can't be bypassed, patrol
 routes on every floor, stairs both ways, safe zones, caught recovery, save/load and escape checks.

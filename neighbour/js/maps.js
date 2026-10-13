@@ -30,7 +30,7 @@ function kit(L) {
     return [c, 1.6, y, y + 2.2];
   }
   function win(id, axis, t, c, sill, w, name, opts = {}) {
-    L.windows.push({ id, axis, c, t0: t, t1: t + 0.2, sill, top: sill + (opts.h || 1.2), w, glass: true, boards: !!opts.boards,
+    L.windows.push({ id, axis, c, t0: t, t1: t + 0.2, sill, top: sill + (opts.h || 1.2), w, glass: opts.glass !== false, boards: !!opts.boards,
       breakable: opts.breakable !== false, name, outside: opts.outside || 1, learned: false, entry: opts.entry || null });
     return [c, w, sill, sill + (opts.h || 1.2)];
   }
@@ -218,212 +218,338 @@ function buildCellar() {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Level 3: Hollow Lane. A new two-storey house with a basement, across the road from your home.
-//   fuse (upstairs bedroom) -> fuse box (basement rec room) -> the upstairs office opens ->
-//   red key -> basement vault -> his tape recorder -> home across the road.
-function buildHollowLane() {
-  const L = base(2, {
-    targets: ['tapes'], indoor: false, outdoorLight: 0.6, groundVisualY: H - 0.02,
-    titleCamera: { from: [18, 11, 10], to: [0, 6, -12] },
-  });
-  const { box, detail, wall, door, win, lamp, table, shelves, item, hide, poi, stairs, room, mount } = kit(L);
-  const brick = 0x8a5446, cream = 0xd9cfb4, slate = 0x3b4150;
+// Level 3: Mulberry Close. The street from level 1 (same road, your same little brick house, the
+// houses either side), with a new neighbour opposite: a single-storey house with an attached garage
+// and a basement under all of it. Everything above ground sits at y=H so the basement can be at y=0.
+//   crowbar (greenhouse) -> garage stairs -> pry the boarded storage hatch in the basement -> fuse ->
+//   fuse box (boiler room) -> his study's electric door opens -> red key -> basement vault ->
+//   photo album -> home across the road.
+const SIDING = 0x4d6b58, TRIM = 0xece6d6, ROOF = 0x2c333c;
 
-  // Ground: raised lawn everywhere except the house footprint, which drops to the basement.
-  box(-24, 0, -34, -10, H, 16, 'grass', 0x6f8f55); box(10, 0, -34, 24, H, 16, 'grass', 0x6f8f55);
-  box(-10, 0, -34, 10, H, -20, 'grass', 0x6f8f55); box(-10, 0, -4, 10, H, 16, 'grass', 0x6f8f55);
-  L.holes = [[-10, -20, 10, -4]];
-
-  // ---- basement (y 0..3)
-  box(-10, -0.25, -20, 10, 0, -4, 'concrete', 0x6c7378);
-  wall('x', -20, -10, 10, 0, 3, [], 'block', 0x77736c);
-  wall('x', -4.2, -10, 10, 0, 3, [], 'block', 0x77736c);
-  wall('z', -10, -20, -4, 0, 3, [], 'block', 0x77736c);
-  wall('z', 9.8, -20, -4, 0, 3, [], 'block', 0x77736c);
-  wall('z', 0, -19.8, -4.2, 0, 3, [
-    door('basement', 'z', 0, -16, 0, 'red', 'Vault door'),
-    door('storage', 'z', 0, -8, 0, null, 'Storage door'),
-  ], 'block', 0x77736c);
-  wall('x', -12.2, -9.8, 0, 0, 3, [], 'block', 0x77736c);
-  stairs(7.8, 9.8, -12, 1, 0, 0x7a6450, 'wood');
-  // Rec room: old sofa, a dead TV, a pool table, and the fuse box on the east wall.
-  box(1, 0, -6, 4.5, 0.45, -5, 'fabric', 0x6b5a4a); box(1, 0.45, -5.35, 4.5, 1.1, -5, 'fabric', 0x5d4c3e);
-  box(1.8, 0, -10.6, 3.8, 0.6, -10, 'wood', 0x4a3a2c); box(2.1, 0.6, -10.5, 3.5, 1.5, -10.1, 'metal', 0x2a2d30);
-  box(2.5, 0, -18.5, 6.5, 0.85, -16.5, 'fabric', 0x2f6b45); detail(2.4, 0.85, -18.6, 6.6, 0.95, -16.4, 'wood', 0x5b3b25);
-  L.fusebox = { x: 9.6, y: 1.35, z: -15 };
-  lamp('rec', 4, 2.85, -12, 0xffd9a0);
-  poi('rec', 4, 0, -13.5, 3);
-  hide('recLocker', 1, 0, -19.2, '+z');
-  // Vault (red padlock): filing cabinets, a camera on a tripod, and the tape recorder.
-  for (const z of [-19, -17.6]) box(-9.7, 0, z, -8.9, 1.4, z + 1.2, 'metal', 0x6d7a6f);
-  shelves(-5, 0, -19.3, 'x', 0x5c3a2e);
-  for (const [x, z] of [[-4, -13.5], [-7, -13.5]]) for (let i = 0; i < 5; i++) detail(x + i * 0.3 - 0.6, 1.4, z, x + i * 0.3 - 0.45, 1.9, z + 0.04, 'paper1', 0xe8e0c8);
-  table(-4.5, 0, -16, 0x4a3226);
-  item('tapes', 'radio', -4.5, 0.87, -16, 'His tape recorder');
-  lamp('basement', -5, 2.85, -16, 0xe0604a);
-  // Storage: boxes, a chest freezer, paint tins.
-  box(-9.6, 0, -11.8, -7.6, 0.9, -10.8, 'metal', 0xdedfd9);
-  for (const [x, z] of [[-3, -6], [-5, -5], [-8.5, -6]]) box(x - 0.5, 0, z - 0.5, x + 0.5, 0.8, z + 0.5, 'cardboard', 0xb08a5c);
-  item('paint1', 'paint', -6, 0, -9); item('crate1', 'crate', -2.5, 0, -10.5);
-  hide('storageLocker', -9.3, 0, -8, '+x');
-  lamp('storage', -5, 2.85, -8, 0xffcf96, false, 2.6);
-
-  // ---- ground floor (y 3.2..6.2): slab with the basement stairwell cut out
-  box(-10, 3, -20, 7.6, H, -4, 'woodfloor', 0x9b7a55);
-  box(7.6, 3, -20, 10, H, -12, 'woodfloor', 0x9b7a55);
-  box(7.6, 3, -5.6, 10, H, -4, 'woodfloor', 0x9b7a55);
-  box(7.5, H, -12, 7.6, H + 0.9, -5.6, 'trim', 0xe9e2cf);
-  for (let z = -11.6; z < -5.6; z += 0.8) detail(7.52, H, z, 7.58, H + 0.9, z + 0.06, 'trim', 0xe9e2cf);
-  // Outer walls: front door, lounge and kitchen windows, back door, utility side window.
-  wall('x', -4.2, -10, 10, H, 3, [
-    door('front', 'x', -4.2, -6.5, H, null, 'Front door', -1, 0x2f4f6b),
-    win('loungeW', 'x', -4.2, 3, H + 0.9, 2, 'Lounge window', { entry: 'loungeWindow' }),
-  ], 'brick', brick);
-  wall('x', -20, -10, 10, H, 3, [
-    door('back', 'x', -20, -6, H, null, 'Back door', 1, 0x2f4f6b),
-    win('kitchenW', 'x', -20, -1, H + 0.9, 1.6, 'Kitchen window', { entry: 'kitchenWindow', outside: -1 }),
-  ], 'brick', brick);
-  wall('z', -10, -20, -4, H, 3, [], 'brick', brick);
-  wall('z', 9.8, -20, -4, H, 3, [win('utilityW', 'z', 9.8, -16, H + 0.9, 1.4, 'Utility window', { entry: 'utilityWindow' })], 'brick', brick);
-  // Inside: hall | lounge, and the kitchen + utility behind.
-  wall('z', -3, -12, -4.2, H, 3, [door('hallLounge', 'z', -3, -8.5, H, null, 'Lounge door')], 'paper1', 0xd8d0b4);
-  wall('x', -12.2, -9.8, 9.8, H, 3, [
-    door('hallKitchen', 'x', -12.2, -5, H, null, 'Kitchen door'),
-    door('loungeUtil', 'x', -12.2, 5.5, H, null, 'Utility door'),
-  ], 'paper2', 0xc9d3c0);
-  wall('z', 2, -19.8, -12.2, H, 3, [door('kitchenUtil', 'z', 2, -16, H, null, 'Utility door')], 'paper2', 0xc9d3c0);
-  // Stairs up to the first floor along the hall's west wall.
-  stairs(-9.8, -7.8, -6, -1, H, 0x8a6a48, 'wood');
-  // Hall: coat rack, umbrella stand, a console table.
-  box(-3.6, H, -6, -3.2, H + 0.8, -5, 'wood', 0x5b4330); item('vase1', 'vase', -3.4, H + 0.8, -5.5);
-  lamp('hall', -5.5, H + 2.85, -8, 0xffe1b0);
-  // Lounge: sofa, armchair, coffee table, bookcase, rug.
-  box(-0.8, H, -11.6, 3.4, H + 0.45, -10.6, 'fabric', 0x7d4a3a); box(-0.8, H + 0.45, -11.9, 3.4, H + 1.15, -11.5, 'fabric', 0x6e3e30);
-  box(5, H, -9.5, 6.3, H + 0.45, -8.2, 'fabric', 0x4f6c6a);
-  box(0, H, -9, 2, H + 0.42, -8, 'wood', 0x6b4f37); item('apple1', 'apple', 1, H + 0.42, -8.5);
-  detail(-1.5, H + 0.005, -10, 4, H + 0.015, -6.5, 'carpet', 0x8a5a4a);
-  shelves(-2.4, H, -5.5, 'z', 0x6b4f37);
-  lamp('lounge', 2, H + 2.85, -8, 0xffd59a);
-  poi('lounge', 2.5, H, -6.5, 2);
-  hide('loungeLocker', -1.9, H, -10.9, '+x', 0x6b4f37);
-  // Kitchen: counters, a stove, a fridge, the table.
-  box(-9.8, H, -19.8, -7.6, H + 0.9, -19, 'counter', 0xb7c2b0);
-  box(-2.4, H, -19.8, 0, H + 0.9, -19, 'counter', 0xb7c2b0);
-  box(-9.8, H, -19, -9, H + 0.9, -14, 'counter', 0xb7c2b0);
-  box(-9.8, H, -17, -9, H + 0.92, -16, 'metal', 0x2a2c2f);
-  box(1, H, -19.8, 1.9, H + 2, -18.9, 'metal', 0xe8e8e2);
-  table(-3.5, H, -15.5, 0x8a6a48);
-  item('plate1', 'plate', -3.5, H + 0.86, -15.3); item('bottle1', 'bottle', -4.4, H + 0.86, -15.7);
-  lamp('kitchen', -4, H + 2.85, -16, 0xfff0d0);
-  poi('stove', -8.2, H, -16.5, 3);
-  // Utility room: washing machine, boiler, shelves.
-  box(8.8, H, -19.8, 9.7, H + 0.9, -18.9, 'metal', 0xd7d9d2);
-  box(2.4, H, -19.8, 3.6, H + 2.3, -18.8, 'metal', 0x5a7681);
-  shelves(5.5, H, -19.4, 'x');
-  lamp('utility', 6, H + 2.85, -16, 0xfff0d0, false, 2.6);
-
-  // ---- first floor (y 6.4..9.4): slab with the stairwell cut out
-  box(-7.6, 6.2, -20, 10, U, -4, 'carpet', 0x7a6a8a);
-  box(-10, 6.2, -20, -7.6, U, -12.4, 'carpet', 0x7a6a8a);
-  box(-10, 6.2, -5.8, -7.6, U, -4, 'carpet', 0x7a6a8a);
-  box(-7.6, U, -12.4, -7.5, U + 0.95, -5.8, 'trim', 0xe9e2cf);
-  box(-10, U, -5.9, -7.5, U + 0.95, -5.8, 'trim', 0xe9e2cf);
-  wall('x', -4.2, -10, 10, U, 3, [win('bedW', 'x', -4.2, 4, U + 0.9, 1.6, 'Bedroom window', { breakable: false })], 'brick', brick);
-  wall('x', -20, -10, 10, U, 3, [win('landingW', 'x', -20, -6, U + 0.9, 1.2, 'Landing window', { breakable: false, outside: -1 })], 'brick', brick);
-  wall('z', -10, -20, -4, U, 3, [], 'brick', brick);
-  wall('z', 9.8, -20, -4, U, 3, [], 'brick', brick);
-  wall('z', -3, -19.8, -4.2, U, 3, [
-    door('study', 'z', -3, -16, U, 'power', 'Office electric door', 1),
-    door('bedroom', 'z', -3, -8, U, null, 'Bedroom door'),
-  ], 'paper3', 0xcfc6d9);
-  wall('x', -12.2, -2.8, 9.8, U, 3, [], 'paper3', 0xcfc6d9);
-  box(-10, 9.4, -20, 10, 9.6, -4, 'plaster', 0xe6e1d4);
-  L.roofs.push({ x0: -10.7, x1: 10.7, z0: -20.7, z1: -3.3, y: 9.6, h: 3.2, ridge: 'x', tint: slate, gable: brick });
-  // Bedroom: bed, wardrobe, nightstand with the fuse.
-  box(3, U, -11.8, 6, U + 0.5, -8.6, 'wood', 0x6b4f37); box(3, U + 0.5, -11.8, 6, U + 0.75, -8.6, 'fabric', 0xa9b6c9);
-  box(3, U, -11.9, 6, U + 1.2, -11.7, 'wood', 0x5b4330);
-  table(7.8, U, -10.8, 0x6b4f37, 0.6, 0.4);
-  item('fuse', 'fuse', 7.8, U + 0.87, -10.8, 'Fuse');
-  hide('wardrobe', -1.9, U, -5.2, '+x', 0x5b4330);
-  lamp('bedroom', 4, U + 2.85, -8, 0xffd2a0);
-  poi('bedroom', 1.5, U, -7, 2);
-  // Office (electric lock): desk, filing cabinet, corkboard of photos of your house, and the red key.
-  table(4, U, -18.6, 0x4a3a2c, 1.2, 0.55);
-  item('redkey', 'redkey', 4, U + 0.87, -18.6, 'Red key');
-  box(8.6, U, -19.7, 9.6, U + 1.4, -18.5, 'metal', 0x6d7a6f);
-  detail(0, U + 1.2, -19.82, 5, U + 2.4, -19.8, 'cardboard', 0xb08a5c);
-  for (let i = 0; i < 8; i++) detail(0.3 + i * 0.6, U + 1.4 + (i % 2) * 0.45, -19.8, 0.7 + i * 0.6, U + 1.75 + (i % 2) * 0.45, -19.78, 'paper1', 0xf0ead8);
-  lamp('office', 4, U + 2.85, -16, 0xc8e0ff, true);
-  // Landing: a linen cupboard to hide in.
-  hide('landingLocker', -5, U, -19.2, '+z', 0x5b4330);
-  lamp('landing', -5.5, U + 2.85, -10, 0xffe1b0);
-  poi('landing', -5, U, -14.5, 1);
-
-  // ---- garden: a shed with a crowbar, a picket fence, the road and your house opposite.
-  box(-20, H, -31, -15, H + 2.4, -30.8, 'board', 0x6d5a45);
-  box(-20, H, -30.8, -19.8, H + 2.4, -27, 'board', 0x6d5a45); box(-15.2, H, -30.8, -15, H + 2.4, -27, 'board', 0x6d5a45);
-  box(-20.2, H + 2.4, -31.2, -14.8, H + 2.55, -26.8, 'roofflat', 0x3b3f44);
-  detail(-19.8, H + 2.1, -27.1, -15.2, H + 2.4, -26.95, 'board', 0x6d5a45); // open-fronted shed
-  table(-17.5, H, -30, 0x6d5a45, 1, 0.45);
-  item('crowbar', 'crowbar', -17.5, H + 0.87, -30, 'Crowbar');
-  item('crate2', 'crate', -12.5, H, -24); item('crate3', 'crate', 13, H, -26); item('ball1', 'ball', 6, H, -27);
-  poi('garden', 2, H, -26, 1, 'stare');
-  poi('frontyard', -2, H, -0.5, 1, 'stare');
-  for (const x of [-10, 10]) for (let z = -3.8; z < 2.6; z += 0.5) detail(x - 0.04, H, z, x + 0.04, H + 0.85, z + 0.08, 'fence', 0xefeee6);
-  // Road, pavements and a dashed line separate the two properties.
-  detail(-23.7, H + 0.024, 3.25, 23.7, H + 0.04, 5.25, 'asphalt', 0x464c54);
-  for (const z of [3, 5.25]) detail(-23.7, H + 0.025, z, 23.7, H + 0.06, z + 0.25, 'paving', 0xc3c4bb);
-  for (let x = -22; x < 23; x += 4) detail(x, H + 0.041, 4.2, x + 1.8, H + 0.046, 4.3, 'trim', 0xefdfaa);
-  detail(-7.3, H + 0.006, -4, -5.7, H + 0.02, 3, 'paving', 0xb8b3a1);
-  // Your house: a small cream cottage with an open front door facing his.
-  box(-8, H - 0.12, 7, 0, H, 14, 'woodfloor', 0xb69972);
-  wall('x', 7, -8, 0, H, 2.9, [[-4, 2, H, H + 2.35]], 'siding', cream);
-  wall('x', 13.8, -8, 0, H, 2.9, [], 'siding', cream);
-  wall('z', -8, 7, 14, H, 2.9, [], 'siding', cream);
-  wall('z', -0.2, 7, 14, H, 2.9, [], 'siding', cream);
-  box(-8, H + 2.9, 7, 0, H + 3.05, 14, 'plaster', 0xe9e1cc);
-  L.roofs.push({ x0: -8.5, x1: 0.5, z0: 6.5, z1: 14.4, y: H + 3.05, h: 1.65, ridge: 'x', tint: 0x965b49, gable: cream });
-  detail(-5, H + 0.006, 5.6, -3, H + 0.025, 7, 'fabric', 0x5b8875);
-  box(-7.5, H, 10, -6, H + 0.45, 13, 'fabric', 0x548784); box(-7.5, H + 0.45, 10, -7.15, H + 1.1, 13, 'fabric', 0x446f73);
-  shelves(-1.3, H, 9, 'z');
-  lamp('playerHome', -4, H + 2.65, 10.5, 0xffd6a0); lamp('playerPorch', -4, H + 2.5, 6.8, 0xffdfa6);
-  L.spawn = { x: -4, y: H, z: 11, yaw: 0 };
-  L.exit = makeBox(-6, H - 0.15, 8, -2, H + 2.5, 13);
-  // Your side of the road is out of bounds for him.
-  L.safeZones.push(makeBox(-24, H - 0.1, 5.25, 24, 20, 16));
-  // Hedges around the whole plot keep every reachable surface on the map.
-  wall('x', -34, -24, 24, H, 2.2, [], 'hedge', 0x45634a); wall('x', 15.8, -24, 24, H, 2.2, [], 'hedge', 0x45634a);
-  wall('z', -24, -34, 16, H, 2.2, [], 'hedge', 0x45634a); wall('z', 23.8, -34, 16, H, 2.2, [], 'hedge', 0x45634a);
-  lamp('porch', -6.5, H + 2.6, -3.4, 0xffe2a8, false, 2.5);
-
-  room(-10, 0, -20, 10, 3, -4, 0.3);
-  room(-10, H, -20, 10, 6.2, -4, 0.62);
-  room(-10, U, -20, 10, 9.4, -4, 0.58);
-  room(-8, H, 7, 0, H + 2.9, 14, 0.85);
-  L.entries = {
-    frontDoor: { name: 'front door', kind: 'door', ref: 'front', x: -6.5, z: -3 },
-    backDoor: { name: 'back door', kind: 'door', ref: 'back', x: -6, z: -21 },
-    loungeWindow: { name: 'lounge window', kind: 'window', ref: 'loungeW', x: 3, z: -3 },
-    kitchenWindow: { name: 'kitchen window', kind: 'window', ref: 'kitchenW', x: -1, z: -21 },
-    utilityWindow: { name: 'utility window', kind: 'window', ref: 'utilityW', x: 11, z: -16 },
+// Level 1's street and your house, lifted to ground height y.
+function street(L, K, y) {
+  const { box } = K;
+  const vis = (x0, y0, z0, x1, y1, z1, m, c) => box(x0, y0, z0, x1, y1, z1, m, c, { col: false, op: false });
+  const inv = (x0, y0, z0, x1, y1, z1) => box(x0, y0, z0, x1, y1, z1, null, 0, { vis: false, op: false });
+  const faces = (side, negF, posF, axis) => (axis === 'x'
+    ? { nz: negF, pz: posF, nx: side, px: side, py: side, ny: side }
+    : { nx: negF, px: posF, nz: side, pz: side, py: side, ny: side });
+  function wall(axis, t0, t1, a, b, y0, y1, negF, posF, ops, tintN, tintP) {
+    const f = faces('trim', negF, posF, axis), tint = axis === 'x' ? { nz: tintN, pz: tintP } : { nx: tintN, px: tintP };
+    const seg = (s0, s1, ya, yb) => {
+      if (s1 - s0 < 1e-3 || yb - ya < 1e-3) return;
+      const bb = axis === 'x' ? box(s0, ya, t0, s1, yb, t1, f, 0xffffff) : box(t0, ya, s0, t1, yb, s1, f, 0xffffff);
+      bb.tf = tint;
+    };
+    let s = a;
+    for (const o of ops.slice().sort((p, q) => p.c - q.c)) {
+      seg(s, o.c - o.w / 2, y0, y1); seg(o.c - o.w / 2, o.c + o.w / 2, y0, o.lo); seg(o.c - o.w / 2, o.c + o.w / 2, o.hi, y1); s = o.c + o.w / 2;
+    }
+    seg(s, b, y0, y1);
+  }
+  const picket = (a, b, z, h, c) => {
+    inv(a, y, z - 0.07, b, y + h, z + 0.07);
+    for (let x = a + 0.07; x < b - 0.03; x += 0.17) {
+      vis(x - 0.045, y, z - 0.025, x + 0.045, y + h - 0.06, z + 0.025, 'trim', c);
+      vis(x - 0.03, y + h - 0.06, z - 0.02, x + 0.03, y + h, z + 0.02, 'trim', c);
+    }
+    vis(a, y + h * 0.22, z - 0.06, b, y + h * 0.22 + 0.07, z - 0.025, 'trim', c);
+    vis(a, y + h * 0.72, z - 0.06, b, y + h * 0.72 + 0.07, z - 0.025, 'trim', c);
   };
-  L.places = [['the basement', 4, 0, -14], ['the storage room', -5, 0, -8], ['the hall', -5.5, H, -8], ['the lounge', 2, H, -8],
-    ['the kitchen', -4, H, -16], ['the utility room', 6, H, -16], ['the bedroom', 4, U, -8], ['the landing', -5.5, U, -15],
-    ['the front yard', -2, H, 0], ['the back garden', 0, H, -27], ['the shed', -17.5, H, -29], ['the street', 0, H, 4]];
-  mount('porchCam', -8.6, H + 2.6, -3.6, -4, 2, 'the porch');
-  mount('gardenCam', 9.6, H + 2.6, -20.4, 0, -27, 'the back garden');
-  mount('hallCam', -3.4, H + 2.7, -11.8, -6, -5, 'the hall');
-  L.navBounds = { x0: -23.5, z0: -33.5, x1: 23.5, z1: 15.5 }; L.reachBounds = L.navBounds;
+  const light = (x, ly, z, color, intensity, dist, o = {}) => L.lights.push(Object.assign({ x, y: y + ly, z, color, intensity, dist }, o));
+  const asphalt = { py: 'asphalt', nx: 'asphalt', px: 'asphalt', ny: 'asphalt', nz: 'asphalt', pz: 'asphalt' };
+
+  // road, dashed centre line, raised pavements and kerbs
+  vis(-34.5, y - 0.1, -4, 34.5, y + 0.005, 4, asphalt, 0x9a9aa2);
+  for (let x = -33; x < 33; x += 6) vis(x, y + 0.005, -0.08, x + 3, y + 0.01, 0.08, 'paint', 0xe8dd9a);
+  box(-34.5, y - 0.1, -6, 34.5, y + 0.12, -4, 'paving', 0xc9c3b8);
+  box(-34.5, y - 0.1, 4, 34.5, y + 0.12, 6, 'paving', 0xc9c3b8);
+  vis(-34.5, y - 0.1, -4.12, 34.5, y + 0.13, -4, 'concrete', 0xa8a39a);
+  vis(-34.5, y - 0.1, 4, 34.5, y + 0.13, 4.12, 'concrete', 0xa8a39a);
+  for (const [x, z, ry] of [[-14, 5.4, Math.PI], [14, 5.4, Math.PI], [-3, -5.4, 0], [-24, -5.4, 0], [24, -5.4, 0]]) {
+    box(x - 0.09, y + 0.12, z - 0.09, x + 0.09, y + 4.6, z + 0.09, 'metal', 0x3a3d44);
+    L.decor.push({ t: 'streetlamp', x, y, z, ry });
+  }
+  light(-3, 4.3, -4.6, 0xffc777, 9, 14, { name: 'street' });
+  light(14, 4.3, 4.6, 0xffc777, 7, 12, { name: 'street2' });
+
+  // your house: exactly level 1's
+  const z0 = 10, z1 = 18, x0 = -5, x1 = 5, h = 2.8, T = 0.2;
+  const op = (c, lo, hi, w = 1.3) => ({ c, w, lo, hi });
+  box(x0, y - 0.1, z0, x1, y, z1, { py: 'woodfloor', ny: 'trim', nx: 'trim', px: 'trim', nz: 'trim', pz: 'trim' }, 0xb07a4a);
+  wall('x', z0, z0 + T, x0, x1, y, y + h, 'brick', 'paper3', [op(0, y, y + 2.1), op(-3, y + 1, y + 2.1), op(3, y + 1, y + 2.1)], 0xa04a3a, 0xc9d7e8);
+  wall('x', z1 - T, z1, x0, x1, y, y + h, 'paper3', 'brick', [op(2.5, y + 1, y + 2.1)], 0xc9d7e8, 0xa04a3a);
+  wall('z', x0, x0 + T, z0, z1, y, y + h, 'brick', 'paper3', [], 0xa04a3a, 0xc9d7e8);
+  wall('z', x1 - T, x1, z0, z1, y, y + h, 'paper3', 'brick', [op(14, y + 1, y + 2.1)], 0xc9d7e8, 0xa04a3a);
+  box(x0 - 0.1, y + h, z0 - 0.1, x1 + 0.1, y + h + 0.2, z1 + 0.1, { ny: 'plaster', py: 'trim', nx: 'trim', px: 'trim', nz: 'trim', pz: 'trim' }, 0xeeeae2);
+  L.roofs.push({ x0: x0 - 0.5, x1: x1 + 0.5, z0: z0 - 0.6, z1: z1 + 0.6, y: y + h + 0.2, h: 2.2, ridge: 'x', tint: 0x4b4f5c, gable: 0xa04a3a });
+  const glass = (a, b, c, d, e, f) => box(a, b, c, d, e, f, 'glass', 0xbfe0ff, { op: false });
+  for (const c of [-3, 3]) glass(c - 0.65, y + 1, z0 + 0.08, c + 0.65, y + 2.1, z0 + 0.12);
+  glass(1.85, y + 1, z1 - 0.12, 3.15, y + 2.1, z1 - 0.08);
+  glass(x1 - 0.12, y + 1, 13.35, x1 - 0.08, y + 2.1, 14.65);
+  L.doors.push({ id: 'home', axis: 'x', c: 0, t0: z0, t1: z0 + T, y, w: 1.3, h: 2.1, swing: 1, hinge: -1, lock: null, open: true,
+    name: 'Front door', mat: 'door', tint: 0x2f5a8a, entry: null, inside: null, chained: false, room: null });
+  box(-4.8, y, 15.6, -2.9, y + 0.5, 17.8, 'fabric', 0x3d6fb0);
+  box(-4.8, y + 0.5, 17.1, -2.9, y + 0.62, 17.8, 'fabric', 0xf2efe6);
+  box(-4.8, y, 17.65, -2.9, y + 1.1, 17.8, 'wood', 0x7a5236);
+  box(2.6, y, 16.9, 4.8, y + 0.78, 17.8, 'wood', 0x9b6b43);
+  box(3.6, y, 10.2, 4.8, y + 2.1, 10.9, 'wood', 0x6f4a30);
+  vis(-2.5, y + 0.001, 12.5, 1.5, y + 0.012, 15.5, 'fabric', 0xb5523b);
+  L.decor.push({ t: 'lamp', x: 4.4, y: y + 0.78, z: 17.4 });
+  L.decor.push({ t: 'poster', x: -1, y: y + 1.7, z: 17.79, ry: Math.PI, c: 0x2b6c5a });
+  L.decor.push({ t: 'poster', x: x0 + 0.21, y: y + 1.6, z: 13, ry: Math.PI / 2, c: 0x8a3b56 });
+  L.decor.push({ t: 'binoculars', x: 3.7, y: y + 0.78, z: 17.2 });
+  light(0.5, 1.9, 14.6, 0xffe6c4, 3.2, 8, { name: 'home' });
+  L.lightZones.push({ box: makeBox(x0, y - 1, z0, x1, y + 3, z1), level: 0.8 });
+  vis(-0.8, y, 6, 0.8, y + 0.02, 10, 'paving', 0xb9b2a6);
+  L.decor.push({ t: 'mailbox', x: 1.6, y, z: 6.6, ry: Math.PI, c: 0x2f5a8a });
+  box(5.6, y, 6.6, 9.8, y + 1.3, 9.2, null, 0, { vis: false, tag: 'car' });
+  L.decor.push({ t: 'car', x: 7.7, y, z: 7.9, ry: Math.PI / 2, c: 0xb83a32 });
+  for (const xs of [[-10, -1], [1, 10]]) picket(xs[0], xs[1], 6.35, 0.85, 0xf0ece2);
+
+  // the other houses on the street (solid, with lit windows facing the road)
+  const filler = (fx0, fz0, fx1, fz1, fh, siding, roof) => {
+    box(fx0, y, fz0, fx1, y + fh, fz1, 'siding', siding);
+    L.roofs.push({ x0: fx0 - 0.4, x1: fx1 + 0.4, z0: fz0 - 0.4, z1: fz1 + 0.4, y: y + fh, h: 2.4, ridge: 'x', tint: roof, gable: siding });
+    const fz = fz0 > 0 ? fz0 : fz1;
+    for (let x = fx0 + 1.5; x < fx1 - 1; x += 3) L.decor.push({ t: 'litwindow', x, y: y + 1.6, z: fz + (fz0 > 0 ? -0.02 : 0.02), ry: fz0 > 0 ? Math.PI : 0, lit: ((x * 7) | 0) % 3 === 0 });
+  };
+  filler(-20, 11, -10, 19, 5.6, 0xc7b38a, 0x5a3f3a);
+  filler(11, 11, 21, 19, 3.2, 0x9fb4c7, 0x3d4250);
+  filler(25, 11, 33, 18, 5.6, 0xd6c6c0, 0x5a4a44);
+  filler(-33, 11, -25, 18, 3.2, 0xa8c49a, 0x46423c);
+  filler(-34, -26, -25, -10, 6, 0xbfafa0, 0x40363a);
+  filler(25, -26, 34, -10, 6, 0xc0c8b0, 0x3b3f48);
+  filler(-34, -46, -25, -32, 3.2, 0xd1c2a4, 0x4a3b36);
+  filler(25, -46, 34, -32, 5.6, 0xa9b7a8, 0x3a3f44);
+  // map edges
+  inv(-35, -1, -50.5, -34.5, 14, 23); inv(34.5, -1, -50.5, 35, 14, 23);
+  inv(-35, -1, 22.5, 35, 14, 23); inv(-35, -1, -51, 35, 14, -50.5);
+  return { picket, inv };
+}
+
+function buildMulberry() {
+  const L = base(2, {
+    targets: ['album'], indoor: false, outdoorLight: 0.62, groundVisualY: H - 0.02,
+    titleCamera: { from: [-14, H + 6, 9], to: [0, H + 1.5, -18] },
+  });
+  const K = kit(L);
+  const { box, detail, wall, door, win, lamp, table, shelves, item, hide, poi, stairs, room, mount } = K;
+
+  // Lawn everywhere at y=H, open over his house so the basement can sit beneath it.
+  for (const [a, b, c, d] of [[-34.5, -50.5, -12, 23], [12, -50.5, 34.5, 23], [-12, -50.5, 12, -26], [-12, -12, 12, 23]]) box(a, 0, b, c, H, d, 'grass', 0x6c8c50);
+  L.holes = [[-12, -26, 12, -12]];
+  const { picket, inv } = street(L, K, H);
+
+  // ---- his plot: picket front (climbable), tall fences around the side and back gardens
+  for (const [a, b] of [[-22, -3], [-1, 5], [12, 22]]) picket(a, b, -6.55, 1.1, 0xf3efe4);
+  box(-22.2, H, -49.8, -22, H + 2, -6.5, 'fence', 0x7a5a40); box(22, H, -49.8, 22.2, H + 2, -6.5, 'fence', 0x7a5a40);
+  box(-22.2, H, -50, 22.2, H + 2, -49.8, 'fence', 0x7a5a40);
+  inv(-22.8, H + 2, -50, -22.2, 14, -6.5); inv(22.2, H + 2, -50, 22.8, 14, -6.5); inv(-22.8, H + 2, -50.5, 22.8, 14, -50);
+  detail(-2.8, H, -12, -1.2, H + 0.02, -6.5, 'paving', 0xb6ad9f);
+  detail(5, H, -12, 12, H + 0.02, -6, 'concrete', 0xaaa59c);
+  box(7.3, H, -11.9, 9.7, H + 1.35, -6.6, null, 0, { vis: false, tag: 'car' });
+  L.decor.push({ t: 'car', x: 8.5, y: H, z: -9.25, ry: 0, c: 0x2e2e33 });
+  L.decor.push({ t: 'mailbox', x: -3.6, y: H, z: -7.1, ry: 0, c: 0x2f4a3a });
+  box(-14.4, H, -10.4, -13.6, H + 4.4, -9.6, 'bark', 0x5a4030, { tag: 'tree' }); L.decor.push({ t: 'tree', x: -14, y: H + 4, z: -10, s: 1.2 });
+  box(-11.6, H, -12.9, -4.6, H + 0.8, -12.2, 'hedge', 0x3f6b32, { tag: 'hedge' });
+
+  // ---- basement (y 0..3) under the whole house
+  box(-12, -0.25, -26, 12, 0, -12, 'concrete', 0x6e7377);
+  const bw = (axis, t, a, b, ops = []) => wall(axis, t, a, b, 0, 3, ops, 'block', 0x7a756c);
+  bw('x', -26, -12, 12); bw('x', -12.2, -12, 12); bw('z', -12, -26, -12); bw('z', 11.8, -26, -12);
+  bw('z', 5, -25.8, -12.2, [door('workshop', 'z', 5, -17, 0, null, 'Workshop door')]);
+  bw('z', -3, -25.8, -12.2, [
+    door('basement', 'z', -3, -22.5, 0, 'red', 'Vault door'),
+    door('storage', 'z', -3, -16, 0, 'bolt', 'Storage door', -1),
+    win('storeHatch', 'z', -3, -13.5, 0.9, 1.4, 'Storage hatch', { boards: true, glass: false, outside: 1 }),
+  ]);
+  bw('x', -19.2, -11.8, -3);
+  // Workshop under the garage: the stairs come down here.
+  stairs(9.8, 11.8, -20.4, 1, 0, 0x6d5a45, 'wood');
+  table(7, 0, -25.2, 0x6b5136, 1.4, 0.45);
+  L.decor.push({ t: 'pegboard', x: 7, y: 1.7, z: -25.78, ry: 0 });
+  shelves(5.6, 0, -13.5, 'z');
+  item('paint1', 'paint', 6.5, 0.86, -25.1); item('can1', 'can', 8, 0, -16);
+  lamp('workshop', 7.5, 2.85, -18, 0xffd9a0);
+  poi('workshop', 7.5, 0, -22, 2);
+  // Boiler room: the boiler, an oil tank, the fuse box, a locker.
+  box(-2.4, 0, -25.5, -0.6, 2.3, -24, 'metal', 0x5a7681); detail(-2.2, 1.1, -24.02, -0.8, 1.25, -23.98, 'emissive', 0xf0a040);
+  box(1.5, 0, -25.6, 4.6, 1.3, -24.2, 'metal', 0x6b5a3a);
+  for (const x of [-2, -1.2]) detail(x, 2.3, -25, x + 0.14, 3, -24.86, 'metal', 0x8e5c42);
+  detail(-2.8, 2.6, -17.1, 4.8, 2.74, -16.96, 'metal', 0x8e5c42);
+  L.fusebox = { x: 4.95, y: 1.35, z: -21.5 };
+  hide('boilerLocker', 3.5, 0, -12.9, '-z');
+  item('bottle1', 'bottle', 0.5, 0, -14); item('can2', 'can', -1.5, 0, -20);
+  lamp('boiler', 1, 2.85, -19, 0xffc890);
+  poi('boiler', 1, 0, -18.5, 3);
+  // Storage (bolted from inside; the hatch beside the door is boarded up): the fuse.
+  shelves(-10.9, 0, -17.5, 'z'); shelves(-10.9, 0, -14.2, 'z');
+  for (const [x, z] of [[-6, -18.4], [-5, -18.4], [-5.5, -17.6]]) box(x - 0.45, 0, z - 0.4, x + 0.45, 0.8, z + 0.4, 'cardboard', 0xb08a5c);
+  table(-7.5, 0, -13.2, 0x8a7457, 1, 0.45);
+  item('fuse', 'fuse', -7.5, 0.87, -13.2, 'Fuse');
+  lamp('storage', -7.5, 2.85, -15.5, 0xffe6b0, false, 2.6);
+  // Vault (red padlock): photos of your house pinned everywhere, and the album.
+  table(-7.5, 0, -24.8, 0x4a3226, 1.2, 0.5);
+  detail(-8.6, 0.86, -25.2, -6.4, 0.88, -24.4, 'fabric', 0x6e1f1f);
+  item('album', 'book', -7.5, 0.87, -24.8, 'His photo album');
+  for (let i = 0; i < 12; i++) detail(-11.4 + (i % 6) * 1.2, 1.3 + Math.floor(i / 6) * 0.6, -25.79, -10.9 + (i % 6) * 1.2, 1.7 + Math.floor(i / 6) * 0.6, -25.77, 'paper1', 0xf0ead8);
+  L.decor.push({ t: 'corkboard', x: -11.78, y: 1.6, z: -22, ry: Math.PI / 2 });
+  box(-11.7, 0, -20.6, -10.9, 1.4, -19.4, 'metal', 0x6d7a6f);
+  lamp('basement', -7.5, 2.85, -22.5, 0xe0604a);
+
+  // ---- ground floor (y 3.2..6.2); the slab has the garage stairwell cut out
+  box(-12, 3, -26, 9.6, H, -12, 'woodfloor', 0x9b7a55);
+  box(9.6, 3, -26, 12, H, -20.4, 'concrete', 0x8a8c88);
+  box(9.6, 3, -14, 12, H, -12, 'concrete', 0x8a8c88);
+  detail(5.2, H, -26, 9.6, H + 0.015, -12.2, 'concrete', 0x8a8c88);
+  box(9.5, H, -20.5, 9.6, H + 0.95, -14, 'metal', 0x4a5258);
+  box(9.5, H, -20.6, 11.8, H + 0.95, -20.4, 'metal', 0x4a5258);
+  // Outside walls: house (3 m) and garage (2.8 m, flat roof).
+  wall('x', -12.2, -12, 5, H, 3, [
+    win('livingW', 'x', -12.2, -8, H + 0.9, 1.8, 'Living-room window', { entry: 'livingWindow' }),
+    door('front', 'x', -12.2, -2, H, null, 'Front door', -1, 0x7a2a2a),
+    win('studyW', 'x', -12.2, 2.6, H + 0.9, 1.4, 'Study window', { breakable: false }),
+  ], 'siding', SIDING);
+  wall('x', -12.2, 5, 12, H, 2.8, [], 'siding', SIDING);
+  detail(5.6, H, -11.99, 11.4, H + 2.5, -11.9, 'garagedoor', 0xd9d4c6);
+  wall('x', -26, -12, 5, H, 3, [
+    door('back', 'x', -26, -9, H, null, 'Back door', 1, 0x7a2a2a),
+    win('kitchenW', 'x', -26, -5, H + 1, 1.4, 'Kitchen window', { entry: 'kitchenWindow', outside: -1 }),
+    win('bedroomW', 'x', -26, 1, H + 0.9, 1.4, 'Bedroom window', { entry: 'bedroomWindow', outside: -1 }),
+  ], 'siding', SIDING);
+  wall('x', -26, 5, 12, H, 2.8, [], 'siding', SIDING);
+  wall('z', -12, -26, -12, H, 3, [], 'siding', SIDING);
+  wall('z', 11.8, -26, -12, H, 2.8, [door('garageSide', 'z', 11.8, -23, H, null, 'Garage side door', -1, 0x8a8a80)], 'siding', SIDING);
+  // corner boards, porch, chimney, roofs
+  for (const [x, z] of [[-12.1, -12.1], [11.9, -12.1], [-12.1, -26.1], [11.9, -26.1]]) detail(x - 0.06, H, z - 0.06, x + 0.06, H + 3, z + 0.06, 'trim', TRIM);
+  box(-3.5, H, -10.7, -3.3, H + 2.8, -10.5, 'trim', TRIM); box(-0.7, H, -10.7, -0.5, H + 2.8, -10.5, 'trim', TRIM);
+  detail(-3.8, H + 2.8, -12, -0.2, H + 2.95, -10.3, 'roofflat', ROOF);
+  detail(-3.6, H, -12, -0.4, H + 0.12, -10.4, 'paving', 0xb6ad9f);
+  box(-10, 6.4, -20, -9, 10.2, -19, 'brick', 0x7a4a3a);
+  box(-12, 6.2, -26, 5, 6.4, -12, 'plaster', 0xe8e3d6);
+  L.roofs.push({ x0: -12.6, x1: 5.4, z0: -26.6, z1: -11.4, y: 6.4, h: 3, ridge: 'x', tint: ROOF, gable: SIDING });
+  box(5, 6, -26.2, 12.2, 6.25, -11.8, 'roofflat', ROOF);
+  lamp('porch', -2, H + 2.6, -11.2, 0xffe2a8, false, 2.5);
+  L.decor.push({ t: 'weathervane', x: -9.5, y: 10.2, z: -19.5 });
+  // Inside walls: front rooms / corridor / back rooms, and the garage.
+  const iw = (axis, t, a, b, ops = [], tint = 0xd6cfb6, m = 'paper1') => wall(axis, t, a, b, H, 3, ops, m, tint);
+  iw('z', -4.2, -17, -12.2);
+  iw('z', 0, -17, -12.2, [door('study', 'z', 0, -14.6, H, 'power', 'Study electric door', 1)], 0xcfd6cc, 'paper2');
+  iw('z', 5, -26, -12.2, [door('garageDoor', 'z', 5, -18.1, H, null, 'Garage door')], 0xbcb5a4);
+  iw('x', -17.2, -11.8, 5, [door('livingDoor', 'x', -17.2, -6, H, null, 'Living-room door'), [-2, 1.6, H, H + 2.3]]);
+  iw('x', -19.2, -11.8, 5, [door('kitchenDoor', 'x', -19.2, -7, H, null, 'Kitchen door'), door('bedroomDoor', 'x', -19.2, 1.5, H, null, 'Bedroom door')]);
+  iw('z', -3, -26, -19.2, [], 0xcfc6d9, 'paper3');
+  // Living room: sofa, armchair, TV, standing lamp, a wardrobe to hide in.
+  box(-11.4, H, -16.6, -8.2, H + 0.45, -15.6, 'fabric', 0x7d5a3a); box(-11.4, H + 0.45, -16.95, -8.2, H + 1.15, -16.55, 'fabric', 0x6e4c30);
+  box(-11.85, H, -15, -11.35, H + 0.5, -13.4, 'wood', 0x4a3a2c);
+  L.decor.push({ t: 'tvscreen', x: -11.4, y: H + 1.0, z: -14.2, ry: Math.PI / 2 });
+  box(-9.6, H, -14.4, -8.4, H + 0.42, -13.6, 'wood', 0x6b4f37); item('vase1', 'vase', -9, H + 0.42, -14);
+  L.decor.push({ t: 'standlamp', x: -7.2, y: H, z: -16.5 });
+  hide('livingWardrobe', -5, H, -13.1, '-x', 0x5b4330);
+  lamp('living', -8, H + 2.85, -14.6, 0xffd59a);
+  poi('living', -7.5, H, -15, 2);
+  // Hall: coat rack and a clock.
+  L.decor.push({ t: 'coatrack', x: -3.6, y: H, z: -12.8 });
+  L.decor.push({ t: 'clock', x: -0.22, y: H + 1.9, z: -16.2, ry: -Math.PI / 2, tall: true });
+  lamp('hall', -2, H + 2.85, -14.6, 0xffe1b0);
+  // Study (electric lock): desk with the red key, filing cabinet, a corkboard of your comings and goings.
+  table(2.6, H, -16.3, 0x4a3a2c, 1.2, 0.5);
+  item('redkey', 'redkey', 2.6, H + 0.87, -16.3, 'Red key');
+  L.decor.push({ t: 'desklamp', x: 3.4, y: H + 0.86, z: -16.4 });
+  box(4.1, H, -13.4, 4.8, H + 1.3, -12.5, 'metal', 0x6d7a6f);
+  L.decor.push({ t: 'corkboard', x: 0.22, y: H + 1.6, z: -15.8, ry: Math.PI / 2 });
+  lamp('study', 2.6, H + 2.85, -14.6, 0xc8e0ff, true);
+  // Corridor
+  lamp('corridor', -4, H + 2.85, -18.1, 0xffe1b0, false, 2.6);
+  L.decor.push({ t: 'portrait', x: -8, y: H + 1.9, z: -17.02, ry: 0 });
+  // Kitchen: counters, stove, fridge, table, pantry cupboard.
+  box(-11.8, H, -25.8, -10, H + 0.9, -25, 'counter', 0xb7c2b0);
+  box(-7.9, H, -25.8, -3.2, H + 0.9, -25, 'counter', 0xb7c2b0);
+  box(-11.8, H, -24.2, -11, H + 0.92, -23.2, 'metal', 0x2a2c2f);
+  box(-11.8, H, -21.4, -11, H + 2, -20.4, 'metal', 0xe8e8e2);
+  table(-7, H, -22.2, 0x8a6a48);
+  item('plate1', 'plate', -7.3, H + 0.86, -22); item('apple1', 'apple', -6.5, H + 0.86, -22.4);
+  hide('pantry', -3.8, H, -20.5, '-x', 0x6b5136);
+  lamp('kitchen', -7, H + 2.85, -22.5, 0xfff0d0);
+  poi('stove', -10.3, H, -23.7, 3);
+  // Bedroom: bed, nightstand, rocking chair, wardrobe.
+  box(2.4, H, -25.6, 4.7, H + 0.5, -22.6, 'wood', 0x6b4f37); box(2.4, H + 0.5, -25.6, 4.7, H + 0.72, -22.6, 'fabric', 0x8a6d9a);
+  box(2.4, H, -25.8, 4.7, H + 1.2, -25.6, 'wood', 0x5b4330);
+  L.decor.push({ t: 'rockingchair', x: -1.5, y: H, z: -24.5, ry: 0.6 });
+  hide('bedWardrobe', -2.3, H, -21, '+x', 0x5b4330);
+  lamp('bedroom', 1.5, H + 2.85, -22.5, 0xffd2a0);
+  poi('bedroom', 0.5, H, -21.5, 1);
+  // Garage: workbench, shelves, tyres, crates, a locker.
+  table(7.3, H, -25.3, 0x6b5136, 1.6, 0.45);
+  L.decor.push({ t: 'pegboard', x: 7.3, y: H + 1.7, z: -25.78, ry: 0 });
+  L.decor.push({ t: 'tires', x: 6, y: H, z: -13.2 });
+  shelves(11.3, H, -24.2, 'z');
+  item('crate1', 'crate', 7.5, H, -21); item('crate2', 'crate', 6.2, H, -15.5);
+  hide('garageLocker', 5.7, H, -23, '+x', 0x476469);
+  lamp('garage', 7.5, H + 2.6, -18, 0xf2f2e0);
+  poi('garage', 7.5, H, -17.5, 2);
+
+  // ---- back garden: greenhouse (the crowbar), vegetable beds, washing line, a tree
+  const gx0 = -8, gx1 = -2, gz0 = -41, gz1 = -35;
+  const pane = (a, b, c, d) => box(a, H, b, c, H + 2.4, d, 'glass', 0xcfe8e0, { op: false });
+  pane(gx0, gz0, gx1, gz0 + 0.06); pane(gx0, gz0, gx0 + 0.06, gz1); pane(gx1 - 0.06, gz0, gx1, gz1);
+  pane(gx0, gz1 - 0.06, -5.8, gz1); pane(-4.2, gz1 - 0.06, gx1, gz1);
+  detail(gx0, H + 2.4, gz0, gx1, H + 2.46, gz1, 'glass', 0xcfe8e0);
+  for (const x of [gx0, -5.8, -4.2, gx1 - 0.08]) detail(x, H, gz1 - 0.08, x + 0.08, H + 2.46, gz1, 'trim', TRIM);
+  table(-5, H, -40.2, 0x6d5a45, 2, 0.45);
+  for (let x = -6.6; x <= -3.4; x += 0.8) L.decor.push({ t: 'pots', x, y: H + 0.86, z: -40.3 });
+  item('crowbar', 'crowbar', -5, H + 0.87, -40.1, 'Crowbar');
+  lamp('greenhouse', -5, H + 2.3, -38, 0xd8ffd0, false, 2);
+  for (let x = 4; x <= 10; x += 1.2) for (const z of [-36.3, -34.8]) L.decor.push({ t: (x + z) % 2 > -1 ? 'cabbage' : 'pumpkin', x, y: H + 0.22, z });
+  detail(3.4, H, -37, 10.8, H + 0.2, -34, 'dirt', 0x5a4632);
+  L.decor.push({ t: 'clothesline', x: 0, y: H + 2.1, z: -45 });
+  box(14.6, H, -42.4, 15.4, H + 4.5, -41.6, 'bark', 0x5a4030, { tag: 'tree' }); L.decor.push({ t: 'tree', x: 15, y: H + 4, z: -42, s: 1.4 });
+  item('ball1', 'ball', 2, H, -30); item('crate3', 'crate', -14, H, -30);
+  detail(-1.2, H, -31, 2.4, H + 0.02, -26, 'paving', 0xb6ad9f);
+  poi('greenhouse', -5, H, -33, 1, 'stare');
+  poi('frontyard', -2, H, -8.5, 1, 'stare');
+
+  // ---- rules
+  L.spawn = { x: -1.6, y: H, z: 15.4, yaw: Math.atan2(-1.6, 5.2) };
+  L.exit = makeBox(-4.6, H - 0.15, 10.4, 4.6, H + 2.5, 17.6);
+  L.safeZones.push(makeBox(-34.5, H - 0.2, 6, 34.5, 30, 23));   // your side of the street
+  room(-12, 0, -26, 12, 3, -12, 0.3);
+  room(-12, H, -26, 5, 6.2, -12, 0.62);
+  room(5, H, -26, 12, 6, -12, 0.55);
+  L.entries = {
+    frontDoor: { name: 'front door', kind: 'door', ref: 'front', x: -2, z: -11 },
+    backDoor: { name: 'back door', kind: 'door', ref: 'back', x: -9, z: -27 },
+    garageSide: { name: 'garage side door', kind: 'door', ref: 'garageSide', x: 13, z: -23 },
+    livingWindow: { name: 'living-room window', kind: 'window', ref: 'livingW', x: -8, z: -11 },
+    kitchenWindow: { name: 'kitchen window', kind: 'window', ref: 'kitchenW', x: -5, z: -27 },
+    bedroomWindow: { name: 'bedroom window', kind: 'window', ref: 'bedroomW', x: 1, z: -27 },
+  };
+  L.places = [['the workshop', 7.5, 0, -20], ['the boiler room', 1, 0, -19], ['the storage room', -7.5, 0, -15.5], ['the vault door', -2, 0, -22.5],
+    ['the living room', -8, H, -14.6], ['the hall', -2, H, -14.6], ['the corridor', -4, H, -18.1], ['the kitchen', -7, H, -22.5],
+    ['the bedroom', 1.5, H, -22.5], ['the garage', 7.5, H, -18], ['the front yard', -2, H, -8.5], ['the drive', 8.5, H, -8],
+    ['the back garden', 0, H, -32], ['the greenhouse', -5, H, -38], ['the street', 0, H, 0]];
+  mount('porchCam', -3.9, H + 2.7, -11.9, -2, -6, 'the porch');
+  mount('gardenCam', -11.9, H + 2.6, -26.3, -5, -34, 'the back garden');
+  mount('garageCam', 11.6, H + 2.4, -12.5, 7, -20, 'the garage');
+  mount('boilerCam', 4.8, 2.6, -12.5, 0, -20, 'the boiler room');
+  L.navBounds = { x0: -34.2, z0: -50.2, x1: 34.2, z1: 22.2 }; L.reachBounds = L.navBounds;
+  // Some prop models are built from ground level 0; raise everything above the basement onto the lawn.
+  for (const d of L.decor) if (d.y >= H - 0.01) d.lift = H;
   L.objective = w => {
-    if (w.steps.tapes !== undefined) return 'You have his tape recorder. Get home — across the road.';
-    if (!w.flags.power) return w.hasItem('fuse') ? 'The fuse box is in the basement rec room (stairs in the lounge).' : 'Find a fuse. Try upstairs.';
-    if (!w.hasItem('redkey') && w.doorById.basement.locked) return 'The upstairs office has power. Take the red key from his desk.';
+    if (w.steps.album !== undefined) return 'You have his album. Get home — across the road to your own front door.';
+    if (!w.flags.power) {
+      if (w.hasItem('fuse')) return 'Put the fuse in the fuse box in the basement boiler room.';
+      if (!w.hasItem('crowbar') && w.windows.find(x => x.id === 'storeHatch').boards) return 'There is a boarded hatch in his basement. Find something to pry it open — try the greenhouse out back.';
+      return 'The basement stairs are in his garage. Pry open the storage hatch and find the fuse.';
+    }
+    if (!w.hasItem('redkey') && w.doorById.basement.locked) return 'Power is on: his study (off the hall) is unlocked. Take the red key from the desk.';
     if (w.doorById.basement.locked) return 'Unlock the red padlock on the basement vault.';
-    return 'Take the tape recorder from the vault.';
+    return 'Take the photo album from the vault.';
   };
   return L;
 }
 
 export function buildMap(mission) {
-  return mission === 1 ? buildCellar() : buildHollowLane();
+  return mission === 1 ? buildCellar() : buildMulberry();
 }
