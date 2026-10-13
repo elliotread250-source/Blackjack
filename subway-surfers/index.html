@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#8fd3ff">
+<title>Subway Surfers</title>
+<meta name="description" content="Dash down the subway tracks: dodge trains, jump hurdles, roll under barriers, grab coins and outrun the inspector.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hud" hidden>
+  <div class="left"><div class="score" id="score">0</div><div class="mult" id="mult">×1</div></div>
+  <div class="right"><div class="coins"><span class="coin"></span><b id="coins">0</b></div><button id="pause" class="icon" aria-label="Pause">❚❚</button></div>
+  <div id="powers" class="powers"></div>
+  <div id="warn" class="warn"></div>
+</div>
+
+<div id="title" class="screen">
+  <h1><span>SUBWAY</span><span>SURFERS</span></h1>
+  <p class="best" id="t-best"></p>
+  <div class="skins">
+    <button id="s-prev" class="icon" aria-label="Previous character">◀</button>
+    <div class="skin"><b id="s-name">Jake</b><small id="s-info"></small></div>
+    <button id="s-next" class="icon" aria-label="Next character">▶</button>
+  </div>
+  <button id="play" class="big">Tap to play</button>
+  <p class="keys" id="keys">Arrows / WASD: change lane, jump, roll • Swipe on touch</p>
+  <div class="bank"><span class="coin"></span><b id="bank">0</b></div>
+  <button id="mute" class="icon mute" aria-label="Mute">🔊</button>
+</div>
+
+<div id="over" class="screen dim" hidden>
+  <h2 id="o-why">Busted!</h2>
+  <div class="final"><small>Score</small><b id="o-score">0</b><span id="o-best"></span></div>
+  <div class="final small"><span class="coin"></span><b id="o-coins">0</b></div>
+  <div class="row"><button id="again" class="big">Play again</button><button id="menu" class="big alt">Menu</button></div>
+</div>
+
+<div id="paused" class="screen dim" hidden>
+  <h2>Paused</h2>
+  <div class="row"><button id="resume" class="big">Resume</button><button id="quit" class="big alt">Quit</button></div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
