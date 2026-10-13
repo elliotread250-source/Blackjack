@@ -87,6 +87,32 @@
   footer a { color: var(--muted); text-decoration: none; }
   footer a:hover { color: var(--ink); }
   [hidden] { display: none !important; }
+
+  /* suggestions box */
+  .suggest { margin: 4px 0 0; padding: 16px 18px; border: 1px solid var(--line); border-radius: 18px;
+    background: linear-gradient(120deg, rgba(139,123,255,.12), rgba(255,154,118,.08)); }
+  .sg-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .sg-head h2 { margin: 0; font: 600 18px "Space Grotesk", sans-serif; letter-spacing: -.01em; }
+  .sg-view { font: 500 13px Inter, sans-serif; color: var(--muted); background: none; border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+  .sg-view:hover { color: var(--ink); border-color: rgba(255,255,255,.2); }
+  .suggest textarea, .suggest input, .sg-dialog input { width: 100%; font: 400 15px Inter, sans-serif; color: var(--ink); background: rgba(0,0,0,.28);
+    border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; outline: none; }
+  .suggest textarea { min-height: 64px; resize: vertical; }
+  .suggest textarea:focus, .suggest input:focus, .sg-dialog input:focus { border-color: var(--accent); }
+  .sg-row { display: flex; gap: 10px; margin-top: 10px; }
+  .sg-row input { flex: 1; min-width: 0; }
+  .sg-btn { flex: none; font: 600 15px Inter, sans-serif; color: #0a0b10; background: var(--ink); border: 0; border-radius: 12px; padding: 10px 20px; cursor: pointer; }
+  .sg-btn:disabled { opacity: .5; cursor: default; }
+  .sg-msg { margin: 8px 0 0; font-size: 14px; color: var(--muted); min-height: 1em; }
+  .sg-msg.ok { color: #3ddc84; } .sg-msg.err { color: #ffb547; }
+  .sg-dialog { width: min(640px, calc(100vw - 32px)); max-height: 80vh; color: var(--ink); background: var(--bg2); border: 1px solid var(--line); border-radius: 18px; padding: 20px; }
+  .sg-dialog::backdrop { background: rgba(0,0,0,.6); backdrop-filter: blur(4px); }
+  .sg-dialog h3 { margin: 0 0 12px; font: 600 20px "Space Grotesk", sans-serif; }
+  .sg-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 10px; }
+  .sg-list li { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: rgba(255,255,255,.02); }
+  .sg-list .meta { font-size: 12px; color: var(--dim); margin-bottom: 4px; }
+  .sg-list .txt { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 15px; line-height: 1.45; }
+  .sg-close { float: right; }
   @media (prefers-reduced-motion: reduce) { .card, .art svg, .go { transition: none; } }
 </style>
 </head>
@@ -95,6 +121,33 @@
   <header>
     <a class="logo" href="/"><img src="icon.svg" alt="">Open Arcade</a>
   </header>
+
+  <section class="suggest" aria-labelledby="sg-title">
+    <div class="sg-head">
+      <h2 id="sg-title">💡 Got an idea? Suggest a game or a change</h2>
+      <button class="sg-view" id="sg-open" type="button">🔒 View suggestions</button>
+    </div>
+    <form id="sg-form">
+      <label class="sr" for="sg-text" hidden>Your suggestion</label>
+      <textarea id="sg-text" maxlength="1000" placeholder="What game should be added next, or what would make one better?" required></textarea>
+      <div class="sg-row">
+        <input id="sg-name" maxlength="40" placeholder="Your name (optional)" autocomplete="nickname">
+        <button class="sg-btn" id="sg-send" type="submit">Send</button>
+      </div>
+      <p class="sg-msg" id="sg-msg" role="status" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <dialog class="sg-dialog" id="sg-dialog">
+    <button class="sg-view sg-close" id="sg-close" type="button">Close</button>
+    <h3>Suggestions</h3>
+    <form id="sg-code-form" class="sg-row">
+      <input id="sg-code" type="password" placeholder="Enter the code" autocomplete="off" required>
+      <button class="sg-btn" type="submit">Open</button>
+    </form>
+    <p class="sg-msg" id="sg-code-msg" role="status"></p>
+    <ul class="sg-list" id="sg-list"></ul>
+  </dialog>
 
   <section class="hero">
     <span class="eyebrow"><i></i> Everything's free and runs in your browser</span>
@@ -314,6 +367,50 @@ function filter(f) {
 chips.forEach(c => c.addEventListener('click', () => filter(c.dataset.f)));
 let saved = 'all'; try { saved = localStorage.getItem('arcade.filter') || 'all'; } catch {}
 filter(saved);
+
+// ---- suggestions box
+(() => {
+  const $ = id => document.getElementById(id);
+  const post = (url, data) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+    .then(async r => ({ status: r.status, data: await r.json().catch(() => ({})) }));
+  try { $('sg-name').value = localStorage.getItem('oa.sg.name') || ''; } catch { /* storage blocked */ }
+  $('sg-form').addEventListener('submit', async e => {
+    e.preventDefault();
+    const text = $('sg-text').value.trim(), name = $('sg-name').value.trim(), msg = $('sg-msg');
+    if (text.length < 3) { msg.className = 'sg-msg err'; msg.textContent = 'Write a little more first.'; return; }
+    $('sg-send').disabled = true; msg.className = 'sg-msg'; msg.textContent = 'Sending…';
+    try {
+      const r = await post('/api/suggestions', { text, name });
+      if (r.status < 300) { msg.className = 'sg-msg ok'; msg.textContent = 'Thanks! Your suggestion has been saved.'; $('sg-text').value = ''; try { localStorage.setItem('oa.sg.name', name); } catch { /* fine */ } }
+      else { msg.className = 'sg-msg err'; msg.textContent = r.data.error || 'Could not send that. Try again.'; }
+    } catch { msg.className = 'sg-msg err'; msg.textContent = 'Could not reach the server. Try again.'; }
+    $('sg-send').disabled = false;
+  });
+  const dlg = $('sg-dialog');
+  const esc = s => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  async function open(code) {
+    const m = $('sg-code-msg');
+    m.className = 'sg-msg'; m.textContent = 'Checking…';
+    try {
+      const r = await post('/api/suggestions/view', { code });
+      if (r.status !== 200) { m.className = 'sg-msg err'; m.textContent = r.data.error || 'Wrong code.'; try { sessionStorage.removeItem('oa.sg.code'); } catch { /* fine */ } return; }
+      try { sessionStorage.setItem('oa.sg.code', code); } catch { /* fine */ }
+      const list = r.data.suggestions || [];
+      $('sg-code-form').hidden = true;
+      m.textContent = list.length ? `${list.length} suggestion${list.length === 1 ? '' : 's'}, newest first.` : 'No suggestions yet.';
+      $('sg-list').innerHTML = list.map(s => `<li><div class="meta">${esc(s.name || 'Anonymous')} · ${new Date(s.time * 1000).toLocaleString()}</div><div class="txt">${esc(s.text)}</div></li>`).join('');
+    } catch { m.className = 'sg-msg err'; m.textContent = 'Could not reach the server.'; }
+  }
+  $('sg-open').addEventListener('click', () => {
+    $('sg-list').innerHTML = ''; $('sg-code-msg').textContent = ''; $('sg-code-form').hidden = false; $('sg-code').value = '';
+    dlg.showModal();
+    let saved = null; try { saved = sessionStorage.getItem('oa.sg.code'); } catch { /* fine */ }
+    if (saved) open(saved); else $('sg-code').focus();
+  });
+  $('sg-code-form').addEventListener('submit', e => { e.preventDefault(); open($('sg-code').value); });
+  $('sg-close').addEventListener('click', () => dlg.close());
+  dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); });
+})();
 </script>
 </body>
 </html>

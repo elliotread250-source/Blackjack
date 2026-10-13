@@ -33,7 +33,10 @@ SHOW = 20             # entries sent to clients
 MAX_SCORE = 10000
 HOPS_PER_SEC = 7.5    # one hop is 8 ticks at 60 Hz, so nobody can beat this
 RUN_TTL = 6 * 3600
-CHARS = {"chicken", "duck", "frog", "pig", "cat", "penguin", "fox", "panda", "robot", "unicorn"}
+CHARS = {"chicken", "duck", "frog", "pig", "cat", "penguin", "fox", "panda", "robot", "unicorn", "dog",
+         "bunny", "mouse", "sheep", "cow", "turtle", "bee", "owl", "camel", "lizard", "monkey", "parrot",
+         "tiger", "polarbear", "snowman", "pumpkin", "bat", "ghost", "skeleton", "zombie", "gingerbread",
+         "ninja", "dino", "alien", "astronaut", "dragon"}
 BLOCKED = re.compile(r"fuck|shit|cunt|nigg|fag|bitch|whore|slut|rape|nazi|hitler|penis|cock|dick|pussy|wank", re.I)
 
 _lock = threading.Lock()
