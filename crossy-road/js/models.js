@@ -84,7 +84,41 @@ export const THEMES = {
     trunk: 0xfff4f8, leaves: [0xff6fa8, 0x8fe39a, 0xffd36f, 0xa98bff], rock: [0xffffff, 0xf0e6ff],
     log: 0xc98a5a, logEnd: 0xffe3b8, pad: 0x9ff0b0, candy: true, hemi: [0xffffff, 0xd8a8c8, 1.45], sun: 2.2, fog: 0xffdcef,
   },
+  desert: {
+    sky: 0xffe0a8, grass: [0xf0d28a, 0xe8c87c], grassSide: 0xc29a52, road: 0x6e6058, roadSide: 0x544840, line: 0xfff1c8,
+    water: 0x3fc2d9, waterDeep: 0x2aa8c2, rail: 0xa08a70, tie: 0x6b4a33, steel: 0xc8c0b4,
+    trunk: 0x4f9a3f, leaves: [0x5cae48, 0x4f9a3f, 0x68b852, 0x5cae48], rock: [0xd9a066, 0xc48a52], style: 'cactus',
+    flowers: [0xff7a8a, 0xffd23f, 0xb9864a], flowerStyle: 'pebble',
+    log: 0x9a6236, logEnd: 0xe8b77c, pad: 0x6cc4a0, hemi: [0xfff4dc, 0xc8a070, 1.45], sun: 2.6, fog: 0xffe2b0,
+  },
+  spooky: {
+    sky: 0x3a2350, grass: [0x4f5a3a, 0x475234], grassSide: 0x2f3824, road: 0x34303c, roadSide: 0x24212c, line: 0xff9a2a,
+    water: 0x3f6a5a, waterDeep: 0x2f5548, rail: 0x5a5060, tie: 0x3a2a24, steel: 0x8a8a98,
+    trunk: 0x3a2a24, leaves: [0x2a2228, 0x332a30], rock: [0x8a8a94, 0x74747e], style: 'spooky',
+    flowers: [0xff8a1d, 0xffe08a, 0x9a5ad8], flowerStyle: 'pumpkin',
+    log: 0x5a4636, logEnd: 0x9a7a5a, pad: 0x5a7a4a, hemi: [0xc8b0ff, 0x4a3a5a, 1.3], sun: 1.7, fog: 0x3a2350,
+  },
+  jungle: {
+    sky: 0xa8e8c8, grass: [0x4fbf4a, 0x46b242], grassSide: 0x2f7a2f, road: 0x5a5a50, roadSide: 0x40403a, line: 0xf2f2d8,
+    water: 0x2fb8a8, waterDeep: 0x1f9a8c, rail: 0x7a6a5a, tie: 0x5a3a24, steel: 0xb4b8b0,
+    trunk: 0x8a6236, leaves: [0x2fa83a, 0x3fbf48, 0x25922f, 0x52c85a], rock: [0x8a9a7a, 0x768668], style: 'palm',
+    flowers: [0xff4f7a, 0xffa82a, 0xb85aff], flowerStyle: 'fern',
+    log: 0x7a5232, logEnd: 0xc89a62, pad: 0x3fae4a, hemi: [0xf0fff0, 0x6a9a7a, 1.35], sun: 2.4, fog: 0xa8e8c8,
+  },
+  space: {
+    sky: 0x14112e, grass: [0x6a6a86, 0x62627e], grassSide: 0x3f3f58, road: 0x2a2840, roadSide: 0x1c1a2e, line: 0x7af0ff,
+    water: 0x7a3fd8, waterDeep: 0x6430c0, rail: 0x4a4a64, tie: 0x2a2a40, steel: 0x9ad8ff,
+    trunk: 0x8a5aff, leaves: [0x6af0ff, 0xff6ad8, 0x9a7aff, 0x6aff9a], rock: [0x8a8aa4, 0x74748e], style: 'crystal',
+    flowers: [0x6af0ff, 0xff6ad8, 0xfff06a], flowerStyle: 'glow',
+    log: 0x5a5a74, logEnd: 0x9aa0c8, pad: 0x9a7aff, hemi: [0xc8d0ff, 0x4a3a7a, 1.4], sun: 1.9, fog: 0x14112e,
+  },
 };
+// The order the world cycles through on a long run (starting from the character's own world).
+export const BIOME_ORDER = ['classic', 'autumn', 'desert', 'jungle', 'snow', 'spooky', 'night', 'candy', 'space'];
+export const BIOME_NAMES = { classic: 'Meadow', autumn: 'Autumn Woods', desert: 'Desert', jungle: 'Jungle', snow: 'Snowfields', spooky: 'Spooky Hollow', night: 'Night Town', candy: 'Candy Land', space: 'Outer Space' };
+for (const [k, f, st] of [['classic', [0xff6a8a, 0xffd23f, 0xffffff, 0xa86aff], 'flower'], ['snow', [0xffffff, 0xe8f4ff], 'mound'], ['autumn', [0xe8742c, 0xd9452b, 0xf2b53a], 'leaves'], ['night', [0x6affd8, 0xb8ff6a, 0x8ad8ff], 'glow'], ['candy', [0xff6fa8, 0x8fe39a, 0xffd36f, 0xa98bff], 'gumdrop']]) {
+  THEMES[k].flowers = f; THEMES[k].flowerStyle = st;
+}
 
 const CAR_COLORS = [0xe8463b, 0x3b8de8, 0xf5c430, 0x40c46a, 0xff8a2a, 0xa85ae8, 0xf2f2f2, 0x30c8c8];
 
@@ -109,6 +143,7 @@ export function laneBoxes(lane, next, prev, th) {
     const g = th.grass[((lane.row % 2) + 2) % 2];
     span(-0.7, 0.7, g, shadeHex(g, dark));
     for (const d of lane.deco) treeOrRock(B, d, th, Math.abs(d.c) > COLS ? dark : 1);
+    for (const f of lane.flowers || []) flowerBoxes(B, f, th);
   } else if (lane.type === 'road') {
     span(-0.8, 0.68, th.road, shadeHex(th.road, 0.72));
     if (next && next.type === 'road') {
@@ -136,11 +171,38 @@ export function laneBoxes(lane, next, prev, th) {
     B.push([sx, 1.0, 0.42, 0.62, 0.32, 0.16, 0x2b2c31]);
     B.push([sx, 0.75, 0.42, 0.5, 0.06, 0.5, 0xf2f2f2]);
   }
+  // a chequered flag every 50 rows, on both sides of the playable strip
+  if (lane.row > 0 && lane.row % 50 === 0) {
+    for (const sx of [-(COLS + 1.4), COLS + 1.4]) {
+      B.push([sx, baseOf(lane), 0, 0.1, 1.9, 0.1, 0xeeeeee]);
+      for (let i = 0; i < 4; i++) for (let j = 0; j < 3; j++) B.push([sx + 0.08 + i * 0.16 + 0.08, baseOf(lane) + 1.35 + j * 0.16, 0, 0.16, 0.16, 0.04, (i + j) % 2 ? 0x1d1d22 : 0xffffff]);
+    }
+  }
   return B;
+}
+const baseOf = lane => (lane.type === 'road' ? -0.12 : lane.type === 'rail' ? -0.09 : lane.type === 'river' ? -0.34 : 0);
+
+function flowerBoxes(B, f, th) {
+  const x = f.c + f.dx, z = f.dz, c = th.flowers[f.v % th.flowers.length];
+  switch (th.flowerStyle) {
+    case 'flower': B.push([x, 0, z, 0.05, 0.22, 0.05, 0x3f8f2a], [x, 0.2, z, 0.16, 0.08, 0.16, c], [x, 0.22, z, 0.06, 0.06, 0.06, 0xffe24a]); break;
+    case 'mound': B.push([x, 0, z, 0.36, 0.1, 0.3, c], [x, 0.1, z, 0.2, 0.06, 0.18, c]); break;
+    case 'leaves': B.push([x, 0, z, 0.3, 0.05, 0.22, c], [x + 0.06, 0.04, z + 0.04, 0.2, 0.04, 0.2, shadeHex(c, 1.15)]); break;
+    case 'glow': B.push([x, 0, z, 0.06, 0.14, 0.06, 0xd8d8d8], [x, 0.14, z, 0.2, 0.1, 0.2, c]); break;
+    case 'gumdrop': B.push([x, 0, z, 0.2, 0.16, 0.2, c], [x, 0.16, z, 0.12, 0.06, 0.12, shadeHex(c, 1.2)]); break;
+    case 'pebble': B.push([x, 0, z, 0.2, 0.08, 0.16, f.v % 2 ? 0xc8a070 : 0xb08a5a]); if (f.v === 0) B.push([x, 0, z, 0.36, 0.3, 0.36, 0xb9864a, 0.8]); break;
+    case 'pumpkin': if (f.v < 2) B.push([x, 0, z, 0.26, 0.2, 0.26, 0xff8a1d], [x, 0.2, z, 0.04, 0.06, 0.04, 0x3f6a2a]); else B.push([x, 0, z, 0.06, 0.18, 0.06, 0xe8e0c8], [x, 0.18, z, 0.04, 0.05, 0.04, 0xffd23f]); break;
+    case 'fern': B.push([x, 0, z, 0.36, 0.12, 0.1, 0x2f9a3a], [x, 0, z, 0.1, 0.12, 0.36, 0x2f9a3a]); if (f.v < 2) B.push([x, 0.12, z, 0.12, 0.1, 0.12, c]); break;
+  }
 }
 
 function treeOrRock(B, d, th, shade) {
   const x = d.c;
+  if (d.kind === 'rock' && th.style === 'spooky') {
+    // gravestone
+    B.push([x, 0, 0.02, 0.56, 0.62, 0.2, th.rock[d.v % 2], shade], [x, 0.62, 0.02, 0.36, 0.12, 0.2, th.rock[d.v % 2], shade], [x, 0.36, -0.09, 0.06, 0.18, 0.02, 0x4a4a54, shade], [x, 0.42, -0.09, 0.2, 0.05, 0.02, 0x4a4a54, shade]);
+    return;
+  }
   if (d.kind === 'rock') {
     const c = th.rock[d.v % th.rock.length];
     B.push([x, 0, 0.02, 0.78, 0.42, 0.72, c, shade]);
@@ -148,6 +210,35 @@ function treeOrRock(B, d, th, shade) {
     return;
   }
   const leaf = th.leaves[d.v % th.leaves.length];
+  if (th.style === 'cactus') {
+    const h = 0.5 + d.h * 0.22;
+    B.push([x, 0, 0, 0.32, h, 0.32, leaf, shade]);
+    if (d.h > 1) { B.push([x - 0.26, h * 0.45, 0, 0.22, 0.14, 0.18, leaf, shade], [x - 0.32, h * 0.45, 0, 0.14, 0.36, 0.16, leaf, shade]); }
+    if (d.h > 2) { B.push([x + 0.26, h * 0.6, 0, 0.22, 0.14, 0.18, leaf, shade], [x + 0.32, h * 0.6, 0, 0.14, 0.3, 0.16, leaf, shade]); }
+    if (d.v === 0) B.push([x, h, 0, 0.14, 0.1, 0.14, 0xff7a9a, shade]);
+    return;
+  }
+  if (th.style === 'palm') {
+    const h = 0.7 + d.h * 0.3;
+    B.push([x, 0, 0, 0.18, h, 0.18, th.trunk, shade]);
+    B.push([x, h, 0, 1.0, 0.1, 0.34, leaf, shade], [x, h, 0, 0.34, 0.1, 1.0, leaf, shade], [x, h - 0.12, 0, 0.7, 0.12, 0.7, shadeHex(leaf, 0.85), shade]);
+    if (d.v < 2) B.push([x + 0.12, h - 0.2, 0.1, 0.12, 0.12, 0.12, 0x8a5a2a, shade]);
+    return;
+  }
+  if (th.style === 'spooky') {
+    const h = 0.6 + d.h * 0.25;
+    B.push([x, 0, 0, 0.2, h, 0.2, th.trunk, shade]);
+    B.push([x - 0.2, h * 0.6, 0, 0.36, 0.08, 0.08, th.trunk, shade], [x - 0.36, h * 0.6, 0, 0.08, 0.28, 0.08, th.trunk, shade]);
+    B.push([x + 0.18, h * 0.8, 0, 0.32, 0.08, 0.08, th.trunk, shade], [x + 0.32, h * 0.8, 0, 0.08, 0.24, 0.08, th.trunk, shade]);
+    if (d.v === 1) B.push([x, h, 0, 0.3, 0.26, 0.3, 0xff8a1d, shade]);
+    return;
+  }
+  if (th.style === 'crystal') {
+    const h = 0.4 + d.h * 0.25;
+    B.push([x, 0, 0, 0.4, h, 0.4, leaf, shade], [x + 0.22, 0, 0.12, 0.22, h * 0.6, 0.22, shadeHex(leaf, 0.85), shade], [x - 0.2, 0, -0.1, 0.2, h * 0.45, 0.2, shadeHex(leaf, 1.1), shade]);
+    B.push([x, h, 0, 0.24, 0.16, 0.24, shadeHex(leaf, 1.2), shade]);
+    return;
+  }
   if (th.candy) {
     // lollipops and candy canes
     B.push([x, 0, 0, 0.12, 0.5 + d.h * 0.2, 0.12, th.trunk, shade]);
@@ -210,6 +301,48 @@ export function vehicleBoxes(kind, colorIdx, th) {
     B.push([-0.45, 0.62, 0, 1.84, 0.18, 0.94, c]);
     B.push([len / 2, 0.24, -0.3, 0.04, 0.12, 0.16, 0xfff5b0]);
     B.push([len / 2, 0.24, 0.3, 0.04, 0.12, 0.16, 0xfff5b0]);
+  } else if (kind === 'police') {
+    const len = 1.6;
+    wheels(len);
+    B.push([0, 0.12, 0, len, 0.38, 0.8, 0xf4f4f4]);
+    B.push([0, 0.12, 0, len + 0.01, 0.14, 0.81, 0x1d1d26]);
+    B.push([-0.1, 0.5, 0, 0.84, 0.34, 0.72, 0x1d1d26]);
+    B.push([-0.1, 0.55, 0, 0.86, 0.22, 0.74, glassD]);
+    B.push([-0.1, 0.84, -0.12, 0.26, 0.12, 0.22, 0xff2a2a], [-0.1, 0.84, 0.12, 0.26, 0.12, 0.22, 0x2a6aff]);
+    B.push([len / 2, 0.24, -0.26, 0.04, 0.12, 0.16, 0xfff5b0], [len / 2, 0.24, 0.26, 0.04, 0.12, 0.16, 0xfff5b0]);
+  } else if (kind === 'icecream') {
+    const len = 2.0;
+    wheels(len);
+    B.push([0, 0.12, 0, len, 0.9, 0.84, 0xffd6ec]);
+    B.push([0, 0.36, 0, len + 0.01, 0.12, 0.85, 0x8fe3f0]);
+    B.push([0.6, 0.6, 0, 0.6, 0.3, 0.86, glassD]);
+    B.push([-0.3, 0.42, -0.43, 0.7, 0.36, 0.02, 0x5a3a2a]);
+    B.push([-0.3, 1.02, 0, 0.26, 0.3, 0.26, 0xe8b77c], [-0.3, 1.32, 0, 0.36, 0.3, 0.36, 0xfff4f8], [-0.3, 1.62, 0, 0.12, 0.1, 0.12, 0xe8372f]);
+    B.push([len / 2, 0.26, -0.28, 0.04, 0.12, 0.16, 0xfff5b0], [len / 2, 0.26, 0.28, 0.04, 0.12, 0.16, 0xfff5b0]);
+  } else if (kind === 'fire') {
+    const len = 3.0;
+    for (const x of [-1.0, 1.0]) for (const zz of [-0.4, 0.4]) B.push([x, 0, zz, 0.42, 0.34, 0.14, wheel]);
+    B.push([0, 0.14, 0, len, 0.86, 0.9, 0xd92b2b]);
+    B.push([1.05, 0.6, 0, 0.8, 0.36, 0.92, glassD]);
+    B.push([len / 2, 0.62, 0, 0.04, 0.3, 0.74, glass]);
+    B.push([-0.3, 1.0, 0, 2.2, 0.08, 0.5, 0xc8ccd4]);
+    for (let x = -1.3; x < 0.8; x += 0.3) B.push([x, 1.08, 0, 0.05, 0.08, 0.5, 0xc8ccd4]);
+    B.push([0, 0.36, 0, len + 0.02, 0.06, 0.92, 0xf4f4f4]);
+    B.push([1.0, 1.0, 0, 0.3, 0.12, 0.3, 0x2a6aff]);
+    B.push([len / 2, 0.24, -0.3, 0.04, 0.12, 0.16, 0xfff5b0], [len / 2, 0.24, 0.3, 0.04, 0.12, 0.16, 0xfff5b0]);
+  } else if (kind === 'moto') {
+    B.push([-0.36, 0, 0, 0.3, 0.3, 0.1, wheel], [0.36, 0, 0, 0.3, 0.3, 0.1, wheel]);
+    B.push([0, 0.2, 0, 0.8, 0.22, 0.24, c]);
+    B.push([0.32, 0.4, 0, 0.1, 0.24, 0.4, 0x2a2a2a]);
+    B.push([-0.06, 0.42, 0, 0.3, 0.42, 0.24, 0x3a3a48], [-0.02, 0.84, 0, 0.26, 0.26, 0.26, shadeHex(c, 0.9)], [0.06, 0.88, 0, 0.14, 0.1, 0.27, 0x2a2a3a]);
+    B.push([0.42, 0.3, 0, 0.04, 0.1, 0.12, 0xfff5b0]);
+  } else if (kind === 'tractor') {
+    B.push([-0.4, 0, -0.4, 0.66, 0.66, 0.18, wheel], [-0.4, 0, 0.4, 0.66, 0.66, 0.18, wheel], [0.5, 0, -0.36, 0.4, 0.4, 0.14, wheel], [0.5, 0, 0.36, 0.4, 0.4, 0.14, wheel]);
+    B.push([0.3, 0.2, 0, 0.9, 0.44, 0.56, 0x3f9b2f]);
+    B.push([-0.35, 0.3, 0, 0.6, 0.86, 0.66, 0x3f9b2f]);
+    B.push([-0.35, 0.66, 0, 0.62, 0.4, 0.68, glassD]);
+    B.push([-0.35, 1.16, 0, 0.7, 0.06, 0.74, 0xf5c430]);
+    B.push([0.5, 0.64, 0.14, 0.08, 0.36, 0.08, 0x2a2a2a]);
   } else if (kind === 'bus') {
     const len = 3.3;
     const body = colorIdx % 2 ? 0xffc21a : 0x37a3e8;
@@ -233,6 +366,46 @@ export function logBoxes(len, th) {
   for (let x = -L / 2 + 0.4; x < L / 2 - 0.2; x += 0.7) B.push([x, -0.02, 0.0, 0.12, 0.05, 0.78, shadeHex(th.log, 0.8)]);
   B.push([-L / 2, -0.32, 0, 0.04, 0.3, 0.66, th.logEnd]);
   B.push([L / 2, -0.32, 0, 0.04, 0.3, 0.66, th.logEnd]);
+  return B;
+}
+
+// Turtles: one shell per tile slot, riding exactly like a log.
+export function turtleBoxes(len) {
+  const B = [];
+  for (let i = 0; i < len; i++) {
+    const x = -len / 2 + 0.5 + i;
+    B.push([x, -0.34, 0, 0.76, 0.24, 0.7, 0x3f8f3a], [x, -0.1, 0, 0.56, 0.12, 0.52, 0x4fa548], [x, -0.02, 0, 0.26, 0.06, 0.26, 0x6cbf5a]);
+    B.push([x + 0.44, -0.28, 0, 0.18, 0.16, 0.22, 0x6cbf5a], [x + 0.52, -0.2, -0.05, 0.03, 0.04, 0.04, 0x111111]);
+  }
+  return B;
+}
+export function raftBoxes(len) {
+  const B = [], L = len - 0.06;
+  for (let z = -0.3; z <= 0.31; z += 0.2) B.push([0, -0.34, z, L, 0.3, 0.18, 0xc89a5a]);
+  for (const x of [-L / 2 + 0.25, L / 2 - 0.25]) B.push([x, -0.04, 0, 0.12, 0.05, 0.8, 0x8a5a2a]);
+  B.push([0, -0.04, 0, 0.08, 0.9, 0.08, 0x8a5a2a], [0.2, 0.4, 0, 0.4, 0.4, 0.02, 0xf4f4f4]);
+  return B;
+}
+
+export function gemBoxes() {
+  return [
+    [0, -0.3, 0, 0.2, 0.12, 0.2, 0x2fb8d8], [0, -0.18, 0, 0.42, 0.16, 0.42, 0x4fd8f0],
+    [0, -0.02, 0, 0.3, 0.12, 0.3, 0x8ff0ff], [0, 0.1, 0, 0.14, 0.08, 0.14, 0xd8ffff],
+  ];
+}
+
+// Things that drift across the sky for a bit of life: a hot-air balloon or a little flock of birds.
+export function balloonBoxes(c) {
+  return [
+    [0, 1.0, 0, 1.2, 1.3, 1.2, c], [0, 1.15, 0, 1.3, 1.0, 1.3, c], [0, 2.3, 0, 0.8, 0.25, 0.8, c],
+    [0, 1.4, 0, 1.32, 0.2, 1.32, 0xffffff], [0, 0.7, 0, 0.6, 0.3, 0.6, shadeHex(c, 0.8)],
+    [-0.2, 0.15, 0, 0.03, 0.55, 0.03, 0x5a3a2a], [0.2, 0.15, 0, 0.03, 0.55, 0.03, 0x5a3a2a],
+    [0, -0.2, 0, 0.5, 0.35, 0.5, 0x9a6236],
+  ];
+}
+export function birdBoxes() {
+  const B = [];
+  for (const [x, z] of [[0, 0], [-0.7, 0.6], [0.7, 0.6], [-1.3, 1.2]]) B.push([x, 0, z, 0.2, 0.12, 0.3, 0x2a2a34], [x - 0.22, 0.06, z, 0.3, 0.04, 0.16, 0x2a2a34], [x + 0.22, 0.06, z, 0.3, 0.04, 0.16, 0x2a2a34]);
   return B;
 }
 

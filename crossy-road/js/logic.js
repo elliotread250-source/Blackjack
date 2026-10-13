@@ -60,7 +60,16 @@ export const VEHICLES = {
   van: { len: 1.9 },
   truck: { len: 2.7 },
   bus: { len: 3.3 },
+  police: { len: 1.6 },
+  icecream: { len: 2.0 },
+  fire: { len: 3.0 },
+  moto: { len: 1.0 },
+  tractor: { len: 1.5 },
 };
+// The world changes biome every BIOME_ROWS rows (see render.js for what each one looks like).
+export const BIOME_ROWS = 60;
+export const zoneOf = row => Math.floor(Math.max(0, row) / BIOME_ROWS);
+export const GEM_VALUE = 5;
 export const TRAIN_CAR = 3.2;          // length of one train carriage
 export const TRAIN_SPEED = 30;         // tiles per second
 export const TRAIN_WARN = 1.6;         // seconds of flashing light before the train
@@ -122,6 +131,7 @@ export class LaneGen {
       const spec = this.queue.shift();
       lane = this.build(row, spec);
     }
+    lane.zone = zoneOf(row);
     return lane;
   }
 
@@ -217,9 +227,12 @@ export class LaneGen {
       blocked.delete(n === c ? c - 1 : n);
       this.reach = this.flood(blocked, open);
     }
-    let coin = null;
-    if (r.chance(0.42)) coin = r.pick([...this.reach]);
-    return { row, type: 'grass', blocked, deco: this.decoFor(row, blocked), coin, speed: 0, dir: 1, items: [] };
+    let coin = null, gem = false;
+    if (r.chance(0.42)) { coin = r.pick([...this.reach]); gem = row > 20 && r.chance(0.08); }
+    // flowers, tufts and mushrooms on open cells: scenery only, never in the way
+    const flowers = [];
+    for (const c of ALL_COLS) if (!blocked.has(c) && c !== coin && r.chance(0.18)) flowers.push({ c, v: r.int(0, 5), dx: r.range(-0.3, 0.3), dz: r.range(-0.3, 0.3) });
+    return { row, type: 'grass', blocked, deco: this.decoFor(row, blocked), coin, gem, flowers, speed: 0, dir: 1, items: [] };
   }
 
   // Scenery for each blocked cell plus the forest outside the playable strip.
@@ -240,16 +253,20 @@ export class LaneGen {
     const r = this.rng;
     const d = difficulty(row);
     const dir = r.chance(0.5) ? 1 : -1;
-    const speed = lerp(1.8, 4.2, d) * r.range(0.8, 1.25);
-    const style = r.weighted([['cars', 5], ['mixed', 3], ['trucks', lerp(1, 3, d)]]);
+    const style = r.weighted([['cars', 5], ['mixed', 3], ['trucks', lerp(1, 3, d)], ['emergency', 0.7], ['motos', row > 30 ? 0.8 : 0], ['farm', 0.6]]);
+    // motorbikes are quick, tractors crawl; the gap rules below scale with speed either way
+    const speed = lerp(1.8, 4.2, d) * r.range(0.8, 1.25) * (style === 'motos' ? 1.35 : style === 'farm' ? 0.7 : 1);
     const minGap = 3.2 + speed * 0.45;
     const maxGap = minGap + lerp(8, 3.5, d);
     const items = [];
     let total = 0;
     for (let guard = 0; guard < 20; guard++) {
-      const kind = style === 'cars' ? r.pick(['car', 'car', 'taxi', 'van'])
+      const kind = style === 'cars' ? r.pick(['car', 'car', 'taxi', 'van', 'car', 'icecream', 'police'])
         : style === 'trucks' ? r.pick(['truck', 'bus', 'truck'])
-        : r.pick(['car', 'van', 'truck', 'bus', 'taxi']);
+        : style === 'emergency' ? r.pick(['police', 'police', 'fire'])
+        : style === 'motos' ? r.pick(['moto', 'moto', 'moto', 'car'])
+        : style === 'farm' ? r.pick(['tractor', 'tractor', 'van'])
+        : r.pick(['car', 'van', 'truck', 'bus', 'taxi', 'police', 'icecream']);
       const len = VEHICLES[kind].len;
       const gap = r.range(minGap, maxGap);
       if (total + gap + len + minGap > WRAP) break;
@@ -279,7 +296,7 @@ export class LaneGen {
       const len = r.weighted(lens);
       const gap = r.range(minGap, maxGap);
       if (total + gap + len + minGap > WRAP) break;
-      items.push({ x0: total + gap + len / 2, len, kind: 'log' });
+      items.push({ x0: total + gap + len / 2, len, kind: len <= 3 && r.chance(0.18) ? 'turtles' : len >= 2 && r.chance(0.12) ? 'raft' : 'log' });
       total += gap + len;
     }
     const shift = -HALF + r.range(0, WRAP);
@@ -536,8 +553,9 @@ export class Game {
       const key = p.row + ':' + lane.coin;
       if (Math.round(p.x) === lane.coin && !this.taken.has(key)) {
         this.taken.add(key);
-        this.coins++;
-        this.emit('coin', { row: p.row, col: lane.coin });
+        const value = lane.gem ? GEM_VALUE : 1;
+        this.coins += value;
+        this.emit('coin', { row: p.row, col: lane.coin, value, gem: !!lane.gem });
       }
     }
     this.emit('land', { lane: lane.type, log: !!h.float });
@@ -595,7 +613,34 @@ export const CHARACTERS = [
   { id: 'panda', name: 'Panda', price: 150, theme: 'classic' },
   { id: 'robot', name: 'Robot', price: 180, theme: 'night' },
   { id: 'unicorn', name: 'Unicorn', price: 250, theme: 'candy' },
+  { id: 'dog', name: 'Dog', price: 40, theme: 'classic' },
+  { id: 'bunny', name: 'Bunny', price: 50, theme: 'classic' },
+  { id: 'mouse', name: 'Mouse', price: 60, theme: 'classic' },
+  { id: 'sheep', name: 'Sheep', price: 70, theme: 'classic' },
+  { id: 'cow', name: 'Cow', price: 90, theme: 'classic' },
+  { id: 'turtle', name: 'Turtle', price: 90, theme: 'classic' },
+  { id: 'bee', name: 'Bee', price: 110, theme: 'classic' },
+  { id: 'owl', name: 'Owl', price: 130, theme: 'night' },
+  { id: 'camel', name: 'Camel', price: 140, theme: 'desert' },
+  { id: 'lizard', name: 'Lizard', price: 150, theme: 'desert' },
+  { id: 'monkey', name: 'Monkey', price: 160, theme: 'jungle' },
+  { id: 'parrot', name: 'Parrot', price: 170, theme: 'jungle' },
+  { id: 'tiger', name: 'Tiger', price: 200, theme: 'jungle' },
+  { id: 'polarbear', name: 'Polar Bear', price: 200, theme: 'snow' },
+  { id: 'snowman', name: 'Snowman', price: 220, theme: 'snow' },
+  { id: 'pumpkin', name: 'Pumpkin', price: 220, theme: 'spooky' },
+  { id: 'bat', name: 'Bat', price: 230, theme: 'spooky' },
+  { id: 'ghost', name: 'Ghost', price: 260, theme: 'spooky' },
+  { id: 'skeleton', name: 'Skeleton', price: 280, theme: 'spooky' },
+  { id: 'zombie', name: 'Zombie', price: 300, theme: 'spooky' },
+  { id: 'gingerbread', name: 'Gingerbread', price: 300, theme: 'candy' },
+  { id: 'ninja', name: 'Ninja', price: 320, theme: 'night' },
+  { id: 'dino', name: 'Dino', price: 350, theme: 'jungle' },
+  { id: 'alien', name: 'Alien', price: 400, theme: 'space' },
+  { id: 'astronaut', name: 'Astronaut', price: 450, theme: 'space' },
+  { id: 'dragon', name: 'Dragon', price: 500, theme: 'desert' },
 ];
+export const PRIZE_PRICE = 100;
 export const charById = id => CHARACTERS.find(c => c.id === id) || CHARACTERS[0];
 
 // Saved progress. `storage` is anything with get(key, default) / set(key, value) that never
@@ -642,6 +687,17 @@ export class Profile {
     return true;
   }
   setMuted(m) { this.muted = !!m; this.save(); }
+  // Prize machine: a random character you don't own yet, for PRIZE_PRICE coins.
+  prize(rnd = Math.random) {
+    const left = CHARACTERS.filter(c => !this.owned.has(c.id));
+    if (!left.length || this.coins < PRIZE_PRICE) return null;
+    const c = left[Math.floor(rnd() * left.length)];
+    this.coins -= PRIZE_PRICE;
+    this.owned.add(c.id);
+    this.selected = c.id;
+    this.save();
+    return c;
+  }
 }
 function num(v) { v = Number(v); return Number.isFinite(v) && v >= 0 ? Math.floor(v) : 0; }
 

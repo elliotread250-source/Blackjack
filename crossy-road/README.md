@@ -19,9 +19,17 @@ sound is synthesised, and there is no build step: the folder is the game.
   snatched by the eagle if you idle for 9 seconds or fall too far behind.
 - **Hop feel**: squash-and-stretch hops on a grid, input buffering so quick taps are never lost, a
   bump when you hop into a tree.
-- **Ten characters** bought with coins: Chicken, Duck, Frog, Pig, Cat, Penguin, Fox, Panda, Robot and
-  Unicorn, shown on a rotating carousel. Penguin brings a snowy world, Fox an autumn one, Robot a night
-  world and Unicorn a candy world.
+- **36 characters** bought with coins, or won at random from the **prize machine** (100 coins): Chicken,
+  Duck, Frog, Pig, Cat, Dog, Bunny, Mouse, Sheep, Cow, Turtle, Bee, Owl, Penguin, Fox, Panda, Robot,
+  Unicorn, Camel, Lizard, Dragon, Monkey, Parrot, Tiger, Dino, Polar Bear, Snowman, Pumpkin, Bat, Ghost,
+  Skeleton, Zombie, Gingerbread, Ninja, Alien and Astronaut. Many bring their own world.
+- **Biomes**: every 60 rows the world changes — Meadow, Autumn Woods, Desert (cacti), Jungle (palms),
+  Snowfields, Spooky Hollow (bare trees and gravestones), Night Town, Candy Land and Outer Space
+  (crystals) — with a banner, a sky that fades over, and its own weather and ground details.
+- **More variety**: police cars, ice-cream vans, fire engines, motorbike lanes and slow tractors join the
+  cars, taxis, vans, trucks and buses; rivers carry rafts and turtles as well as logs; flowers, ferns,
+  pumpkins and mushrooms on the grass; rare gems worth 5 coins; a chequered flag every 50 rows; balloons
+  and birds drifting overhead.
 - **Global leaderboard**: after a run, post your score under a name (saved for next time) and see your
   world rank; the trophy button shows the world top 20, and the title screen shows the world best. The
   server keeps each name's best score in a JSON file on a Railway volume at `/data` (`DATA_DIR`), checks
@@ -51,6 +59,15 @@ python server.py    # http://localhost:8080
 ```
 
 Add `?autopilot` to the URL to watch the planner play.
+
+## Tests
+
+```
+node tools/test.mjs [seeds] [rows]   # default 12 seeds to row 260
+```
+
+Checks every character model, the prize machine, biomes, vehicles, floats and gems, and lets the
+autopilot play each seed to prove the world stays passable.
 
 ## Files
 

@@ -85,6 +85,15 @@ export class Renderer {
     this.weather.visible = false;
     this.scene.add(this.weather);
     this.coinGeo = M.mergeBoxes(M.coinBoxes());
+    this.gemGeo = M.mergeBoxes(M.gemBoxes());
+    // balloons and birds drifting across the sky
+    this.flyers = [];
+    for (let i = 0; i < 3; i++) {
+      const group = new THREE.Group();
+      group.visible = false;
+      this.scene.add(group);
+      this.flyers.push({ group, t: -1 - i * 6 });
+    }
     this.lightOn = new THREE.MeshBasicMaterial({ color: 0xff3020 });
     this.lightOff = new THREE.MeshBasicMaterial({ color: 0x4a1a18 });
     this.lightGeo = new THREE.BoxGeometry(0.16, 0.16, 0.04);
@@ -108,23 +117,53 @@ export class Renderer {
     return g;
   }
 
+  // The character's world is where every run starts; further on the world cycles through biomes.
   setTheme(name) {
     if (name === this.themeName) return;
     this.themeName = name;
     this.th = M.THEMES[name] || M.THEMES.classic;
-    const th = this.th;
-    this.scene.background = new THREE.Color(th.sky);
-    this.scene.fog = new THREE.Fog(th.fog, 50, 70);
-    this.hemi.color.setHex(th.hemi[0]);
-    this.hemi.groundColor.setHex(th.hemi[1]);
-    this.hemi.intensity = th.hemi[2];
-    this.sun.intensity = th.sun;
+    if (!this.scene.background) this.scene.background = new THREE.Color();
+    if (!this.scene.fog) this.scene.fog = new THREE.Fog(0xffffff, 50, 70);
     this.clearLanes();
+    this.applyEnv(name, true);
     this.updateFog();
-    this.weather.visible = !!(th.ice || name === 'autumn');
-    this.weatherMat.color.setHex(th.ice ? 0xffffff : 0xe8742c);
-    this.weatherMat.size = (th.ice ? 4 : 5) * Math.min(2, window.devicePixelRatio || 1) * 0.75;
-    this.weatherFall = th.ice ? 1.1 : 0.8;
+  }
+
+  themeForZone(zone) {
+    if (!zone) return this.themeName || 'classic';
+    const i = Math.max(0, M.BIOME_ORDER.indexOf(this.themeName));
+    let name = M.BIOME_ORDER[(i + zone) % M.BIOME_ORDER.length];
+    if (name === this.themeName) name = M.BIOME_ORDER[(i + zone + 1) % M.BIOME_ORDER.length];
+    return name;
+  }
+
+  // Sky, fog, light and weather for a biome; blended over ~1.5 s unless `now`.
+  applyEnv(name, now = false) {
+    const th = M.THEMES[name] || M.THEMES.classic;
+    this.envName = name;
+    const cur = { sky: this.scene.background.clone(), fog: this.scene.fog.color.clone(), hc: this.hemi.color.clone(), hg: this.hemi.groundColor.clone(), hi: this.hemi.intensity, sun: this.sun.intensity };
+    this.envFrom = now ? null : cur;
+    this.envTo = { sky: new THREE.Color(th.sky), fog: new THREE.Color(th.fog), hc: new THREE.Color(th.hemi[0]), hg: new THREE.Color(th.hemi[1]), hi: th.hemi[2], sun: th.sun };
+    this.envT = now ? 1 : 0;
+    this.stepEnv(0);
+    const snowy = !!th.ice, leafy = name === 'autumn', spooky = name === 'spooky', stars = name === 'space';
+    this.weather.visible = snowy || leafy || spooky || stars;
+    this.weatherMat.color.setHex(snowy ? 0xffffff : leafy ? 0xe8742c : spooky ? 0xb88aff : 0xfff6c8);
+    this.weatherMat.size = (snowy ? 4 : stars ? 3 : 5) * Math.min(2, window.devicePixelRatio || 1) * 0.75;
+    this.weatherFall = snowy ? 1.1 : leafy ? 0.8 : spooky ? 0.35 : 0.05;
+  }
+
+  stepEnv(dt) {
+    if (this.envT >= 1 && this.envFrom === null && dt) return;
+    this.envT = Math.min(1, this.envT + dt / 1.5);
+    const k = this.envT * this.envT * (3 - 2 * this.envT), a = this.envFrom || this.envTo, b = this.envTo;
+    this.scene.background.copy(a.sky).lerp(b.sky, k);
+    this.scene.fog.color.copy(a.fog).lerp(b.fog, k);
+    this.hemi.color.copy(a.hc).lerp(b.hc, k);
+    this.hemi.groundColor.copy(a.hg).lerp(b.hg, k);
+    this.hemi.intensity = lerp(a.hi, b.hi, k);
+    this.sun.intensity = lerp(a.sun, b.sun, k);
+    if (this.envT >= 1) this.envFrom = null;
   }
 
   stepWeather(dt) {
@@ -166,6 +205,7 @@ export class Renderer {
 
   reset(game) {
     this.clearLanes();
+    if (this.themeName) this.applyEnv(this.themeName, true);
     this.game = game;
     this.camRow = 1; this.camX = 0;
     this.eagle.visible = false;
@@ -202,7 +242,7 @@ export class Renderer {
 
   // ------------------------------------------------------------ lanes
   makeLane(lane) {
-    const g = this.game, th = this.th;
+    const g = this.game, themeName = this.themeForZone(lane.zone || 0), th = M.THEMES[themeName] || this.th;
     const group = new THREE.Group();
     group.position.z = -lane.row;
     const ground = new THREE.Mesh(M.mergeBoxes(M.laneBoxes(lane, g.lanes.get(lane.row + 1), g.lanes.get(lane.row - 1), th)), this.mat);
@@ -221,8 +261,8 @@ export class Renderer {
       }
     } else if (lane.type === 'river') {
       for (const it of lane.items) {
-        const key = it.kind === 'pad' ? 'pad:' + this.themeName : 'log:' + it.len + ':' + this.themeName;
-        const m = new THREE.Mesh(this.cached(key, () => (it.kind === 'pad' ? M.padBoxes(th) : M.logBoxes(it.len, th))), this.mat);
+        const key = it.kind === 'pad' ? 'pad:' + themeName : it.kind === 'log' ? 'log:' + it.len + ':' + themeName : it.kind + ':' + it.len;
+        const m = new THREE.Mesh(this.cached(key, () => (it.kind === 'pad' ? M.padBoxes(th) : it.kind === 'turtles' ? M.turtleBoxes(it.len) : it.kind === 'raft' ? M.raftBoxes(it.len) : M.logBoxes(it.len, th))), this.mat);
         m.castShadow = it.kind !== 'pad';
         m.receiveShadow = true;
         if (it.kind === 'pad') m.rotation.y = (lane.row * 1.7 + it.x0) % 3;
@@ -246,7 +286,7 @@ export class Renderer {
       });
     }
     if (lane.coin !== null && lane.coin !== undefined && lane.type !== 'river' && !g.taken.has(lane.row + ':' + lane.coin)) {
-      const c = new THREE.Mesh(this.coinGeo, this.mat);
+      const c = new THREE.Mesh(lane.gem ? this.gemGeo : this.coinGeo, this.mat);
       c.castShadow = true;
       c.position.set(lane.coin, baseY(lane) + 0.5, 0);
       group.add(c);
@@ -362,7 +402,40 @@ export class Renderer {
     this.updatePlayer(g, pose, t, dt);
     this.stepParticles(dt);
     this.stepWeather(dt);
+    // the sky follows the biome the camera is in
+    const here = g.lanes.get(Math.round(this.camRow));
+    if (here) { const name = this.themeForZone(here.zone || 0); if (name !== this.envName) this.applyEnv(name); }
+    this.stepEnv(dt);
+    this.stepFlyers(dt);
   }
+
+  stepFlyers(dt) {
+    const T = this.target;
+    for (const f of this.flyers) {
+      if (!f.group.visible) {
+        f.t += dt;
+        if (f.t < 0) continue;
+        // launch from one side, a few rows ahead of the camera
+        f.group.clear();
+        const balloon = Math.random() < 0.45;
+        const c = [0xff5a5a, 0x5ab4ff, 0xffd23f, 0x8be36b, 0xc77dff][Math.floor(Math.random() * 5)];
+        f.group.add(new THREE.Mesh(balloon ? this.cached('balloon:' + c, () => M.balloonBoxes(c)) : this.cached('birds', () => M.birdBoxes()), this.mat));
+        f.balloon = balloon;
+        f.dir = Math.random() < 0.5 ? 1 : -1;
+        f.speed = balloon ? 0.9 + Math.random() * 0.5 : 3.2 + Math.random() * 1.5;
+        f.group.position.set(T.x - f.dir * 16, balloon ? 4.6 + Math.random() * 1.6 : 3.8 + Math.random(), T.z - 4 - Math.random() * 12);
+        f.group.rotation.y = balloon ? 0 : f.dir > 0 ? -Math.PI / 2 : Math.PI / 2;
+        f.group.visible = true;
+        f.t = 0;
+        continue;
+      }
+      f.t += dt;
+      f.group.position.x += f.dir * f.speed * dt;
+      f.group.position.y += (f.balloon ? Math.cos(f.t) * 0.08 : Math.cos(f.t * 6) * 0.3) * dt;
+      if (Math.abs(f.group.position.x - T.x) > 17) { f.group.visible = false; f.t = -(8 + Math.random() * 14); }
+    }
+  }
+
 
   updateLane(v, t) {
     const lane = v.lane;

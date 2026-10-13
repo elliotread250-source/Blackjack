@@ -1,5 +1,6 @@
 // Glue: screens, the fixed-timestep loop, input, sound and saved progress.
-import { Game, Profile, TICK, CHARACTERS, charById, entityX, trainState } from './logic.js';
+import { Game, Profile, TICK, CHARACTERS, charById, entityX, trainState, zoneOf, PRIZE_PRICE } from './logic.js';
+import { BIOME_NAMES } from './models.js';
 import { Renderer } from './render.js';
 import { Sound } from './audio.js';
 import { Input } from './input.js';
@@ -24,7 +25,7 @@ const autopilot = params.has('autopilot') ? new Autopilot() : null;
 const board = new Leaderboard(!params.has('autopilot') && !params.has('seed'));
 const touchUI = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
 
-const THEME_NOTE = { snow: 'Comes with a snowy world', autumn: 'Comes with an autumn world', night: 'Comes with a night world', candy: 'Comes with a candy world' };
+const THEME_NOTE = { snow: 'Comes with a snowy world', autumn: 'Comes with an autumn world', night: 'Comes with a night world', candy: 'Comes with a candy world', desert: 'Comes with a desert world', jungle: 'Comes with a jungle world', spooky: 'Comes with a spooky world', space: 'Comes with a space world' };
 const DEATH_TEXT = {
   car: ['Splat!', 'Flattened!', 'Road pizza!'],
   train: ['Choo choo!', 'Derailed!', 'Train wreck!'],
@@ -50,6 +51,7 @@ function newGame() {
   renderer.setCharacter(profile.selected);
   renderer.reset(game);
   board.startRun();
+  lastZone = 0;
   updateHud();
   prevPhase.clear(); passed.clear();
 }
@@ -256,7 +258,21 @@ function updateChars() {
     btn.className = 'btn orange';
     $('c-info').textContent = (profile.coins < c.price ? 'Need ' + (c.price - profile.coins) + ' more coins' : 'Unlock ' + c.name) + (note ? ' • ' + note.toLowerCase() : '');
   }
-  $('c-dots').innerHTML = CHARACTERS.map((ch, i) => `<i class="${i === sel ? 'on' : ''} ${profile.owned.has(ch.id) ? '' : 'lock'}"></i>`).join('');
+  $('c-dots').textContent = `${sel + 1} / ${CHARACTERS.length} • ${profile.owned.size} unlocked`;
+  const left = CHARACTERS.length - profile.owned.size;
+  $('c-prize').disabled = !left || profile.coins < PRIZE_PRICE;
+  $('c-prize').innerHTML = left ? `🎁 Prize machine <span class="coin-ic"></span>${PRIZE_PRICE}` : '🎁 You have everyone!';
+}
+
+function prize() {
+  const c = profile.prize();
+  if (!c) return;
+  sound.buy();
+  renderer.setCarouselOwned(profile.owned);
+  sel = CHARACTERS.indexOf(c);
+  updateChars();
+  updateHud();
+  $('c-info').textContent = 'You won ' + c.name + '!';
 }
 
 function charsStep(d) {
@@ -340,6 +356,7 @@ click('c-back', closeChars);
 click('c-prev', () => charsStep(-1));
 click('c-next', () => charsStep(1));
 click('c-action', charsAction);
+click('c-prize', prize);
 for (const b of document.querySelectorAll('.mute')) b.addEventListener('click', e => { e.stopPropagation(); toggleMute(); b.blur(); });
 // buttons should never start a hop underneath them
 for (const b of document.querySelectorAll('button, a')) b.addEventListener('pointerdown', e => e.stopPropagation());
@@ -361,10 +378,17 @@ function handleEvents() {
       case 'hop': sound.hop(); break;
       case 'bump': sound.bump(); break;
       case 'land': if (e.log) sound.plop(); break;
-      case 'score': updateHud(); break;
+      case 'score': {
+        updateHud();
+        const zone = zoneOf(e.score);
+        if (zone !== lastZone) { lastZone = zone; banner(BIOME_NAMES[renderer.themeForZone(zone)] || '', 'Entering'); }
+        else if (e.score % 50 === 0) banner(e.score + ' rows!', 'Milestone');
+        break;
+      }
       case 'coin':
-        profile.addCoins(1);
+        profile.addCoins(e.value || 1);
         sound.coin();
+        if (e.gem) { setTimeout(() => sound.coin(), 90); setTimeout(() => sound.coin(), 180); }
         renderer.collectCoin(e.row);
         updateHud();
         $('coinbox').classList.remove('pop'); void $('coinbox').offsetWidth; $('coinbox').classList.add('pop');
@@ -381,6 +405,15 @@ function handleEvents() {
         break;
     }
   }
+}
+
+let lastZone = 0, bannerTimer = 0;
+function banner(text, kicker) {
+  if (!text) return;
+  const b = $('banner');
+  b.innerHTML = `<small>${kicker}</small>${text}`;
+  b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
+  clearTimeout(bannerTimer); bannerTimer = setTimeout(() => b.classList.remove('show'), 2200);
 }
 
 // Traffic whooshes, horns, train bells and rumble near the player.
