@@ -1,5 +1,5 @@
 // Glue: screens, the fixed-timestep loop, input, sound and saved progress.
-import { Game, Profile, TICK, CHARACTERS, charById, entityX, trainState, zoneOf, PRIZE_PRICE, SECRET_WORDS, INVINCIBLE_SECONDS } from './logic.js';
+import { Game, Profile, TICK, CHARACTERS, CHALLENGES, charById, entityX, trainState, zoneOf, PRIZE_PRICE, SECRET_WORDS, INVINCIBLE_SECONDS } from './logic.js';
 import { BIOME_NAMES } from './models.js';
 import { Renderer } from './render.js';
 import { Sound } from './audio.js';
@@ -58,7 +58,7 @@ function newGame() {
 }
 
 function show(id) {
-  for (const s of ['s-title', 's-pause', 's-over', 's-chars', 's-board']) $(s).hidden = s !== id;
+  for (const s of ['s-title', 's-pause', 's-over', 's-chars', 's-board', 's-challenges']) $(s).hidden = s !== id;
   $('arcade').hidden = !(id === 's-title' || id === 's-over');
   $('hud').hidden = id === 's-title' || id === 's-chars' || id === 's-board';
   $('hud').classList.toggle('over', id === 's-over');
@@ -301,6 +301,28 @@ function charsAction() {
   updateHud();
 }
 
+// ------------------------------------------------------------ challenges board
+let challengesFrom = 'title';
+function openChallenges() {
+  challengesFrom = state;
+  state = 'challenges';
+  const done = CHALLENGES.filter(c => profile.owned.has(c.id)).length;
+  $('ch-count').textContent = `${done} / ${CHALLENGES.length}`;
+  const order = { Easy: 0, Medium: 1, Hard: 2, Extreme: 3 };
+  const list = CHALLENGES.slice().sort((a, b) => order[a.challenge.tier] - order[b.challenge.tier] || a.challenge.goal - b.challenge.goal);
+  $('ch-list').innerHTML = list.map(c => {
+    const ch = c.challenge, got = profile.owned.has(c.id), best = Math.min(profile.records[ch.stat] || 0, ch.goal);
+    const pct = got ? 100 : Math.round(best / ch.goal * 100);
+    return `<div class="ch${got ? ' done' : ''}"><b>${got ? '✅ ' + c.name : '🔒 ' + c.name}</b><span class="tier ${ch.tier}">${ch.tier}</span>
+      <span class="goal">${ch.text}</span><span class="num">${got ? 'Unlocked' : best + ' / ' + ch.goal}</span><div class="bar"><i style="width:${pct}%"></i></div></div>`;
+  }).join('');
+  show('s-challenges');
+}
+function closeChallenges() {
+  state = challengesFrom === 'over' ? 'over' : 'title';
+  show(state === 'over' ? 's-over' : 's-title');
+}
+
 function closeChars() {
   sound.click();
   toTitle();
@@ -329,6 +351,7 @@ function onKey(e) {
     if (k === 'Escape' || k === 'Space' || k === 'Enter') { closeBoard(); return true; }
     return false;
   }
+  if (state === 'challenges') { if (k === 'Escape' || k === 'Enter' || k === 'Space') closeChallenges(); return true; }
   if (k === 'KeyP' || k === 'Escape') {
     if (state === 'playing' || state === 'dying') pause();
     else if (state === 'paused') resume();
@@ -357,6 +380,8 @@ click('p-menu', () => { sound.click(); toTitle(); });
 click('o-retry', () => { sound.click(); retry(); });
 click('o-chars', () => { sound.click(); openChars(); });
 click('t-chars', () => { sound.click(); openChars(); });
+click('t-challenges', () => { sound.click(); openChallenges(); });
+click('ch-close', () => { sound.click(); closeChallenges(); });
 click('t-board', () => { sound.click(); openBoard(); });
 click('o-board', () => { sound.click(); openBoard(); });
 click('b-back', () => { sound.click(); closeBoard(); });
@@ -432,7 +457,7 @@ function handleEvents() {
 // ------------------------------------------------------------ secret words, codes, challenges
 let pendingFast = false, suited = false, typed = '';
 function checkChallenges() {
-  if (!game) return;
+  if (!game || game.usedFast) return;
   for (const c of profile.recordRun(game.runStats())) {
     sound.buy();
     setTimeout(() => banner(c.name + ' unlocked!', '🏆 Challenge complete'), 300);

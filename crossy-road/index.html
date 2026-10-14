@@ -167,6 +167,19 @@
 .admin-list button { border: 0; border-radius: 9px; background: #e8463b; color: #fff; font-weight: 900; height: 34px; cursor: pointer; }
 .admin-msg { margin: 0; min-height: 1.2em; color: #ffd23f; }
 .admin-row { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.ch-box { width: min(560px, 100%); max-height: 90vh; display: flex; flex-direction: column; gap: 10px; background: #2c3448; border-radius: 20px; padding: 16px; color: #fff; font: 600 15px system-ui, sans-serif; box-shadow: 0 10px 0 rgba(0,0,0,.25); }
+.ch-head { display: flex; align-items: center; gap: 10px; } .ch-head h2 { margin: 0; font-size: 24px; } .ch-head span { margin-left: auto; color: #ffd23f; font-weight: 900; }
+.ch-note { margin: 0; color: #c8d0e0; font-size: 13px; font-weight: 500; }
+.ch-list { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+.ch { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,.07); border: 2px solid transparent; }
+.ch.done { border-color: #5cd83a; background: rgba(92,216,58,.12); }
+.ch b { font-size: 16px; } .ch .goal { grid-column: 1; color: #d8deea; font-size: 13px; font-weight: 500; }
+.ch .tier { grid-row: 1; grid-column: 2; justify-self: end; font-size: 11px; font-weight: 900; padding: 3px 8px; border-radius: 999px; letter-spacing: .05em; text-transform: uppercase; }
+.tier.Easy { background: #3ac06a; } .tier.Medium { background: #3a8cff; } .tier.Hard { background: #ff8a2a; } .tier.Extreme { background: #e8263a; box-shadow: 0 0 10px #e8263a; }
+.ch .bar { grid-column: 1 / -1; height: 10px; border-radius: 6px; background: rgba(0,0,0,.35); overflow: hidden; }
+.ch .bar i { display: block; height: 100%; background: linear-gradient(90deg, #ffd23f, #ff8a2a); }
+.ch.done .bar i { background: #5cd83a; }
+.ch .num { grid-row: 2; grid-column: 2; justify-self: end; font-size: 13px; color: #ffd23f; font-variant-numeric: tabular-nums; }
 </style>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 </head>
@@ -174,6 +187,13 @@
 <canvas id="game"></canvas>
 <a class="arcade" id="arcade" href="https://open-arcade.up.railway.app">&larr; Arcade</a>
 
+<div id="s-challenges" class="screen dim" hidden>
+  <div class="ch-box">
+    <div class="ch-head"><h2>🏆 Challenges</h2><span id="ch-count"></span><button class="btn round" id="ch-close" aria-label="Close">✕</button></div>
+    <p class="ch-note">Beat a challenge in a single run to unlock its hero and their world. Runs where you used <b>fast</b> don't count.</p>
+    <div class="ch-list" id="ch-list"></div>
+  </div>
+</div>
 <div id="s-admin" class="admin" hidden>
   <div class="admin-box">
     <h2>Edit leaderboard</h2>
@@ -211,7 +231,7 @@
       <button class="btn orange" id="t-chars"><svg viewBox="0 0 24 24"><path d="M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm0 10c4.4 0 8 2 8 4.5V21H4v-3.5C4 15 7.6 13 12 13z"/></svg>Characters</button>
       <button class="btn round mute" aria-label="Mute"></button>
     </div>
-    <button class="btn" id="t-redeem" style="font-size:15px;padding:8px 16px">🎟️ Redeem code</button>
+    <div class="row"><button class="btn" id="t-challenges" style="font-size:15px;padding:8px 16px">🏆 Challenges</button><button class="btn" id="t-redeem" style="font-size:15px;padding:8px 16px">🎟️ Redeem code</button></div>
     <div class="keys outline pass" id="t-keys"></div>
   </div>
 </div>

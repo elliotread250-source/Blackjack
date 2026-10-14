@@ -382,6 +382,7 @@ export class Game {
   makeInvincible(seconds = INVINCIBLE_SECONDS) {
     if (this.player.dead) return false;
     this.invUntil = this.tick + Math.round(seconds * TPS);
+    this.usedFast = true;            // challenges don't count on a cheat run
     this.emit('invincible', { seconds });
     return true;
   }
@@ -682,7 +683,16 @@ CHARACTERS.push(
   { id: 'knight', name: 'Pixel Knight', price: null, theme: 'retro', challenge: { stat: 'rails', goal: 30, text: 'Cross 30 train tracks in one run' } },
   { id: 'marine', name: 'Space Marine', price: null, theme: 'space', challenge: { stat: 'score', goal: 250, text: 'Reach 250 rows in one run' } },
   { id: 'golem', name: 'Lava Golem', price: null, theme: 'volcano', challenge: { stat: 'logs', goal: 60, text: 'Ride 60 logs in one run' } },
+  { id: 'phoenix', name: 'Phoenix', price: null, theme: 'volcano', challenge: { stat: 'score', goal: 500, text: 'Reach 500 rows in one run' } },
+  { id: 'titan', name: 'Robo Titan', price: null, theme: 'metro', challenge: { stat: 'roads', goal: 150, text: 'Cross 150 roads in one run' } },
+  { id: 'frost', name: 'Frost Wizard', price: null, theme: 'snow', challenge: { stat: 'rails', goal: 60, text: 'Cross 60 train tracks in one run' } },
+  { id: 'pirate', name: 'Pirate Captain', price: null, theme: 'classic', challenge: { stat: 'logs', goal: 120, text: 'Ride 120 logs in one run' } },
+  { id: 'cosmic', name: 'Cosmic Guardian', price: null, theme: 'space', challenge: { stat: 'coins', goal: 60, text: 'Grab 60 coins in one run' } },
 );
+// how hard each challenge is, for the challenges board
+const TIERS = { miner: 'Easy', ironsuit: 'Easy', panther: 'Medium', starshield: 'Medium', thunder: 'Medium', crawler: 'Medium',
+  brute: 'Hard', hedgehog: 'Hard', knight: 'Hard', golem: 'Hard', marine: 'Hard', phoenix: 'Extreme', titan: 'Extreme', frost: 'Extreme', pirate: 'Extreme', cosmic: 'Extreme' };
+for (const c of CHARACTERS) if (c.challenge) c.challenge.tier = TIERS[c.id] || 'Medium';
 export const CHALLENGES = CHARACTERS.filter(c => c.challenge);
 export const INVINCIBLE_SECONDS = 20;
 export const SECRET_WORDS = ['fast', 'golden'];

@@ -81,6 +81,9 @@
   .card:hover .go { background: var(--ink); color: var(--bg); border-color: var(--ink); transform: rotate(-45deg); }
   .body p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.5; }
   .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 6px; }
+  .plays { position: absolute; z-index: 2; bottom: 12px; left: 12px; display: flex; align-items: center; gap: 6px; font: 600 12px Inter, sans-serif; color: #fff;
+    background: rgba(0,0,0,.45); backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,.14); padding: 5px 10px; border-radius: 999px; }
+  .plays.top { background: linear-gradient(90deg, rgba(255,180,40,.85), rgba(255,100,60,.85)); border-color: transparent; }
   .tags span { font-size: 12px; color: var(--dim); border: 1px solid var(--line); padding: 3px 8px; border-radius: 6px; }
 
   footer { border-top: 1px solid var(--line); padding: 26px 0 40px; color: var(--dim); font-size: 13px; display: flex; flex-wrap: wrap; gap: 10px 22px; justify-content: space-between; }
@@ -276,7 +279,7 @@ const ITEMS = [
     blurb: 'Two minutes, one hatchback, a whole town of cones, bins, gnomes and pianos to smash. Combos, drifts, jumps and a world leaderboard.',
     tags: ['Driving', '3D', 'Leaderboard'], c1: '#e0262c', c2: '#1d2a4a', glow: 'rgba(255,106,26,.4)', art: 'wreck' },
   { name: 'Nosy Neighbour', kind: 'game', url: 'https://neighbour-production-5073.up.railway.app',
-    blurb: 'Four stealth levels: sneak into his basement, escape his cold cellar, rob the new neighbour on your street, then break into a huge mansion.',
+    blurb: 'Five stealth levels: sneak into his basement, escape his cold cellar, rob the new neighbour on your street, break into a huge mansion, then survive the Nightmare House with its tram and Fear rooms.',
     tags: ['3D', 'Stealth', 'Horror'], c1: '#b8566a', c2: '#2a1b4a', glow: 'rgba(255,46,46,.32)', art: 'neighbour' },
   { name: 'Getting Over It', kind: 'game', url: 'https://over-a-barrel-production.up.railway.app',
     blurb: 'A man in a pot, a sledgehammer and a 100 metre mountain. No checkpoints. Falling is part of the deal.',
@@ -340,6 +343,31 @@ const ART = {
 const grid = document.getElementById('grid');
 const arrow = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const slug = s => s.toLowerCase().replace(/replica|extreme/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 48);
+const plays = {};
+function countPlay(card) {
+  const game = card.dataset.game;
+  const body = JSON.stringify({ game });
+  // sendBeacon survives the page navigating away to the game
+  if (!(navigator.sendBeacon && navigator.sendBeacon('/api/play', new Blob([body], { type: 'application/json' }))))
+    fetch('/api/play', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, keepalive: true }).catch(() => {});
+  plays[game] = (plays[game] || 0) + 1;
+  showPlays();
+}
+// most played first; ties keep the shelf's own order
+function showPlays() {
+  const cards = [...grid.children];
+  const max = Math.max(0, ...cards.map(c => plays[c.dataset.game] || 0));
+  for (const c of cards) {
+    const n = plays[c.dataset.game] || 0, el = c.querySelector('.plays');
+    el.innerHTML = `▶ <b>${n.toLocaleString()}</b> ${n === 1 ? 'play' : 'plays'}`;
+    el.classList.toggle('top', n > 0 && n === max);
+  }
+}
+function sortByPlays() {
+  const cards = [...grid.children].sort((a, b) => (plays[b.dataset.game] || 0) - (plays[a.dataset.game] || 0) || a.dataset.order - b.dataset.order);
+  for (const c of cards) grid.appendChild(c);
+}
 
 for (const it of ITEMS.filter(it => !it.pending)) {
   const a = document.createElement('a');
@@ -350,6 +378,7 @@ for (const it of ITEMS.filter(it => !it.pending)) {
     <div class="art">${ART[it.art]}
       <span class="badge">${it.kind === 'tool' ? 'Tool' : 'Game'}</span>
       ${it.ping === false ? '<span class="status"><i></i>GitHub</span>' : '<span class="status"><i></i>Checking</span>'}
+      <span class="plays">▶ <b>…</b> plays</span>
     </div>
     <div class="body">
       <div class="title"><h2>${esc(it.name)}</h2><span class="go">${arrow}</span></div>
@@ -357,9 +386,16 @@ for (const it of ITEMS.filter(it => !it.pending)) {
       <div class="tags">${it.tags.map(t => `<span>${esc(t)}</span>`).join('')}</div>
     </div>`;
   a.setAttribute('aria-label', `${it.name}: ${it.blurb}`);
+  a.dataset.game = slug(it.name); a.dataset.order = grid.children.length;
+  // count a play when the card is opened (left click, middle click or Enter)
+  const count = () => countPlay(a);
+  a.addEventListener('click', count); a.addEventListener('auxclick', e => { if (e.button === 1) count(); });
   grid.appendChild(a);
   if (it.ping !== false) ping(it.url, a.querySelector('.status'));
 }
+
+fetch('/api/plays', { cache: 'no-store' }).then(r => r.json()).then(d => { Object.assign(plays, d.plays || {}); sortByPlays(); showPlays(); })
+  .catch(() => { for (const el of grid.querySelectorAll('.plays')) el.hidden = true; });
 
 // An opaque no-cors request still tells us the server answered. Some games
 // sleep when idle, so this also wakes them up before you click.
@@ -377,7 +413,7 @@ function filter(f) {
   let n = 0;
   for (const c of grid.children) { const show = f === 'all' || c.dataset.kind === f; c.hidden = !show; n += show; }
   for (const c of chips) c.setAttribute('aria-pressed', String(c.dataset.f === f));
-  document.getElementById('count').textContent = `${n} ${n === 1 ? 'thing' : 'things'} to play with`;
+  document.getElementById('count').textContent = `${n} ${n === 1 ? 'thing' : 'things'} to play with · most played first`;
   try { localStorage.setItem('arcade.filter', f); } catch {}
 }
 chips.forEach(c => c.addEventListener('click', () => filter(c.dataset.f)));

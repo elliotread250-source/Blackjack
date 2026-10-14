@@ -8,6 +8,10 @@ Railway volume at $DATA_DIR (default /data), so they survive redeploys. Reading
 them back is POST /api/suggestions/view {code}; the code is the
 SUGGESTIONS_CODE environment variable (kept out of the public repo), compared
 in constant time. Posting and viewing are both rate limited per IP.
+
+Play counts: POST /api/play {game} adds one to that game's count (the same IP
+clicking the same game again within PLAY_GAP seconds is ignored), and
+GET /api/plays returns {"plays": {game: count}}. Stored in plays.json.
 """
 
 import hmac
@@ -26,11 +30,17 @@ SUGGESTIONS_FILE = os.path.join(DATA_DIR, "suggestions.json")
 KEEP = 5000                 # newest suggestions kept on disk
 MAX_TEXT, MAX_NAME = 1000, 40
 POSTS_PER_WINDOW, VIEWS_PER_WINDOW, WINDOW = 5, 12, 600
+PLAYS_FILE = os.path.join(DATA_DIR, "plays.json")
+PLAY_GAP = 30               # seconds before the same IP can count the same game again
+MAX_GAMES = 300
+GAME_KEY = re.compile(r"^[a-z0-9][a-z0-9-]{0,47}$")
 
 _lock = threading.Lock()
 _suggestions = []
 _posts = {}                 # ip -> [times]
 _views = {}
+_plays = {}                 # game -> count
+_last_play = {}             # (ip, game) -> time
 
 
 def _load():
@@ -41,6 +51,41 @@ def _load():
         _suggestions = [s for s in data if isinstance(s, dict) and isinstance(s.get("text"), str)][-KEEP:]
     except (OSError, ValueError):
         _suggestions = []
+
+
+def _load_plays():
+    global _plays
+    try:
+        with open(PLAYS_FILE) as f:
+            data = json.load(f)
+        _plays = {k: int(v) for k, v in data.items() if isinstance(k, str) and GAME_KEY.match(k) and int(v) >= 0}
+    except (OSError, ValueError, AttributeError, TypeError):
+        _plays = {}
+
+
+def add_play(ip, body):
+    game = str(body.get("game") or "").strip().lower()
+    if not GAME_KEY.match(game):
+        return 400, {"error": "Bad game"}
+    now = time.time()
+    with _lock:
+        if game not in _plays and len(_plays) >= MAX_GAMES:
+            return 400, {"error": "Bad game"}
+        if len(_last_play) > 50000:
+            for k in [k for k, t in _last_play.items() if now - t > PLAY_GAP]:
+                del _last_play[k]
+        if now - _last_play.get((ip, game), 0) >= PLAY_GAP:
+            _last_play[(ip, game)] = now
+            _plays[game] = _plays.get(game, 0) + 1
+            try:
+                os.makedirs(DATA_DIR, exist_ok=True)
+                tmp = PLAYS_FILE + ".tmp"
+                with open(tmp, "w") as f:
+                    json.dump(_plays, f)
+                os.replace(tmp, PLAYS_FILE)
+            except OSError as exc:
+                print(f"plays save failed: {exc}", flush=True)
+        return 200, {"game": game, "plays": _plays.get(game, 0)}
 
 
 def _save():
@@ -137,13 +182,16 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
+        if self.path.split("?")[0] == "/api/plays":
+            with _lock:
+                return self._json(200, {"plays": dict(_plays)})
         if self.path.split("?")[0] == "/data" or self.path.startswith("/data/"):
             return self._json(404, {"error": "Not found"})  # never serve a local data folder
         super().do_GET()
 
     def do_POST(self):
         route = self.path.split("?")[0]
-        if route not in ("/api/suggestions", "/api/suggestions/view"):
+        if route not in ("/api/suggestions", "/api/suggestions/view", "/api/play"):
             return self._json(404, {"error": "Not found"})
         try:
             n = int(self.headers.get("Content-Length") or 0)
@@ -152,6 +200,8 @@ class Handler(SimpleHTTPRequestHandler):
                 raise ValueError
         except ValueError:
             return self._json(400, {"error": "Bad request"})
+        if route == "/api/play":
+            return self._json(*add_play(self._ip(), body))
         if route == "/api/suggestions":
             return self._json(*add_suggestion(self._ip(), body))
         return self._json(*view_suggestions(self._ip(), body))
@@ -163,6 +213,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 def main():
     _load()
+    _load_plays()
     port = int(os.environ.get("PORT", "8080"))
     server = ThreadingHTTPServer(("0.0.0.0", port), partial(Handler, directory=ROOT))
     print(f"serving {os.path.basename(ROOT)} on :{port} ({len(_suggestions)} suggestions)", flush=True)
