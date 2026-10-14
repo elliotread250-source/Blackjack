@@ -28,7 +28,7 @@ sound is synthesised, and there is no build step: the folder is the game.
   (crystals) — with a banner, a sky that fades over, and its own weather and ground details.
 - **More variety**: police cars, ice-cream vans, fire engines, motorbike lanes and slow tractors join the
   cars, taxis, vans, trucks and buses; rivers carry rafts and turtles as well as logs; flowers, ferns,
-  pumpkins and mushrooms on the grass; rare gems worth 5 coins; a chequered flag every 50 rows; balloons
+  pumpkins and mushrooms on the grass; rare blue jewels worth 3 coins; a chequered flag every 50 rows; balloons
   and birds drifting overhead.
 - **Global leaderboard**: after a run, post your score under a name (saved for next time) and see your
   world rank; the trophy button shows the world top 20, and the title screen shows the world best. The
@@ -39,6 +39,39 @@ sound is synthesised, and there is no build step: the folder is the game.
   the eagle's screech and the squish.
 - Score (furthest row) and best score, coins, owned and selected characters and mute are saved on your
   device. Pauses when the tab is hidden. Fixed 60 Hz simulation, works in portrait and landscape.
+
+## Accounts, coins and daily challenges (2026)
+
+- **Accounts**: the first visit asks for a username. New names pick a PIN (stored hashed with scrypt)
+  and get a one-time recovery code; existing names sign in with their PIN. Usernames are unique
+  regardless of capitals (Sam = sam = SAM). A device stays signed in (HttpOnly cookie) and remembers
+  every account used on it, so players can switch without mixing progress. Guests can still play with
+  the old on-device save, and a device's old save can be brought into an account once (capped).
+- **Everything lives on the server** (SQLite on the Railway volume, backed up): coins, characters,
+  equipped skin, settings, records, daily progress. Signing in on another device shows the same account.
+- **Runs are verified**: the server picks each run's seed and replays the hops the browser sends with the
+  same game code (`tools/worker.mjs` runs `js/logic.js` in node), so scores, coins and challenge progress
+  can't be faked. Runs using `fast` or the autopilot are practice runs (no coins or progress). Finished
+  runs that can't be sent (offline) wait in a queue and are sent later.
+- **Daily challenges**: 100 missions (35 Easy, 35 Medium, 30 Hard; 50 Standard, 25 Rare, 15 Epic,
+  10 Legendary). Every day at 00:00 UTC everyone gets one of each tier; Easy pays 10, Medium 25, Hard 50,
+  plus a rarity bonus (Rare +5, Epic +15, Legendary +30). Each tier works through its whole pool before
+  any mission repeats. A run counts for the UTC day it started. Rewards are claimed once, server-side.
+- **83 characters**, including the 2026 collection of 30 (Forest Hedgehog 25 … Royal Phoenix 1,000),
+  a searchable, sortable shop list with previews, and purchase confirmation. The prize machine
+  (100 coins) gives a random ordinary character up to 300 coins, each equally likely.
+- **The crown**: whoever is #1 on the world board wears a golden crown on any character.
+- **Settings** (saved to the account): movement speed (Fast = 4 ticks a hop, Classic = 8; from the next
+  run), master and effects volume, mute, graphics quality, reduced motion, high contrast, screen shake,
+  and train lights (flashing or steady).
+- **Train warnings** work without sound: both crossing signals flash (about 1.5 times a second, or steady),
+  barriers lower, the rails glow red, a "TRAIN!" sign floats over the crossing and a "TRAIN APPROACHING"
+  banner shows the side the train comes from — all driven by the train's real timing (2.2 s of warning).
+- Blue jewels are worth 3 coins.
+
+Tests: `node tools/test.mjs` (game rules, replays, catalogue, characters) and
+`python3 tools/test_server.py` (accounts, devices, runs, coins, dailies, shop, crown, admin).
+The leaderboard editor is opened by entering the `ADMIN_CODE` environment variable as a redeem code.
 
 ## Controls
 

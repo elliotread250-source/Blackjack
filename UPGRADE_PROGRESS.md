@@ -48,9 +48,24 @@ Order: Phase 1 Crossy Road → Phase 2 Nosy Neighbour visual rebuild → Phase 3
 - [x] Server: accounts, devices, runs, ledger, shop, prize (≤300-coin characters only, uniform odds),
       redeem codes, migration, daily missions, claims, leaderboards, crown, admin, backups
 - [x] Server test suite (`tools/test_server.py`)
-- [x] 30 new characters in the catalogue (models: in progress)
-- [ ] Client: account screens, remembered accounts, settings, daily panel, shop list, crown, end screen
-- [ ] 30 new voxel models + Royal Phoenix effects
-- [ ] Train warnings (lights, barriers, sign, no-audio, reduced flashing)
-- [ ] Visual polish pass
-- [ ] Browser verification of the Phase 1 acceptance scenario
+- [x] 30 new characters with their own voxel models (Royal Phoenix: most detailed, glow light, ember +
+      feather bursts on hops, premium shop card, showy carousel turn)
+- [x] Client: welcome / sign-in / create / recovery code / old-save migration / reset PIN / remembered
+      accounts; settings (4/8 ticks, volumes, quality presets, reduced motion, high contrast, shake, train
+      lights, account stats, switch, sign out, change PIN); daily cards (tier, rarity styling, base+bonus,
+      progress, claim, countdown, live milestone toasts); shop list (search, sort, affordable/owned
+      filters, thumbnails, confirmation); end-of-run screen; crown; champion on the title
+- [x] Train warnings: both signals, halos, barriers, glowing rails, floating sign, HUD banner with side
+      arrow; flashing ~1.5 Hz or steady; 2.2 s warning
+- [x] Polish: grass patches, river foam/pebbles, glowing jewels, landing dust, hop animation, deaths
+- [x] Tests: `node tools/test.mjs` 339 checks; `python3 tools/test_server.py` 61 checks
+- [x] Browser acceptance (local server): new account Sam → old save migrated (340 coins, 2 characters) →
+      replay-verified run credited → daily mission claimed once (+15) → second claim refused → Meerkat
+      bought (confirmation) → 8-tick setting saved → second device (separate cookies) signs in and sees the
+      same coins, characters, equipped skin, settings, best score, claims and crown; crown rendered on
+      several characters; crossing warning rendered from the real train state; mobile layout checked
+- Notes: no music exists, so there is no music slider. Username existence is visible by design (the brief's
+  sign-in flow needs it); it is rate limited.
+- **Deployment: not deployed yet — waiting for permission** (merging this branch into
+  `claude/modest-tesla-7rfcgo` deploys it; the server migrates a fresh `crossy.db` next to the existing
+  `leaderboard.json`, which is kept as the Classic board).

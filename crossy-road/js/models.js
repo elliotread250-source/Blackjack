@@ -166,6 +166,13 @@ export function laneBoxes(lane, next, prev, th) {
   if (lane.type === 'grass') {
     const g = th.grass[((lane.row % 2) + 2) % 2];
     span(-0.7, 0.7, g, shadeHex(g, dark));
+    // soft patches of lighter and darker grass so the meadow isn't one flat colour
+    let gs = (lane.row * 2654435761) >>> 0;
+    const grnd = () => ((gs = (gs * 1103515245 + 12345) >>> 0) / 4294967296);
+    for (let i = 0; i < 5; i++) {
+      const x = -COLS - 0.5 + grnd() * (COLS * 2 + 1), w = 0.4 + grnd() * 0.9;
+      B.push([x, 0, -0.3 + grnd() * 0.6, w, 0.012, 0.25 + grnd() * 0.35, shadeHex(g, grnd() < 0.5 ? 0.93 : 1.06)]);
+    }
     for (const d of lane.deco) treeOrRock(B, d, th, Math.abs(d.c) > COLS ? dark : 1);
     for (const f of lane.flowers || []) flowerBoxes(B, f, th);
   } else if (lane.type === 'road') {
@@ -183,6 +190,13 @@ export function laneBoxes(lane, next, prev, th) {
     for (let i = 0; i < 9; i++) {
       const x = -HALF + rnd() * HALF * 2;
       B.push([x, -0.32, -0.35 + rnd() * 0.7, 0.4 + rnd() * 0.6, 0.01, 0.05, shadeHex(th.water, 1.18)]);
+    }
+    // foam and pebbles where the river meets the bank
+    for (const [side, other] of [[-1, next], [1, prev]]) {
+      if (other && other.type === 'river') continue;
+      const z = side * 0.47;
+      for (let x = -HALF + rnd() * 0.6; x < HALF; x += 0.5 + rnd() * 0.7) B.push([x, -0.33, z, 0.3 + rnd() * 0.5, 0.02, 0.07, 0xf2fbff]);
+      for (let i = 0; i < 6; i++) B.push([-COLS - 3 + rnd() * (COLS * 2 + 6), -0.36, z * 0.98, 0.16 + rnd() * 0.16, 0.12, 0.12, shadeHex(th.rock ? th.rock[0] : 0x9aa0a8, 0.9 + rnd() * 0.2)]);
     }
   } else if (lane.type === 'rail') {
     span(-0.75, 0.66, th.rail, shadeHex(th.rail, 0.72));

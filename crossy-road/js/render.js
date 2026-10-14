@@ -407,6 +407,17 @@ export class Renderer {
       c.position.set(lane.coin, baseY(lane) + 0.5, 0);
       group.add(c);
       v.coin = c;
+      if (lane.gem) {
+        // the blue jewel (worth 3) glows so it reads as different from a coin
+        if (!this.gemHaloMat) {
+          const cv = document.createElement('canvas'); cv.width = cv.height = 64;
+          const g2 = cv.getContext('2d'), gr = g2.createRadialGradient(32, 32, 2, 32, 32, 32);
+          gr.addColorStop(0, 'rgba(160,240,255,.95)'); gr.addColorStop(0.4, 'rgba(60,180,255,.45)'); gr.addColorStop(1, 'rgba(0,120,255,0)');
+          g2.fillStyle = gr; g2.fillRect(0, 0, 64, 64);
+          this.gemHaloMat = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(cv), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+        }
+        const h = new THREE.Sprite(this.gemHaloMat); h.scale.setScalar(1.1); c.add(h); v.gemHalo = h;
+      }
     }
     this.scene.add(group);
     return v;
