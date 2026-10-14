@@ -66,6 +66,10 @@ Order: Phase 1 Crossy Road → Phase 2 Nosy Neighbour visual rebuild → Phase 3
       several characters; crossing warning rendered from the real train state; mobile layout checked
 - Notes: no music exists, so there is no music slider. Username existence is visible by design (the brief's
   sign-in flow needs it); it is rate limited.
-- **Deployment: not deployed yet — waiting for permission** (merging this branch into
-  `claude/modest-tesla-7rfcgo` deploys it; the server migrates a fresh `crossy.db` next to the existing
-  `leaderboard.json`, which is kept as the Classic board).
+- **Deployed 2026-10-14** (permission given): merged into `claude/modest-tesla-7rfcgo`, Railway deployed
+  `3e9d7aa`. Live checks: /healthz ok, /api/session ok, /api/daily served by the node worker, the
+  Classic board kept every old score, the page shows the welcome screen with no console errors.
+- Follow-up (on the branch, ships with the next deploy): the title screen no longer flashes under
+  "Loading…" before the sign-in screen.
+
+## Phase 2 — Nosy Neighbour visual rebuild (in progress)
