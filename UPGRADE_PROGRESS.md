@@ -130,3 +130,10 @@ door; Act 3 TV unit vs party-room door. Each was shifted clear of its doorway; a
   the old `slug(name)` and must be preserved; online multiplayer present in code for Pool, Kart Racer, Pong,
   Connect 4 (this repo) and Apex GP (live `net.js`); Space Invaders is same-screen co-op; Tic Tac Toe and Chess
   are local 2-player. Before screenshots in `docs/arcade-redesign/`.
+- WIP (not deployed, not yet browser-tested): `arcade/registry.json` (39 entries, legacy ids), server `/api/status`
+  (allowlisted, cached, no redirects) + asset caching, new brand assets in `arcade/assets/branding/`, new
+  `index.html` shell, `css/` design system, `js/` modules (registry, cards, featured/popular/recent/favourites,
+  library search/filter/sort, Ctrl/Cmd+K palette, settings, ambient effects, suggestions with the same API),
+  art generator `arcade/tools/art/` with all 39 thumbnails drafted (thumbs1–3.mjs).
+- Next: square logos (logos.mjs), build script writing `assets/game-logos|game-thumbnails/*.svg` + manifest,
+  apple-touch PNG, tests (`arcade/tests/`), browser QA at all widths, then Phase 3 multiplayer.

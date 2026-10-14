@@ -1,0 +1,74 @@
+/* EMBER//ARCADE design tokens. Every colour, size, radius, shadow and timing used by the hub lives here. */
+:root {
+  /* surfaces */
+  --ink: #080b10;
+  --surface: #10151d;
+  --panel: #171e28;
+  --raised: #202937;
+  --line: #2a3440;
+  --line-soft: rgba(42, 52, 64, .6);
+
+  /* brand */
+  --orange: #ff7518;
+  --orange-hover: #ff8c32;
+  --amber: #ffb347;
+  --gold: #ffd08a;
+  --orange-08: rgba(255, 117, 24, .08);
+  --orange-15: rgba(255, 117, 24, .15);
+  --orange-30: rgba(255, 117, 24, .3);
+  --orange-50: rgba(255, 117, 24, .5);
+
+  /* text */
+  --text: #f2f5fa;
+  --muted: #a6adba;
+  --faint: #6f7886;
+
+  /* states (deliberately not the brand orange) */
+  --ok: #48d6a1;
+  --warn: #f4d35e;
+  --err: #ff5c7a;
+  --unknown: #8a93a3;
+
+  /* type */
+  --font-display: 'Space Grotesk', 'Sora', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --font-body: 'Inter', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SFMono-Regular', Menlo, Consolas, monospace;
+  --fs-overline: .72rem;
+  --fs-small: .84rem;
+  --fs-body: 1rem;
+  --fs-lead: clamp(1.02rem, .95rem + .35vw, 1.2rem);
+  --fs-h3: clamp(1.1rem, 1rem + .4vw, 1.3rem);
+  --fs-h2: clamp(1.6rem, 1.2rem + 1.6vw, 2.5rem);
+  --fs-hero: clamp(2.6rem, 1.2rem + 5.6vw, 6.2rem);
+
+  /* spacing */
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 72px; --s9: 112px;
+  --gutter: clamp(16px, 4vw, 48px);
+  --maxw: 1320px;
+
+  /* shape */
+  --r-sm: 8px; --r-md: 12px; --r-lg: 18px; --r-xl: 26px; --r-pill: 999px;
+
+  /* elevation */
+  --shadow-1: 0 1px 0 rgba(255, 255, 255, .04) inset, 0 8px 24px rgba(0, 0, 0, .35);
+  --shadow-2: 0 1px 0 rgba(255, 255, 255, .05) inset, 0 18px 48px rgba(0, 0, 0, .5);
+  --glow: 0 0 0 1px var(--orange-30), 0 10px 40px rgba(255, 117, 24, .18);
+
+  /* motion */
+  --t-fast: 150ms;
+  --t-card: 280ms;
+  --t-reveal: 560ms;
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
+  --stagger: 60ms;
+
+  /* density (Settings > Density) */
+  --card-min: 280px;
+  --card-pad: 18px;
+  --section-gap: var(--s9);
+}
+:root[data-density="compact"] {
+  --card-min: 230px;
+  --card-pad: 13px;
+  --section-gap: var(--s8);
+}

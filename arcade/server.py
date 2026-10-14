@@ -12,16 +12,25 @@ in constant time. Posting and viewing are both rate limited per IP.
 Play counts: POST /api/play {game} adds one to that game's count (the same IP
 clicking the same game again within PLAY_GAP seconds is ignored), and
 GET /api/plays returns {"plays": {game: count}}. Stored in plays.json.
+
+Status: GET /api/status returns {"status": {game: "up" | "down" | "checking"}, "checked": t}. The server
+itself asks each game's URL — only the URLs listed in registry.json (an allowlist read at start-up, never
+anything from the request), without following redirects, 5 s timeout, at most 8 at a time — and caches
+the answers for STATUS_TTL seconds. Checks only run when someone loads the hub, so idle games can still
+sleep. "up" means the game's server answered with a non-5xx status; it is not a claim about players.
 """
 
 import hmac
+import http.client
 import json
 import os
 import re
 import threading
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
+from urllib.parse import urlsplit
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -41,6 +50,66 @@ _posts = {}                 # ip -> [times]
 _views = {}
 _plays = {}                 # game -> count
 _last_play = {}             # (ip, game) -> time
+
+STATUS_TTL = 90
+_status = {}                # game -> "up" | "down"
+_status_at = 0.0
+_status_busy = False
+_targets = {}               # game -> (host, path): the allowlist
+
+
+def _load_targets():
+    """The only hosts /api/status will ever contact: the live entries of registry.json."""
+    global _targets
+    try:
+        with open(os.path.join(ROOT, "registry.json")) as f:
+            games = json.load(f)["games"]
+    except (OSError, ValueError, KeyError) as exc:
+        print(f"registry not loaded: {exc}", flush=True)
+        return
+    t = {}
+    for g in games:
+        if g.get("pending") or not GAME_KEY.match(str(g.get("id", ""))):
+            continue
+        u = urlsplit(str(g.get("url", "")))
+        if u.scheme == "https" and u.hostname and u.hostname.endswith(".up.railway.app"):
+            t[g["id"]] = (u.hostname, u.path or "/")
+    _targets = t
+
+
+def _probe(target):
+    host, path = target
+    try:
+        conn = http.client.HTTPSConnection(host, 443, timeout=5)
+        conn.request("GET", path, headers={"User-Agent": "open-arcade-status/1"})
+        code = conn.getresponse().status
+        conn.close()
+        return "up" if code < 500 else "down"   # redirects are answers too; they are not followed
+    except (OSError, http.client.HTTPException):
+        return "down"
+
+
+def _refresh_status():
+    global _status, _status_at, _status_busy
+    try:
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            ids = list(_targets)
+            results = dict(zip(ids, pool.map(lambda i: _probe(_targets[i]), ids)))
+        with _lock:
+            _status, _status_at = results, time.time()
+    finally:
+        _status_busy = False
+
+
+def get_status():
+    global _status_busy
+    with _lock:
+        stale = time.time() - _status_at > STATUS_TTL
+        if stale and not _status_busy and _targets:
+            _status_busy = True
+            threading.Thread(target=_refresh_status, daemon=True).start()
+        out = {g: _status.get(g, "checking") for g in _targets}
+        return {"status": out, "checked": int(_status_at), "fresh": not stale}
 
 
 def _load():
@@ -154,10 +223,15 @@ class Handler(SimpleHTTPRequestHandler):
         ".svg": "image/svg+xml",
         ".json": "application/json",
         ".webmanifest": "application/manifest+json",
+        ".webp": "image/webp",
+        ".png": "image/png",
     }
 
     def end_headers(self):
-        self.send_header("Cache-Control", "no-cache")
+        # artwork and fonts change rarely: let browsers keep them for a day (filenames are stable,
+        # so a redeploy is picked up after revalidation); everything else is revalidated every time
+        path = self.path.split("?")[0]
+        self.send_header("Cache-Control", "public, max-age=86400" if path.startswith("/assets/") else "no-cache")
         self.send_header("X-Content-Type-Options", "nosniff")
         super().end_headers()
 
@@ -182,6 +256,8 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
+        if self.path.split("?")[0] == "/api/status":
+            return self._json(200, get_status())
         if self.path.split("?")[0] == "/api/plays":
             with _lock:
                 return self._json(200, {"plays": dict(_plays)})
@@ -214,6 +290,7 @@ class Handler(SimpleHTTPRequestHandler):
 def main():
     _load()
     _load_plays()
+    _load_targets()
     port = int(os.environ.get("PORT", "8080"))
     server = ThreadingHTTPServer(("0.0.0.0", port), partial(Handler, directory=ROOT))
     print(f"serving {os.path.basename(ROOT)} on :{port} ({len(_suggestions)} suggestions)", flush=True)

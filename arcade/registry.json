@@ -1,0 +1,827 @@
+{
+ "version": 1,
+ "note": "Single source of truth for the hub. id = legacy slug(name): play counts are keyed by it, never rename.",
+ "games": [
+  {
+   "id": "blackjack",
+   "name": "Blackjack",
+   "kind": "game",
+   "url": "https://blackjack-production-0312.up.railway.app",
+   "blurb": "A six-deck table with play-money chips. Blackjack pays 3:2, dealer stands on soft 17, split up to four hands.",
+   "genres": [
+    "Cards",
+    "Casino"
+   ],
+   "categories": [
+    "board",
+    "classic",
+    "casual"
+   ],
+   "features": [],
+   "keywords": "cards casino 21 dealer chips",
+   "accent": "#1a7a52",
+   "shelf": 0
+  },
+  {
+   "id": "pool",
+   "name": "Pool",
+   "kind": "game",
+   "url": "https://pool-production-3a8d.up.railway.app",
+   "blurb": "English pub pool with reds and yellows. Play bots from Easy to Pro, pass and play, or send a friend a link and play online. Pub rules or Blackball.",
+   "genres": [
+    "Sports",
+    "Billiards"
+   ],
+   "categories": [
+    "multiplayer",
+    "board",
+    "casual"
+   ],
+   "features": [
+    "online",
+    "bots"
+   ],
+   "keywords": "billiards 8 ball snooker cue sports",
+   "accent": "#2e9a4e",
+   "shelf": 1
+  },
+  {
+   "id": "kart-racer",
+   "name": "Kart Racer",
+   "kind": "game",
+   "url": "https://kart-production-8bb0.up.railway.app",
+   "blurb": "3D kart racing on eight tracks, five outdoor and three indoor. Apex GP-style steering, drift boosts, karts you paint yourself, and races against bots or friends online.",
+   "genres": [
+    "Racing",
+    "3D"
+   ],
+   "categories": [
+    "racing",
+    "multiplayer",
+    "3d",
+    "action"
+   ],
+   "features": [
+    "online"
+   ],
+   "keywords": "car cars kart drive driving race",
+   "accent": "#ff9d57",
+   "shelf": 2
+  },
+  {
+   "id": "geometry-dash",
+   "name": "Geometry Dash Replica",
+   "kind": "game",
+   "url": "https://game-production-8782.up.railway.app",
+   "blurb": "Jump, fly and flip to the beat. Practice modes, a shop, a level editor and an online leaderboard.",
+   "genres": [
+    "Rhythm",
+    "Platformer"
+   ],
+   "categories": [
+    "platformer",
+    "arcade",
+    "action"
+   ],
+   "features": [],
+   "keywords": "cube jump music levels editor",
+   "accent": "#2f5bff",
+   "shelf": 3
+  },
+  {
+   "id": "bloons-td-6",
+   "name": "Bloons TD 6 Replica",
+   "kind": "game",
+   "url": "https://game-production-6f5d.up.railway.app",
+   "blurb": "Pop every bloon before it gets through. 21 monkeys with full upgrade paths, six heroes, 12 maps and rounds up to 100 and beyond.",
+   "genres": [
+    "Tower defence",
+    "Strategy"
+   ],
+   "categories": [
+    "strategy"
+   ],
+   "features": [],
+   "keywords": "balloons monkeys darts towers td",
+   "accent": "#6fbf3a",
+   "shelf": 4
+  },
+  {
+   "id": "flappy-bird",
+   "name": "Flappy Bird Replica",
+   "kind": "game",
+   "url": "https://game-production-2b7d2.up.railway.app",
+   "blurb": "The 2013 original, pixel for pixel. Tap to flap through the pipes, chase medals, or work through ten levels from Breezy to Demon.",
+   "genres": [
+    "Arcade",
+    "One button"
+   ],
+   "categories": [
+    "arcade",
+    "casual"
+   ],
+   "features": [],
+   "keywords": "bird pipes tap flap",
+   "accent": "#4ec0ca",
+   "shelf": 5
+  },
+  {
+   "id": "space-invaders",
+   "name": "Space Invaders Extreme",
+   "kind": "game",
+   "url": "https://game-production-0b23.up.railway.app",
+   "blurb": "The neon remix: chain four of a colour for bombs, lasers and spreads, win UFO rounds for Fever, and take on five bosses to a pounding beat. Solo or co-op.",
+   "genres": [
+    "Shooter",
+    "Arcade"
+   ],
+   "categories": [
+    "arcade",
+    "action",
+    "classic",
+    "multiplayer"
+   ],
+   "features": [
+    "coop"
+   ],
+   "keywords": "aliens shooter retro space laser",
+   "accent": "#1a0b3d",
+   "shelf": 6
+  },
+  {
+   "id": "pong",
+   "name": "Pong",
+   "kind": "game",
+   "url": "https://game-production-3c6d.up.railway.app",
+   "blurb": "The 1972 Atari classic. Beat the CPU on three difficulties, play a friend on one screen, or go online with a room code.",
+   "genres": [
+    "Arcade",
+    "Sports"
+   ],
+   "categories": [
+    "arcade",
+    "classic",
+    "multiplayer"
+   ],
+   "features": [
+    "online",
+    "bots"
+   ],
+   "keywords": "paddle ball tennis retro",
+   "accent": "#2a2a2a",
+   "shelf": 7
+  },
+  {
+   "id": "tetris",
+   "name": "Tetris",
+   "kind": "game",
+   "url": "https://tetris-production-9024.up.railway.app",
+   "blurb": "The falling-block puzzle done the modern way: 7-bag, SRS rotation, hold, ghost piece, T-spins and back-to-backs, Marathon and a 40-line sprint.",
+   "genres": [
+    "Puzzle",
+    "Falling blocks"
+   ],
+   "categories": [
+    "puzzle",
+    "classic"
+   ],
+   "features": [
+    "touch"
+   ],
+   "keywords": "blocks lines tetromino",
+   "accent": "#4a3bb0",
+   "shelf": 8
+  },
+  {
+   "id": "snake",
+   "name": "Snake",
+   "kind": "game",
+   "url": "https://snake-production-7c68.up.railway.app",
+   "blurb": "Eat the apple, grow, and don't bite your own tail. Smooth gliding movement, buffered turns for tight U-turns, three board sizes and three speeds.",
+   "genres": [
+    "Arcade",
+    "Classic"
+   ],
+   "categories": [
+    "arcade",
+    "classic",
+    "casual"
+   ],
+   "features": [
+    "touch"
+   ],
+   "keywords": "snake apple grow nokia",
+   "accent": "#8fd14f",
+   "shelf": 9
+  },
+  {
+   "id": "pac-man",
+   "name": "Pac-Man",
+   "kind": "game",
+   "url": "https://pac-man-production-74bc.up.railway.app",
+   "blurb": "The 1980 maze, all 240 dots. Blinky, Pinky, Inky and Clyde hunt with their real arcade personalities, scatter and chase on the original timers.",
+   "genres": [
+    "Maze",
+    "Arcade"
+   ],
+   "categories": [
+    "arcade",
+    "classic",
+    "action"
+   ],
+   "features": [],
+   "keywords": "maze ghosts pellets chomp",
+   "accent": "#23238f",
+   "shelf": 10
+  },
+  {
+   "id": "2048",
+   "name": "2048",
+   "kind": "game",
+   "url": "https://2048-production-ed21.up.railway.app",
+   "blurb": "Slide, merge, reach 2048. Classic colours and animations, plus undo, board sizes from 3x3 to 6x6, and your game survives a refresh.",
+   "genres": [
+    "Puzzle",
+    "Numbers"
+   ],
+   "categories": [
+    "puzzle",
+    "casual"
+   ],
+   "features": [
+    "touch"
+   ],
+   "keywords": "tiles numbers merge slide",
+   "accent": "#f3e3b0",
+   "shelf": 11
+  },
+  {
+   "id": "minesweeper",
+   "name": "Minesweeper",
+   "kind": "game",
+   "url": "https://minesweeper-production-483e.up.railway.app",
+   "blurb": "The Windows classic, grey bevels and all. Safe first click, chording, Beginner to Expert plus custom boards, and best times per level.",
+   "genres": [
+    "Logic",
+    "Puzzle"
+   ],
+   "categories": [
+    "puzzle",
+    "classic",
+    "strategy"
+   ],
+   "features": [],
+   "keywords": "mines flags logic grid",
+   "accent": "#1f8a8a",
+   "shelf": 12
+  },
+  {
+   "id": "solitaire",
+   "name": "Solitaire",
+   "kind": "game",
+   "url": "https://solitaire-production-826a.up.railway.app",
+   "blurb": "Klondike, the most-played computer game ever. Drag or tap to move, Draw 1 or Draw 3, unlimited undo, hints, auto-finish and the bouncing-card win.",
+   "genres": [
+    "Cards",
+    "Patience"
+   ],
+   "categories": [
+    "board",
+    "classic",
+    "casual"
+   ],
+   "features": [],
+   "keywords": "klondike patience cards",
+   "accent": "#2f8a4f",
+   "shelf": 13
+  },
+  {
+   "id": "wordle",
+   "name": "Wordle",
+   "kind": "game",
+   "url": "https://wordle-production-2926.up.railway.app",
+   "blurb": "Six tries to find the five-letter word. A daily puzzle everyone shares, an unlimited mode, hard mode, stats and an emoji grid to share.",
+   "genres": [
+    "Word",
+    "Daily puzzle"
+   ],
+   "categories": [
+    "puzzle",
+    "casual"
+   ],
+   "features": [
+    "daily"
+   ],
+   "keywords": "words letters guess daily",
+   "accent": "#5d9a58",
+   "shelf": 14
+  },
+  {
+   "id": "sudoku",
+   "name": "Sudoku",
+   "kind": "game",
+   "url": "https://sudoku-production-222b.up.railway.app",
+   "blurb": "Fresh puzzles with exactly one solution, Easy to Expert plus a daily. Pencil notes, hints that explain themselves, undo and best times.",
+   "genres": [
+    "Logic",
+    "Numbers"
+   ],
+   "categories": [
+    "puzzle",
+    "classic"
+   ],
+   "features": [
+    "daily"
+   ],
+   "keywords": "numbers grid logic",
+   "accent": "#4f7fc4",
+   "shelf": 15
+  },
+  {
+   "id": "breakout",
+   "name": "Breakout",
+   "kind": "game",
+   "url": "https://breakout-production-999f.up.railway.app",
+   "blurb": "Smash the wall. The 1976 Atari rules in Classic, plus an Arcade mode with shaped levels, steel bricks, lasers, multi-ball and fireballs.",
+   "genres": [
+    "Arcade",
+    "Bricks"
+   ],
+   "categories": [
+    "arcade",
+    "classic"
+   ],
+   "features": [],
+   "keywords": "bricks paddle ball arkanoid",
+   "accent": "#2a2f6e",
+   "shelf": 16
+  },
+  {
+   "id": "asteroids",
+   "name": "Asteroids",
+   "kind": "game",
+   "url": "https://asteroids-production-8c7a.up.railway.app",
+   "blurb": "The 1979 vector classic. Thrust, wrap and blast rocks into smaller rocks, dodge the saucers, and put your initials on the high score table.",
+   "genres": [
+    "Shooter",
+    "Vector"
+   ],
+   "categories": [
+    "arcade",
+    "classic",
+    "action"
+   ],
+   "features": [],
+   "keywords": "space rocks ship shooter",
+   "accent": "#2a2a2a",
+   "shelf": 17
+  },
+  {
+   "id": "dino-run",
+   "name": "Dino Run",
+   "kind": "game",
+   "url": "https://dino-production-350d.up.railway.app",
+   "blurb": "Chrome's offline T-Rex, rebuilt. Jump the cacti, duck the pterodactyls, and see how far you get before night falls.",
+   "genres": [
+    "Endless runner",
+    "One button"
+   ],
+   "categories": [
+    "arcade",
+    "casual"
+   ],
+   "features": [],
+   "keywords": "dinosaur jump cactus runner offline",
+   "accent": "#e9e9e9",
+   "shelf": 18
+  },
+  {
+   "id": "drift-boss",
+   "name": "Drift Boss",
+   "kind": "game",
+   "url": "https://drift-boss-production.up.railway.app",
+   "blurb": "Hold to drift round the next corner of a zig-zag road in the sky. One button, one mistake and you are off the edge.",
+   "genres": [
+    "Driving",
+    "One button"
+   ],
+   "categories": [
+    "racing",
+    "casual",
+    "arcade"
+   ],
+   "features": [],
+   "keywords": "car drift road driving",
+   "accent": "#ffb4a2",
+   "shelf": 19
+  },
+  {
+   "id": "doodle-jump",
+   "name": "Doodle Jump",
+   "kind": "game",
+   "url": "https://doodle-jump-production-9840.up.railway.app",
+   "blurb": "Bounce up a sheet of graph paper on springs, moving and breaking platforms. Dodge the monsters and keep climbing.",
+   "genres": [
+    "Platformer",
+    "Endless"
+   ],
+   "categories": [
+    "platformer",
+    "casual",
+    "arcade"
+   ],
+   "features": [
+    "touch"
+   ],
+   "keywords": "jump platforms springs climb",
+   "accent": "#fdf6e3",
+   "shelf": 20
+  },
+  {
+   "id": "crossy-road",
+   "name": "Crossy Road",
+   "kind": "game",
+   "url": "https://crossy-road-production.up.railway.app",
+   "blurb": "Hop a voxel chicken across busy roads, rivers of logs and train tracks. How far can you get before the eagle?",
+   "genres": [
+    "Endless hopper",
+    "3D"
+   ],
+   "categories": [
+    "arcade",
+    "casual",
+    "3d"
+   ],
+   "features": [
+    "leaderboard",
+    "daily",
+    "saves"
+   ],
+   "keywords": "chicken road cross hop cars trains voxel",
+   "accent": "#7ec850",
+   "shelf": 21,
+   "featured": 1
+  },
+  {
+   "id": "stickman-hook",
+   "name": "Stickman Hook",
+   "kind": "game",
+   "url": "https://stickman-hook-production-d257.up.railway.app",
+   "blurb": "Swing from hook to hook, let go at the right moment and fly to the finish. Dozens of levels of rope physics.",
+   "genres": [
+    "Physics",
+    "Swinging"
+   ],
+   "categories": [
+    "platformer",
+    "casual",
+    "arcade"
+   ],
+   "features": [],
+   "keywords": "swing grapple rope hook stickman",
+   "accent": "#ffc2d1",
+   "shelf": 22
+  },
+  {
+   "id": "connect-4",
+   "name": "Connect 4",
+   "kind": "game",
+   "url": "https://connect-4-production-12e1.up.railway.app",
+   "blurb": "Drop discs, line up four. Play a bot from easy to expert, pass and play, or send a friend a link and play online.",
+   "genres": [
+    "Board game",
+    "Strategy"
+   ],
+   "categories": [
+    "board",
+    "strategy",
+    "multiplayer",
+    "classic"
+   ],
+   "features": [
+    "online",
+    "bots"
+   ],
+   "keywords": "four in a row discs board",
+   "accent": "#3b82f6",
+   "shelf": 23
+  },
+  {
+   "id": "candy-match",
+   "name": "Candy Match",
+   "kind": "game",
+   "url": "https://candy-match-production.up.railway.app",
+   "blurb": "Swap sweets to match three or more. Striped, wrapped and colour-bomb candies, cascades and a map of levels to clear.",
+   "genres": [
+    "Match 3",
+    "Puzzle"
+   ],
+   "categories": [
+    "puzzle",
+    "casual"
+   ],
+   "features": [],
+   "keywords": "candy sweets match three",
+   "accent": "#c77dff",
+   "shelf": 24,
+   "pending": true
+  },
+  {
+   "id": "boggle",
+   "name": "Boggle",
+   "kind": "game",
+   "url": "https://boggle-production.up.railway.app",
+   "blurb": "Shake the letter cubes and find as many words as you can before the timer runs out. Solo, daily board or race a CPU.",
+   "genres": [
+    "Word",
+    "Dice"
+   ],
+   "categories": [
+    "puzzle"
+   ],
+   "features": [
+    "bots"
+   ],
+   "keywords": "words letters dice find",
+   "accent": "#f97316",
+   "shelf": 25
+  },
+  {
+   "id": "tic-tac-toe",
+   "name": "Tic Tac Toe",
+   "kind": "game",
+   "url": "https://tic-tac-toe-production-4cd6.up.railway.app",
+   "blurb": "Neon noughts and crosses. Beat the computer on Easy or Medium, try to draw against Impossible, or play a friend.",
+   "genres": [
+    "Board game",
+    "Classic"
+   ],
+   "categories": [
+    "board",
+    "classic",
+    "casual",
+    "multiplayer"
+   ],
+   "features": [
+    "local2p",
+    "bots"
+   ],
+   "keywords": "noughts crosses x o",
+   "accent": "#ff4fa3",
+   "shelf": 26
+  },
+  {
+   "id": "cookie-clicker",
+   "name": "Cookie Clicker",
+   "kind": "game",
+   "url": "https://cookie-clicker-production-aef1.up.railway.app",
+   "blurb": "Click the big cookie, hire grandmas, build farms, factories and portals, catch golden cookies and bake trillions.",
+   "genres": [
+    "Idle",
+    "Clicker"
+   ],
+   "categories": [
+    "casual"
+   ],
+   "features": [
+    "saves"
+   ],
+   "keywords": "cookie idle clicker incremental",
+   "accent": "#d89a52",
+   "shelf": 27
+  },
+  {
+   "id": "block-blast",
+   "name": "Block Blast",
+   "kind": "game",
+   "url": "https://block-blast-production-8f44.up.railway.app",
+   "blurb": "Drag blocks onto an 8×8 board, fill rows and columns to blast them and chain combos for a high score.",
+   "genres": [
+    "Puzzle",
+    "Blocks"
+   ],
+   "categories": [
+    "puzzle",
+    "casual"
+   ],
+   "features": [
+    "touch"
+   ],
+   "keywords": "blocks drag lines grid",
+   "accent": "#5c7cfa",
+   "shelf": 28
+  },
+  {
+   "id": "chess",
+   "name": "Chess",
+   "kind": "game",
+   "url": "https://chess-production-34bd.up.railway.app",
+   "blurb": "The full game of kings. Take on the computer at Easy, Medium or Hard, or play a friend on the same device.",
+   "genres": [
+    "Board game",
+    "Strategy"
+   ],
+   "categories": [
+    "board",
+    "strategy",
+    "classic",
+    "multiplayer"
+   ],
+   "features": [
+    "local2p",
+    "bots"
+   ],
+   "keywords": "chess knight king queen checkmate",
+   "accent": "#b5835a",
+   "shelf": 29
+  },
+  {
+   "id": "fruit-ninja",
+   "name": "Fruit Ninja",
+   "kind": "game",
+   "url": "https://fruit-ninja-production.up.railway.app",
+   "blurb": "Swipe to slice flying fruit, chain combos and dodge the bombs. Classic, Arcade and Zen modes.",
+   "genres": [
+    "Arcade",
+    "Swipe"
+   ],
+   "categories": [
+    "arcade",
+    "action",
+    "casual"
+   ],
+   "features": [
+    "touch"
+   ],
+   "keywords": "fruit slice sword swipe",
+   "accent": "#7a4a24",
+   "shelf": 30
+  },
+  {
+   "id": "subway-surfers",
+   "name": "Subway Surfers",
+   "kind": "game",
+   "url": "https://subway-surfers-production-4827.up.railway.app",
+   "blurb": "Dash down the subway tracks in 3D. Dodge oncoming trains, jump hurdles, roll under barriers and grab coins.",
+   "genres": [
+    "Endless runner",
+    "3D"
+   ],
+   "categories": [
+    "arcade",
+    "action",
+    "3d"
+   ],
+   "features": [
+    "touch"
+   ],
+   "keywords": "runner trains rails surf",
+   "accent": "#8fd3ff",
+   "shelf": 31
+  },
+  {
+   "id": "wreck-run",
+   "name": "Wreck Run",
+   "kind": "game",
+   "url": "https://wreck-run-production.up.railway.app",
+   "blurb": "Two minutes, one hatchback, a whole town of cones, bins, gnomes and pianos to smash. Combos, drifts, jumps and a world leaderboard.",
+   "genres": [
+    "Driving",
+    "Demolition"
+   ],
+   "categories": [
+    "racing",
+    "action",
+    "3d"
+   ],
+   "features": [
+    "leaderboard"
+   ],
+   "keywords": "car crash wreck driving demolition",
+   "accent": "#e0262c",
+   "shelf": 32
+  },
+  {
+   "id": "nosy-neighbour",
+   "name": "Nosy Neighbour",
+   "kind": "game",
+   "url": "https://neighbour-production-5073.up.railway.app",
+   "blurb": "Five stealth levels: sneak into his basement, escape his cold cellar, rob the new neighbour on your street, break into a huge mansion, then survive the Nightmare House with its tram and Fear rooms.",
+   "genres": [
+    "Stealth",
+    "Horror"
+   ],
+   "categories": [
+    "action",
+    "3d"
+   ],
+   "features": [
+    "saves"
+   ],
+   "keywords": "neighbour neighbor stealth house basement horror",
+   "accent": "#b8566a",
+   "shelf": 33,
+   "featured": 2
+  },
+  {
+   "id": "getting-over-it",
+   "name": "Getting Over It",
+   "kind": "game",
+   "url": "https://over-a-barrel-production.up.railway.app",
+   "blurb": "A man in a pot, a sledgehammer and a 100 metre mountain. No checkpoints. Falling is part of the deal.",
+   "genres": [
+    "Rage climber",
+    "Physics"
+   ],
+   "categories": [
+    "platformer"
+   ],
+   "features": [],
+   "keywords": "hammer pot climb mountain rage",
+   "accent": "#e2895a",
+   "shelf": 34
+  },
+  {
+   "id": "blockforge",
+   "name": "BlockForge",
+   "kind": "game",
+   "url": "https://blockforge-web-production.up.railway.app",
+   "blurb": "An endless voxel world to mine and build in, with day and night, water, caves, shaders and touch controls.",
+   "genres": [
+    "Sandbox",
+    "Survival"
+   ],
+   "categories": [
+    "3d",
+    "action"
+   ],
+   "features": [],
+   "keywords": "voxel mine build craft blocks sandbox",
+   "accent": "#5fae4a",
+   "shelf": 35,
+   "featured": 4
+  },
+  {
+   "id": "apex-gp",
+   "name": "Apex GP",
+   "kind": "game",
+   "url": "https://apex-gp-production.up.railway.app",
+   "blurb": "First-person Formula racing. Ten teams, three circuits, DRS and ERS, pit stops, and multiplayer with friends.",
+   "genres": [
+    "Racing",
+    "Formula"
+   ],
+   "categories": [
+    "racing",
+    "multiplayer",
+    "3d"
+   ],
+   "features": [
+    "online"
+   ],
+   "keywords": "f1 formula car race grand prix",
+   "accent": "#e8313a",
+   "shelf": 36,
+   "featured": 3
+  },
+  {
+   "id": "2-weeks",
+   "name": "2 Weeks",
+   "kind": "game",
+   "url": "https://two-weeks-production.up.railway.app",
+   "blurb": "Build-and-shoot battle royale on an island. Drop from the bus, farm, build, loot and outlast 24 bots and the storm.",
+   "genres": [
+    "Battle royale",
+    "Building"
+   ],
+   "categories": [
+    "action",
+    "3d"
+   ],
+   "features": [
+    "bots"
+   ],
+   "keywords": "battle royale build shoot island storm",
+   "accent": "#3cc3ff",
+   "shelf": 37
+  },
+  {
+   "id": "the-humanizer",
+   "name": "The Humanizer",
+   "kind": "tool",
+   "url": "https://humanizer-production-e796.up.railway.app",
+   "blurb": "Paste AI-written text, get back something that reads like a person wrote it. Checks itself against AI detectors.",
+   "genres": [
+    "Writing tool",
+    "AI"
+   ],
+   "categories": [
+    "tool"
+   ],
+   "features": [],
+   "keywords": "text writing ai rewrite humanize",
+   "accent": "#8b7bff",
+   "shelf": 38
+  }
+ ]
+}
