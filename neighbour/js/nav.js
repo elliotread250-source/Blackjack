@@ -9,7 +9,7 @@ import { SpatialHash } from './geom.js';
 
 export const STEP = 0.45;          // walk up without jumping (stairs are 0.27)
 export const PLAYER_CLIMB = 1.45;  // jump apex + mantle, see world.js (physics allows ~1.5)
-export const MAX_L = 8;
+export const MAX_L = 12;
 
 export function buildGrid(boxes, opt) {
   const { bounds, cell = 0.5, radius = 0.3, clear = 1.9, step = STEP } = opt;

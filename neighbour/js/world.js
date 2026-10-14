@@ -11,6 +11,7 @@ import { buildGrid, makePather, findNode, smoothPath, nodePos } from './nav.js';
 import { sightRate, hearNoise, lightAt, lineOfSight, NOISE } from './perception.js';
 import { Neighbour, DIFFICULTY, EYE } from './ai.js';
 import * as Learn from './learning.js';
+import { initAct3, act3Dyn, act3Look, act3Hint, act3Use, act3Step, rideStep, act3Pickup, sightBlocked, act3Save, act3Load } from './act3.js';
 
 export const PLAYER = {
   r: 0.3, h: 1.75, hc: 1.0, eye: 1.62, eyeC: 0.88,
@@ -35,7 +36,8 @@ export class World {
     this.winById = Object.fromEntries(this.windows.map(w => [w.id, w]));
     // navigation for the neighbour (the basement door is never his way)
     const base = this.doorById.basement;
-    this.nav = opts.nav || buildGrid(L.boxes, { bounds: L.navBounds, radius: 0.3, clear: 1.9, extra: [base.closed, ...(L.safeZones || [])] });
+    const blk = L.act3 ? [makeBox(L.act3.blocker.x0, L.act3.blocker.y0, L.act3.blocker.z0, L.act3.blocker.x1, L.act3.blocker.y1, L.act3.blocker.z1)] : [];
+    this.nav = opts.nav || buildGrid(L.boxes, { bounds: L.navBounds, radius: 0.3, clear: 1.9, extra: [base.closed, ...(L.safeZones || []), ...blk] });
     this.astar = makePather(this.nav);
     this.hides = L.hides.map(h => Object.assign({}, h, {
       yaw: Math.atan2(-(h.face[0] - h.x), -(h.face[1] - h.z)),
@@ -64,6 +66,7 @@ export class World {
     this.look = null;
     this.trapSeq = 0;
     this.dirty = false;
+    if (L.act3) initAct3(this);
   }
 
   makeProp(it) {
@@ -108,6 +111,7 @@ export class World {
       p.box.prop = p;
       if (p.type === 'crate') op.push(p.box);
     }
+    if (this.a3) act3Dyn(this, dyn, op);
   }
   solidsNear(x0, z0, x1, z1, out, withProps = true, skipProp = null) {
     this.hash.query(x0, z0, x1, z1, out);
@@ -138,6 +142,7 @@ export class World {
     if (p.caught) { this.updateCaught(dt); this.ai.update(dt, this); this.flushAI(); return; }
     this.stats.time += dt;
     this.updatePlayer(dt, inp);
+    if (this.a3) act3Step(this, dt, inp);
     const safe=this.isSafe(p.x,p.y,p.z);
     if(safe && !this.wasSafe) this.say('Safe area — the neighbour cannot enter. Take a breather.', 'good');
     this.wasSafe=safe;
@@ -181,6 +186,7 @@ export class World {
       return;
     }
     if (p.vault) { this.updateVault(dt); return; }
+    if (this.a3 && this.a3.tram.riding) { this.look = null; rideStep(this, dt, inp); return; }
     if (p.stuck > 0) p.stuck = Math.max(0, p.stuck - dt);
 
     // crouch: can't stand up under something
@@ -206,6 +212,10 @@ export class World {
       p.vy = PLAYER.jumpV; p.onGround = false;
       this.noise(p.x, p.y, p.z, NOISE.jump, 'jump', true);
       this.emit('jump');
+    } else if (inp.jump && !p.onGround && p.stuck <= 0 && this.a3 && this.a3.powers.double && !this.a3.usedDouble) {
+      // the double-jump power from the Fear closet
+      p.vy = PLAYER.jumpV * 1.1; this.a3.usedDouble = true; p.fallFrom = p.y;
+      this.emit('jump', { double: true });
     }
     p.vy -= GRAV * dt;
     const wasGround = p.onGround;
@@ -215,6 +225,7 @@ export class World {
     this.moveAxis('z', p.vz * dt, near);
     this.moveY(p.vy * dt, near, wasGround);
     p.speed = Math.hypot(p.vx, p.vz);
+    if (p.onGround && this.a3) this.a3.usedDouble = false;
 
     // footsteps
     if (p.onGround && p.speed > 0.4) {
@@ -347,6 +358,7 @@ export class World {
     for (const w of this.windows) test(w.box, 'window', w, 0.25);
     for (const h of this.hides) test(h.box, 'hide', h, 0.45);
     test(this.fusebox.box, 'fusebox', this.fusebox, 0.3);
+    if (this.a3) act3Look(this, test);
     return best;
   }
 
@@ -367,6 +379,7 @@ export class World {
     switch (look.kind) {
       case 'prop': return { act: 'take', text: 'Take ' + (r.missionName || r.def.name) };
       case 'hide': return { act: 'hide', text: 'Hide in ' + r.name.toLowerCase() };
+      case 'gadget': return act3Hint(this, r);
       case 'fusebox':
         if (this.flags.power) return { act: 'none', text: 'Fuse box (power on)' };
         return this.hasItem('fuse') ? { act: 'use', text: 'Put the fuse in' } : { act: 'none', text: 'Fuse box: a fuse is missing' };
@@ -397,6 +410,7 @@ export class World {
     switch (look.kind) {
       case 'prop': this.pickUp(r); break;
       case 'hide': this.enterHide(r); break;
+      case 'gadget': act3Use(this, r); break;
       case 'fusebox':
         if (this.flags.power) { this.say('The power is on.'); break; }
         if (this.hasItem('fuse')) {
@@ -518,6 +532,7 @@ export class World {
     const p = this.player;
     if (pr.held || pr.gone) return false;
     if (p.groundProp === pr) { this.say("You're standing on it."); return false; }
+    if (this.a3 && act3Pickup(this, pr)) return true;
     if (this.level.collectTargets && this.level.targets.includes(pr.id)) {
       pr.gone = true; this.markStep(pr.id); this.emit('pickup', { item: pr.type });
       this.say(pr.missionName + ' recovered.'); this.dirty = true; return true;
@@ -777,12 +792,13 @@ export class World {
   }
   updateCams(dt) {
     const p = this.player;
+    const blind = this.a3 && sightBlocked(this);
     for (const c of this.cams) {
       const m = this.level.camMounts.find(mm => mm.id === c.mount);
       c.mountRef = m;
       if (c.cool > 0) { c.cool -= dt; c.seeing = false; continue; }
       let rate = 0;
-      if (!p.hiding && !this.atHome(p.x, p.z)) {
+      if (!p.hiding && !blind && !this.atHome(p.x, p.z)) {
         rate = sightRate(this.hash, this.dynOpaque, { x: m.x, y: m.y - 0.1, z: m.z, yaw: m.yaw, fov: 75 * Math.PI / 180, range: 13, feel: 0 },
           { x: p.x, y: p.y, z: p.z, height: p.height, crouch: p.crouch, speed: p.speed, light: lightAt(this.level, p.x, p.y + 1, p.z) });
       }
@@ -802,6 +818,7 @@ export class World {
   sightRate(ai) {
     const p = this.player;
     if (p.hiding || p.caught || this.atHome(p.x, p.z)) return 0;
+    if (this.a3 && sightBlocked(this)) return 0;
     return sightRate(this.hash, this.dynOpaque,
       { x: ai.x, y: ai.y + EYE, z: ai.z, yaw: ai.yaw + ai.head, range: this.diff.range },
       { x: p.x, y: p.y, z: p.z, height: p.height, crouch: p.crouch, speed: p.speed, light: lightAt(this.level, p.x, p.y + 1, p.z) });
@@ -827,6 +844,7 @@ export class World {
     const p = this.player;
     if (p.caught || this.flags.won || this.isSafe(p.x,p.y,p.z)) return;
     if (p.hiding) { this.emit('dragged'); p.hiding = null; }
+    if (this.a3) this.a3.tram.riding = false;
     p.vault = null;
     p.caught = { t: 0, x: p.x, y: p.y, z: p.z };
     p.charging = false;
@@ -994,6 +1012,7 @@ export class World {
       traps: this.traps.map(t => [t.id, t.x, t.y, t.z, t.armed ? 1 : 0]), trapSeq: this.trapSeq,
       cams: this.cams.map(c => c.mount),
       extraPois: this.ai.extraPois,
+      act3: this.a3 ? act3Save(this) : undefined,
     };
   }
 
@@ -1015,6 +1034,7 @@ export class World {
       this.cams = (s.cams || []).map(mount => ({ mount, seeT: 0, cool: 0 }));
       this.ai.extraPois = s.extraPois || [];
       if (this.flags.power) this.setPower(true);
+      if (this.a3) act3Load(this, s.act3);
       return true;
     } catch (e) { return false; }
   }

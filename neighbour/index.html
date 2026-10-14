@@ -128,6 +128,14 @@
   #chargefill { height: 100%; width: 0; background: linear-gradient(90deg, #ffe08a, #ff7a3a); }
   #itemname { position: absolute; left: 50%; bottom: calc(var(--safe-b) + 80px); transform: translateX(-50%); font-weight: 800; font-size: 13px; color: #e8dcc8; text-shadow: 0 1px 4px #000; opacity: 0; transition: opacity .4s; }
   #itemname.show { opacity: 1; }
+  #powers { position: absolute; right: calc(var(--safe-r) + 16px); top: calc(var(--safe-t) + 64px); display: flex; gap: 6px; }
+  #powers span { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-size: 20px; background: rgba(12, 9, 22, 0.55); border: 2px solid rgba(255,255,255,0.15); filter: grayscale(1); opacity: .45; transition: all .3s; }
+  #powers span.on { filter: none; opacity: 1; border-color: var(--gold); box-shadow: 0 0 12px rgba(255, 207, 90, 0.5); }
+  #powers span.pop { animation: thump2 .3s 3; }
+  #tramhud { position: absolute; left: 50%; bottom: calc(var(--safe-b) + 110px); transform: translateX(-50%); padding: 8px 16px; border-radius: 14px; background: rgba(20, 50, 110, 0.75); border: 2px solid #f2c84a; text-align: center; text-shadow: 0 1px 3px #000; }
+  #tramhud b { font: 900 26px var(--font); color: #f2c84a; } #tramhud small { margin-left: 4px; color: #fff; }
+  #tramhud span { display: block; font-size: 13px; color: #fff; }
+  .tb[data-b=push] { right: calc(var(--safe-r) + 196px); bottom: calc(var(--safe-b) + 112px); width: 62px; height: 62px; background: rgba(210, 60, 60, 0.5); }
   #toast { position: absolute; left: 50%; top: calc(var(--safe-t) + 64px); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
   #toast div { padding: 8px 14px; border-radius: 10px; background: rgba(12, 9, 22, 0.78); border: 1px solid var(--line); font-weight: 700; font-size: 14px; max-width: 80vw; text-align: center; animation: tin .25s ease-out; }
   #toast div.good { border-color: rgba(123, 216, 143, 0.6); color: #d8ffe0; }
@@ -221,6 +229,8 @@
   <div id="hint" hidden></div>
   <div id="toast"></div>
   <div id="stuck" hidden>STUCK! WAIT&hellip;</div>
+  <div id="powers" hidden><span data-p="invis" title="Invisibility: crouch">👻</span><span data-p="push" title="Push: R">✋</span><span data-p="double" title="Double jump">⏫</span></div>
+  <div id="tramhud" hidden><b id="tramspd">0</b><small>km/h</small><span id="tramtip"></span></div>
   <div id="itemname"></div>
   <div id="charge" hidden><div id="chargefill"></div></div>
   <div class="hotbar" id="hotbar"></div>
@@ -241,6 +251,7 @@
   <div class="tb" data-b="jump">Jump</div>
   <div class="tb" data-b="crouch">Crouch</div>
   <div class="tb" data-b="drop">Drop</div>
+  <div class="tb" data-b="push" hidden>Push</div>
 </div>
 
 <div id="s-title" class="screen">
@@ -261,7 +272,7 @@
     <h2>Choose your mission</h2>
     <label for="mission-select">Level</label>
     <select id="mission-select" style="width:100%;padding:12px;margin:10px 0;background:#231d27;color:#fff;font:inherit">
-      <option value="0">1 — The Basement</option><option value="1">2 — The Cold Cellar · New map</option><option value="2">3 — Mulberry Close · New house</option><option value="3">4 — The Mansion · Huge house</option>
+      <option value="0">1 — The Basement</option><option value="1">2 — The Cold Cellar · New map</option><option value="2">3 — Mulberry Close · New house</option><option value="3">4 — The Mansion · Huge house</option><option value="4">5 — The Nightmare House · Biggest yet: tram + powers</option>
     </select><p id="mission-brief"></p>
     <h2>How nosy is he?</h2>
     <div class="dpick" id="dpick">
@@ -296,7 +307,7 @@
     <h3>Staying hidden</h3>
     <ul><li>Crouch to be quiet and harder to see, especially in the dark. Sprinting is loud.</li><li>Throw things to distract him: he goes to check the noise.</li><li>Hide in wardrobes and cupboards &mdash; unless he saw you get in.</li><li>The eye at the top shows how much he has noticed you.</li></ul>
     <h3>Desktop</h3>
-    <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move &middot; <kbd>Shift</kbd> sprint &middot; <kbd>C</kbd> / <kbd>Ctrl</kbd> crouch &middot; <kbd>Space</kbd> jump &middot; <kbd>E</kbd> use / open / pick up &middot; <b>Left mouse</b> pick up, or hold to charge a throw &middot; <b>Right mouse</b> / <kbd>Q</kbd> drop &middot; <kbd>1</kbd>&ndash;<kbd>4</kbd> / wheel pick a slot &middot; <kbd>F</kbd> hide / come out &middot; <kbd>Esc</kbd> pause. Look at a crate while holding another and drop it to stack them; jump onto stacks to climb.</div>
+    <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> move &middot; <kbd>Shift</kbd> sprint &middot; <kbd>C</kbd> / <kbd>Ctrl</kbd> crouch &middot; <kbd>Space</kbd> jump &middot; <kbd>E</kbd> use / open / pick up &middot; <b>Left mouse</b> pick up, or hold to charge a throw &middot; <b>Right mouse</b> / <kbd>Q</kbd> drop &middot; <kbd>1</kbd>&ndash;<kbd>4</kbd> / wheel pick a slot &middot; <kbd>F</kbd> hide / come out &middot; <kbd>R</kbd> push (once you have the power) &middot; <kbd>Esc</kbd> pause. Look at a crate while holding another and drop it to stack them; jump onto stacks to climb.</div>
     <h3>Phone / tablet</h3>
     <div>Hold the phone sideways. Left thumb: move (push to the edge to sprint). Right side: drag to look. <b>Use</b> opens, picks up and hides; <b>Throw</b> (hold to charge); <b>Jump</b>, <b>Crouch</b>, <b>Drop</b>; tap the slots to switch items.</div>
     <div class="row" style="margin-top:16px"><button class="btn primary small" id="h-done">Got it</button></div>

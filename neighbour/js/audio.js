@@ -221,6 +221,15 @@ export class Sound {
       case 'vault': this.burst('bandpass', 700, 1, 0.3, 0.12); break;
       case 'win': for (const [f, d] of [[110, 0], [164.8, 0.3], [207.7, 0.6], [246.9, 0.9], [311.1, 1.3]]) this.tone('sine', f, f, 4, 0.08, d, 1); this.burst('lowpass', 150, 1, 3, 0.3, 0, null, 60); break;
       case 'ui': this.tone('triangle', 660, 880, 0.06, 0.08); break;
+      case 'portal': this.tone('sine', 180, 900, 0.9, 0.12); this.tone('sine', 270, 1350, 0.9, 0.08, 0.05); this.burst('bandpass', 1200, 2, 0.8, 0.15, 0, null, 300); break;
+      case 'powerup': for (const [f, d] of [[523, 0], [659, 0.12], [784, 0.24], [1047, 0.36]]) this.tone('triangle', f, f, 0.35, 0.12, d); break;
+      case 'bell': for (let i = 0; i < 14; i++) this.tone('square', 1400, 1380, 0.07, 0.07, i * 0.08, 0.002); break;
+      case 'topple': this.burst('lowpass', 260, 1, 0.8, 0.9, 0.35); this.tone('sine', 70, 35, 0.8, 0.4, 0.35); this.burst('bandpass', 900, 1, 0.5, 0.4, 0.4); break;
+      case 'push': this.burst('lowpass', 500, 1, 0.25, 0.5); this.tone('sine', 140, 60, 0.25, 0.25); break;
+      case 'click': this.tone('square', 220, 160, 0.08, 0.15); this.burst('bandpass', 2000, 3, 0.05, 0.2); break;
+      case 'ding': this.tone('sine', 988, 988, 0.6, 0.12); this.tone('sine', 784, 784, 0.8, 0.1, 0.25); break;
+      case 'grab': this.tone('sawtooth', 300, 80, 0.6, 0.2); this.burst('highpass', 2000, 1, 0.3, 0.3); break;
+      case 'whoosh': this.burst('bandpass', 900, 1, 0.3, 0.15, 0, null, 2400); break;
     }
   }
   unlockish(at) { for (let i = 0; i < 6; i++) this.burst('bandpass', 3000 + Math.random() * 1500, 5, 0.08, 0.2, i * 0.05, at); this.tone('square', 200, 80, 0.15, 0.2, 0.3, 0.003, at); }

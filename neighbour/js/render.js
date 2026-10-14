@@ -6,6 +6,7 @@ import { makeTextures, TEX_SCALE } from './textures.js';
 import { GeoBuilder, addDecor, addRoof, propMesh, trapMesh, setTrapState, cameraMesh, buildNeighbour, animateNeighbour, handMesh, primGeo } from './models.js';
 import { windowCenter, doorCenter, F1 } from './level.js';
 import { lightAt } from './perception.js';
+import { Act3View } from './act3view.js';
 
 const SUN_DIR = new THREE.Vector3(-0.62, 0.36, 0.7).normalize();
 
@@ -113,7 +114,7 @@ export class Renderer {
     }
     s.add(this.sunLight, this.sunLight.target);
     this.points = [];
-    const keep = high ? null : new Set(['kitchen', 'basement', 'porch', 'home', 'living']);
+    const keep = high ? null : new Set(['kitchen', 'basement', 'porch', 'home', 'living', ...(this.world.level.keepLights || [])]);
     for (const L of this.world.level.lights) {
       if (keep && !keep.has(L.name)) continue;
       const p = new THREE.PointLight(L.color, L.intensity * 2.2, L.dist * 1.25, 1.6);
@@ -220,6 +221,7 @@ export class Renderer {
     if (this.sunLight.shadow.map) this.sunLight.shadow.map.dispose();
     this.buildLights();
     this.buildStatic();
+    if (this.a3v) { const f = this.scene.fog, f0 = this.a3v.fog0; f.color.setHex(f0.color); f.near = f0.near; f.far = f0.far; this.sky.visible = true; }
     this.scene.remove(this.dynGroup);
     this.dynGroup.traverse(o => { if (o.isMesh) { if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose(); } });
     this.buildDynamic();
@@ -318,6 +320,7 @@ export class Renderer {
     s.add(this.nb.root);
     this.trapViews = new Map();
     this.camViews = new Map();
+    this.a3v = W.a3 ? new Act3View(this) : null;
   }
 
   chainGroup(d, lockColor, big) {
@@ -507,6 +510,7 @@ export class Renderer {
       v.userData.cone.material.opacity = c.seeing ? 0.14 : c.cool > 0 ? 0.02 : 0.05;
       v.rotation.y = m.yaw + Math.sin(t * 0.5) * 0.35;
     }
+    if (this.a3v) this.a3v.update(dt, t);
     this.updateParticles(dt);
     this.updateCamera(dt, view);
   }

@@ -78,6 +78,7 @@ export class Input {
           if (id === 'jump') T.jump = true;
           if (id === 'use') T.use = true;
           if (id === 'drop') T.drop = true;
+          if (id === 'push') T.push = true;
           if (id === 'crouch') { this.crouchToggle = !this.crouchToggle; }
           if (id === 'throw') { T.throwHeld = true; T.throwPress = true; }
           setOn(id, true);
@@ -152,6 +153,7 @@ export class Input {
       primary: this.lmb || T.throwHeld,
       primaryPress: this.lmbPress || T.throwPress,
       drop: this.rmbPress || E('KeyQ') || E('KeyG') || T.drop,
+      push: E('KeyR') || T.push,
       slot: this.slot,
       wheel: this.wheel,
     };
@@ -159,7 +161,7 @@ export class Input {
     this.dx = this.dy = 0; this.wheel = 0;
     this.lmbPress = this.rmbPress = false;
     this.slot = null;
-    T.jump = T.use = T.drop = T.throwPress = false;
+    T.jump = T.use = T.drop = T.throwPress = T.push = false;
     return out;
   }
   // forget held state (when pausing)

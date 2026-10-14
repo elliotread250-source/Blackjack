@@ -175,7 +175,7 @@ for (let i = 0; i < 4; i++) {
   $('hotbar').appendChild(s); slots.push(s);
 }
 let hudCache = {};
-function hudReset() { hudCache = {}; wakeAt = -99; $('toast').innerHTML = ''; $('black').style.opacity = 0; $('black').style.transition = 'none'; refreshNotes(); }
+function hudReset() { hudCache = {}; $('powers').hidden = !world.a3; $('tramhud').hidden = true; { const pb = document.querySelector('.tb[data-b=push]'); if (pb) pb.hidden = true; } wakeAt = -99; $('toast').innerHTML = ''; $('black').style.opacity = 0; $('black').style.transition = 'none'; refreshNotes(); }
 function setText(id, txt) { if (hudCache[id] !== txt) { hudCache[id] = txt; $(id).innerHTML = txt; } }
 function toast(text, kind = 'info') {
   const d = document.createElement('div'); d.className = kind; d.textContent = text;
@@ -229,6 +229,21 @@ function updateHud() {
   eye.className = (ai.aware > 0.02 || st ? 'show ' : '') + st;
   $('eyefill').style.width = (Math.min(1, ai.state === 'chase' ? 1 : ai.aware) * 100).toFixed(0) + '%';
   $('stuck').hidden = !(p.stuck > 0);
+  if (world.a3) {
+    const A = world.a3, pw = Object.entries(A.powers).map(([k, v]) => k + (v ? 1 : 0)).join();
+    if (hudCache.pw !== pw) {
+      hudCache.pw = pw;
+      for (const s of $('powers').children) s.classList.toggle('on', !!A.powers[s.dataset.p]);
+      const pb = document.querySelector('.tb[data-b=push]'); if (pb) pb.hidden = !A.powers.push;
+    }
+    const t = A.tram;
+    $('tramhud').hidden = !t.riding;
+    if (t.riding) {
+      setText('tramspd', String(Math.round(Math.abs(t.v) * 3.6)));
+      const st = t.near && A.stations.find(s => s.id === t.near);
+      setText('tramtip', st ? (Math.abs(t.v) < 1.6 ? `${st.name}: press ${isTouch ? 'USE' : 'E'} to get off` : `${st.name}: slow down to stop`) : (isTouch ? 'Stick up/down to drive' : 'W / S to drive · E at a station to get off'));
+    }
+  }
   $('slats').hidden = !p.hiding;
   // red vignette when he's chasing and close
   const d = Math.hypot(ai.x - p.x, ai.z - p.z);
@@ -242,7 +257,17 @@ function handleEvents() {
   for (const e of world.events) {
     switch (e.type) {
       case 'step': sound.play('step', e); break;
-      case 'jump': case 'mantle': case 'vault': case 'pickup': case 'drop': sound.play(e.type, e); break;
+      case 'jump': case 'mantle': case 'vault': case 'pickup': case 'drop': sound.play(e.type, e); if (e.double) sound.play('whoosh'); break;
+      case 'portal': sound.play('portal'); flash(1); { const f = $('flash'); f.style.background = '#000'; setTimeout(() => { f.style.background = ''; }, 600); } renderer.eyeY = null; break;
+      case 'power-up': sound.play('powerup'); flash(0.5); for (const s of $('powers').children) if (s.dataset.p === e.power) { s.classList.remove('pop'); void s.offsetWidth; s.classList.add('pop'); } break;
+      case 'bell': sound.play('bell'); break;
+      case 'topple': sound.play('topple'); if (e.what === 'giant') renderer.shake = 0.15; break;
+      case 'push': sound.play('push'); break;
+      case 'lever': case 'click': sound.play('click'); break;
+      case 'locked-gadget': sound.play('ui'); break;
+      case 'tram-on': sound.play('power'); sound.play('ding'); break;
+      case 'tram-call': case 'tram-arrive': case 'tram-board': case 'tram-off': sound.play('ding'); break;
+      case 'mannequin-grab': sound.play('grab'); flash(0.8); renderer.eyeY = null; break;
       case 'land': sound.play('land', e); break;
       case 'throw': sound.play('throw', e); break;
       case 'door': { const d = world.doorById[e.door]; sound.play('door', { open: e.open, pos: doorCenter(d) }); break; }

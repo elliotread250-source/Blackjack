@@ -24,7 +24,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.environ.get("DATA_DIR") or ("/data" if os.path.isdir("/data") else os.path.join(ROOT, "data"))
 BOARD_FILE = os.path.join(DATA_DIR, "leaderboard.json")
-LEVELS = 4
+LEVELS = 5
 KEEP, SHOW = 100, 20
 MIN_TIME = 15            # seconds: nobody finishes a level faster than this
 RUN_TTL = 12 * 3600

@@ -38,10 +38,11 @@ export const MISSIONS = [
   { name: 'The Cold Cellar', brief: 'You’re in his cellar. Find a fuse, restore power, get the red key from the cold room, take the jar from his vault and escape up the stairs.', win: 'You got out with the jar.' },
   { name: 'Mulberry Close', brief: 'Back on your street, but a new neighbour has moved in opposite. Find the crowbar, get into his basement through the garage, restore power, take the red key from his study and steal his photo album from the vault. Then get home.', win: 'You made it home with his photo album.' },
   { name: 'The Mansion', brief: 'The richest neighbour on the street lives in a huge mansion. Find the crowbar in his hedge maze, pry open the attic hatch for the fuse, restore power in the wine cellar, take the red key from his study and steal his golden trophy from the vault. Then get home.', win: 'You got out of the mansion with his golden trophy!' },
+  { name: 'The Nightmare House', brief: 'His house has grown into a towering nightmare, with a tram looping round it. Beat your fears behind the three Fear doors to win powers (invisibility, push, double jump), get the fuse past the Eye, start the tram in the control room, ride it to the Water Room for the red key, shove the wardrobe off the basement door and steal his music box. Then get home.', win: 'You escaped the Nightmare House with his music box!' },
 ];
 
 export function buildLevel(mission = 0) {
-  if (mission >= 1 && mission <= 3) return buildMap(mission);
+  if (mission >= 1 && mission <= 4) return buildMap(mission);
   const boxes = [];      // static boxes
   const doors = [];
   const windows = [];

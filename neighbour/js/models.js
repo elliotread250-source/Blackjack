@@ -302,6 +302,88 @@ export function addDecor(B, d) {
       B.geom('paint', geo('cyl'), mat(d.x, d.y + 0.5, d.z, 0, 0, 0, 0.03, 1, 0.03), 0x3a3a3a);
       B.geom('fabric', geo('sphere'), mat(d.x, d.y + 1.3, d.z, 0, ry, 0, 0.22, 0.38, 0.15), 0xd8cdb8);
       B.geom('paint', geo('sphere'), mat(d.x, d.y + 1.82, d.z, 0, 0, 0, 0.11, 0.14, 0.11), 0xe6dccb);
+      break;      if (d.hat) B.geom('paint', geo('cone'), mat(d.x, d.y + 2.06, d.z, 0.15, 0, 0.1, 0.09, 0.26, 0.09), [0xe84a8a, 0x4ab8e8, 0xf0c83a][Math.abs((d.x * 7) | 0) % 3]);
+      break;
+    }
+    // ---- the nightmare house
+    case 'feardoor': {
+      const y = d.y, c = d.c || 0xd03a3a;
+      rbz(B, 'trim', at(0, 0.02), y, 1.7, 2.5, 0.06, ry, 0x2a2030);
+      rbz(B, 'door', at(0, 0.06), y + 0.02, 1.4, 2.32, 0.06, ry, c);
+      B.geom('metal', geo('sphere'), mat(...vecAt(at(0.52, 0.12), y + 1.05), 0, 0, 0, 0.06, 0.06, 0.06), 0xe8c050);
+      rbz(B, 'emissive', at(0, 0.1), y + 1.45, 0.78, 0.62, 0.01, ry, d.sym === 'exit' ? 0x1a8a3a : 0x18121e);
+      const ink = d.sym === 'exit' ? 0xffffff : 0xfff2b0, s = (x, yy, w, h) => rbz(B, 'emissive', at(x, 0.115), y + yy, w, h, 0.01, ry, ink);
+      if (d.sym === 'cart') { s(0, 1.68, 0.46, 0.05); s(-0.02, 1.55, 0.36, 0.05); s(-0.2, 1.55, 0.05, 0.18); s(0.2, 1.55, 0.05, 0.18); s(-0.13, 1.5, 0.07, 0.06); s(0.11, 1.5, 0.07, 0.06); }
+      else if (d.sym === 'bell') { s(0, 1.52, 0.42, 0.06); s(0, 1.58, 0.32, 0.1); s(0, 1.68, 0.22, 0.1); s(0, 1.78, 0.08, 0.06); s(0, 1.48, 0.07, 0.05); }
+      else if (d.sym === 'bulb') { s(0, 1.62, 0.26, 0.26); s(0, 1.56, 0.34, 0.14); s(0, 1.5, 0.14, 0.08); }
+      else { s(-0.05, 1.7, 0.3, 0.06); s(0.12, 1.66, 0.06, 0.14); s(-0.05, 1.55, 0.36, 0.06); }
+      // a painted eye above every Fear door
+      B.geom('paint', geo('sphere'), mat(...vecAt(at(0, 0.07), y + 2.75), 0, ry, 0, 0.3, 0.16, 0.04), 0xf8f4ea);
+      B.geom('emissive', geo('sphere'), mat(...vecAt(at(0, 0.1), y + 2.75), 0, ry, 0, 0.1, 0.1, 0.03), d.sym === 'exit' ? 0x2a8a3a : 0x8a1020);
+      break;
+    }
+    case 'udoor': {
+      // an upside-down door, hinged at the top and hanging half open: handle up high, panels flipped
+      rbz(B, 'trim', at(-0.84, 0.0), d.y, 0.1, 2.3, 0.3, ry, 0xf4ecd8); rbz(B, 'trim', at(0.84, 0.0), d.y, 0.1, 2.3, 0.3, ry, 0xf4ecd8);
+      rbz(B, 'trim', at(0, 0.0), d.y + 2.2, 1.78, 0.12, 0.3, ry, 0xf4ecd8);
+      B.geom('door', geo('box'), mat(...vecAt(at(0, 0.55), d.y + 1.25), -0.95, ry, Math.PI, 1.5, 2.1, 0.06), 0x3a7ad8);
+      B.geom('metal', geo('sphere'), mat(...vecAt(at(0.55, 0.62), d.y + 0.55), 0, 0, 0, 0.06, 0.06, 0.06), 0xe8c050);
+      break;
+    }
+    case 'cake': {
+      B.geom('paint', geo('cyl'), mat(d.x, d.y + 0.12, d.z, 0, 0, 0, 0.36, 0.24, 0.36), 0xf8e0ea);
+      B.geom('paint', geo('cyl'), mat(d.x, d.y + 0.33, d.z, 0, 0, 0, 0.26, 0.2, 0.26), 0xff8ab8);
+      B.geom('paint', geo('cyl'), mat(d.x, d.y + 0.25, d.z, 0, 0, 0, 0.365, 0.03, 0.365), 0xffffff);
+      for (let i = 0; i < 7; i++) { const a = i / 7 * 6.28; B.geom('paint', geo('cyl'), mat(d.x + Math.cos(a) * 0.17, d.y + 0.5, d.z + Math.sin(a) * 0.17, 0, 0, 0, 0.012, 0.14, 0.012), [0x5ab4e0, 0xf0c83a, 0x7ad05a][i % 3]); B.geom('emissive', geo('sphere'), mat(d.x + Math.cos(a) * 0.17, d.y + 0.59, d.z + Math.sin(a) * 0.17, 0, 0, 0, 0.018, 0.03, 0.018), 0xffc040); }
+      break;
+    }
+    case 'balloons': for (let i = 0; i < 4; i++) {
+      const bx = d.x + Math.cos(i * 1.9) * 0.25, bz = d.z + Math.sin(i * 1.9) * 0.25, by = d.y + 1.7 + (i % 2) * 0.35;
+      B.geom('metal', geo('cyl'), mat((d.x + bx) / 2, d.y + by / 2 - d.y / 2 + 0.1, (d.z + bz) / 2, 0, 0, 0, 0.004, by - d.y - 0.2, 0.004), 0xdddddd);
+      B.geom('paint', geo('sphere2'), mat(bx, by, bz, 0, 0, 0, 0.2, 0.25, 0.2), [0xe8404a, 0x4a8ae8, 0xf0c83a, 0x5ac85a][i]);
+    } break;
+    case 'present': {
+      rbox(B, 'paint', d.x, d.y, d.z, 0.5, 0.4, 0.5, 0.3, d.c || 0x3a8ad8);
+      rbox(B, 'paint', d.x, d.y, d.z, 0.52, 0.41, 0.1, 0.3, 0xf8e8a0); rbox(B, 'paint', d.x, d.y, d.z, 0.1, 0.41, 0.52, 0.3, 0xf8e8a0);
+      break;
+    }
+    case 'banner': for (let i = 0; i < 11; i++) {
+      const u = (i - 5) * 0.62, sag = 0.25 * (1 - Math.pow(u / 3.4, 2));
+      const [x, z] = at(u, 0.04);
+      B.geom('paint', geo('cone'), mat(x, d.y - sag, z, Math.PI, ry, 0, 0.22, 0.42, 0.02), [0xe84a8a, 0x4ab8e8, 0xf0c83a, 0x7ad05a][i % 4]);
+    } break;
+    case 'gear': {
+      const [x, z] = at(0, 0);
+      B.geom('metal', geo('cyl'), mat(x, d.y, z, Math.PI / 2, ry, 0, 0.7, 0.12, 0.7), 0x9a7a3a);
+      for (let i = 0; i < 12; i++) { const a = i / 12 * 6.28; const [tx, tz] = at(Math.cos(a) * 0.8, 0); B.geom('metal', geo('box'), mat(tx, d.y + Math.sin(a) * 0.8, tz, 0, ry, a, 0.22, 0.18, 0.12), 0x9a7a3a); }
+      B.geom('metal', geo('cyl'), mat(x, d.y, z, Math.PI / 2, ry, 0, 0.18, 0.16, 0.18), 0x4a4a4a);
+      break;
+    }
+    case 'tramMap': {
+      rbox(B, 'board', d.x, d.y - 0.5, d.z, 1.6, 1.0, 0.04, ry, 0xf0e6c8);
+      const ln = (x, yy, w, h) => rbz(B, 'emissive', at(x, 0.03), d.y + yy, w, h, 0.01, ry, 0x2a6ac8);
+      ln(0, -0.3, 1.2, 0.04); ln(0, 0.3, 1.2, 0.04); ln(-0.6, -0.3, 0.04, 0.64); ln(0.6, -0.3, 0.04, 0.64);
+      for (const [x, yy, c] of [[0.6, 0.0, 0xd83a3a], [-0.6, -0.05, 0x3aa0e0], [0, 0.3, 0xf0c83a]]) rbz(B, 'emissive', at(x, 0.035), d.y + yy - 0.06, 0.12, 0.12, 0.01, ry, c);
+      break;
+    }
+    case 'bell': {
+      const [x, z] = at(0, 0.12);
+      rbox(B, 'wood', d.x, d.y - 0.3, d.z, 0.4, 0.6, 0.05, ry, 0x5a3a26);
+      B.geom('metal', geo('sphere2'), mat(x, d.y, z, Math.PI / 2, ry, 0, 0.2, 0.12, 0.2), 0xd83a2a);
+      break;
+    }
+    case 'blackboard': {
+      rbox(B, 'board', d.x, d.y, d.z, 3.2, 1.4, 0.05, ry, 0x2a4a3a);
+      for (let i = 0; i < 5; i++) rbz(B, 'emissive', at(-1.2 + i * 0.5, 0.03), d.y + 0.4 + (i % 2) * 0.4, 0.35, 0.03, 0.01, ry, 0xd8d8d0);
+      rbz(B, 'wood', at(0, 0.06), d.y - 0.06, 3.2, 0.06, 0.1, ry, 0x8a6a4a);
+      break;
+    }
+    case 'cart': {
+      const p = (x, y, z, w, h, dd, c = 0xb8c0c8) => rbz(B, 'metal', at(x, z), d.y + y, w, h, dd, ry, c);
+      p(0, 0.45, 0, 0.6, 0.04, 0.9); p(-0.3, 0.45, 0, 0.03, 0.45, 0.9); p(0.3, 0.45, 0, 0.03, 0.45, 0.9);
+      p(0, 0.45, -0.45, 0.6, 0.45, 0.03); p(0, 0.45, 0.45, 0.6, 0.45, 0.03); p(0, 0.95, 0.55, 0.6, 0.05, 0.05, 0xd83a3a);
+      for (const [x, z] of [[-0.25, -0.38], [0.25, -0.38], [-0.25, 0.38], [0.25, 0.38]]) p(x, 0, z, 0.05, 0.12, 0.12, 0x222222);
+      for (const [x, z] of [[-0.28, -0.4], [0.28, -0.4], [-0.28, 0.4], [0.28, 0.4]]) p(x, 0.1, z, 0.03, 0.36, 0.03);
       break;
     }
     case 'rockingchair': {

@@ -74,4 +74,103 @@ for (const mission of [1, 2, 3]) {
   ok(w.player.y > 9.5, 'Mansion: attic stairs reach the attic (y=' + w.player.y.toFixed(2) + ')');
   ok(w.level.boxes.length > 800, 'Mansion: it really is huge (' + w.level.boxes.length + ' boxes)');
 }
+// The Nightmare House (level 5): biggest map, gates that really need the powers, the Fear rooms,
+// the tram and a full scripted playthrough with real physics where it matters.
+{
+  const { buildGrid, findNode, playerReach } = require('../js/nav.js');
+  const { makeBox } = require('../js/geom.js');
+  const DT = 1 / 60;
+  const L5 = buildLevel(4), N = 'Nightmare House';
+  ok(L5.boxes.length > buildLevel(3).boxes.length * 1.8, N + ': the biggest house yet (' + L5.boxes.length + ' boxes)');
+  ok(MISSIONS[4] && MISSIONS[4].name === 'The Nightmare House', N + ': listed as level 5');
+  let w = new World({ mission: 4, seed: 9 });
+  for (const p of w.pois) ok(w.path(w.ai.x, w.ai.y, w.ai.z, p.x, p.y, p.z)?.complete, N + ': patrol reaches ' + p.id);
+  ok(w.pois[0].id === 'stove', N + ': he starts in the kitchen');
+  // what you can reach on foot from the street (locked doors shut, wardrobe in place)
+  const extra = [w.a3.blockerBox, ...w.doors.filter(d => d.lock).map(d => d.closed)];
+  const g = buildGrid(L5.boxes, { bounds: L5.reachBounds, cell: 0.5, radius: 0.3, clear: 1.0, extra });
+  const st = findNode(g, L5.spawn.x, L5.spawn.y, L5.spawn.z);
+  const reach = (x, y, z, cr = 0) => { const id = findNode(g, x, y, z, 1); return id >= 0 && !!playerReach(g, st, cr, 0.7).seen[id]; };
+  ok(reach(-8, 9.6, -43) && reach(18, 12.8, -29) && reach(4, 16, -38) && reach(0, 12.8, -53.6), N + ': Eye hall, Depot, attic and Windmill platform are on foot');
+  ok(!reach(-11, 15.1, -25) && !reach(-11, 15.1, -25, 1), N + ': the control-room ledge needs more than a jump (or one crate)');
+  ok(!reach(-24, 12.8, -33, 3), N + ': the Water Room is only reachable by tram');
+  ok(!reach(-5, 0, -36, 3), N + ': the basement is sealed');
+  // the ledge: a jump falls short, a double jump makes it
+  const ledge = (dbl) => {
+    const v = new World({ mission: 4, seed: 7 }); v.ai.update = () => {}; v.a3.powers.double = dbl;
+    Object.assign(v.player, { x: -6.5, y: 12.8, z: -25, yaw: Math.PI / 2 });
+    for (let i = 0; i < 150; i++) v.step(DT, { mz: 1, sprint: true, jump: i === 20 || i === 38 });
+    return v.player.y;
+  };
+  ok(ledge(false) < 13, N + ': no double jump, no control room');
+  ok(Math.abs(ledge(true) - 15.1) < 0.02, N + ': double jump lands on the control-room ledge');
+
+  w = new World({ mission: 4, seed: 11 });
+  w.ai.update = () => {}; w.ai.x = 300; w.ai.z = 300;
+  const A = w.a3, G = id => A.gadgetById[id], use = id => { w.interact({ kind: 'gadget', ref: G(id) }); w.step(DT, {}); };
+  const run = (sec, inp = {}) => { for (let i = 0; i < sec * 60; i++) w.step(DT, typeof inp === 'function' ? inp(i) : inp); };
+  // --- Supermarket: groceries, the mannequins, the checkout -> invisibility
+  use('fearMarket'); ok(A.zone === 'market', N + ': the Supermarket door takes you into the dream');
+  use('checkout'); ok(!A.powers.invis, N + ': no paying with an empty trolley');
+  const mq = A.mannequins.find(m => m.id === 'mq2');
+  Object.assign(w.player, { x: 162, y: 0, z: -24, yaw: 0, pitch: 0, crouch: false });      // facing it: it stays put
+  const z0 = mq.z; run(1); ok(Math.abs(mq.z - z0) < 1e-6, N + ': a watched mannequin does not move');
+  w.player.yaw = Math.PI; run(0.6, { crouch: true }); ok(Math.abs(mq.z - z0) < 1e-6, N + ': crouching in the shop, they cannot see you');
+  run(3); ok(Math.abs(w.player.z - L5.act3.zones.market.start.z) < 0.01 && A.zone === 'market', N + ': turn your back standing up and it grabs you (back to the start)');
+  for (const id of L5.act3.groceries) w.pickUp(w.propById[id]);
+  ok(A.groceries === 5, N + ': five groceries in the trolley');
+  use('checkout'); ok(A.powers.invis, N + ': pay -> invisibility');
+  run(2.5); ok(A.zone === null && Math.abs(w.player.x - -12.3) < 0.01, N + ': you wake by the Supermarket door');
+  // --- the Eye guards the fuse
+  Object.assign(w.player, { x: -5, y: 9.6, z: -35, yaw: Math.PI / 2 });
+  run(1.2, { mz: 0 }); ok(Math.abs(w.player.x - -2.6) < 0.01, N + ': standing in the Eye hall gets you thrown out');
+  Object.assign(w.player, { x: -5, y: 9.6, z: -35, yaw: Math.PI / 2 });
+  run(1.2, { crouch: true }); ok(Math.abs(w.player.x - -5) < 0.2, N + ': invisible while crouching, the Eye cannot see you');
+  ok(w.sightRate(w.ai) === 0, N + ': he cannot see you either');
+  Object.assign(w.player, { x: -8, y: 9.6, z: -43.2, yaw: 0, crouch: true }); w.pickUp(w.propById.fuse); ok(w.hasItem('fuse'), N + ': fuse taken from the Eye hall');
+  // --- School: bell, giant -> push
+  use('fearSchool'); ok(A.zone === 'school', N + ': into the School');
+  use('giant'); ok(!A.powers.push, N + ': the giant will not fall before the bell');
+  use('bell'); use('giant'); ok(A.powers.push && A.giantDown, N + ': bell, then push the giant over -> push');
+  run(2.5); ok(A.zone === null, N + ': back from school');
+  // --- Closet: the switch -> double jump
+  use('fearCloset'); ok(A.zone === 'closet', N + ': into the Closet');
+  use('switch'); ok(A.powers.double && A.closetLight, N + ': light switch -> double jump');
+  run(2.5); ok(A.zone === null, N + ': back from the closet');
+  ok(w.objective().length > 5, N + ': objective text');
+  // --- control room: fuse, lever, button
+  use('lever'); ok(!A.tram.lever, N + ': lever is dead without power');
+  Object.assign(w.player, { x: -13, y: 15.1, z: -25, yaw: Math.PI / 2 });
+  w.interact({ kind: 'fusebox', ref: w.fusebox }); ok(w.flags.power, N + ': fuse into the control-room fuse box');
+  use('button'); ok(!A.tram.on, N + ': button needs the lever first');
+  use('lever'); use('button'); ok(A.tram.on, N + ': lever + red button start the tram');
+  // --- the tram: board at the Depot, drive, get off at the Water Room, call it from the Windmill
+  Object.assign(w.player, { x: 17.5, y: 12.8, z: -25.8 });
+  use('callDepot'); ok(A.tram.riding, N + ': board the tram at the Depot');
+  const s0 = A.tram.s; run(2, { mz: 1 }); ok(Math.abs(A.loop.delta(s0, A.tram.s)) > 3 && A.tram.riding, N + ': it drives');
+  const water = A.stations.find(x => x.id === 'water');
+  A.tram.s = water.s + 1; A.tram.v = 0; w.step(DT, { interact: true });
+  ok(!A.tram.riding && Math.abs(w.player.x - -23.9) < 0.01, N + ': get off at the Water Room');
+  w.pickUp(w.propById.redkey); ok(w.hasItem('redkey'), N + ': red key from the Water Room');
+  use('callWater'); ok(A.tram.riding, N + ': board again'); A.tram.s = A.stations.find(x => x.id === 'windmill').s; w.step(DT, { interact: true });
+  ok(!A.tram.riding && Math.abs(w.player.z - -53.4) < 0.01, N + ': off at the Windmill');
+  A.tram.s = water.s; Object.assign(w.player, { x: 2, y: 12.8, z: -52.6 });
+  use('callWindmill'); ok(A.tram.auto === 'windmill', N + ': call the tram');
+  run(30); ok(!A.tram.auto && A.stations.find(x => x.id === 'windmill') === require('../js/act3.js').dockedAt(w), N + ': it comes and docks at the Windmill');
+  // --- push: the wardrobe and him
+  Object.assign(w.player, { x: 2, y: 3.2, z: -33.4, yaw: 0, crouch: false });
+  w.step(DT, { push: true }); ok(A.blocker, N + ': R shoves the wardrobe off the basement door');
+  run(1.5);
+  const ai = w.ai; delete ai.update; Object.assign(ai, { x: 2.2, y: 3.2, z: -25, state: 'patrol' });
+  Object.assign(w.player, { x: 2.2, y: 3.2, z: -22.6, yaw: 0 }); A.pushCd = 0;
+  w.step(DT, { push: true }); ok(ai.stunT > 1 && ai.z < -26, N + ': push shoves him back and stuns him');
+  ai.x = 300; ai.z = 300; ai.update = () => {};
+  // --- basement, music box, home
+  Object.assign(w.player, { x: 2, y: 3.2, z: -34.8, yaw: 0 }); w.useDoor(w.doorById.basement);
+  ok(!w.doorById.basement.locked, N + ': red key opens the basement');
+  Object.assign(w.player, { x: -5, y: 0, z: -37 }); w.pickUp(w.propById.musicbox); ok(w.steps.musicbox !== undefined, N + ': the music box');
+  const saved = w.serialize(), w2 = new World({ mission: 4 }); ok(w2.load(saved) && w2.a3.powers.double && w2.a3.tram.on && w2.a3.blocker, N + ': save keeps powers, tram and wardrobe');
+  Object.assign(w.player, L5.spawn); w.step(DT, {}); ok(w.flags.won, N + ': home with the music box wins');
+  console.log(N + ': passed');
+}
 console.log(count + ' map checks passed');

@@ -7,7 +7,7 @@ export const TEX_SCALE = {
   grass: 3, asphalt: 5, paving: 1.6, concrete: 3, brick: 1.4, siding: 1.6, shingle: 1.6, trim: 2, paint: 2,
   paper1: 0.9, paper2: 0.8, paper3: 0.7, panel: 1.6, tile: 0.9, checker: 0.8, woodfloor: 2, carpet: 1.2, plaster: 2.5,
   wood: 1.2, fabric: 0.6, metal: 1, fence: 1.8, board: 1, block: 1.6, attic: 2, counter: 1, hedge: 1.2, dirt: 1.2,
-  bark: 1, garagedoor: 2.4, roofflat: 2.5, cardboard: 1, crate: 0.7, door: 1, emissive: 1, glass: 1,
+  bark: 1, garagedoor: 2.4, roofflat: 2.5, cardboard: 1, crate: 0.7, door: 1, emissive: 1, glass: 1, diamond: 0.6,
 };
 
 function rnd(seed) { let s = seed >>> 0 || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
@@ -326,3 +326,19 @@ export function makeTextures(size = 256, aniso = 1) {
   }
   return out;
 }
+
+// tram floor: diamond-plate steel
+Object.assign(DRAW, {
+  diamond(g, n, r) {
+    g.fillStyle = grey(190); g.fillRect(0, 0, n, n);
+    const s = n / 8;
+    for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+      const cx = (x + 0.5) * s, cy = (y + 0.5) * s, a = (x + y) % 2 ? 0.6 : -0.6;
+      g.save(); g.translate(cx, cy); g.rotate(a);
+      g.fillStyle = grey(235); g.fillRect(-s * 0.32, -s * 0.07, s * 0.64, s * 0.14);
+      g.fillStyle = grey(120); g.fillRect(-s * 0.32, s * 0.07, s * 0.64, s * 0.04);
+      g.restore();
+    }
+    noise(g, n, r, 18, 2);
+  },
+});

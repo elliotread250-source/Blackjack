@@ -3,6 +3,7 @@
 // navigation physics work unchanged. Both maps use the extraction rules in world.js: collect the
 // target, restore power, then reach `exit`.
 import { makeBox } from './geom.js';
+import { roundedLoop, act3Objective } from './act3.js';
 
 const H = 3.2, U = 6.4;
 
@@ -839,6 +840,521 @@ function buildMansion() {
   return L;
 }
 
+// ------------------------------------------------------------------------------------------------
+// Level 5: The Nightmare House (in the style of Hello Neighbor's Act 3). The biggest house yet: a
+// wonky tower of five floors stacked crooked on top of each other over a basement, with a tram that
+// loops round it on an elevated track (Depot, Windmill and Water Room stations) and three Fear doors
+// that lead to dream rooms where you win powers.
+//   Supermarket (5 groceries past the mannequins)  -> crouch invisibility -> past the Eye -> fuse
+//   Closet (climb in the dark to the light switch) -> double jump -> up the 2.3 m ledge to the
+//     control room -> fuse in the fuse box, pull the lever, press the red button -> tram runs
+//   tram -> the Water Room (only reachable by tram) -> red key
+//   School (lockers, the bell, the giant mannequin) -> push -> shove the wardrobe off the basement
+//     door -> red key opens it -> the music box -> home.
+const F1x = 6.4, F2x = 9.6, F3x = 12.8, F4x = 16;
+
+// floor slab [x0,x1]x[z0,z1] (top at y) with rectangular holes cut out
+function slab(K, x0, z0, x1, z1, y, holes, m, c) {
+  const xs = new Set([x0, x1]), zs = new Set([z0, z1]);
+  for (const [a, b, cc, d] of holes) { xs.add(Math.max(x0, Math.min(x1, a))); xs.add(Math.max(x0, Math.min(x1, cc))); zs.add(Math.max(z0, Math.min(z1, b))); zs.add(Math.max(z0, Math.min(z1, d))); }
+  const X = [...xs].sort((a, b) => a - b), Z = [...zs].sort((a, b) => a - b);
+  // merge cells into strips along x for fewer boxes
+  for (let j = 0; j < Z.length - 1; j++) {
+    let run = null;
+    for (let i = 0; i < X.length - 1; i++) {
+      const cx = (X[i] + X[i + 1]) / 2, cz = (Z[j] + Z[j + 1]) / 2;
+      const hole = holes.some(([a, b, cc, d]) => cx > a && cx < cc && cz > b && cz < d);
+      if (!hole) { if (run === null) run = X[i]; }
+      if ((hole || i === X.length - 2) && run !== null) { K.box(run, y - 0.2, Z[j], hole ? X[i] : X[i + 1], y, Z[j + 1], m, c); run = null; }
+    }
+  }
+}
+
+function buildAct3() {
+  const L = base(4, {
+    targets: ['musicbox'], indoor: false, outdoorLight: 0.5, groundVisualY: H - 0.02,
+    titleCamera: { from: [-30, 17, 6], to: [0, 10, -32] },
+  });
+  const K = kit(L);
+  const { box, detail, wall, door, win, lamp, table, shelves, item, hide, poi, stairs, room, mount } = K;
+  // Act 3 palette: every floor a different clashing colour, patched with planks
+  const TEAL = 0x3f93b8, MUSTARD = 0xe0a83a, BRICKR = 0xb24a30, MINT = 0x62bd8c, PURPLE = 0x8a5ac0, TRIM = 0xf4ecd8, ROOFR = 0x9a2c26, ROOFB = 0x2c4a6a;
+  const RAIL = 0xf0e6cc;
+  const rail = (axis, t, a, b, y, c = RAIL) => (axis === 'x' ? box(a, y, t, b, y + 0.95, t + 0.08, 'trim', c) : box(t, y, a, t + 0.08, y + 0.95, b, 'trim', c));
+  const gad = (o) => { (L.act3.gadgets).push(Object.assign({ hx: 0.3, hy: 0.4, hz: 0.3 }, o)); };
+  L.act3 = { gadgets: [], mannequins: [], groceries: [], zones: {}, signs: [], tram: null, eye: null, blocker: null };
+
+  // ---- ground: lawn at y=H, open over the house so its basement can sit under it
+  for (const [a0, b0, a1, b1] of [[-34.5, -70.5, -14, 23], [14, -70.5, 34.5, 23], [-14, -70.5, 14, -44], [-14, -18, 14, 23]]) box(a0, 0, b0, a1, H, b1, 'grass', 0x5f8a48);
+  for (const [a0, b0, a1, b1] of [[-14, -44, -10, -18], [10, -44, 14, -18], [-10, -28, 10, -18]]) box(a0, 0, b0, a1, 3, b1, 'concrete', 0x8a8478);
+  L.holes = [[-14, -44, 14, -18]];
+  const { picket, inv } = street(L, K, H, -70.5);
+
+  // ---- his plot: picket front, tall fences round the rest, a crooked path, a dead tree
+  for (const [a, b] of [[-23, -1.6], [1.6, 23]]) picket(a, b, -6.55, 1.1, 0xf3efe4);
+  box(-23.2, H, -66, -23, H + 2, -6.5, 'fence', 0x7a5a40); box(23, H, -66, 23.2, H + 2, -6.5, 'fence', 0x7a5a40);
+  box(-23.2, H, -66.2, 23.2, H + 2, -66, 'fence', 0x7a5a40);
+  inv(-23.6, H + 2, -66.4, -23.2, 11.5, -6.5); inv(23.2, H + 2, -66.4, 23.6, 11.5, -6.5); inv(-23.6, H + 2, -66.8, 23.6, 11.5, -66.2);
+  for (let i = 0; i < 6; i++) detail(-1 + Math.sin(i) * 0.6, H, -7 - i * 1.8, 1 + Math.sin(i) * 0.6, H + 0.02, -8.6 - i * 1.8, 'paving', 0xc9c0ae);
+  box(-16.4, H, -12.4, -15.6, H + 5, -11.6, 'bark', 0x4a3a2a, { tag: 'tree' }); L.decor.push({ t: 'tree', x: -16, y: H + 4.5, z: -12, s: 1.1 });
+  L.decor.push({ t: 'mailbox', x: -2.6, y: H, z: -7.1, ry: 0, c: 0xd23a3a });
+  box(6.8, H, -15.9, 9.2, H + 1.35, -10.6, null, 0, { vis: false, tag: 'car' }); L.decor.push({ t: 'car', x: 8, y: H, z: -13.25, ry: 0, c: 0x3a5ad0 });
+  item('crate1', 'crate', -18, H, -48); item('crate2', 'crate', 17, H, -60); item('ball1', 'ball', 12, H, -12);
+  L.decor.push({ t: 'clothesline', x: -8, y: H + 2.1, z: -60 });
+  poi('frontyard', -4, H, -10, 1, 'stare'); poi('backyard', 8, H, -52, 1);
+
+  // ---- the elevated tram track: a rounded loop round the whole house at 12.8 m
+  const loop = roundedLoop(-21, -57, 21, -9, 5);
+  L.act3.tram = {
+    y: F3x, pts: loop, start: 'depot',
+    stations: [
+      { id: 'depot', name: 'the Depot', at: [21, -29], exit: { x: 18.2, y: F3x, z: -29, yaw: Math.PI / 2 } },
+      { id: 'windmill', name: 'the Windmill', at: [0, -57], exit: { x: -1.2, y: F3x, z: -53.4, yaw: Math.PI } },
+      { id: 'water', name: 'the Water Room', at: [-21, -33], exit: { x: -23.9, y: F3x, z: -33, yaw: Math.PI / 2 } },
+    ],
+  };
+  // steel pillars (skip the front path and the station platforms)
+  for (const [x, z] of [[-21, -15], [-21, -22], [-21, -45], [-21, -51], [21, -15], [21, -22], [21, -38], [21, -45], [21, -51], [-12, -9], [-6, -9], [6, -9], [12, -9], [-12, -57], [-6, -57], [6, -57], [12, -57]]) {
+    box(x - 0.25, H, z - 0.25, x + 0.25, F3x - 0.6, z + 0.25, 'metal', 0x3a4a5a);
+    detail(x - 0.45, F3x - 0.75, z - 0.45, x + 0.45, F3x - 0.6, z + 0.45, 'metal', 0x2a3440);
+  }
+
+  // ================================================================================== BASEMENT
+  box(-10, -0.25, -44, 10, 0, -28, 'concrete', 0x5a5650);
+  const bw = (axis, t, a, b, ops = []) => wall(axis, t, a, b, 0, 3, ops, 'block', 0x6d665c);
+  bw('x', -44, -10, 10); bw('x', -28.2, -10, 10); bw('z', -10, -44, -28); bw('z', 9.8, -44, -28);
+  bw('z', 0.8, -42.6, -28.2); bw('z', 3, -42.6, -28.2);
+  stairs(1, 3, -42.6, 1, 0, 0x5a4a3a, 'wood');
+  // the kid's room: the music box on a little stage, drawings, a tiny bed, a red bulb
+  box(-5.6, 0, -38.6, -4.4, 0.9, -37.4, 'wood', 0x6a2a3a); detail(-5.5, 0.9, -38.5, -4.5, 0.92, -37.5, 'fabric', 0x8a1f2a);
+  item('musicbox', 'radio', -5, 0.92, -38, 'His music box');
+  box(-9.6, 0, -43.6, -7.6, 0.45, -41.6, 'wood', 0x5a3a2a); box(-9.6, 0.45, -43.6, -7.6, 0.6, -41.6, 'fabric', 0x4a6a9a);
+  for (let i = 0; i < 9; i++) detail(-9.8 + i * 1.1, 1.3 + (i % 2) * 0.35, -43.79, -9.2 + i * 1.1, 1.75 + (i % 2) * 0.35, -43.77, 'paper1', [0xffe7a0, 0xbfe3ff, 0xffc0c8][i % 3]);
+  L.decor.push({ t: 'blocks', x: -3, y: 0, z: -31 }); L.decor.push({ t: 'rockinghorse', x: -8, y: 0, z: -31 });
+  lamp('basement', -5, 2.85, -36, 0xff4030);
+  // the boiler side
+  box(5, 0, -43.6, 7, 2.4, -41.6, 'metal', 0x5a7681); detail(5.2, 1.1, -41.62, 6.8, 1.25, -41.58, 'emissive', 0xf0a040);
+  shelves(9, 0, -33, 'z'); item('can1', 'can', 6, 0, -30); item('bottle1', 'bottle', 7.5, 0, -36);
+  lamp('boiler', 6.5, 2.85, -35, 0xffc890, false, 2.4);
+  room(-10, 0, -44, 10, 3, -28, 0.25);
+
+  // ================================================================================== GROUND FLOOR (H)
+  slab(K, -14, -44, 14, -18, H, [[1, -42.6, 3, -36.2]], 'woodfloor', 0x9b6a40);
+  const ext = (axis, t, a, b, y, ops, m, c, h = 3) => wall(axis, t, a, b, y, h, ops, m, c);
+  ext('x', -18.2, -14, 14, H, [
+    win('livingW', 'x', -18.2, -9, H + 0.9, 1.8, 'Living-room window', { entry: 'livingWindow' }),
+    door('front', 'x', -18.2, 0, H, null, 'Front door', -1, 0xd23a3a),
+    win('kitchenW', 'x', -18.2, 9, H + 1, 1.6, 'Kitchen window', { entry: 'kitchenWindow' }),
+  ], 'siding', TEAL);
+  ext('x', -44, -14, 14, H, [
+    win('partyW', 'x', -44, -9, H + 0.9, 1.6, 'Birthday-room window', { entry: 'partyWindow', outside: -1 }),
+    door('back', 'x', -44, 9, H, null, 'Back door', 1, 0xe0a83a),
+  ], 'siding', TEAL);
+  ext('z', -14, -44, -18, H, [win('livingSideW', 'z', -14, -21.5, H + 0.9, 1.4, 'Living-room side window', { outside: -1, entry: 'sideWindow' })], 'siding', TEAL);
+  ext('z', 13.8, -44, -18, H, [win('kitchenSideW', 'z', 13.8, -24, H + 1, 1.4, 'Kitchen side window', { breakable: false }), door('sideDoor', 'z', 13.8, -38, H, null, 'Side door', -1, 0x3a8a5a)], 'siding', TEAL);
+  for (const [x, z] of [[-14.1, -18.1], [13.9, -18.1], [-14.1, -44.1], [13.9, -44.1]]) detail(x - 0.08, H, z - 0.08, x + 0.08, H + 3, z + 0.08, 'trim', TRIM);
+  // porch with a sagging roof
+  for (const x of [-1.6, 1.6]) box(x - 0.12, H, -16.6, x + 0.12, H + 2.7, -16.36, 'trim', TRIM);
+  detail(-2.2, H + 2.7, -18, 2.2, H + 2.85, -16.1, 'roofflat', ROOFR);
+  detail(-2.2, H, -18, 2.2, H + 0.12, -16.2, 'board', 0x8a6a4a);
+  lamp('porch', 0, H + 2.5, -17, 0xffe2a8, false, 2.6);
+  // inside walls
+  const iw = (axis, t, a, b, y, ops = [], m = 'paper1', c = 0xe8d8b0) => wall(axis, t, a, b, y, 3, ops, m, c);
+  iw('z', -4.2, -43.8, -18.2, H, [door('livDoor', 'z', -4.2, -22, H, null, 'Living-room door'), door('partyDoor', 'z', -4.2, -38, H, null, 'Birthday-room door', -1, 0xd85aa0)], 'paper2', 0xf0c070);
+  iw('z', 4, -43.8, -18.2, H, [door('kitDoor', 'z', 4, -22, H, null, 'Kitchen door'), door('utilDoor', 'z', 4, -38, H, null, 'Utility door')], 'paper2', 0xf0c070);
+  iw('x', -30.2, -13.8, -4.2, H, [door('livParty', 'x', -30.2, -9, H, null, 'Door')], 'paper3', 0xb8d8f0);
+  iw('x', -30.2, 4.2, 13.8, H, [door('kitUtil', 'x', -30.2, 9, H, null, 'Door')], 'paper1', 0xc8e8a8);
+  iw('x', -36.2, -4, 4, H, [door('basement', 'x', -36.2, 2, H, 'red', 'Basement door', -1, 0x4a2a2a)], 'paper2', 0xf0c070);
+  iw('z', 0.8, -43.8, -36.2, H, [], 'block', 0x8a8070); iw('z', 3, -43.8, -36.2, H, [], 'block', 0x8a8070);
+  // the giant wardrobe shoved in front of the basement door (push power knocks it over)
+  L.act3.blocker = { x0: 1.0, y0: H, z0: -35.95, x1: 3.0, y1: H + 2.7, z1: -34.95 };
+  // hall: crooked stairs up, clock, portraits, rug
+  stairs(-2, 0, -24, -1, H, 0x7a4a2a, 'wood');
+  detail(-3.6, H + 0.005, -35.6, 3.6, H + 0.02, -19, 'carpet', 0xa83a3a);
+  L.decor.push({ t: 'clock', x: -3.75, y: H + 1.9, z: -33, ry: Math.PI / 2, tall: true });
+  L.decor.push({ t: 'portrait', x: 3.78, y: H + 2, z: -27, ry: -Math.PI / 2 }); L.decor.push({ t: 'portrait', x: 3.78, y: H + 2, z: -32, ry: -Math.PI / 2 });
+  L.decor.push({ t: 'coatrack', x: -3.4, y: H, z: -19 });
+  lamp('hall', 0, H + 2.85, -28, 0xffe1b0);
+  poi('hall', 1.5, H, -33, 2);
+  // living room: the Supermarket Fear door on the west wall
+  box(-12.6, H, -20, -8.6, H + 0.45, -19, 'fabric', 0x3a7ac0); box(-12.6, H + 0.45, -19.2, -8.6, H + 1.15, -18.8, 'fabric', 0x2f6aa8);
+  box(-11, H, -25, -9.4, H + 0.42, -23.8, 'wood', 0x7a4a2a); item('vase1', 'vase', -10.2, H + 0.42, -24.4);
+  L.decor.push({ t: 'tvscreen', x: -10.5, y: H + 1.05, z: -29.6, ry: 0 }); box(-11.5, H, -29.9, -9.5, H + 0.5, -29.3, 'wood', 0x4a3a2c);
+  L.decor.push({ t: 'standlamp', x: -5, y: H, z: -19.2 });
+  L.decor.push({ t: 'feardoor', x: -13.79, y: H, z: -26.5, ry: Math.PI / 2, c: 0xe03a3a, sym: 'cart' });
+  gad({ id: 'fearMarket', kind: 'fear', zone: 'market', power: 'invis', name: 'Fear Door: Supermarket', x: -13.45, y: H + 1.1, z: -26.5, hx: 0.3, hy: 1.1, hz: 0.75 });
+  hide('livWardrobe', -5, H, -28.8, '-x', 0x6a3a8a);
+  lamp('living', -9, H + 2.85, -24, 0xffd59a);
+  poi('living', -8, H, -22, 2);
+  // kitchen: where he spends his time
+  box(4.4, H, -19.4, 9, H + 0.9, -18.4, 'counter', 0xf0e0b0); box(10.6, H, -19.4, 13.6, H + 0.9, -18.4, 'counter', 0xf0e0b0);
+  box(12.6, H, -23, 13.6, H + 0.92, -21.8, 'metal', 0x2a2c2f); L.decor.push({ t: 'hood', x: 13.2, y: H + 1.9, z: -22.4 });
+  box(12.6, H, -27, 13.6, H + 2, -25.8, 'metal', 0xf0f0e8);
+  table(8, H, -25, 0xd0a060, 1.3, 0.6);
+  item('apple1', 'apple', 7.5, H + 0.86, -25); item('plate1', 'plate', 8.6, H + 0.86, -24.8); item('can2', 'can', 6, H + 0.9, -18.9);
+  hide('pantry', 4.7, H, -28.6, '+x', 0x8a5a2a);
+  lamp('kitchen', 9, H + 2.85, -24, 0xfff0d0);
+  poi('stove', 11.9, H, -22.4, 3);
+  // the birthday room: mannequins at a party that never ends
+  table(-9, H, -37, 0xf0d0e0, 2.2, 0.7); detail(-11.2, H + 0.86, -37.7, -6.8, H + 0.88, -36.3, 'fabric', 0xffa0c8);
+  L.decor.push({ t: 'cake', x: -9, y: H + 0.88, z: -37 });
+  for (const [x, z, ry] of [[-11.6, -35.8, 2.6], [-6.4, -35.8, 3.6], [-11.6, -38.2, 0.5], [-6.4, -38.2, -0.5], [-9, -39.2, 0]]) L.decor.push({ t: 'mannequin', x, y: H, z, ry, hat: true });
+  for (const [x, z] of [[-13, -32], [-5.2, -42.5], [-12.6, -43], [-5.4, -31.4]]) L.decor.push({ t: 'balloons', x, y: H, z });
+  for (const [x, z, c] of [[-12.6, -41.6, 0x3a8ad8], [-11.8, -42.6, 0xe0c03a], [-6, -40.4, 0xd83a6a]]) L.decor.push({ t: 'present', x, y: H, z, c });
+  L.decor.push({ t: 'banner', x: -9, y: H + 2.5, z: -43.78, ry: 0 });
+  lamp('party', -9, H + 2.85, -37, 0xff9ad0);
+  L.lights[L.lights.length - 1].pulse = true;
+  poi('party', -9, H, -33.2, 2, 'stare');
+  // utility room: washing machine, crates, a locker
+  for (const x of [12.4, 13.4]) { box(x - 0.45, H, -43.6, x + 0.45, H + 0.9, -42.8, 'metal', 0xe8e8e0); detail(x - 0.25, H + 0.35, -42.82, x + 0.25, H + 0.75, -42.8, 'glass', 0x7d97a6); }
+  shelves(4.8, H, -33, 'z', 0x7a6a4a); item('crate3', 'crate', 9, H, -34); item('paint1', 'paint', 6.5, H, -42);
+  hide('utilLocker', 13.1, H, -33, '-x', 0x3a7a8a);
+  lamp('utility', 9, H + 2.85, -37, 0xf2f2e0);
+  poi('utility', 9, H, -36, 1);
+  room(-14, H, -44, 14, H + 3, -18, 0.62);
+
+  // ================================================================================== FIRST FLOOR (F1x), shoved 2 m west
+  slab(K, -16, -44, 12, -18, F1x, [[-2, -30.4, 0, -24]], 'woodfloor', 0xa87a4a);
+  box(12, F1x - 0.2, -44, 14, F1x, -18, 'roofflat', ROOFR);                     // ground-floor roof strip
+  rail('z', 13.9, -44, -18, F1x);
+  ext('x', -18.2, -16, 12, F1x, [win('kidW', 'x', -18.2, -10, F1x + 0.9, 1.6, 'Bedroom window', { breakable: false }), win('toyW', 'x', -18.2, 8, F1x + 0.9, 1.6, 'Toy-room window', { breakable: false })], 'siding', MUSTARD);
+  ext('x', -44, -16, 12, F1x, [win('bathW', 'x', -44, -10, F1x + 1.1, 1.2, 'Bathroom window', { breakable: false, outside: -1 }), win('studyBW', 'x', -44, 8, F1x + 0.9, 1.6, 'Study window', { breakable: false, outside: -1 })], 'siding', MUSTARD);
+  ext('z', -16, -44, -18, F1x, [win('kidSideW', 'z', -16, -24, F1x + 0.9, 1.4, 'Bedroom window', { breakable: false, outside: -1 })], 'siding', MUSTARD);
+  ext('z', 11.8, -44, -18, F1x, [win('studySideW', 'z', 11.8, -38, F1x + 0.9, 1.4, 'Study window', { breakable: false })], 'siding', MUSTARD);
+  for (let i = 0; i < 7; i++) detail(-16.06, F1x + 0.4 + i * 0.37, -43 + i * 3.1, -16, F1x + 0.62 + i * 0.37, -40.6 + i * 3.1, 'board', [0x9a6a3a, 0xb24a30, 0x3f93b8][i % 3]); // patched planks
+  iw('z', -4.2, -43.8, -18.2, F1x, [door('kidDoor', 'z', -4.2, -22, F1x, null, 'Bedroom door', -1, 0x5aa0e0), door('bathDoor', 'z', -4.2, -37, F1x, null, 'Bathroom door')], 'paper3', 0xd8c0f0);
+  iw('z', 4, -43.8, -18.2, F1x, [door('toyDoor', 'z', 4, -22, F1x, null, 'Toy-room door', 1, 0xe0c03a), door('study', 'z', 4, -37, F1x, 'power', 'Study electric door', 1)], 'paper3', 0xd8c0f0);
+  iw('x', -30.2, -15.8, -4.2, F1x, [], 'paper1', 0xa8e0c8); iw('x', -30.2, 4.2, 11.8, F1x, [], 'paper1', 0xffd0a0);
+  // stairwell: rails round the hole, then the next flight up beside it
+  rail('x', -24.08, -2, 0, F1x); rail('z', -2.08, -30.4, -24, F1x); rail('z', -0.04, -30.4, -24, F1x);
+  stairs(0, 2, -30.4, 1, F1x, 0x7a4a2a, 'wood');
+  lamp('landing1', 0, F1x + 2.85, -36, 0xffe1b0);
+  L.decor.push({ t: 'portrait', x: -3.98, y: F1x + 2, z: -32, ry: Math.PI / 2 });
+  poi('landing1', -1, F1x, -34, 1);
+  // kid's bedroom
+  box(-15.6, F1x, -21.4, -13.4, F1x + 0.45, -18.6, 'wood', 0x5a8ad0); box(-15.6, F1x + 0.45, -21.4, -13.4, F1x + 0.62, -18.6, 'fabric', 0xffd040);
+  L.decor.push({ t: 'mobile', x: -14.5, y: F1x + 2.9, z: -20 }); L.decor.push({ t: 'blocks', x: -9, y: F1x, z: -25 }); L.decor.push({ t: 'rockinghorse', x: -6.5, y: F1x, z: -20 });
+  hide('kidWardrobe', -15.1, F1x, -28, '+x', 0x5aa0e0);
+  item('ball2', 'ball', -10, F1x, -22);
+  lamp('kidroom', -10, F1x + 2.85, -24, 0xffd8a0);
+  poi('kidroom', -9, F1x, -26, 1);
+  // bathroom
+  box(-15.6, F1x, -43.6, -12.6, F1x + 0.6, -41.8, 'tile', 0xf4f4f0); detail(-15.4, F1x + 0.6, -43.4, -12.8, F1x + 0.62, -42, 'glass', 0x5ab4e0);
+  box(-8, F1x, -43.6, -7.2, F1x + 0.5, -42.8, 'tile', 0xf4f4f0); box(-6, F1x, -43.7, -4.8, F1x + 0.9, -43.1, 'tile', 0xf4f4f0);
+  detail(-16, F1x, -44, -4.2, F1x + 1.2, -43.8, 'tile', 0x8ad0e0);
+  hide('showerCurtain', -14.5, F1x, -32, '+x', 0xd85aa0);
+  lamp('bath', -10, F1x + 2.85, -37, 0xe8f4ff, false, 2.6);
+  // toy room: the School Fear door
+  L.decor.push({ t: 'feardoor', x: 11.79, y: F1x, z: -24, ry: -Math.PI / 2, c: 0xf0c020, sym: 'bell' });
+  gad({ id: 'fearSchool', kind: 'fear', zone: 'school', power: 'push', name: 'Fear Door: School', x: 11.45, y: F1x + 1.1, z: -24, hx: 0.3, hy: 1.1, hz: 0.75 });
+  L.decor.push({ t: 'blocks', x: 7, y: F1x, z: -27 }); L.decor.push({ t: 'present', x: 5.2, y: F1x, z: -19.2, c: 0x3ac0a0 });
+  table(7.5, F1x, -20.4, 0xe07a3a, 1, 0.5); item('book1', 'book', 7.3, F1x + 0.86, -20.4);
+  lamp('toyroom', 8, F1x + 2.85, -24, 0xfff0c0);
+  poi('toyroom', 7, F1x, -25, 1);
+  // study (electric lock, power from the control room's fuse box)
+  table(8, F1x, -42.8, 0x4a3a2c, 1.4, 0.5); L.decor.push({ t: 'desklamp', x: 8.8, y: F1x + 0.86, z: -42.9 });
+  shelves(11, F1x, -33, 'z', 0x6b4430); item('radio1', 'radio', 7.2, F1x + 0.86, -42.8); item('bottle2', 'bottle', 6, F1x, -32);
+  L.decor.push({ t: 'corkboard', x: 4.22, y: F1x + 1.6, z: -40.5, ry: Math.PI / 2 });
+  lamp('study', 8, F1x + 2.85, -37, 0xc8e0ff, true);
+  room(-16, F1x, -44, 12, F1x + 3, -18, 0.6);
+
+  // ================================================================================== SECOND FLOOR (F2x), shoved east and back
+  slab(K, -12, -46, 16, -20, F2x, [[0, -30.4, 2, -24]], 'woodfloor', 0x8a5a3a);
+  box(-16, F2x - 0.2, -44, -12, F2x, -18, 'roofflat', ROOFB); box(-12, F2x - 0.2, -20, 12, F2x, -18, 'roofflat', ROOFB);  // first-floor roof strips
+  rail('z', -16.04, -44, -18, F2x); rail('x', -18.04, -16, 12, F2x);
+  ext('x', -20.2, -12, 16, F2x, [win('galleryW', 'x', -20.2, -8, F2x + 0.9, 1.6, 'Gallery window', { breakable: false }), win('musicW', 'x', -20.2, 10, F2x + 0.9, 1.6, 'Music-room window', { breakable: false })], 'brick', BRICKR);
+  ext('x', -46, -12, 16, F2x, [win('bedBW', 'x', -46, 10, F2x + 0.9, 1.6, 'Bedroom window', { breakable: false, outside: -1 })], 'brick', BRICKR);
+  ext('z', -12, -46, -20, F2x, [win('gallerySideW', 'z', -12, -26, F2x + 0.9, 1.4, 'Gallery window', { breakable: false, outside: -1 })], 'brick', BRICKR);
+  ext('z', 15.8, -46, -20, F2x, [win('musicSideW', 'z', 15.8, -26, F2x + 0.9, 1.4, 'Music-room window', { breakable: false }), win('bedSideW', 'z', 15.8, -39, F2x + 0.9, 1.4, 'Bedroom window', { breakable: false })], 'brick', BRICKR);
+  iw('z', -4.2, -45.8, -20.2, F2x, [door('galleryDoor', 'z', -4.2, -26, F2x, null, 'Gallery door'), door('eyeDoor', 'z', -4.2, -35, F2x, null, 'Door with an eye painted on it', -1, 0x8a1f2a)], 'paper2', 0x9ad0f0);
+  iw('z', 4, -45.8, -20.2, F2x, [door('musicDoor', 'z', 4, -26, F2x, null, 'Music-room door'), door('bedDoor', 'z', 4, -39, F2x, null, 'Bedroom door')], 'paper2', 0x9ad0f0);
+  iw('x', -32.2, -11.8, -4.2, F2x, [], 'paper3', 0xf0b0b0); iw('x', -32.2, 4.2, 15.8, F2x, [], 'paper1', 0xf0e0a0);
+  rail('x', -30.48, 0, 2, F2x); rail('z', 2, -30.4, -24.6, F2x); rail('z', -0.04, -30.4, -24.6, F2x);
+  stairs(-2, 0, -24, -1, F2x, 0x7a4a2a, 'wood');
+  lamp('landing2', 0, F2x + 2.85, -38, 0xffe1b0);
+  poi('landing2', 1, F2x, -40, 1);
+  // gallery: portraits of him everywhere, statues
+  for (const z of [-22, -25, -28]) L.decor.push({ t: 'portrait', x: -11.78, y: F2x + 2, z, ry: Math.PI / 2 });
+  for (const x of [-10, -6.4]) { box(x - 0.35, F2x, -31.4, x + 0.35, F2x + 0.9, -30.7, 'block', 0xe8e0d0); L.decor.push({ t: 'mannequin', x, y: F2x + 0.9, z: -31, ry: 0 }); }
+  item('vase2', 'vase', -8, F2x, -22);
+  lamp('gallery', -8, F2x + 2.85, -26, 0xffe0b0);
+  poi('gallery', -8, F2x, -25, 2);
+  // the Eye hall: a giant eye watches the whole room, the fuse waits at its feet
+  detail(-11.8, F2x + 0.005, -45.8, -4.4, F2x + 0.02, -32.4, 'carpet', 0x5a1a2a);
+  box(-8.5, F2x, -44.8, -7.5, F2x + 0.9, -43.8, 'block', 0x2a2a30);
+  item('fuse', 'fuse', -8, F2x + 0.9, -44.3, 'Fuse');
+  L.act3.eye = { box: makeBox(-12, F2x - 0.1, -46, -4.2, F2x + 3, -32.2), x: -8, y: F2x + 1.9, z: -45.4, back: { x: -2.6, y: F2x, z: -35, yaw: Math.PI / 2 } };
+  lamp('eyehall', -8, F2x + 2.85, -40, 0xff5040, false, 2.4);
+  // music room: piano and gramophone
+  box(12.6, F2x, -23.6, 15.4, F2x + 1, -21.4, 'wood', 0x1d1d22); box(12.6, F2x + 1, -23.6, 13.4, F2x + 1.4, -21.4, 'wood', 0x1d1d22);
+  detail(13.4, F2x + 1, -23.4, 13.5, F2x + 1.02, -21.6, 'trim', 0xf8f8f0);
+  box(6, F2x, -21, 6.8, F2x + 0.8, -20.4, 'wood', 0x5a3a26); L.decor.push({ t: 'pots', x: 6.4, y: F2x + 0.8, z: -20.7 });
+  lamp('music', 10, F2x + 2.85, -26, 0xffd0a0);
+  poi('music', 9, F2x, -27, 2);
+  // his bedroom
+  box(10.5, F2x, -45.6, 14.5, F2x + 0.5, -41.4, 'wood', 0x4a2e1e); box(10.5, F2x + 0.5, -45.6, 14.5, F2x + 0.75, -41.4, 'fabric', 0x3a5a2a);
+  hide('bedWardrobe', 5, F2x, -44.8, '+z', 0x4a2e1e);
+  L.decor.push({ t: 'rockingchair', x: 7, y: F2x, z: -35, ry: 0.4 });
+  lamp('bedroom', 10, F2x + 2.85, -39, 0xffd2a0);
+  poi('bedroom', 9, F2x, -38, 1);
+  room(-12, F2x, -46, 16, F2x + 3, -20, 0.6);
+  L.lightZones.push({ box: makeBox(-12, F2x, -46, -4.2, F2x + 3, -32.2), level: 0.35 });
+
+  // ================================================================================== THIRD FLOOR (F3x) + the engine hall
+  slab(K, -14, -44, 10, -20, F3x, [[-2, -30.4, 0, -24]], 'woodfloor', 0x9a7048);
+  // second-floor roof: the east terrace (to the Depot) and a back strip
+  box(10, F3x - 0.2, -46, 16, F3x, -20, 'roofflat', ROOFB); box(-12, F3x - 0.2, -46, 10, F3x, -44, 'roofflat', ROOFB);
+  rail('z', 15.92, -46, -33.2, F3x); rail('z', 15.92, -24.8, -20, F3x); rail('x', -20.08, 10, 16, F3x); rail('x', -46, -12, 16, F3x); rail('z', -12.08, -46, -44, F3x);
+  // depot platform and shed
+  box(16, F3x - 0.2, -33, 19.6, F3x, -25, 'concrete', 0xb8b0a0);
+  rail('x', -25.08, 16, 19.6, F3x); rail('x', -33, 16, 19.6, F3x);
+  box(19.6, F3x, -33, 19.72, F3x + 2.6, -25, null, 0, { vis: false, op: false });
+  for (const [x, z] of [[16.1, -32.9], [16.1, -25.1]]) box(x - 0.1, F3x, z - 0.1, x + 0.1, F3x + 2.8, z + 0.1, 'trim', TRIM);
+  detail(15.8, F3x + 2.8, -33.4, 19.9, F3x + 3, -24.6, 'roofflat', ROOFR);
+  L.act3.signs.push({ x: 17.8, y: F3x + 3.4, z: -24.7, ry: 0, text: 'DEPOT' });
+  detail(16.2, F3x + 0.002, -33, 19.5, F3x + 0.012, -32.8, 'paint', 0xffd040); detail(19.3, F3x + 0.002, -33, 19.5, F3x + 0.012, -25, 'paint', 0xffd040);
+  gad({ id: 'callDepot', kind: 'tramcall', station: 'depot', name: 'the Depot', x: 17, y: F3x + 1.2, z: -25.5, hx: 0.25, hy: 0.3, hz: 0.25 });
+  box(16.85, F3x, -25.3, 17.15, F3x + 0.95, -25.15, 'metal', 0xd8b030);
+  lamp('depot', 17.8, F3x + 2.6, -29, 0xffe0a0, false, 3);
+  poi('depot', 17.5, F3x, -29, 1, 'stare');
+  // outside walls (the engine hall's corner rises to 18.8)
+  const EH = 6;
+  ext('x', -20.2, -14, -4, F3x, [win('engineW', 'x', -20.2, -9, F3x + 3.6, 2, 'Control-room window', { breakable: false, h: 1.4 })], 'siding', MINT, EH);
+  ext('x', -20.2, -4, 10, F3x, [win('clockW', 'x', -20.2, 7, F3x + 0.9, 1.6, 'Window', { breakable: false })], 'siding', MINT);
+  ext('x', -44, -14, 10, F3x, [win('darkW', 'x', -44, -9, F3x + 0.9, 1.4, 'Window', { breakable: false, outside: -1, boards: true, glass: false }), win('clock2W', 'x', -44, 7, F3x + 0.9, 1.6, 'Window', { breakable: false, outside: -1 })], 'siding', MINT);
+  ext('z', -14, -30, -20, F3x, [], 'siding', MINT, EH);
+  ext('z', -14, -44, -30, F3x, [], 'siding', MINT);
+  ext('z', 9.8, -44, -20, F3x, [[-29, 1.6, F3x, F3x + 2.2]], 'siding', MINT);
+  L.decor.push({ t: 'udoor', x: 9.9, y: F3x, z: -29, ry: -Math.PI / 2 });
+  iw('z', -4.2, -29.8, -20.2, F3x, [[-25, 1.6, F3x, F3x + 2.2]], 'panel', 0x8a6a4a); box(-4.2, F3x + 3, -30, -4, F3x + EH, -20, 'panel', 0x8a6a4a);
+  iw('x', -30.2, -13.8, -4, F3x, [], 'panel', 0x8a6a4a); box(-14, F3x + 3, -30.2, -4, F3x + EH, -30, 'panel', 0x8a6a4a);
+  iw('z', -4.2, -43.8, -30.2, F3x, [door('darkDoor', 'z', -4.2, -37, F3x, null, 'Door', -1, 0x5a3a8a)], 'paper2', 0x6a5a9a);
+  iw('z', 4, -43.8, -20.2, F3x, [door('depotHall', 'z', 4, -25, F3x, null, 'Door'), door('clockDoor', 'z', 4, -37, F3x, null, 'Clock-room door')], 'paper1', 0xd0f0c0);
+  iw('x', -30.2, 4.2, 9.8, F3x, [], 'paper1', 0xd0f0c0);
+  rail('x', -24.08, -2, 0, F3x); rail('z', -2.08, -30.4, -24, F3x); rail('z', 0, -30.4, -24, F3x);
+  stairs(0, 2, -30.4, -1, F3x, 0x7a4a2a, 'wood');
+  lamp('landing3', 0, F3x + 2.85, -40, 0xffe1b0);
+  poi('landing3', -1, F3x, -38, 1);
+  // engine hall: pipes and gears on the walls; the control room stands on a 2.3 m ledge
+  const LEDGE = F3x + 2.3;
+  box(-14, F3x, -30, -8.6, LEDGE, -20, 'block', 0x6a7a7a);
+  detail(-8.62, LEDGE - 0.15, -30, -8.58, LEDGE, -20, 'paint', 0xffd040);
+  for (let z = -29.5; z < -20.2; z += 1) detail(-8.62, F3x + 0.2, z, -8.58, LEDGE - 0.3, z + 0.12, 'paint', 0x3a3a3a);
+  box(-14, F3x + EH - 0.2, -30.2, -4, F3x + EH, -20, 'plaster', 0xd8d0c0);              // its high ceiling
+  for (const [x, y, z] of [[-6, F3x + 3.5, -20.25], [-5, F3x + 4.6, -20.25], [-4.6, F3x + 2.2, -29.75]]) L.decor.push({ t: 'gear', x, y, z, ry: 0 });
+  for (const y of [F3x + 4.2, F3x + 4.8]) detail(-8.4, y, -29.9, -4.4, y + 0.18, -29.72, 'metal', 0x8e5c42);
+  detail(-4.38, F3x + 0.3, -29.8, -4.22, F3x + 5.6, -29.64, 'metal', 0x8e5c42);
+  // control room on the ledge: fuse box, lever, red button, a map of the line
+  box(-13.2, LEDGE, -21.8, -11.8, LEDGE + 0.9, -20.6, 'metal', 0x4a5a6a); box(-13.2, LEDGE, -29.4, -11.8, LEDGE + 0.9, -28.2, 'metal', 0x4a5a6a);
+  gad({ id: 'lever', kind: 'lever', x: -12.5, y: LEDGE + 1.15, z: -21.2, hx: 0.3, hy: 0.3, hz: 0.3 });
+  gad({ id: 'button', kind: 'button', x: -12.5, y: LEDGE + 1.0, z: -28.8, hx: 0.3, hy: 0.2, hz: 0.3 });
+  L.fusebox = { x: -13.6, y: LEDGE + 1.3, z: -25 };
+  L.decor.push({ t: 'tramMap', x: -13.79, y: LEDGE + 1.1, z: -22.8, ry: Math.PI / 2 });
+  lamp('control', -11, F3x + EH - 0.3, -25, 0x9fd8ff, true, 3);
+  lamp('engine', -6, F3x + EH - 0.3, -25, 0xffc890, false, 3);
+  // the dark bedroom with the Closet Fear door
+  box(-12, F3x, -43.6, -9, F3x + 0.5, -41, 'wood', 0x2a2a3a); box(-12, F3x + 0.5, -43.6, -9, F3x + 0.7, -41, 'fabric', 0x4a3a6a);
+  hide('darkWardrobe', -5, F3x, -42.8, '+z', 0x3a2a4a);
+  L.decor.push({ t: 'feardoor', x: -13.79, y: F3x, z: -37, ry: Math.PI / 2, c: 0x8a4ad8, sym: 'bulb' });
+  gad({ id: 'fearCloset', kind: 'fear', zone: 'closet', power: 'double', name: 'Fear Door: Closet', x: -13.45, y: F3x + 1.1, z: -37, hx: 0.3, hy: 1.1, hz: 0.75 });
+  lamp('darkroom', -9, F3x + 2.85, -37, 0xb090ff, false, 2.2);
+  L.lights[L.lights.length - 1].flicker = 1;
+  // depot hall (the upside-down door) and the clock room
+  L.act3.signs.push({ x: 9.7, y: F3x + 2.6, z: -29, ry: -Math.PI / 2, text: 'TRAM' });
+  item('can3', 'can', 6, F3x, -22);
+  lamp('depothall', 7, F3x + 2.85, -25, 0xfff0c0);
+  poi('depothall', 7, F3x, -26, 1);
+  L.decor.push({ t: 'clock', x: 9.58, y: F3x + 1.9, z: -37, ry: -Math.PI / 2, tall: true });
+  L.decor.push({ t: 'clock', x: 4.22, y: F3x + 1.9, z: -34, ry: Math.PI / 2, tall: true });
+  L.decor.push({ t: 'gear', x: 7, y: F3x + 2.2, z: -43.75, ry: 0 });
+  lamp('clockroom', 7, F3x + 2.85, -37, 0xffd8a0);
+  poi('clockroom', 7, F3x, -38, 1);
+  room(-14, F3x, -44, 10, F3x + 3, -20, 0.55);
+  room(-14, F3x, -30, -4, F3x + EH, -20, 0.55);
+
+  // ================================================================================== ROOF + ATTIC (F4x)
+  slab(K, -14, -44, 10, -20, F4x, [[-14, -30.2, -4, -20], [0, -36.8, 2, -30.4]], 'roofflat', ROOFR);
+  rail('x', -20.08, -4, 10, F4x); rail('z', 9.92, -44, -20, F4x); rail('z', -14.08, -44, -30.2, F4x); rail('x', -44, -14, 0, F4x); rail('x', -44, 2, 10, F4x);
+  const aw = (axis, t, a, b, ops = []) => wall(axis, t, a, b, F4x, 2.8, ops, 'board', PURPLE);
+  aw('x', -30.2, -3, 9, [door('atticFront', 'x', -30.2, 6, F4x, null, 'Roof door')]);
+  aw('x', -44, -3, 9, [door('atticBack', 'x', -44, 1, F4x, null, 'Door to the windmill bridge', -1)]);
+  aw('z', -3, -44, -30.2); aw('z', 8.8, -44, -30.2);
+  box(-3, F4x + 2.8, -44, 9, F4x + 3, -30.2, 'board', 0x5a4a6a);
+  L.roofs.push({ x0: -3.5, x1: 9.5, z0: -44.6, z1: -29.6, y: F4x + 3, h: 3.2, ridge: 'z', tint: ROOFB, gable: PURPLE });
+  rail('x', -30.48, 0, 2, F4x); rail('z', -0.08, -36.8, -30.4, F4x); rail('z', 2, -36.8, -30.4, F4x);
+  for (const [x, z] of [[5, -40], [7, -33], [-1.5, -41]]) box(x - 0.6, F4x, z - 0.5, x + 0.6, F4x + 0.8, z + 0.5, 'cardboard', 0xb08a5c);
+  L.decor.push({ t: 'mannequin', x: 7.5, y: F4x, z: -42.5, ry: 2.4 });
+  hide('atticTrunk', 7.9, F4x, -37.5, '-x', 0x6b5136);
+  lamp('attic', 3, F4x + 2.6, -37, 0xffd9a0, false, 2.4);
+  poi('attic', 4, F4x, -38.5, 1);
+  room(-3, F4x, -44, 9, F4x + 2.8, -30.2, 0.4);
+  // the windmill on the north-west corner of the roof
+  box(-12.5, F4x, -43.5, -9.5, F4x + 7, -40.5, 'board', 0xf0e0c0);
+  L.roofs.push({ x0: -13, x1: -9, z0: -44, z1: -40, y: F4x + 7, h: 1.6, spire: true, tint: ROOFR, gable: 0xf0e0c0 });
+  L.act3.windmill = { x: -11, y: F4x + 6, z: -40.3 };
+  // chimney stacks leaning every which way
+  box(6, F4x, -24, 7.2, F4x + 3.5, -22.8, 'brick', 0x8a3a2a); box(6.2, F4x + 3.5, -23.8, 7.6, F4x + 4.2, -22.4, 'brick', 0x7a2a22);
+  // bridge + stairs down to the Windmill station platform
+  box(0, F4x - 0.2, -45.2, 2, F4x, -44, 'woodfloor', 0x7a5a3a);
+  stairs(0, 2, -51.6, 1, F3x, 0x6a5a4a, 'wood');
+  rail('z', -0.08, -45.2, -44, F4x); rail('z', 2, -45.2, -44, F4x);
+  box(-3, F3x - 0.2, -55.6, 3, F3x, -51.6, 'concrete', 0xb8b0a0);
+  rail('z', -3.08, -55.6, -51.6, F3x); rail('z', 3, -55.6, -51.6, F3x); rail('x', -51.68, -3, 0, F3x); rail('x', -51.68, 2, 3, F3x);
+  box(-3, F3x, -55.72, 3, F3x + 2.6, -55.6, null, 0, { vis: false, op: false });
+  for (const [x, z] of [[-2.8, -55.4], [2.8, -55.4], [-2.8, -51.8], [2.8, -51.8], [1, -48.5]]) box(x - 0.2, H, z - 0.2, x + 0.2, F3x - 0.2, z + 0.2, 'metal', 0x3a4a5a);
+  detail(-3.2, F3x + 2.8, -55.8, 3.2, F3x + 3, -51.4, 'roofflat', ROOFB);
+  for (const x of [-2.9, 2.9]) box(x - 0.1, F3x, -51.8, x + 0.1, F3x + 2.8, -51.6, 'trim', TRIM);
+  L.act3.signs.push({ x: 0, y: F3x + 3.4, z: -51.5, ry: Math.PI, text: 'WINDMILL' });
+  gad({ id: 'callWindmill', kind: 'tramcall', station: 'windmill', name: 'the Windmill', x: 2.5, y: F3x + 1.2, z: -52.1, hx: 0.25, hy: 0.3, hz: 0.25 });
+  box(2.35, F3x, -52.25, 2.65, F3x + 0.95, -51.95, 'metal', 0xd8b030);
+  lamp('windmill', 0, F3x + 2.6, -53.6, 0xffe0a0, false, 2.6);
+  poi('windmill', 0, F3x, -53, 1, 'stare');
+
+  // ================================================================================== THE WATER ROOM (tram only)
+  const WX0 = -33, WX1 = -22.6, WZ0 = -39, WZ1 = -27;
+  box(-25.4, F3x - 0.2, WZ0, WX1, F3x, WZ1, 'concrete', 0x8a9aa0);
+  box(WX0, F3x - 0.8, WZ0, -25.4, F3x - 0.4, WZ1, 'tile', 0x4a8aa0);
+  detail(WX0 + 0.2, F3x - 0.12, WZ0 + 0.2, -25.42, F3x - 0.1, WZ1 - 0.2, 'glass', 0x3aa0d8);   // the flood
+  const ww = (axis, t, a, b, ops = []) => wall(axis, t, a, b, F3x - 0.4, 3.4, ops, 'block', 0x5a8a9a);
+  ww('z', WX0, WZ0, WZ1); ww('x', WZ0 - 0.2, WX0, WX1, [win('waterNW', 'x', WZ0 - 0.2, -29, F3x + 0.8, 1.4, 'Window', { breakable: false, outside: -1 })]);
+  ww('x', WZ1, WX0, WX1, [win('waterSW', 'x', WZ1, -29, F3x + 0.8, 1.4, 'Window', { breakable: false })]);
+  ww('z', WX1 - 0.2, WZ0, WZ1, [[-33, 6, F3x - 0.4, F3x + 2.6]]);
+  box(WX1 - 0.12, F3x, -36, WX1, F3x + 2.6, -30, null, 0, { vis: false, op: false });
+  box(WX0, F3x + 3, WZ0 - 0.2, WX1, F3x + 3.2, WZ1 + 0.2, 'roofflat', ROOFB);
+  for (const [x, z] of [[WX0 + 0.3, WZ0 + 0.3], [WX0 + 0.3, WZ1 - 0.3], [WX1 - 0.4, WZ0 + 0.3], [WX1 - 0.4, WZ1 - 0.3], [-28, -33]]) box(x - 0.25, H, z - 0.25, x + 0.25, F3x - 0.8, z + 0.25, 'wood', 0x5a4030);
+  box(-30, F3x - 0.4, -34, -28, F3x + 0.3, -32, 'block', 0x8a8a7a);
+  item('redkey', 'redkey', -29, F3x + 0.3, -33, 'Red key');
+  for (const [x, z] of [[-31.5, -29], [-27, -37.5], [-32, -37]]) detail(x - 0.4, F3x - 0.15, z - 0.4, x + 0.4, F3x + 0.25, z + 0.4, 'crate', 0xc89a62);
+  L.act3.signs.push({ x: -22.7, y: F3x + 2.9, z: -33, ry: -Math.PI / 2, text: 'WATER' });
+  gad({ id: 'callWater', kind: 'tramcall', station: 'water', name: 'the Water Room', x: -23.4, y: F3x + 1.2, z: -29.6, hx: 0.25, hy: 0.3, hz: 0.25 });
+  box(-23.55, F3x, -29.75, -23.25, F3x + 0.95, -29.45, 'metal', 0xd8b030);
+  lamp('water', -28, F3x + 2.7, -33, 0x7ad0ff, false, 3);
+  room(WX0, F3x - 0.5, WZ0, WX1, F3x + 3, WZ1, 0.45);
+
+  // ================================================================================== FEAR ROOMS (far away: dreams)
+  const Z = L.act3.zones;
+  const shell = (x0, z0, x1, z1, h, wallM, wallC, floorM, floorC) => {
+    detail(x0, -0.06, z0, x1, 0.002, z1, floorM, floorC);
+    box(x0 - 0.3, 0, z0 - 0.3, x1 + 0.3, h, z0, wallM, wallC); box(x0 - 0.3, 0, z1, x1 + 0.3, h, z1 + 0.3, wallM, wallC);
+    box(x0 - 0.3, 0, z0, x0, h, z1, wallM, wallC); box(x1, 0, z0, x1 + 0.3, h, z1, wallM, wallC);
+    box(x0 - 0.3, h, z0 - 0.3, x1 + 0.3, h + 0.3, z1 + 0.3, 'plaster', 0xe8e8e0);
+  };
+  const leave = (zone, x, y, z, ry) => {
+    L.decor.push({ t: 'feardoor', x, y, z, ry, c: 0xf0f0f0, sym: 'exit' });
+    const s = Math.round(Math.sin(ry)), c = Math.round(Math.cos(ry));
+    gad({ id: 'leave_' + zone, kind: 'leave', zone, x: x + s * 0.35, y: y + 1.1, z: z + c * 0.35, hx: c ? 0.75 : 0.3, hy: 1.1, hz: c ? 0.3 : 0.75 });
+  };
+  // ---- SUPERMARKET (fear of being seen): 5 groceries into the trolley, mannequins in the aisles
+  {
+    const X0 = 150, X1 = 174, Z0 = -36, Z1 = -10;
+    shell(X0, Z0, X1, Z1, 5, 'paint', 0xe8f0e8, 'tile', 0xf0f0f0);
+    Z.market = { box: makeBox(X0, -1, Z0, X1, 6, Z1), start: { x: 162, y: 0, z: -11.4, yaw: 0 }, back: { x: -12.3, y: H, z: -26.5, yaw: -Math.PI / 2 },
+      intro: 'THE SUPERMARKET. Find the 5 groceries. The mannequins move when you look away — crouch and they cannot see you.', fog: [0xe6efe6, 16, 70] };
+    leave('market', 152, 0, Z1 - 0.01, Math.PI);
+    box(156, 0, -13.6, 160, 1, -12.8, 'counter', 0xd04040); detail(156.2, 1, -13.5, 157.4, 1.3, -12.9, 'metal', 0x3a3a3a);
+    gad({ id: 'checkout', kind: 'checkout', x: 158.6, y: 1.25, z: -13.2, hx: 0.6, hy: 0.35, hz: 0.5 });
+    L.decor.push({ t: 'cart', x: 164.5, y: 0, z: -12.4, ry: 0.3 });
+    const cols = [0xe04040, 0x40a0e0, 0xf0c030, 0x50c060, 0xe080c0, 0xf08a30];
+    for (const sx of [155, 159, 165, 169]) {
+      box(sx - 0.5, 0, -30, sx + 0.5, 1.6, -16, 'metal', 0xd8d8d0);
+      for (let z = -29.6; z < -16.2; z += 0.7) for (const y of [0.3, 0.85, 1.35]) for (const sd of [-1, 1]) detail(sx + sd * 0.5 - (sd > 0 ? 0 : 0.03), y, z, sx + sd * 0.5 + (sd > 0 ? 0.03 : 0), y + 0.35, z + 0.5, 'paint', cols[((z * 3 + y * 7 + sx) | 0) % cols.length]);
+      detail(sx - 0.55, 2.4, -23.3, sx + 0.55, 2.9, -22.7, 'emissive', 0xfff0a0);
+    }
+    for (let x = 151; x < 173; x += 3) box(x, 0, Z0 + 0.1, x + 2.6, 0.9, Z0 + 1.2, 'metal', 0xe8f4ff);
+    for (let x = 151; x < 173; x += 3) detail(x + 0.1, 0.9, Z0 + 0.2, x + 2.5, 0.92, Z0 + 1.1, 'glass', 0x9ad0f0);
+    table(171.5, 0, -22, 0x8a6a48, 1.1, 0.6);
+    for (const x of [153, 161, 167, 171]) for (const z of [-14, -22, -32]) detail(x - 1.2, 4.9, z - 0.15, x + 1.2, 4.98, z + 0.15, 'emissive', 0xf8fff8);
+    const groc = [['g1', 'can', 155, 1.6, -19, 'Tin of beans'], ['g2', 'bottle', 162, 0.9, -35.3, 'Bottle of milk'], ['g3', 'apple', 171.5, 0.86, -22, 'Red apple'], ['g4', 'book', 165, 1.6, -27, 'Box of cereal'], ['g5', 'paint', 151, 0, -33.5, 'Tin of paint']];
+    for (const [id, type, x, y, z, name] of groc) { item(id, type, x, y, z, name); L.act3.groceries.push(id); }
+    for (const [id, x, z, yaw] of [['mq1', 157, -24, 0], ['mq2', 162, -29, 0], ['mq3', 167, -18, Math.PI], ['mq4', 171.5, -31, 0], ['mq5', 152.2, -21, Math.PI / 2]]) L.act3.mannequins.push({ id, zone: 'market', x, y: 0, z, yaw, look: 'shop' });
+    lamp('market1', 157, 4.6, -20, 0xf4fff4, false, 4); lamp('market2', 167, 4.6, -28, 0xf4fff4, false, 4);
+    L.lightZones.push({ box: makeBox(X0, -1, Z0, X1, 6, Z1), level: 0.9 });
+  }
+  // ---- SCHOOL (fear of school): lockers, the bell, the giant mannequin in the gym
+  {
+    const X0 = 150, X1 = 176, Z0 = -106, Z1 = -60;
+    shell(X0, Z0, X1, Z1, 4.2, 'paper1', 0xd8c890, 'woodfloor', 0xb08a5a);
+    Z.school = { box: makeBox(X0, -1, Z0, X1, 6, Z1), start: { x: 161, y: 0, z: -61.6, yaw: 0 }, back: { x: 10.6, y: F1x, z: -24, yaw: Math.PI / 2 },
+      intro: 'THE SCHOOL. Reach the bell at the end of the corridor. Hide in the lockers — the mannequins move when you look away.', fog: [0x9a8a70, 18, 60] };
+    leave('school', 159, 0, Z1 - 0.01, Math.PI);
+    const sw = (axis, t, a, b, ops = []) => wall(axis, t, a, b, 0, 4.2, ops, 'paper1', 0xc8b880);
+    sw('z', 157.8, -90, -60, [[-67.5, 1.6, 0, 2.3], [-82.5, 1.6, 0, 2.3]]);
+    sw('z', 164, -90, -60, [[-67.5, 1.6, 0, 2.3], [-82.5, 1.6, 0, 2.3]]);
+    sw('x', -75.2, X0, 157.8); sw('x', -75.2, 164.2, X1);
+    sw('x', -90.2, X0, X1, [[161, 3, 0, 3]]);
+    for (const z of [-64.5, -71, -78, -86]) { hide('lockW' + z, 158.55, 0, z, '+x', 0x3a6ab0); hide('lockE' + z, 163.45, 0, z, '-x', 0xb03a3a); }
+    gad({ id: 'bell', kind: 'bell', x: 158.75, y: 2.0, z: -89.7, hx: 0.4, hy: 0.4, hz: 0.3 });
+    L.decor.push({ t: 'bell', x: 158.75, y: 2.0, z: -89.97 });
+    // classrooms: desks and blackboards
+    for (const [cx, cz] of [[154, -67.5], [154, -82.5], [170, -67.5], [170, -82.5]]) {
+      for (let i = 0; i < 6; i++) { const dx = cx - 2.5 + (i % 3) * 2.5, dz = cz - 2 + ((i / 3) | 0) * 3; box(dx - 0.5, 0, dz - 0.35, dx + 0.5, 0.75, dz + 0.35, 'wood', 0xc89a62); }
+      L.decor.push({ t: 'blackboard', x: cx, y: 1.2, z: cz - 7.3, ry: 0 });
+    }
+    // gym: the giant mannequin on its plinth
+    detail(151, 0.003, -105, 175, 0.012, -91, 'woodfloor', 0xd8a860);
+    box(161.8, 0, -99.2, 164.2, 0.6, -96.8, 'block', 0xe8e0d0);
+    gad({ id: 'giant', kind: 'giant', x: 163, y: 2.6, z: -98, hx: 1.1, hy: 2.2, hz: 1.1 });
+    L.act3.giant = { x: 163, y: 0.6, z: -98 };
+    for (const x of [152, 174]) { box(x - 0.6, 0, -104, x + 0.6, 3.6, -103.6, 'metal', 0xe0e0d8); }
+    for (const [id, x, z, yaw] of [['ms1', 161, -79, 0], ['ms2', 154, -70, Math.PI], ['ms3', 170, -84, 0], ['ms4', 156, -97, -Math.PI / 2]]) L.act3.mannequins.push({ id, zone: 'school', x, y: 0, z, yaw, look: 'school' });
+    lamp('school1', 161, 3.9, -70, 0xfff0d0, false, 3); lamp('school2', 161, 3.9, -85, 0xfff0d0, false, 3); lamp('gym', 163, 3.9, -98, 0xfff0d0, false, 4);
+    L.lightZones.push({ box: makeBox(X0, -1, Z0, X1, 6, Z1), level: 0.75 });
+  }
+  // ---- CLOSET (fear of the dark): climb the shelves to the light switch
+  {
+    const X0 = 200, X1 = 216, Z0 = -26, Z1 = -10;
+    shell(X0, Z0, X1, Z1, 24, 'woodfloor', 0x6a4a3a, 'woodfloor', 0x4a3428);
+    Z.closet = { box: makeBox(X0, -1, Z0, X1, 25, Z1), start: { x: 202.4, y: 0, z: -11.2, yaw: 0 }, back: { x: -12.4, y: F3x, z: -37, yaw: -Math.PI / 2 },
+      intro: 'THE CLOSET. It is dark. Climb the giant shelves up to the light switch at the top.', fog: [0x06060c, 4, 26], dark: true };
+    leave('closet', 201.5, 0, Z1 - 0.01, Math.PI);
+    const plats = [[202, -16, 205, -14, 1], [206, -16, 209, -14, 2], [210, -16, 213, -13, 3], [210.5, -20, 214, -17.5, 4], [210, -24.5, 213, -21.5, 5],
+      [205, -24.5, 208.5, -22, 6], [200.5, -24, 203.5, -21, 7], [200.5, -19.5, 203, -17, 8], [200.5, -15.5, 203, -12.2, 9], [204.5, -13, 207.5, -10.5, 10],
+      [209, -13, 212, -10.5, 11], [213, -14, 215.8, -11, 12], [212.5, -18.5, 215.8, -15.5, 13], [206, -20, 211, -15.5, 14]];
+    for (const [a, b, c, d, y] of plats) {
+      box(a, y - 0.3, b, c, y, d, 'board', 0x8a6a4a);
+      detail(a, y - 0.02, b - 0.02, c, y + 0.01, b + 0.04, 'emissive', 0x6a4aa0); detail(a, y - 0.02, d - 0.04, c, y + 0.01, d + 0.02, 'emissive', 0x6a4aa0);
+      for (const [px, pz] of [[a + 0.1, b + 0.1], [c - 0.1, d - 0.1]]) detail(px - 0.06, 0, pz - 0.06, px + 0.06, y - 0.3, pz + 0.06, 'wood', 0x3a2a20);
+    }
+    box(208.2, 14, -18, 208.8, 15.6, -17.4, 'wood', 0x5a3a2a);
+    gad({ id: 'switch', kind: 'switch', x: 208.5, y: 15.1, z: -17.2, hx: 0.3, hy: 0.35, hz: 0.25 });
+    for (let i = 0; i < 12; i++) detail(201 + i * 1.2, 16 + (i % 3), -25.6, 201.6 + i * 1.2, 22, -25.4, 'fabric', [0x4a3a6a, 0x3a4a5a, 0x5a3a3a][i % 3]);
+    box(212, 0, -25.5, 215.5, 0.6, -23, 'cardboard', 0x7a6a50); box(204, 0, -20, 206, 0.4, -18.5, 'fabric', 0x3a2a3a);
+    L.act3.closetLight = { x: 208, y: 20, z: -18 };
+    L.lightZones.push({ box: makeBox(X0, -1, Z0, X1, 25, Z1), level: 0.12 });
+  }
+
+  // ---- rules, rooms, his routine
+  L.spawn = { x: -1.6, y: H, z: 15.4, yaw: Math.atan2(-1.6, 5.2) };
+  L.exit = makeBox(-4.6, H - 0.15, 10.4, 4.6, H + 2.5, 17.6);
+  L.safeZones.push(makeBox(-34.5, H - 0.2, 6, 34.5, 30, 23));
+  L.entries = {
+    frontDoor: { name: 'front door', kind: 'door', ref: 'front', x: 0, z: -17 },
+    backDoor: { name: 'back door', kind: 'door', ref: 'back', x: 9, z: -45 },
+    sideDoor: { name: 'side door', kind: 'door', ref: 'sideDoor', x: 15, z: -38 },
+    livingWindow: { name: 'living-room window', kind: 'window', ref: 'livingW', x: -9, z: -17 },
+    kitchenWindow: { name: 'kitchen window', kind: 'window', ref: 'kitchenW', x: 9, z: -17 },
+    partyWindow: { name: 'birthday-room window', kind: 'window', ref: 'partyW', x: -9, z: -45 },
+    sideWindow: { name: 'living-room side window', kind: 'window', ref: 'livingSideW', x: -15, z: -21.5 },
+  };
+  L.places = [['the basement', 0, 0, -36], ['the hall', 0, H, -28], ['the living room', -9, H, -24], ['the kitchen', 9, H, -24], ['the birthday room', -9, H, -37],
+    ['the utility room', 9, H, -37], ['the bedroom', -10, F1x, -24], ['the bathroom', -10, F1x, -37], ['the toy room', 8, F1x, -24], ['the study', 8, F1x, -37],
+    ['the gallery', -8, F2x, -26], ['the Eye hall', -8, F2x, -39], ['the music room', 10, F2x, -26], ['his bedroom', 10, F2x, -39], ['the engine hall', -9, F3x, -25],
+    ['the dark bedroom', -9, F3x, -37], ['the tram hall', 7, F3x, -25], ['the clock room', 7, F3x, -37], ['the Depot', 17.8, F3x, -29], ['the attic', 3, F4x, -37],
+    ['the Windmill station', 0, F3x, -53.6], ['the front yard', 0, H, -12], ['the back yard', 0, H, -55], ['the street', 0, H, 0]];
+  mount('hallCam', -3.8, H + 2.8, -19, 0, -30, 'the hall');
+  mount('porchCam', 2, H + 2.6, -18.5, 0, -10, 'the porch');
+  mount('landingCam', 3.8, F2x + 2.7, -44, 0, -30, 'the second-floor landing');
+  mount('terraceCam', 10.4, F3x + 2.6, -21, 16, -30, 'the terrace');
+  mount('yardCam', 13.6, H + 2.6, -44.4, 5, -55, 'the back yard');
+  L.navBounds = { x0: -34.2, z0: -70.2, x1: 34.2, z1: 22.2 }; L.reachBounds = L.navBounds;
+  // models built from floor level sit on whichever floor they are on
+  for (const d of L.decor) if (d.y >= H - 0.01) d.lift = [F4x, F3x, F2x, F1x, H].find(f => d.y >= f - 0.01);
+  L.pois.sort((a, b) => (b.id === 'stove') - (a.id === 'stove'));
+  L.keepLights = ['party', 'market1', 'school1', 'gym', 'water', 'control', 'depot', 'eyehall'];
+  L.objective = w => act3Objective(w);
+  return L;
+}
+
 export function buildMap(mission) {
-  return mission === 1 ? buildCellar() : mission === 3 ? buildMansion() : buildMulberry();
+  return mission === 1 ? buildCellar() : mission === 3 ? buildMansion() : mission === 4 ? buildAct3() : buildMulberry();
 }
