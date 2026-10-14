@@ -8,6 +8,7 @@ import { store } from './store.js';
 import { STEPS } from './puzzle.js';
 import { DIFFICULTY } from './ai.js';
 import { ITEM_TYPES, doorCenter, windowCenter, MISSIONS } from './level.js';
+import { Leaderboard } from './leaderboard.js';
 
 const $ = id => document.getElementById(id);
 const isTouch = (('ontouchstart' in window) || navigator.maxTouchPoints > 0) && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
@@ -95,7 +96,9 @@ function newGame(diff, mission = selectedMission) {
   store.del('save');
   startWorld(null);
 }
+const board = new Leaderboard(!new URLSearchParams(location.search).has('seed'));
 function startWorld(save) {
+  board.startRun();
   world = new World({ mission: save ? (save.mission || 0) : selectedMission, difficulty: save ? save.diff : settings.difficulty, seed: (Math.random() * 1e9) | 0 });
   if (save) world.load(save);
   selectedMission = world.level.mission || 0;
@@ -316,7 +319,38 @@ function showWin() {
   $('w-best').textContent = msg + (mission < MISSIONS.length - 1 ? ' Your next mission awaits.' : ' Every level is available from New game.');
   store.del('save');
   sound.play('win');
+  lastWin = { level: mission, time: s.time, caught: s.caught, diff: world.diff.name };
+  postTime();
 }
+
+// ------------------------------------------------------------------ world fastest times
+let lastWin = null, boardLevel = 0, boardFrom = null;
+function setRank(text, gold) { $('w-rank').textContent = text; $('w-rank').classList.toggle('gold', !!gold); $('w-rank').hidden = !text; }
+function postTime() {
+  $('w-form').hidden = true; setRank('');
+  if (!board.enabled || !lastWin) return;
+  if (!board.name) { setRank('Add your name to put this time on the world board'); $('w-form').hidden = false; return; }
+  setRank('Sending your time…');
+  board.submit(lastWin.level, lastWin.time, lastWin.caught, lastWin.diff)
+    .then(d => setRank(d.rank ? `World rank #${d.rank} on ${MISSIONS[lastWin.level].name}${d.rank <= 3 ? ' 🏆' : ''}` : 'Not in the top 100 yet', d.rank && d.rank <= 10))
+    .catch(e => { setRank(e.message); if (/name/i.test(e.message)) { $('w-name').value = board.name; $('w-form').hidden = false; } });
+}
+$('w-form').onsubmit = e => { e.preventDefault(); const n = $('w-name').value.replace(/\s+/g, ' ').trim().slice(0, 14); if (!n) return; board.setName(n); $('w-form').hidden = true; postTime(); };
+const escHtml = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+function renderBoard(rows, msg) {
+  $('b-tabs').innerHTML = MISSIONS.map((m, i) => `<button role="tab" aria-selected="${i === boardLevel}" data-l="${i}">${i + 1}. ${escHtml(m.name)}</button>`).join('');
+  $('b-tabs').querySelectorAll('button').forEach(b => { b.onclick = () => { boardLevel = +b.dataset.l; loadBoard(); }; });
+  const me = board.name.toLowerCase();
+  $('b-list').innerHTML = (rows || []).map(r => `<li class="${r.name.toLowerCase() === me ? 'me' : ''}"><span>${escHtml(r.name)}</span><b>${fmt(r.time)}</b><small>${r.caught ? 'caught ' + r.caught + '× · ' : ''}${escHtml(r.diff || '')}</small></li>`).join('');
+  $('b-msg').textContent = msg || (rows && rows.length ? '' : 'No times yet. Be the first!');
+  $('b-name').textContent = board.name ? `Playing as ${board.name} · change` : 'Set your name';
+}
+function loadBoard() { renderBoard([], 'Loading…'); board.top(boardLevel).then(rows => renderBoard(rows)).catch(() => renderBoard([], 'Leaderboard offline. Try again soon.')); }
+function openBoard(level) { boardLevel = level ?? boardLevel; boardFrom = mode; openOverlay('s-board'); loadBoard(); }
+$('t-board').onclick = () => openBoard(0);
+$('w-board').onclick = () => openBoard(lastWin ? lastWin.level : 0);
+$('b-close').onclick = closeOverlay;
+$('b-name').onclick = () => { const n = (prompt('Name for the world times (max 14 letters):', board.name) || '').replace(/\s+/g, ' ').trim().slice(0, 14); if (n) { board.setName(n); renderBoard(null); loadBoard(); } };
 
 // ------------------------------------------------------------------ loop
 function stepWorld(dt) {

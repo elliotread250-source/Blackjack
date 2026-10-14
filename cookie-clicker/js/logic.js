@@ -62,7 +62,7 @@ export const ACHIEVEMENTS = [
 ];
 
 export function newState(now = Date.now()) {
-  return { cookies: 0, baked: 0, handmade: 0, clicks: 0, goldens: 0, owned: {}, upgrades: [], achievements: [], frenzyUntil: 0, clickFrenzyUntil: 0, started: now, saved: now };
+  return { cookies: 0, baked: 0, handmade: 0, clicks: 0, goldens: 0, owned: {}, upgrades: [], achievements: [], frenzyUntil: 0, clickFrenzyUntil: 0, megaUntil: 0, started: now, saved: now };
 }
 
 // Cost of the next `amount` buildings with `owned` already bought.
@@ -79,12 +79,15 @@ export function globalMult(s) {
   return (1 + pct / 100) * (1 + s.achievements.length * 0.01); // each achievement: +1%
 }
 export function baseCps(s) { let c = 0; for (const b of BUILDINGS) c += (s.owned[b.id] || 0) * buildingCps(s, b.id); return c; }
-export function cps(s, now = 0) { return baseCps(s) * (now && s.frenzyUntil > now ? 7 : 1); }
+export const MEGA = 1000, MEGA_SECONDS = 100;
+const mega = (s, now) => (now && s.megaUntil > now ? MEGA : 1);
+export function cps(s, now = 0) { return baseCps(s) * (now && s.frenzyUntil > now ? 7 : 1) * mega(s, now); }
 export function clickValue(s, now = 0) {
   let v = buildingMult(s, 'cursor');
   for (let i = 0; i < 5; i++) if (has(s, 'mouse' + i)) v += baseCps(s) * 0.01;
   if (now && s.clickFrenzyUntil > now) v *= 777;
   if (now && s.frenzyUntil > now) v *= 7;
+  v *= mega(s, now);
   return v;
 }
 
@@ -124,6 +127,9 @@ export function checkAchievements(s) {
 }
 
 // Golden cookie effects. rnd picks which one.
+// The secret golden cookie (type "golden"): everything ×1000 for 100 seconds.
+export function megaGolden(s, now) { s.goldens++; s.megaUntil = now + MEGA_SECONDS * 1000; return { kind: 'mega', seconds: MEGA_SECONDS }; }
+
 export function golden(s, now, rnd = Math.random) {
   s.goldens++;
   const r = rnd();

@@ -50,4 +50,11 @@ for (let t = 0; t < 3600 * 6; t++) {
   checkAchievements(s);
 }
 ok(s.baked > 1e9 && cps(s) > 1e5, `six simulated hours reach ${format(s.baked)} baked, ${format(cps(s))}/s`);
+{
+  const { megaGolden } = await import('../js/logic.js');
+  const m = newState(0); m.owned.grandma = 3; const base = cps(m), clickBase = clickValue(m);
+  const r2 = megaGolden(m, 1000);
+  ok(r2.kind === 'mega' && cps(m, 2000) === base * 1000 && clickValue(m, 2000) === clickBase * 1000, 'secret golden cookie: ×1000 production and clicks');
+  ok(cps(m, 1000 + 100001) === base, 'and it wears off after 100 seconds');
+}
 console.log(n + ' cookie clicker checks passed');

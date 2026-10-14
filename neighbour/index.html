@@ -186,6 +186,19 @@
   #rotate span { color: var(--muted); }
   #loading { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: #1b1730; font-family: var(--serif); font-style: italic; font-size: 22px; color: var(--muted); }
   #err { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; background: #1b1730; padding: 24px; text-align: center; }
+  .lb-rank { text-align: center; margin: 0 0 10px; color: #f6e7c8; font-weight: 700; }
+  .lb-rank.gold { color: #ffd23f; }
+  .lb-form { display: flex; gap: 8px; justify-content: center; margin: 0 0 14px; }
+  .lb-form input { font: inherit; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--line); background: #231d27; color: #fff; width: 180px; }
+  .lb-panel { width: min(520px, 94vw); max-height: 88vh; overflow-y: auto; }
+  .lb-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 12px; }
+  .lb-tabs button { font: inherit; font-size: 13px; padding: 6px 10px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: inherit; cursor: pointer; }
+  .lb-tabs button[aria-selected="true"] { background: #f6e7c8; color: #231d27; }
+  .lb-list { margin: 0; padding-left: 26px; display: grid; gap: 4px; }
+  .lb-list li { display: grid; grid-template-columns: 1fr auto auto; gap: 12px; }
+  .lb-list li.me { color: #ffd23f; }
+  .lb-list small { opacity: .7; }
+  .lb-msg { opacity: .8; min-height: 1em; }
 </style>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 </head>
@@ -238,6 +251,7 @@
     <button class="btn" id="t-new">New game</button>
     <button class="btn" id="t-settings">Settings</button>
     <button class="btn" id="t-help">How to play</button>
+    <button class="btn" id="t-board">🏆 World times</button>
   </div>
   <div class="title-foot" id="t-foot"></div>
 </div>
@@ -308,8 +322,20 @@
     <div><b id="w-caught">0</b><span>Times caught</span></div>
     <div><b id="w-diff">Normal</b><span>Difficulty</span></div>
   </div>
-  <div class="tag" style="text-align:center;margin:0 0 18px" id="w-best"></div>
-  <div class="row"><button class="btn primary" id="w-next">Next level</button><button class="btn" id="w-again">Play again</button><button class="btn" id="w-menu">Title</button></div>
+  <div class="tag" style="text-align:center;margin:0 0 10px" id="w-best"></div>
+  <div class="tag lb-rank" id="w-rank" hidden></div>
+  <form id="w-form" class="lb-form" hidden><input id="w-name" maxlength="14" placeholder="Your name" autocomplete="nickname" aria-label="Name for the world times"><button class="btn primary">Save time</button></form>
+  <div class="row"><button class="btn primary" id="w-next">Next level</button><button class="btn" id="w-again">Play again</button><button class="btn" id="w-board">🏆 World times</button><button class="btn" id="w-menu">Title</button></div>
+</div>
+
+<div id="s-board" class="screen dim" hidden>
+  <div class="panel lb-panel">
+    <h2>🏆 World fastest times</h2>
+    <div class="lb-tabs" id="b-tabs" role="tablist"></div>
+    <ol id="b-list" class="lb-list"></ol>
+    <p id="b-msg" class="lb-msg"></p>
+    <div class="row"><button class="btn" id="b-name">Set your name</button><button class="btn primary" id="b-close">Close</button></div>
+  </div>
 </div>
 
 <div id="rotate" hidden>

@@ -1,6 +1,6 @@
 import {
   BUILDINGS, UPGRADE, ACHIEVEMENTS, newState, load, price, cps, clickValue, click, tick, buy, affordable,
-  availableUpgrades, buyUpgrade, checkAchievements, golden, offline, format, buildingCps,
+  availableUpgrades, buyUpgrade, checkAchievements, golden, megaGolden, offline, format, buildingCps,
 } from './logic.js';
 import { sound } from './audio.js';
 
@@ -95,19 +95,29 @@ function floatText(text, x, y) {
 // ---------------------------------------------------------------- golden cookies
 const goldenEl = $('golden');
 let nextGolden = Date.now() + 40000 + Math.random() * 50000, goldenGone = 0;
-function spawnGolden(now) {
+let megaReady = false;
+function spawnGolden(now, mega = false) {
+  megaReady = mega; goldenEl.classList.toggle('mega', mega);
   goldenEl.hidden = false; goldenEl.classList.remove('fade');
   goldenEl.style.left = (40 + Math.random() * (innerWidth - 170)) + 'px';
   goldenEl.style.top = (60 + Math.random() * (innerHeight - 200)) + 'px';
-  goldenGone = now + 13000;
+  goldenGone = now + (mega ? 20000 : 13000);
 }
+// Type "golden" anywhere to summon the secret golden cookie.
+let typed = '';
+addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1 || e.target?.matches?.('input, textarea')) return;
+  typed = (typed + e.key.toLowerCase()).slice(-6);
+  if (typed === 'golden') { typed = ''; spawnGolden(Date.now(), true); sound.golden(); toast('✨ A <b>secret golden cookie</b> appeared! Click it!'); }
+});
 goldenEl.addEventListener('click', e => {
-  const r = golden(s, Date.now());
+  const r = megaReady ? megaGolden(s, Date.now()) : golden(s, Date.now());
+  megaReady = false; goldenEl.classList.remove('mega');
   goldenEl.hidden = true; goldenGone = 0; nextGolden = Date.now() + 60000 + Math.random() * 120000;
   sound.golden();
-  const msg = r.kind === 'lucky' ? `<b>Lucky!</b> +${format(r.gain)} cookies` : r.kind === 'frenzy' ? '<b>Frenzy!</b> Cookie production ×7 for 77 seconds' : '<b>Click frenzy!</b> Clicking power ×777 for 13 seconds';
+  const msg = r.kind === 'mega' ? '<b>GOLDEN MEGA!</b> Everything ×1000 for 100 seconds!' : r.kind === 'lucky' ? `<b>Lucky!</b> +${format(r.gain)} cookies` : r.kind === 'frenzy' ? '<b>Frenzy!</b> Cookie production ×7 for 77 seconds' : '<b>Click frenzy!</b> Clicking power ×777 for 13 seconds';
   toast(msg);
-  const fr = fx.getBoundingClientRect(); floatText(r.kind === 'lucky' ? '+' + format(r.gain) : r.kind === 'frenzy' ? 'Frenzy!' : 'Click frenzy!', e.clientX - fr.left, e.clientY - fr.top);
+  const fr = fx.getBoundingClientRect(); floatText(r.kind === 'mega' ? '×1000!' : r.kind === 'lucky' ? '+' + format(r.gain) : r.kind === 'frenzy' ? 'Frenzy!' : 'Click frenzy!', e.clientX - fr.left, e.clientY - fr.top);
   refresh(true);
 });
 
@@ -158,6 +168,41 @@ $('rename').addEventListener('click', () => {
 $('mute').addEventListener('click', () => { prefs.muted = sound.muted = !prefs.muted; save(); refresh(true); });
 document.querySelectorAll('.amounts button').forEach(b => b.addEventListener('click', () => { prefs.amount = +b.dataset.amt; save(); refresh(true); }));
 
+// ---------------------------------------------------------------- leaderboard: biggest bakeries
+// Your all-time cookies are posted every couple of minutes once you've picked a name.
+const lbName = () => String(read('cookieclicker.lbName') || '');
+const escHtml = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+let lbTop = [], lbRank = null, lbPosted = 0, lbLastBaked = 0;
+async function lbApi(path, body) {
+  const res = await fetch(path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
+  const d = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(d.error || 'Leaderboard offline');
+  return d;
+}
+async function lbPost(force = false) {
+  if (!lbName() || s.baked < 1 || (!force && s.baked === lbLastBaked)) return;
+  lbPosted = Date.now(); lbLastBaked = s.baked;
+  try { const d = await lbApi('/api/score', { name: lbName(), baked: s.baked, cps: cps(s) }); lbTop = d.top || lbTop; lbRank = d.rank; }
+  catch (e) { if (/name/i.test(e.message)) { write('cookieclicker.lbName', ''); toast('That name isn\'t allowed on the leaderboard. Pick another.'); } }
+}
+function renderBoard(msg) {
+  const me = lbName().toLowerCase();
+  $('lb-list').innerHTML = lbTop.map(r => `<li class="${r.name.toLowerCase() === me ? 'me' : ''}"><span>${escHtml(r.name)} <small>${format(r.cps, 1)}/s</small></span><b>🍪 ${format(r.baked)}</b></li>`).join('');
+  $('lb-msg').textContent = msg || (lbTop.length ? '' : 'No bakeries yet. Be the first!');
+  $('lb-me').textContent = lbName() ? `Baking as ${lbName()}${lbRank ? ` · world rank #${lbRank}` : ''} · your total posts automatically` : 'Set a name to put your bakery on the board.';
+  $('lb-name').textContent = lbName() ? 'Change name' : 'Set your name';
+}
+function openBoard() {
+  renderBoard(lbTop.length ? '' : 'Loading…'); $('board').showModal();
+  lbPost(true).finally(() => lbApi('/api/leaderboard').then(d => { lbTop = d.top || []; renderBoard(); }).catch(() => renderBoard('Leaderboard offline. Try again soon.')));
+}
+$('board-btn').addEventListener('click', openBoard);
+$('lb-name').addEventListener('click', () => {
+  const n = (prompt('Name for the leaderboard (max 14 letters):', lbName()) || '').replace(/\s+/g, ' ').trim().slice(0, 14);
+  if (n) { write('cookieclicker.lbName', n); lbRank = null; lbPost(true).then(() => renderBoard()); }
+});
+setInterval(() => { if (document.visibilityState === 'visible' && Date.now() - lbPosted > 120000) lbPost(); }, 15000);
+
 // ---------------------------------------------------------------- display
 let lastFull = 0;
 function refresh(full = false) {
@@ -166,6 +211,7 @@ function refresh(full = false) {
   const rate = cps(s, now);
   $('cps').textContent = format(rate, 1);
   const buffs = [];
+  if (s.megaUntil > now) buffs.push(`✨ ×1000 everything ${Math.ceil((s.megaUntil - now) / 1000)}s`);
   if (s.frenzyUntil > now) buffs.push(`Frenzy ×7 ${Math.ceil((s.frenzyUntil - now) / 1000)}s`);
   if (s.clickFrenzyUntil > now) buffs.push(`Click ×777 ${Math.ceil((s.clickFrenzyUntil - now) / 1000)}s`);
   $('buff').textContent = buffs.join(' · ');

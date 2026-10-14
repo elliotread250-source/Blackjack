@@ -114,3 +114,13 @@ button { font: inherit; color: inherit; }
 @media (prefers-reduced-motion: reduce) { .cookie, .golden { animation: none; } }
 
 button, select, .cell, .sq { touch-action: manipulation; }
+
+.golden.mega { width: 120px; height: 120px; filter: drop-shadow(0 0 22px #fff6b0) drop-shadow(0 0 40px #ffb300) hue-rotate(0deg); animation: shimmer 1.4s ease-in-out infinite, megaHue 2s linear infinite; }
+@keyframes megaHue { 50% { filter: drop-shadow(0 0 30px #fff) drop-shadow(0 0 55px #ff7a00) saturate(1.6); } }
+
+.lb-list { margin: 0; padding-left: 28px; display: grid; gap: 4px; max-height: 50vh; overflow-y: auto; }
+.lb-list li { display: grid; grid-template-columns: 1fr auto; gap: 12px; }
+.lb-list li.me { color: var(--gold); font-weight: bold; }
+.lb-list small { color: var(--dim); }
+.lb-me { margin: 0 0 10px; color: var(--dim); }
+.lb-msg { color: var(--dim); min-height: 1em; }
