@@ -81,7 +81,10 @@ for (const mission of [1, 2, 3]) {
   const { makeBox } = require('../js/geom.js');
   const DT = 1 / 60;
   const L5 = buildLevel(4), N = 'Nightmare House';
-  ok(L5.boxes.length > buildLevel(3).boxes.length * 1.8, N + ': the biggest house yet (' + L5.boxes.length + ' boxes)');
+  // measured by interior volume and solid geometry, not raw box count (room dressing adds trim boxes)
+  const vol = L => L.regions.reduce((s, r) => s + (r.x1 - r.x0) * (r.y1 - r.y0) * (r.z1 - r.z0), 0), L4 = buildLevel(3);
+  ok(vol(L5) > vol(L4) * 1.5, N + ': the biggest house yet (' + Math.round(vol(L5)) + ' m3 inside vs ' + Math.round(vol(L4)) + ')');
+  ok(L5.boxes.filter(b => b.col).length > L4.boxes.filter(b => b.col).length, N + ': more solid geometry than the Mansion');
   ok(MISSIONS[4] && MISSIONS[4].name === 'The Nightmare House', N + ': listed as level 5');
   let w = new World({ mission: 4, seed: 9 });
   for (const p of w.pois) ok(w.path(w.ai.x, w.ai.y, w.ai.z, p.x, p.y, p.z)?.complete, N + ': patrol reaches ' + p.id);

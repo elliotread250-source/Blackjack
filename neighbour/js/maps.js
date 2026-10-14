@@ -635,7 +635,8 @@ function buildMansion() {
     titleCamera: { from: [-28, H + 15, 4], to: [0, H + 4, -32] },
   });
   const K = kit(L);
-  const { box, detail, wall, door, win, lamp, table, shelves, item, hide, poi, stairs, stairsX, room, mount } = K;
+  const { box, detail, wall, door, win, lamp, table, shelves, item, hide, poi, stairs, stairsX, room, mount, fur, pr } = K;
+  const rug = (x0, y, z0, x1, z1, m) => detail(x0, y + 0.002, z0, x1, y + 0.014, z1, m, 0xffffff);
   const STONE = 0xd8cdb8, STONE2 = 0xc4b79e, SLATE = 0x2f3440, WOOD = 0x5b3a26, GOLD = 0xd4a53a;
 
   // ---- ground: lawn at y=H everywhere, open over the basement (under the centre and east wing)
@@ -672,28 +673,31 @@ function buildMansion() {
   stairs(15.8, 17.8, -38, 1, 0, 0x6d5a45, 'wood');
   L.fusebox = { x: 17.6, y: 1.35, z: -39.1 };
   // wine cellar: racks and barrels
-  for (const z of [-39.2, -36.4]) for (const x of [-4, 0, 4]) { shelves(x, 0, z, 'x', 0x5c3a2e); for (const dy of [0.25, 0.9, 1.6]) detail(x - 0.7, dy, z - 0.25, x + 0.7, dy + 0.12, z + 0.25, 'glass', 0x3c5a3a); }
-  for (const x of [8, 9.4, 10.8]) box(x - 0.6, 0, -39.6, x + 0.6, 1.1, -38.4, 'wood', 0x7a5232);
+  for (const z of [-39.2, -36.4]) for (const x of [-4, 0, 4]) shelves(x, 0, z, 'x', 0x5c3a2e, { kind: 'winerack' });
+  for (const x of [8, 9.4, 10.8]) fur('barrel', box(x - 0.6, 0, -39.6, x + 0.6, 1.1, -38.4, 'wood', 0x7a5232), { c: 0x7a5232 });
+  pr('pipes', 6, 2.7, -30.5, 23.4, 0.4, 0.2, { n: 2, valve: true });
+  pr('elecbox', 17.66, 2.0, -36.2, 0.6, 0.24, 0.6, { faces: '-x' });
   hide('cellarLocker', 13, 0, -31, '-z');
   item('bottle1', 'bottle', 6, 0, -33); item('bottle2', 'bottle', 2, 0, -33.5);
-  lamp('cellar', 4, 2.85, -35, 0xffc890); lamp('cellar2', 12, 2.85, -35, 0xffc890, false, 2.6);
+  lamp('cellar', 4, 2.85, -35, 0xffc890, false, 3.5, { fixture: 'bulb', flicker: 0.3 }); lamp('cellar2', 12, 2.85, -35, 0xffc890, false, 2.6, { fixture: 'bulb', flicker: 0.9 });
   poi('cellar', 8, 0, -34, 2);
   // vault (red padlock): the golden trophy on a velvet plinth, paintings, safe
   box(-1.6, 0, -24.6, 1.6, 0.9, -22.6, 'wood', 0x3a2418); detail(-1.5, 0.9, -24.5, 1.5, 0.92, -22.7, 'fabric', 0x7a1f2a);
   item('trophy', 'vase', 0, 0.92, -23.6, 'His golden trophy');
-  box(-5.6, 0, -21.4, -4.2, 1.3, -20.4, 'metal', 0x4a4f56);
+  fur('cabinet', box(-5.6, 0, -21.4, -4.2, 1.3, -20.4, 'metal', 0x4a4f56), { faces: '-z', c: 0x4a4f56 });
   for (const x of [-4, 0, 2.5]) detail(x - 0.6, 1.2, -20.42, x + 0.6, 2.1, -20.4, 'paper1', 0xd8c89a);
-  lamp('basement', 0, 2.85, -25, 0xe0604a);
+  lamp('basement', 0, 2.85, -25, 0xe0604a, false, 3.5, { fixture: 'bulb' });
   // store room
   shelves(16.8, 0, -24, 'z'); shelves(16.8, 0, -27.5, 'z');
   item('crate1', 'crate', 8, 0, -24); item('crate2', 'crate', 10, 0, -22); item('paint1', 'paint', 6, 0, -27);
-  lamp('store', 11, 2.85, -25, 0xffe6b0, false, 2.6);
+  lamp('store', 11, 2.85, -25, 0xffe6b0, false, 2.6, { fixture: 'bulb', flicker: 0.5 });
+  pr('crates', 6.2, 0, -21.3, 2, 1.4, 1.2, {}); pr('boiler', 14.5, 0, -21.2, 1.4, 1.2, 2.2, { faces: '-z' });
 
   // ---- ground floor (y 3.2..6.2); the slab has the kitchen's cellar stairwell cut out
   box(-18, 3, -40, 15.6, H, -20, 'woodfloor', 0x8a6440);
   box(15.6, 3, -40, 18, H, -38, 'woodfloor', 0x8a6440); box(15.6, 3, -31.6, 18, H, -20, 'woodfloor', 0x8a6440);
   box(15.5, H, -38, 15.6, H + 0.95, -31.6, 'trim', 0xe9e2cf); box(15.5, H, -38.2, 17.8, H + 0.95, -38, 'trim', 0xe9e2cf);
-  detail(-5.8, H + 0.005, -32, 5.8, H + 0.02, -21, 'carpet', 0x7a1f2a);                    // red carpet in the hall
+  rug(-5.6, H, -32, 5.6, -21, 'rug_red');                                                  // red carpet in the hall
   const ext = (axis, t, a, b, y, ops) => wall(axis, t, a, b, y, 3, ops, 'block', STONE);
   ext('x', -20.2, -18, 18, H, [
     win('libraryW', 'x', -20.2, -12, H + 0.9, 1.8, 'Library window', { entry: 'libraryWindow' }),
@@ -719,38 +723,47 @@ function buildMansion() {
   L.decor.push({ t: 'chandelier', x: 0, y: 9.2, z: -27, hang: true });
   L.decor.push({ t: 'clock', x: -5.75, y: H + 1.9, z: -30, ry: Math.PI / 2, tall: true });
   for (const z of [-24, -36]) { L.decor.push({ t: 'portrait', x: 5.78, y: H + 2, z, ry: -Math.PI / 2 }); L.decor.push({ t: 'portrait', x: -5.98, y: H + 2, z: z + 1, ry: Math.PI / 2 }); }
-  for (const x of [-4.6, 4.6]) { box(x - 0.4, H, -21.4, x + 0.4, H + 0.9, -20.6, 'block', STONE); box(x - 0.25, H + 0.9, -21.25, x + 0.25, H + 2.2, -20.75, 'block', 0xeeeae0); }
+  for (const x of [-4.6, 4.6]) fur('statue', [box(x - 0.4, H, -21.4, x + 0.4, H + 0.9, -20.6, 'block', STONE), box(x - 0.25, H + 0.9, -21.25, x + 0.25, H + 2.2, -20.75, 'block', 0xeeeae0)], { faces: '-z' });
+  for (const [x, z] of [[-5.4, -38.8], [5.4, -38.8]]) pr('plant', x, H, z, 0.7, 0.7, 1.6, {});
   item('vase1', 'vase', -4.6, H + 0.9, -23); item('vase2', 'vase', 4, H, -38);
   lamp('hall', 0, 9.1, -24, 0xffe1b0, false, 4.5); lamp('hall2', 0, 6, -37, 0xffe1b0);
   poi('hall', 0, H, -23, 3); poi('hallBack', 3, H, -37, 1);
   // library: bookcases, reading chairs, a fireplace, wardrobe
-  for (const x of [-16.5, -14, -11.5, -9]) shelves(x, H, -29.6, 'x', 0x6b4430);
-  for (let i = 0; i < 12; i++) detail(-17.3 + i * 0.7, H + 0.95, -29.75, -16.9 + i * 0.7, H + 1.45, -29.7, 'paper1', [0x8a2a2a, 0x2a4a8a, 0x2a6a3a, 0x8a6a2a][i % 4]);
-  box(-17.8, H, -24, -17.2, H + 1.3, -22, 'brick', 0x7a4a3a); detail(-17.25, H + 0.2, -23.6, -17.2, H + 0.9, -22.4, 'emissive', 0xff8a3a);
-  box(-12.5, H, -23.5, -11.3, H + 0.5, -22.3, 'fabric', 0x6a2a3a); box(-9.5, H, -23.5, -8.3, H + 0.5, -22.3, 'fabric', 0x6a2a3a);
+  for (const x of [-16.5, -14, -11.5, -9]) shelves(x, H, -29.6, 'x', 0x6b4430, { kind: 'bookshelf', faces: '-z', h: 2.4 });
+  fur('fireplace', box(-17.8, H, -24, -17.2, H + 1.3, -22, 'brick', 0x7a4a3a), { faces: '+x' });
+  for (const x of [-11.9, -8.9]) fur('armchair', box(x - 0.6, H, -23.5, x + 0.6, H + 0.5, -22.3, 'fabric', 0x6a2a3a), { faces: '-x', h: 1.15, c: 0x6a2a3a });
   table(-10.4, H, -25.5, 0x5b3a26, 0.8, 0.5); item('book1', 'book', -10.4, H + 0.86, -25.5);
+  rug(-13.6, H, -26.4, -7.4, -21, 'rug_green'); pr('floorlamp', -17.2, H, -20.8, 0.5, 0.5, 1.7, {});
+  pr('picture', -17.76, H + 1.7, -26.2, 1.2, 0.05, 0.9, { faces: '+x', c: 0x8a6a2a, c2: 0x3a4a6a });
   hide('libWardrobe', -7, H, -28.6, '-x', WOOD);
-  lamp('library', -12, H + 2.85, -25, 0xffd59a);
+  lamp('library', -12, H + 2.85, -25, 0xffd59a, false, 3.5, { fixture: 'pendant' });
   poi('library', -11, H, -26.5, 2);
   // dining room: long table, chairs, sideboard
-  box(-15.5, H + 0.72, -36, -8.5, H + 0.86, -34, 'woodfloor', 0x5b3a26);
-  for (const x of [-15, -8.9]) for (const z of [-35.8, -34.2]) box(x, H, z, x + 0.12, H + 0.72, z + 0.12, 'wood', WOOD);
-  for (let x = -14.6; x <= -9.4; x += 1.3) for (const z of [-36.9, -33.1]) box(x - 0.25, H, z - 0.25, x + 0.25, H + 0.5, z + 0.25, 'wood', 0x6b4430);
+  {
+    const parts = [box(-15.5, H + 0.72, -36, -8.5, H + 0.86, -34, 'woodfloor', 0x5b3a26)];
+    for (const x of [-15, -8.9]) for (const z of [-35.8, -34.2]) parts.push(box(x, H, z, x + 0.12, H + 0.72, z + 0.12, 'wood', WOOD));
+    fur('table', parts, { c: 0x5b3a26, cloth: 0xf0ead8 });
+  }
+  for (let x = -14.6; x <= -9.4; x += 1.3) for (const z of [-36.9, -33.1]) fur('chair', box(x - 0.25, H, z - 0.25, x + 0.25, H + 0.5, z + 0.25, 'wood', 0x6b4430), { faces: z < -35 ? '+z' : '-z', h: 1.1, c: 0x6b4430, c2: 0x7a1f2a });
   for (const x of [-14, -12, -10]) item('plate' + x, 'plate', x, H + 0.86, -35);
-  box(-17.8, H, -38.4, -17.2, H + 0.9, -33.6, 'wood', WOOD);
-  lamp('dining', -12, H + 2.85, -35, 0xffd59a);
+  fur('dresser', box(-17.8, H, -38.4, -17.2, H + 0.9, -33.6, 'wood', WOOD), { faces: '+x', c: WOOD });
+  pr('picture', -12, H + 1.6, -39.76, 2, 0.05, 1.1, { c: 0x8a6a2a, c2: 0x6a3a2a });
+  lamp('dining', -12, H + 2.85, -35, 0xffd59a, false, 3.5, { fixture: 'pendant', drop: 0.7 });
   // ballroom: polished floor, piano, curtains, chandelier
   detail(6.4, H + 0.005, -29.8, 17.6, H + 0.02, -20.4, 'checker', 0xffffff);
-  box(14.2, H, -29.2, 16.8, H + 1, -27.4, 'wood', 0x1d1d22); box(14.2, H + 1, -29.2, 15, H + 1.4, -27.4, 'wood', 0x1d1d22);
+  fur('piano', [box(14.2, H, -29.2, 16.8, H + 1, -27.4, 'wood', 0x1d1d22), box(14.2, H + 1, -29.2, 15, H + 1.4, -27.4, 'wood', 0x1d1d22)], { faces: '-x', c: 0x1d1d22 });
+  for (const z of [-26, -23]) pr('curtains', 17.7, H + 2.3, z, 1.6, 0.1, 1.5, { faces: '-x', c: 0x7a1f2a });
   L.decor.push({ t: 'chandelier', x: 12, y: 6.0, z: -25, hang: true });
   hide('ballCurtain', 7, H, -21.1, '+x', 0x7a1f2a);
   item('ball1', 'ball', 10, H, -23);
   lamp('ballroom', 12, H + 2.6, -25, 0xffe8c0);
   poi('ballroom', 11, H, -24, 2);
   // kitchen: counters, range, big table, pantry; the cellar stairs are in the east corner
-  box(6.4, H, -39.8, 9.2, H + 0.9, -39, 'counter', 0xb7c2b0); box(10.8, H, -39.8, 15.4, H + 0.9, -39, 'counter', 0xb7c2b0);
-  box(6.4, H, -38, 7.2, H + 0.92, -36.4, 'metal', 0x2a2c2f); L.decor.push({ t: 'hood', x: 6.8, y: H + 1.9, z: -37.2 });
-  table(11, H, -34.5, 0x8a6a48, 1.4, 0.6);
+  fur('counter', box(6.4, H, -39.8, 9.2, H + 0.9, -39, 'counter', 0xb7c2b0), { faces: '+z', c: 0x6a7a8a });
+  fur('counter', box(10.8, H, -39.8, 15.4, H + 0.9, -39, 'counter', 0xb7c2b0), { faces: '+z', c: 0x6a7a8a, sink: true, clutter: true });
+  fur('stove', box(6.4, H, -38, 7.2, H + 0.92, -36.4, 'metal', 0x2a2c2f), { faces: '+x' }); L.decor.push({ t: 'hood', x: 6.8, y: H + 1.9, z: -37.2 });
+  pr('fridge', 9.9, H, -39.4, 0.9, 0.7, 2, { faces: '+z' });
+  table(11, H, -34.5, 0x8a6a48, 1.4, 0.6, { cloth: 0xd8d0b8 });
   item('can1', 'can', 10.4, H + 0.86, -34.4); item('apple1', 'apple', 11.6, H + 0.86, -34.6);
   hide('pantry', 6.9, H, -31.4, '+x', 0x6b5136);
   lamp('kitchen', 11, H + 2.85, -35, 0xfff0d0);
@@ -773,25 +786,29 @@ function buildMansion() {
   lamp('gallery', 0, U + 2.85, -37, 0xffe1b0);
   poi('gallery', 0, U, -37, 2);
   // the study (electric lock): desk with the red key, globe, filing cabinets, corkboard
-  table(-12, U, -38.4, 0x3a2418, 1.4, 0.6);
+  table(-12, U, -38.4, 0x3a2418, 1.4, 0.6, { kind: 'desk' });
+  pr('chair', -12, U, -37.2, 0.55, 0.55, 1.05, { faces: '-z', c: 0x3a2418, c2: 0x2a4a3a });
+  rug(-14.5, U, -36.8, -9.5, -32.5, 'rug_red');
   item('redkey', 'redkey', -12, U + 0.87, -38.4, 'Red key');
   L.decor.push({ t: 'desklamp', x: -11.2, y: U + 0.86, z: -38.6 });
-  for (const x of [-17.2, -16.2]) box(x - 0.4, U, -39.7, x + 0.4, U + 1.4, -38.9, 'metal', 0x6d7a6f);
+  for (const x of [-17.2, -16.2]) fur('cabinet', box(x - 0.4, U, -39.7, x + 0.4, U + 1.4, -38.9, 'metal', 0x6d7a6f), { faces: '+z', c: 0x6d7a6f });
   box(-9, U, -32, -7.6, U + 0.9, -31, 'wood', WOOD); detail(-8.7, U + 0.9, -31.8, -7.9, U + 1.5, -31.2, 'glass', 0x5ab4e0);
   L.decor.push({ t: 'corkboard', x: -17.76, y: U + 1.6, z: -34.5, ry: Math.PI / 2 });
   lamp('study', -12, U + 2.85, -35, 0xc8e0ff, true);
   // bedrooms
-  box(-16.5, U, -25.6, -13.5, U + 0.5, -21.4, 'wood', WOOD); box(-16.5, U + 0.5, -25.6, -13.5, U + 0.75, -21.4, 'fabric', 0x8a3a5a); box(-16.5, U, -21.6, -13.5, U + 1.4, -21.4, 'wood', WOOD);
+  fur('bed', [box(-16.5, U, -25.6, -13.5, U + 0.5, -21.4, 'wood', WOOD), box(-16.5, U + 0.5, -25.6, -13.5, U + 0.75, -21.4, 'fabric', 0x8a3a5a), box(-16.5, U, -21.6, -13.5, U + 1.4, -21.4, 'wood', WOOD)], { faces: '-z', c: WOOD, c2: 0x8a3a5a });
+  rug(-17, U, -28.6, -12, -25.8, 'rug_blue'); pr('dresser', -12, U, -29.6, 1.4, 0.5, 0.9, { faces: '+z', mirror: true, c: WOOD });
   hide('bedWWardrobe', -7, U, -24, '-x', WOOD); item('ballW', 'ball', -10, U, -26);
   lamp('bedW', -12, U + 2.85, -25, 0xffd2a0);
-  box(13.5, U, -25.6, 16.5, U + 0.5, -21.4, 'wood', WOOD); box(13.5, U + 0.5, -25.6, 16.5, U + 0.75, -21.4, 'fabric', 0x3a5a8a); box(13.5, U, -21.6, 16.5, U + 1.4, -21.4, 'wood', WOOD);
+  fur('bed', [box(13.5, U, -25.6, 16.5, U + 0.5, -21.4, 'wood', WOOD), box(13.5, U + 0.5, -25.6, 16.5, U + 0.75, -21.4, 'fabric', 0x3a5a8a), box(13.5, U, -21.6, 16.5, U + 1.4, -21.4, 'wood', WOOD)], { faces: '-z', c: WOOD, c2: 0x3a5a8a });
+  rug(12, U, -28.6, 17, -25.8, 'rug_green');
   hide('bedEWardrobe', 7, U, -24, '+x', WOOD);
   L.decor.push({ t: 'rockingchair', x: 9, y: U, z: -22, ry: 0.4 });
   lamp('bedE', 12, U + 2.85, -25, 0xffd2a0);
   poi('bedroom', 11, U, -26, 1);
   // trophy room: cabinets of cups and the stairs up to the attic along the north wall
   stairsX(-39.6, -37.6, 7, 1, U, 0x6b4430, 'wood');
-  for (const x of [10, 14]) { box(x - 0.9, U, -31.2, x + 0.9, U + 1.8, -30.4, 'wood', WOOD); for (const dx of [-0.5, 0, 0.5]) detail(x + dx - 0.12, U + 1.0, -31.25, x + dx + 0.12, U + 1.35, -31.2, 'metal', GOLD); }
+  for (const x of [10, 14]) fur('trophycase', box(x - 0.9, U, -31.2, x + 0.9, U + 1.8, -30.4, 'wood', WOOD), { faces: '-z', c: WOOD });
   for (const z of [-36, -33]) L.decor.push({ t: 'portrait', x: 17.78, y: U + 1.9, z, ry: -Math.PI / 2 });
   lamp('trophy', 12, U + 2.85, -35, 0xffe1b0);
 
@@ -804,12 +821,12 @@ function buildMansion() {
   aw('x', -20.2, 6, 18); aw('x', -40, 6, 18); aw('z', 6, -40, -20); aw('z', 17.8, -40, -20);
   aw('x', -30.2, 6.2, 17.8, [win('atticHatch', 'x', -30.2, 12, A + 0.5, 1.4, 'Boarded attic hatch', { boards: true, glass: false, h: 1.2, outside: 1 })]);
   box(6, 12.4, -40, 18, 12.6, -20, 'board', 0x6a5238);
-  for (const [x, z] of [[9, -34], [15, -35], [11, -32]]) box(x - 0.6, A, z - 0.5, x + 0.6, A + 0.8, z + 0.5, 'cardboard', 0xb08a5c);
+  for (const [x, z] of [[9, -34], [15, -35], [11, -32]]) fur('crates', box(x - 0.6, A, z - 0.5, x + 0.6, A + 0.8, z + 0.5, 'cardboard', 0xb08a5c));
   L.decor.push({ t: 'rockinghorse', x: 15.5, y: A, z: -24 }); L.decor.push({ t: 'mannequin', x: 8, y: A, z: -22 });
   table(12, A, -21.4, 0x6b5136, 1, 0.45);
   item('fuse', 'fuse', 12, A + 0.87, -21.4, 'Fuse');
   hide('atticTrunk', 16.9, A, -32.5, '-x', 0x6b5136);
-  lamp('attic', 12, A + 2.5, -35, 0xffd9a0, false, 2.4); lamp('atticStore', 12, A + 2.5, -25, 0xffd9a0, false, 2);
+  lamp('attic', 12, A + 2.5, -35, 0xffd9a0, false, 2.4, { fixture: 'bulb', flicker: 0.6 }); lamp('atticStore', 12, A + 2.5, -25, 0xffd9a0, false, 2, { fixture: 'bulb' });
   poi('attic', 15, A, -38.6, 1);
 
   // ---- roofs, chimneys, porch columns
@@ -821,6 +838,13 @@ function buildMansion() {
   detail(-3.6, H, -20, 3.6, H + 0.15, -16.8, 'paving', 0xe2dccd);
   lamp('porch', 0, H + 2.9, -18.4, 0xffe2a8, false, 3);
   for (const x of [-18.1, 17.9]) for (const y of [H, U]) detail(x, y + 3, -40.1, x + 0.2, y + 3.2, -19.9, 'trim', 0xeeeae0);
+  // stone quoins, plinth, cornices and downpipes
+  trimShell(L, { x0: -18.2, z0: -40.2, x1: 18, z1: -20, y0: H, y1: A, c: STONE2,
+    pipes: [[-17.6, 'z1', A, 0.7, H], [-17.6, 'z0', A, 0.7, H], [17.4, 'z1', 12.6, 0.7, H], [17.4, 'z0', 12.6, 0.7, H]] });
+  for (const [a, b, c, d] of [[-18.27, -40.27, 9.2, -40.2], [10.8, -40.27, 18.07, -40.2], [-18.27, -20, -0.9, -19.93], [0.9, -20, 18.07, -19.93],
+    [-18.27, -40.2, -18.2, -20], [18, -40.2, 18.07, -20]]) detail(a, H - 0.05, b, c, H + 0.35, d, 'block', STONE2);
+  for (const y of [U - 0.25, A - 0.25]) for (const [a, b, c, d] of [[-18.3, -20.02, 18.1, -19.86], [-18.3, -40.34, 18.1, -40.18]]) detail(a, y, b, c, y + 0.18, d, 'trim', 0xeeeae0);
+  for (const x of [-12, 12]) for (const y of [H, U]) detail(x - 1.1, y + 2.75 + (y === H ? 0 : 0), -19.98, x + 1.1, y + 2.95, -19.8, 'trim', 0xeeeae0);
 
   // ---- the hedge maze behind the house (9 x 9 cells of 2 m); the crowbar waits in the middle
   const MX = -23, MZ = -64, N = 9, CELL = 2, hh = 2.2;
@@ -900,6 +924,25 @@ function buildMansion() {
     if (w.doorById.basement.locked) return 'Unlock the red vault door in the wine cellar.';
     return 'Take the golden trophy from the vault.';
   };
+  const R = (name, x0, z0, x1, z1, y, h, wall, floor, o = {}) => ({ name, x0, z0, x1, z1, y, h, wall, floor, ...o });
+  L.rooms.push(
+    R('cellar', -5.8, -39.8, 17.8, -30.2, 0, 3, 'brick', 'stone', { tint: 0x6a4234, trim: 0x3a2a22, floorTint: 0x8a8070, ceil: 'planks' }),
+    R('vault', -5.8, -30, 4, -20.2, 0, 3, 'stone', 'stone', { tint: 0x7a7268, trim: 0x3a2a22, floorTint: 0x6e665a }),
+    R('store', 4.2, -30, 17.8, -20.2, 0, 3, 'block', 'concrete', { tint: 0x8a8070, trim: 0x5a5248, floorTint: 0x7a7468, ceil: 'planks' }),
+    R('hall', -6, -39.8, 6, -20.2, H, 6.2, 'wp_damask', 'fl_parquet', { full: true, rail: true }),
+    R('gallery', -6, -39.8, 6, -33.4, U, 3, 'wp_damask', 'fl_parquet', { full: true }),
+    R('library', -17.8, -30, -6.2, -20.2, H, 3, 'panel', 'fl_walnut', { tint: 0x6a4430, trim: 0x3a2418 }),
+    R('dining', -17.8, -39.8, -6.2, -30.2, H, 3, 'wp_burgundy', 'fl_parquet', { full: true, rail: true }),
+    R('ballroom', 6.2, -30, 17.8, -20.2, H, 3, 'wp_cream', 'fl_parquet', { full: true, rail: true }),
+    R('kitchen', 6.2, -39.8, 17.8, -30.2, H, 3, 'tile', 'fl_kitchen', { tint: 0xe8eef0, trim: 0x8aa0aa }),
+    R('studyM', -17.8, -39.8, -6.2, -30.2, U, 3, 'panel', 'fl_walnut', { tint: 0x5a3a26, trim: 0x2a1a10 }),
+    R('bedW', -17.8, -30, -6.2, -20.2, U, 3, 'wp_floral_r', 'fl_honey', { full: true }),
+    R('bedE', 6.2, -30, 17.8, -20.2, U, 3, 'wp_floral_b', 'fl_honey', { full: true }),
+    R('trophy', 6.2, -39.8, 17.8, -30.2, U, 3, 'wp_stripe', 'fl_parquet', { full: true, rail: true }),
+    R('atticStore', 6.2, -30, 17.8, -20.2, A, 2.8, 'board', 'fl_attic', { tint: 0x7a6248, trim: 0x4a3a28, ceil: 'planks' }),
+    R('attic', 6.2, -39.8, 17.8, -30.2, A, 2.8, 'board', 'fl_attic', { tint: 0x7a6248, trim: 0x4a3a28, ceil: 'planks' }),
+  );
+  dressRooms(L);
   return L;
 }
 
