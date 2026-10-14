@@ -180,3 +180,20 @@ export function progressOf(d, runs) {
   value = Math.min(value, d.goal);
   return { value, goal: d.goal, done: value >= d.goal };
 }
+
+// Live progress during a run: the server's value for today's finished runs plus the run in progress.
+// (Only a preview: the real numbers come back from the server's replay when the run ends.)
+export function liveValue(d, base, cur) {
+  const s = cur || {}, v = k => Number(s[k]) || 0;
+  if (!validRun(s)) return base;
+  let x = base;
+  switch (d.kind) {
+    case 'row': x = Math.max(base, v('score')); break;
+    case 'sum': x = base + v(d.stat); break;
+    case 'best': x = Math.max(base, v(d.stat)); break;
+    case 'runs': x = base + (v(d.stat) >= d.min ? 1 : 0); break;
+    case 'noBack': x = Math.max(base, Math.min(v('noBackRow'), v('score'))); break;
+    case 'fewSide': for (const [row, side] of Object.entries(s.sideAt || {})) if (side <= d.max && +row <= d.row) x = Math.max(x, +row); break;
+  }
+  return Math.min(x, d.goal);
+}

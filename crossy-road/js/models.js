@@ -190,10 +190,14 @@ export function laneBoxes(lane, next, prev, th) {
     B.push([0, -0.06, -0.27, HALF * 2, 0.1, 0.07, th.steel]);
     B.push([0, -0.06, 0.27, HALF * 2, 0.1, 0.07, th.steel]);
     // signal post on the left of the playable strip
-    const sx = -(COLS + 0.9);
-    B.push([sx, -0.09, 0.42, 0.1, 1.2, 0.1, 0x55565c]);
-    B.push([sx, 1.0, 0.42, 0.62, 0.32, 0.16, 0x2b2c31]);
-    B.push([sx, 0.75, 0.42, 0.5, 0.06, 0.5, 0xf2f2f2]);
+    // a crossing signal on both sides of the playable strip: post, light housing, crossbuck, striped base
+    for (const sx of [-(COLS + 0.9), COLS + 0.9]) {
+      B.push([sx, -0.09, 0.42, 0.12, 1.5, 0.12, 0x55565c]);
+      B.push([sx, 1.1, 0.42, 0.78, 0.36, 0.16, 0x1d1e23]);
+      B.push([sx, 1.5, 0.42, 0.7, 0.12, 0.05, 0xf2f2f2]);
+      B.push([sx, -0.09, 0.42, 0.3, 0.16, 0.3, 0xffd23f]);
+      B.push([sx, 0.07, 0.42, 0.24, 0.12, 0.24, 0x1d1d22]);
+    }
   }
   // a chequered flag every 50 rows, on both sides of the playable strip
   if (lane.row > 0 && lane.row % 50 === 0) {

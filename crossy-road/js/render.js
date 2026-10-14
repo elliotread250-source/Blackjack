@@ -3,7 +3,7 @@
 // smoothly between simulation ticks), plus the player's hop animation, deaths, the eagle,
 // particles and the character carousel.
 import * as THREE from 'three';
-import { TICK, HOP_TICKS, COLS, entityX, trainState, CHARACTERS, lerp, clamp } from './logic.js';
+import { TICK, COLS, TRAIN_WARN, entityX, trainState, CHARACTERS, lerp, clamp } from './logic.js';
 import * as M from './models.js';
 
 const VIEW_BEHIND = 13;
@@ -112,9 +112,47 @@ export class Renderer {
       this.scene.add(group);
       this.flyers.push({ group, t: -1 - i * 6 });
     }
-    this.lightOn = new THREE.MeshBasicMaterial({ color: 0xff3020 });
+    this.lightOn = new THREE.MeshBasicMaterial({ color: 0xff2a1a });
     this.lightOff = new THREE.MeshBasicMaterial({ color: 0x4a1a18 });
-    this.lightGeo = new THREE.BoxGeometry(0.16, 0.16, 0.04);
+    this.lightGeo = new THREE.BoxGeometry(0.24, 0.24, 0.05);
+    // crossing warning extras: light halos, barrier arms, glowing rails and a floating sign
+    const halo = document.createElement('canvas'); halo.width = halo.height = 64;
+    { const g = halo.getContext('2d'), gr = g.createRadialGradient(32, 32, 2, 32, 32, 32); gr.addColorStop(0, 'rgba(255,90,60,1)'); gr.addColorStop(0.35, 'rgba(255,40,20,.55)'); gr.addColorStop(1, 'rgba(255,0,0,0)'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); }
+    this.haloMat = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(halo), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+    this.armGeo = M.mergeBoxes([...Array(6)].map((_, i) => [0.32 + i * 0.36, -0.06, 0, 0.36, 0.12, 0.08, i % 2 ? 0xffffff : 0xe8262a]));
+    this.railGlowMat = new THREE.MeshBasicMaterial({ color: 0xff2a1a, transparent: true, opacity: 0, depthWrite: false });
+    this.railGlowGeo = new THREE.BoxGeometry(36, 0.04, 0.12);
+    const sign = document.createElement('canvas'); sign.width = 256; sign.height = 112;
+    { const g = sign.getContext('2d'); g.fillStyle = '#d4141e'; g.beginPath(); g.roundRect(6, 6, 244, 100, 22); g.fill(); g.lineWidth = 8; g.strokeStyle = '#fff'; g.stroke();
+      g.fillStyle = '#fff'; g.font = '900 46px system-ui, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('🚆 TRAIN!', 128, 60); }
+    this.signMat = new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(sign), transparent: true, depthTest: false });
+    this.opts = { quality: 'high', reducedMotion: false, shake: true, trainWarning: 'strong' };
+    // the champion's crown: gold band, five points, red/blue/purple jewels
+    this.crown = new THREE.Group();
+    {
+      const gold = new THREE.MeshLambertMaterial({ color: 0xffc93a, emissive: 0x6a4a00 });
+      this.crownGold = gold;
+      const band = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.18, 0.12, 10, 1, true), gold);
+      band.material.side = THREE.DoubleSide;
+      this.crown.add(band);
+      for (let i = 0; i < 5; i++) {
+        const a = i / 5 * Math.PI * 2;
+        const tip = new THREE.Mesh(new THREE.ConeGeometry(0.055, 0.16, 4), gold);
+        tip.position.set(Math.cos(a) * 0.19, 0.13, Math.sin(a) * 0.19);
+        this.crown.add(tip);
+        const jewel = new THREE.Mesh(new THREE.OctahedronGeometry(0.04), new THREE.MeshBasicMaterial({ color: [0xe8263a, 0x2a6aff, 0xa05aff][i % 3] }));
+        jewel.position.set(Math.cos(a + 0.6) * 0.205, 0, Math.sin(a + 0.6) * 0.205);
+        this.crown.add(jewel);
+      }
+      const sparkle = new THREE.Mesh(new THREE.OctahedronGeometry(0.035), new THREE.MeshBasicMaterial({ color: 0xfff4b0 }));
+      sparkle.position.set(0.12, 0.26, -0.1); this.crown.add(sparkle); this.crownSparkle = sparkle;
+      this.crown.visible = false;
+      this.playerMesh.add(this.crown);
+    }
+    // the Royal Phoenix glows
+    this.phoenixLight = new THREE.PointLight(0xffa040, 0, 3.2, 1.6);
+    this.phoenixLight.position.set(0, 0.7, 0);
+    this.player.add(this.phoenixLight);
 
     // character carousel scene
     this.pScene = new THREE.Scene();
@@ -165,7 +203,7 @@ export class Renderer {
     this.envT = now ? 1 : 0;
     this.stepEnv(0);
     const snowy = !!th.ice, leafy = name === 'autumn', spooky = name === 'spooky', stars = name === 'space';
-    this.weather.visible = snowy || leafy || spooky || stars;
+    this.weather.visible = !this.weatherOff && (snowy || leafy || spooky || stars);
     this.weatherMat.color.setHex(snowy ? 0xffffff : leafy ? 0xe8742c : spooky ? 0xb88aff : 0xfff6c8);
     this.weatherMat.size = (snowy ? 4 : stars ? 3 : 5) * Math.min(2, window.devicePixelRatio || 1) * 0.75;
     this.weatherFall = snowy ? 1.1 : leafy ? 0.8 : spooky ? 0.35 : 0.05;
@@ -201,7 +239,57 @@ export class Renderer {
   setCharacter(id) {
     if (this.charId === id) return;
     this.charId = id;
-    this.playerMesh.geometry = this.charGeo(id);
+    const g = this.playerMesh.geometry = this.charGeo(id);
+    if (!g.boundingBox) g.computeBoundingBox();
+    const bb = g.boundingBox, w = Math.max(0.3, Math.min(bb.max.x - bb.min.x, bb.max.z - bb.min.z));
+    this.crown.position.set((bb.max.x + bb.min.x) / 2 * 0.3, bb.max.y + 0.01, (bb.max.z + bb.min.z) / 2 * 0.2);
+    this.crown.scale.setScalar(clamp(w / 0.55, 0.75, 1.25));
+    this.phoenixLight.intensity = id === 'royalphoenix' && this.opts.quality !== 'low' ? 1.6 : 0;
+  }
+  setCrown(on) { this.crown.visible = !!on; }
+
+  applySettings(o) {
+    Object.assign(this.opts, o);
+    const q = this.opts.quality;
+    const pr = q === 'low' ? 1 : q === 'medium' ? Math.min(1.5, window.devicePixelRatio || 1) : Math.min(2, window.devicePixelRatio || 1);
+    this.pixelRatio = pr;
+    const shadows = q !== 'low';
+    if (this.gl.shadowMap.enabled !== shadows) {
+      this.gl.shadowMap.enabled = shadows;
+      this.mat.needsUpdate = true;
+      this.scene.traverse(m => { if (m.material) m.material.needsUpdate = true; });
+    }
+    const size = q === 'high' ? 1024 : 512;
+    if (this.sun.shadow.mapSize.x !== size) { this.sun.shadow.mapSize.set(size, size); if (this.sun.shadow.map) { this.sun.shadow.map.dispose(); this.sun.shadow.map = null; } }
+    this.weatherOff = q === 'low';
+    this.phoenixLight.intensity = this.charId === 'royalphoenix' && q !== 'low' ? 1.6 : 0;
+    this.resize();
+  }
+
+  // A small picture of a character for the shop list (cached).
+  thumbnail(id, owned = true) {
+    this.thumbs = this.thumbs || new Map();
+    const key = id + (owned ? '' : ':locked');
+    if (this.thumbs.has(key)) return this.thumbs.get(key);
+    if (!this.tR) {
+      this.tCanvas = document.createElement('canvas'); this.tCanvas.width = this.tCanvas.height = 160;
+      this.tR = new THREE.WebGLRenderer({ canvas: this.tCanvas, antialias: true, alpha: true, preserveDrawingBuffer: true });
+      this.tScene = new THREE.Scene();
+      this.tScene.add(new THREE.HemisphereLight(0xffffff, 0x8899aa, 1.5));
+      const d = new THREE.DirectionalLight(0xffffff, 1.6); d.position.set(2, 4, 3); this.tScene.add(d);
+      this.tCam = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
+      this.tMesh = new THREE.Mesh(undefined, this.mat); this.tScene.add(this.tMesh);
+    }
+    const g = this.charGeo(id);
+    if (!g.boundingBox) g.computeBoundingBox();
+    const bb = g.boundingBox, cy = (bb.max.y + bb.min.y) / 2, size = Math.max(bb.max.x - bb.min.x, bb.max.y - bb.min.y, bb.max.z - bb.min.z);
+    this.tMesh.geometry = g; this.tMesh.material = owned ? this.mat : this.silhouette;
+    this.tMesh.rotation.y = -0.55;
+    this.tCam.position.set(0, cy + size * 0.55, size * 2.9); this.tCam.lookAt(0, cy, 0);
+    this.tR.render(this.tScene, this.tCam);
+    const url = this.tCanvas.toDataURL('image/png');
+    this.thumbs.set(key, url);
+    return url;
   }
 
   charGeo(id) {
@@ -234,7 +322,7 @@ export class Renderer {
 
   resize() {
     const w = window.innerWidth, h = window.innerHeight;
-    this.gl.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    this.gl.setPixelRatio(this.pixelRatio || Math.min(2, window.devicePixelRatio || 1));
     this.gl.setSize(w, h, false);
     if (this.weatherMat) this.weatherMat.size = (this.themeName === 'snow' ? 4 : 5) * Math.min(2, window.devicePixelRatio || 1) * 0.75;
     const aspect = w / h;
@@ -295,13 +383,23 @@ export class Renderer {
       m.rotation.y = lane.dir > 0 ? 0 : Math.PI;
       group.add(m);
       v.train = m;
-      const sx = -(COLS + 0.9);
-      v.lights = [-0.15, 0.15].map(dx => {
-        const l = new THREE.Mesh(this.lightGeo, this.lightOff);
-        l.position.set(sx + dx, 1.16, 0.51);
-        group.add(l);
-        return l;
-      });
+      v.lights = []; v.halos = []; v.arms = [];
+      for (const sx of [-(COLS + 0.9), COLS + 0.9]) {
+        for (const dx of [-0.2, 0.2]) {
+          const l = new THREE.Mesh(this.lightGeo, this.lightOff);
+          l.position.set(sx + dx, 1.28, 0.51);
+          group.add(l); v.lights.push(l);
+          const h = new THREE.Sprite(this.haloMat); h.scale.setScalar(1.1); h.position.set(sx + dx, 1.28, 0.56); h.visible = false;
+          group.add(h); v.halos.push(h);
+        }
+        // barrier arm hinged at the post, swinging out over the crossing
+        const arm = new THREE.Group(); arm.position.set(sx, 0.62, 0.5);
+        const m = new THREE.Mesh(this.armGeo, this.mat); m.scale.x = sx < 0 ? 1 : -1; arm.add(m);
+        arm.rotation.z = sx < 0 ? 1.45 : -1.45; arm.userData.up = arm.rotation.z;
+        group.add(arm); v.arms.push(arm);
+      }
+      v.glow = [-0.27, 0.27].map(z => { const g2 = new THREE.Mesh(this.railGlowGeo, this.railGlowMat); g2.position.set(0, 0.01, z); group.add(g2); return g2; });
+      v.sign = new THREE.Sprite(this.signMat); v.sign.scale.set(1.9, 0.83, 1); v.sign.position.set(0, 1.9, 0.6); v.sign.visible = false; group.add(v.sign);
     }
     if (lane.coin !== null && lane.coin !== undefined && lane.type !== 'river' && !g.taken.has(lane.row + ':' + lane.coin)) {
       const c = new THREE.Mesh(lane.gem ? this.gemGeo : this.coinGeo, this.mat);
@@ -419,6 +517,10 @@ export class Renderer {
 
     // player
     this.updatePlayer(g, pose, t, dt);
+    if (this.crown.visible) {
+      this.crownGold.emissive.setRGB(0.42 + 0.12 * Math.sin(t * 3), 0.29 + 0.08 * Math.sin(t * 3), 0);
+      this.crownSparkle.rotation.y = t * 4; this.crownSparkle.scale.setScalar(0.6 + 0.6 * Math.abs(Math.sin(t * 2.3)));
+    }
     this.stepParticles(dt);
     this.stepWeather(dt);
     // the sky follows the biome the camera is in
@@ -468,10 +570,22 @@ export class Renderer {
       const s = trainState(lane, t);
       v.train.visible = s.phase === 'pass';
       if (v.train.visible) v.train.position.x = s.head;
-      const flash = s.phase !== 'idle';
-      const on = Math.floor(t * 4) % 2 === 0;
-      v.lights[0].material = flash && on ? this.lightOn : this.lightOff;
-      v.lights[1].material = flash && !on ? this.lightOn : this.lightOff;
+      // warning from the moment the cycle leaves "idle" until the last carriage has passed
+      const warn = s.phase !== 'idle';
+      const steady = this.opts.reducedMotion || this.opts.trainWarning === 'steady';
+      const ab = Math.floor(t * 3) % 2 === 0;          // ~1.5 alternations a second, never strobing
+      for (let i = 0; i < v.lights.length; i++) {
+        const lit = warn && (steady || (i % 2 === 0) === ab);
+        v.lights[i].material = lit ? this.lightOn : this.lightOff;
+        v.halos[i].visible = lit;
+      }
+      // barrier arms lower over the first 0.6 s of the warning and rise when the train has gone
+      const down = s.phase === 'pass' ? 1 : s.phase === 'warn' ? clamp((TRAIN_WARN - s.until) / 0.6, 0, 1) : 0;
+      for (const arm of v.arms) arm.rotation.z = arm.userData.up * (1 - down);
+      for (const gl of v.glow) gl.visible = warn;
+      if (warn) this.railGlowMat.opacity = steady ? 0.75 : 0.45 + 0.35 * (ab ? 1 : 0);
+      v.sign.visible = s.phase === 'warn';
+      if (v.sign.visible) { v.sign.position.x = clamp(this.target.x, -COLS + 1, COLS - 1); v.sign.position.y = 1.9 + (steady ? 0 : Math.sin(t * 6) * 0.06); }
     }
     if (v.coin) {
       v.coin.rotation.y = t * 3 + lane.row;
@@ -663,8 +777,11 @@ export class Renderer {
       const on = i === sel;
       const s = on ? 1.35 : 0.9;
       c.group.scale.setScalar(lerp(c.group.scale.x || 1, s, 1 - Math.exp(-dt * 10)));
-      c.m.rotation.y = on ? t * 1.3 : lerp(c.m.rotation.y, -0.5, 1 - Math.exp(-dt * 4));
-      c.m.position.y = on ? Math.abs(Math.sin(t * 3)) * 0.12 : 0;
+      // the Royal Phoenix gets a showier turn: it rises, spins faster and flutters
+      const royal = on && c.id === 'royalphoenix';
+      c.m.rotation.y = on ? t * (royal ? 2.4 : 1.3) : lerp(c.m.rotation.y, -0.5, 1 - Math.exp(-dt * 4));
+      c.m.position.y = on ? (royal ? 0.25 + Math.sin(t * 5) * 0.08 : Math.abs(Math.sin(t * 3)) * 0.12) : 0;
+      c.m.rotation.z = royal ? Math.sin(t * 9) * 0.05 : 0;
     }
     const portrait = this.pCam.aspect < 1, short = window.innerHeight < 560;
     if (portrait) { this.pCam.position.set(this.pPos, 2.4, 11); this.pCam.lookAt(this.pPos, 0.2, 0); }

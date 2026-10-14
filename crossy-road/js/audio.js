@@ -5,6 +5,8 @@ export class Sound {
   constructor(muted) {
     this.ctx = null;
     this.muted = !!muted;
+    this.volume = 0.8;     // master volume (0..1)
+    this.sfx = 1;          // effects level (0..1)
     this.last = {};
   }
 
@@ -15,7 +17,7 @@ export class Sound {
     try { this.ctx = new AC(); } catch { return; }
     const c = this.ctx;
     this.master = c.createGain();
-    this.master.gain.value = this.muted ? 0 : 0.8;
+    this.master.gain.value = this.level();
     const comp = c.createDynamicsCompressor();
     this.master.connect(comp);
     comp.connect(c.destination);
@@ -31,10 +33,22 @@ export class Sound {
     src.start();
   }
 
+  level() { return this.muted ? 0 : this.volume * this.sfx; }
   setMuted(m) {
     this.muted = !!m;
-    if (this.master) this.master.gain.setTargetAtTime(this.muted ? 0 : 0.8, this.ctx.currentTime, 0.02);
+    if (this.master) this.master.gain.setTargetAtTime(this.level(), this.ctx.currentTime, 0.02);
   }
+  setVolume(volume, sfx = this.sfx) {
+    this.volume = Math.max(0, Math.min(1, +volume || 0)); this.sfx = Math.max(0, Math.min(1, +sfx || 0));
+    if (this.master) this.master.gain.setTargetAtTime(this.level(), this.ctx.currentTime, 0.02);
+  }
+  // a bright little fanfare for a finished daily challenge
+  cheer() {
+    if (!this.ok('cheer', 0.3)) return;
+    [523, 659, 784, 1047].forEach((f, i) => this.tone('triangle', f, f, 0.16, 0.09, i * 0.08));
+  }
+  // a short whoosh of feathers for the Royal Phoenix
+  feathers() { if (this.ok('feathers', 0.12)) this.burst(0.1, 0.04, 'highpass', 2400, 4200, 1); }
 
   suspend() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend().catch(() => {}); }
   resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume().catch(() => {}); }
