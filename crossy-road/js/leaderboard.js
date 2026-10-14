@@ -19,6 +19,9 @@ export class Leaderboard {
     this.top = [];
     this.name = String(store.get('lbName', '') || '');
   }
+  // board editor (needs the admin code, checked by the server)
+  adminList(code) { return api('/api/admin', { code, action: 'list' }); }
+  adminSave(code, rows) { return api('/api/admin', { code, action: 'save', rows }); }
   setName(n) { this.name = n; store.set('lbName', n); }
   startRun() {
     this.run = null;

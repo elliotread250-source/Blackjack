@@ -9,6 +9,12 @@ API:
   GET  /api/leaderboard          -> {"top": [{name, score, char, t}, ...]}
   POST /api/run                  -> {"run": token}   (call when a run starts)
   POST /api/score {run, name, score, char} -> {"ok", "rank", "best", "top"}
+  POST /api/admin {code, action: "list"}             -> {"rows": [...]}  (whole board)
+  POST /api/admin {code, action: "save", rows: [...]} -> {"ok", "rows"}   (replace it)
+
+The admin code lives only in the ADMIN_CODE environment variable (never in this
+public repo); without it the admin endpoint is switched off. Wrong guesses are
+rate limited per IP.
 
 There's no way to fully stop a determined cheater with a client-side game, so
 the server sticks to cheap checks: a score needs a run token issued long enough
@@ -43,6 +49,9 @@ _lock = threading.Lock()
 _runs = {}            # token -> issue time
 _last_post = {}       # ip -> last score post time
 _board = []
+ADMIN_CODE = os.environ.get("ADMIN_CODE", "").strip().lower()
+ADMIN_MAX = 999999
+_fails = {}           # ip -> [fail times]
 
 
 def _load():
@@ -121,6 +130,46 @@ def submit(ip, body):
         return 200, {"ok": True, "rank": rank, "best": best["score"] if best else score, "top": _board[:SHOW]}
 
 
+def admin(ip, body):
+    now = time.time()
+    with _lock:
+        recent = [t for t in _fails.get(ip, []) if now - t < 600]
+        _fails[ip] = recent
+        if len(recent) >= 6:
+            return 429, {"error": "Too many tries, wait a few minutes"}
+        code = str(body.get("code") or "").strip().lower()
+        if not ADMIN_CODE or not secrets.compare_digest(code.encode(), ADMIN_CODE.encode()):
+            recent.append(now)
+            return 403, {"error": "Unknown code"}
+        _fails.pop(ip, None)
+        if body.get("action") == "save":
+            rows = body.get("rows")
+            if not isinstance(rows, list) or len(rows) > KEEP:
+                return 400, {"error": "Bad rows"}
+            out, seen = [], set()
+            for r in rows:
+                if not isinstance(r, dict):
+                    continue
+                name = clean_name(r.get("name"))
+                try:
+                    score = int(r.get("score"))
+                except (TypeError, ValueError):
+                    continue
+                if not name or name.lower() in seen or not 0 <= score <= ADMIN_MAX:
+                    continue
+                seen.add(name.lower())
+                t = r.get("t") if isinstance(r.get("t"), int) else int(now)
+                out.append({"name": name, "score": score, "char": r.get("char") if r.get("char") in CHARS else "chicken", "t": t})
+            out.sort(key=lambda e: (-e["score"], e["t"]))
+            _board[:] = out[:KEEP]
+            try:
+                _save()
+            except OSError as exc:
+                return 500, {"error": f"Save failed: {exc}"}
+            return 200, {"ok": True, "rows": _board}
+        return 200, {"rows": _board}
+
+
 def top():
     with _lock:
         return {"top": _board[:SHOW]}
@@ -156,14 +205,16 @@ class Handler(SimpleHTTPRequestHandler):
         route = self.path.split("?")[0]
         if route == "/api/run":
             return self._json(200, {"run": new_run()})
-        if route == "/api/score":
+        if route in ("/api/score", "/api/admin"):
             try:
                 n = int(self.headers.get("Content-Length") or 0)
-                body = json.loads(self.rfile.read(min(n, 4096)) or b"{}") if n else {}
+                body = json.loads(self.rfile.read(min(n, 65536)) or b"{}") if n else {}
                 if not isinstance(body, dict):
                     raise ValueError
             except ValueError:
                 return self._json(400, {"error": "Bad request"})
+            if route == "/api/admin":
+                return self._json(*admin(self._ip(), body))
             return self._json(*submit(self._ip(), body))
         return self._json(404, {"error": "Not found"})
 

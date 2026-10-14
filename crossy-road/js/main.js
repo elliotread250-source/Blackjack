@@ -453,9 +453,36 @@ function secret(word, src) {
     updateHud();
     return true;
   }
-  if (src === 'prompt') banner('Unknown code', 'Hmm');
+  if (src === 'prompt') tryAdmin(word);
   return false;
 }
+// ------------------------------------------------------------ leaderboard editor (server checks the code)
+let adminCode = null, adminRows = [];
+function tryAdmin(code) {
+  board.adminList(code).then(d => { adminCode = code; adminRows = d.rows || []; openAdmin(); })
+    .catch(e => banner(/many/i.test(e.message) ? e.message : 'Unknown code', 'Hmm'));
+}
+function openAdmin(msg = '') {
+  const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  $('a-list').innerHTML = adminRows.map((r, i) => `<div class="r"><span>${i + 1}</span><input data-i="${i}" data-k="name" maxlength="14" value="${esc(r.name)}"><input data-i="${i}" data-k="score" type="number" min="0" value="${r.score | 0}"><button data-del="${i}" aria-label="Delete">✕</button></div>`).join('') || '<p>No scores yet.</p>';
+  $('a-msg').textContent = msg;
+  $('s-admin').hidden = false;
+}
+function readAdmin() {
+  for (const inp of $('a-list').querySelectorAll('input')) {
+    const r = adminRows[+inp.dataset.i];
+    if (r) r[inp.dataset.k] = inp.dataset.k === 'score' ? Math.max(0, Math.floor(+inp.value || 0)) : inp.value;
+  }
+}
+$('a-list').addEventListener('click', e => { const d = e.target.dataset.del; if (d !== undefined) { readAdmin(); adminRows.splice(+d, 1); openAdmin(); } });
+click('a-add', () => { readAdmin(); adminRows.unshift({ name: 'New name', score: 0, char: 'chicken' }); openAdmin(); });
+click('a-close', () => { $('s-admin').hidden = true; });
+click('a-save', () => {
+  readAdmin(); $('a-msg').textContent = 'Saving…';
+  board.adminSave(adminCode, adminRows).then(d => { adminRows = d.rows || []; openAdmin('Saved ✔'); board.top = adminRows.slice(0, 20); })
+    .catch(e => { $('a-msg').textContent = e.message; });
+});
+for (const ev of ['pointerdown', 'keydown']) $('s-admin').addEventListener(ev, e => e.stopPropagation());
 function askCode() {
   const w = (prompt('Enter a code:') || '').trim().toLowerCase();
   if (w) secret(w, 'prompt');

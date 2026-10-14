@@ -158,6 +158,15 @@
 .inv b { font-variant-numeric: tabular-nums; margin-left: 6px; }
 .inv.low { animation-duration: .15s; }
 @keyframes invpulse { from { box-shadow: 0 0 8px #ffc93a; } to { box-shadow: 0 0 26px #9ff4ff; } }
+.admin { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: rgba(10, 14, 30, .7); padding: 12px; }
+.admin-box { width: min(520px, 100%); max-height: 92vh; display: flex; flex-direction: column; gap: 10px; background: #2c3448; border-radius: 18px; padding: 16px; color: #fff; font: 600 15px system-ui, sans-serif; }
+.admin-box h2 { margin: 0; font-size: 22px; }
+.admin-list { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.admin-list .r { display: grid; grid-template-columns: 28px 1fr 96px 36px; gap: 6px; align-items: center; }
+.admin-list input { font: 700 15px system-ui, sans-serif; padding: 7px 9px; border-radius: 9px; border: 0; min-width: 0; }
+.admin-list button { border: 0; border-radius: 9px; background: #e8463b; color: #fff; font-weight: 900; height: 34px; cursor: pointer; }
+.admin-msg { margin: 0; min-height: 1.2em; color: #ffd23f; }
+.admin-row { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
 </style>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 </head>
@@ -165,6 +174,18 @@
 <canvas id="game"></canvas>
 <a class="arcade" id="arcade" href="https://open-arcade.up.railway.app">&larr; Arcade</a>
 
+<div id="s-admin" class="admin" hidden>
+  <div class="admin-box">
+    <h2>Edit leaderboard</h2>
+    <div class="admin-list" id="a-list"></div>
+    <p class="admin-msg" id="a-msg"></p>
+    <div class="admin-row">
+      <button class="btn" id="a-add">+ Add</button>
+      <button class="btn green" id="a-save">Save</button>
+      <button class="btn" id="a-close">Close</button>
+    </div>
+  </div>
+</div>
 <div id="banner" class="banner" aria-live="polite"></div>
 <div id="inv" class="inv outline" hidden>⚡ INVINCIBLE <b id="inv-t">20</b></div>
 <div id="hud" hidden>
