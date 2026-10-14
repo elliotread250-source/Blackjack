@@ -394,6 +394,7 @@ export function addDecor(B, d) {
       for (const s of [-0.22, 0.22]) B.geom('wood', geo('halfTorus'), mat(...vecAt(at(s, 0), d.y + 0.42), 0, ry + Math.PI / 2, Math.PI, 0.42, 0.42, 0.6), 0x4a2e1e);
       break;
     }
+    case 'brace': beam(B, d.m || 'wood', d.a, d.b, d.w ?? 0.14, d.h ?? 0.14, d.c ?? 0x5a3a26); break;   // a timber strut from a to b
     case 'binoculars': for (const s of [-0.05, 0.05]) B.geom('metal', geo('cyl'), mat(d.x + s, d.y + 0.05, d.z, Math.PI / 2, 0, 0, 0.035, 0.14, 0.035), 0x222222); break;
     case 'dish': B.geom('metal', geo('sphere'), mat(d.x, d.y, d.z, -0.6, 0.4, 0, 0.5, 0.18, 0.5), 0xd8d8d0); B.geom('metal', geo('cyl'), mat(d.x, d.y - 0.4, d.z, 0, 0, 0, 0.03, 0.8, 0.03), 0x888888); break;
     case 'weathervane': B.geom('metal', geo('cyl'), mat(d.x, d.y + 0.5, d.z, 0, 0, 0, 0.02, 1, 0.02), 0x2a2a2a); rbox(B, 'metal', d.x, d.y + 0.9, d.z, 0.7, 0.04, 0.04, 0.6, 0x2a2a2a); B.geom('metal', geo('cone'), mat(d.x + 0.3, d.y + 1.0, d.z - 0.2, 0, 0.6, -Math.PI / 2, 0.06, 0.2, 0.02), 0x2a2a2a); break;
