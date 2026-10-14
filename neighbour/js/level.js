@@ -10,7 +10,7 @@
 
 import { makeBox } from './geom.js';
 import { buildMap } from './maps.js';
-import { dressRooms, furnish, prop } from './dress.js';
+import { dressRooms, furnish, prop, trimShell } from './dress.js';
 
 export const T = 0.2;          // wall thickness
 export const F1 = 3.2;         // upper floor height
@@ -340,8 +340,12 @@ export function buildLevel(mission = 0) {
   // the rest of the roof space is sealed off
   inv(X0, F2, Z0, X1, 10, -27.1); inv(X0, F2, -16.9, X1, 10, Z1); inv(X0, F2, -27.1, -5.1, 10, -16.9); inv(5.1, F2, -27.1, X1, 10, -16.9);
   roofs.push({ x0: X0 - 0.6, x1: X1 + 0.6, z0: Z0 - 0.7, z1: Z1 + 0.7, y: F2 - 0.05, h: 5.0, ridge: 'z', tint: 0x5a3a4a, gable: SIDC });
+  trimShell({ boxes }, { x0: X0, z0: Z0, x1: X1, z1: Z1, y0: 0.3, y1: F2 - 0.1, c: TRIM,
+    pipes: [[-12.5, 'x0', F2 - 0.05, 0.66, 0], [-27.5, 'x0', F2 - 0.05, 0.66, 0], [-12.5, 'x1', F2 - 0.05, 0.66, 3.2], [-27.5, 'x1', F2 - 0.05, 0.66, 3.6]] });
   // chimney + odd bits on the roof
   box(-7.5, F2, -26, -6.3, 11.2, -24.8, 'brick', 0x8a5a48);
+  vis(-7.62, 11.0, -26.12, -6.18, 11.25, -24.68, 'concrete', 0x8a857c);          // chimney cap
+  for (const x of [-7.2, -6.6]) vis(x - 0.12, 11.25, -25.52, x + 0.12, 11.6, -25.28, 'paint', 0x7a3a2a); // pots
   decor.push({ t: 'dish', x: 6.5, y: 8.4, z: -15.2 });
   decor.push({ t: 'weathervane', x: 0, y: F2 + 4.95, z: -12.4 });
 

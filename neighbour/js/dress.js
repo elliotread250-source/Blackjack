@@ -140,3 +140,25 @@ export function furnish(L, kind, boxes, o = {}) {
 export function prop(L, kind, x, y, z, w, d, h, o = {}) {
   L.decor.push({ t: 'f_' + kind, x, y, z, w, d, h, ry: RY[o.faces || '+z'] ?? 0, ...o });
 }
+
+// Exterior trim for a house block: corner boards and downpipes from the gutters (visual only).
+//   o = { x0, z0, x1, z1, y0, y1, c, pipes: [[x or z along the wall, side ('x0'|'x1'|'z0'|'z1'), eave height, overhang, bottom]] }
+export function trimShell(L, o) {
+  const y0 = o.y0 ?? 0, c = o.c ?? 0xf1ead8;
+  const detail = (x0, y0_, z0, x1, y1, z1, m, col) => L.boxes.push(makeBox(Math.min(x0, x1), y0_, Math.min(z0, z1), Math.max(x0, x1), y1, Math.max(z0, z1), { m, c: col, col: false, op: false, vis: true }));
+  for (const [cx, sx] of [[o.x0, -1], [o.x1, 1]]) for (const [cz, sz] of [[o.z0, -1], [o.z1, 1]]) {
+    detail(cx + sx * 0.05, y0, cz + sz * 0.05, cx - sx * 0.14, o.y1, cz - sz * 0.02, 'trim', c);
+    detail(cx + sx * 0.05, y0, cz + sz * 0.05, cx - sx * 0.02, o.y1, cz - sz * 0.14, 'trim', c);
+  }
+  for (const [a, side, top, over = 0.7, bottom] of o.pipes || []) {
+    const y0 = bottom ?? o.y0 ?? 0, PC = 0x5c6066, s = side === 'x0' || side === 'z0' ? -1 : 1;
+    const wall = side === 'x0' ? o.x0 : side === 'x1' ? o.x1 : side === 'z0' ? o.z0 : o.z1;
+    const at = (n0, n1, y0_, y1, a0, a1) => side[0] === 'z'
+      ? detail(a + a0, y0_, wall + s * n0, a + a1, y1, wall + s * n1, 'metal', PC)
+      : detail(wall + s * n0, y0_, a + a0, wall + s * n1, y1, a + a1, 'metal', PC);
+    at(over, over + 0.12, top - 0.6, top - 0.18, -0.05, 0.05);       // drop from the gutter
+    at(0.06, over + 0.12, top - 0.7, top - 0.58, -0.05, 0.05);       // elbow back to the wall
+    at(0.06, 0.18, y0 + 0.12, top - 0.6, -0.06, 0.06);               // down the wall
+    at(0.06, 0.38, y0, y0 + 0.14, -0.07, 0.07);                      // shoe at the bottom
+  }
+}

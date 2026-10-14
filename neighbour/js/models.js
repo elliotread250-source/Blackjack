@@ -400,6 +400,23 @@ export function addDecor(B, d) {
   }
 }
 function vecAt(xz, y) { return [xz[0], y, xz[1]]; }
+// a box of cross-section w x h running from point a to point b (its h side kept as upright as possible)
+const BX = new THREE.Vector3(), BY = new THREE.Vector3(), BZ = new THREE.Vector3(), UP = new THREE.Vector3(0, 1, 0);
+function beam(B, m, a, b, w, h, color) {
+  BX.set(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
+  const len = BX.length(); if (len < 1e-4) return;
+  BX.divideScalar(len);
+  BY.copy(UP).addScaledVector(BX, -BX.dot(UP));
+  if (BY.lengthSq() < 1e-6) BY.set(1, 0, 0);
+  BY.normalize(); BZ.crossVectors(BX, BY);
+  const m4 = new THREE.Matrix4().makeBasis(BX, BY, BZ);
+  m4.scale(S.set(len, h, w));
+  m4.setPosition((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2);
+  B.geom(m, geo('box'), m4, color);
+}
+const GUTTER = 0x5c6066;
+// a gutter box under an eave
+function gutter(B, x0, z0, x1, z1, y) { B.box('metal', x0, y - 0.2, z0, x1, y - 0.06, z1, GUTTER); }
 
 // ---------------------------------------------------------------- roofs
 // gable roof over [x0,x1]x[z0,z1] from height y, ridge h above, along x (or z); a spire is a pyramid
@@ -414,6 +431,11 @@ export function addRoof(B, r) {
       const a = c[i], b = c[(i + 1) % 4];
       const n = new THREE.Vector3().subVectors(new THREE.Vector3(...b), new THREE.Vector3(...a)).cross(new THREE.Vector3().subVectors(new THREE.Vector3(...ap), new THREE.Vector3(...a))).normalize();
       B.tri('shingle', [a, b, ap], [n.x, n.y, n.z], [[0, 0], [3 / sc, 0], [1.5 / sc, 4 / sc]], rc);
+      if (!r.plain) beam(B, 'trim', a, ap, 0.1, 0.1, 0x2a2a2a);
+    }
+    if (!r.plain) {
+      B.geom('metal', geo('cyl'), mat(ap[0], ap[1] + 0.35, ap[2], 0, 0, 0, 0.03, 0.8, 0.03), 0x2a2a2a);
+      B.geom('metal', geo('sphere'), mat(ap[0], ap[1] + 0.2, ap[2], 0, 0, 0, 0.09, 0.09, 0.09), 0x8a7a4a);
     }
     return;
   }
@@ -435,6 +457,7 @@ export function addRoof(B, r) {
     B.box('trim', r.x0, r.y - 0.12, r.z0 - 0.02, r.x1, r.y + 0.02, r.z0 + 0.04, 0xf1ead8);
     // soffit
     B.quad('plaster', [[r.x0, r.y - 0.02, r.z0], [r.x1, r.y - 0.02, r.z0], [r.x1, r.y - 0.02, r.z1], [r.x0, r.y - 0.02, r.z1]], [0, -1, 0], [[0, 0], [1, 0], [1, 1], [0, 1]], [[0.35, 0.3, 0.3]]);
+    roofTrim(B, r, rc);
   } else {
     // ridge along z: slopes face +-x, gables face the street and the back yard
     const xm = (r.x0 + r.x1) / 2, yt = r.y + r.h, slope = Math.hypot(xm - r.x0, r.h);
@@ -453,6 +476,32 @@ export function addRoof(B, r) {
     B.box('trim', r.x1 - 0.02, r.y - 0.12, r.z0, r.x1 + 0.04, r.y + 0.02, r.z1, 0xf1ead8);
     B.box('trim', r.x0 - 0.04, r.y - 0.12, r.z0, r.x0 + 0.02, r.y + 0.02, r.z1, 0xf1ead8);
     B.quad('plaster', [[r.x0, r.y - 0.02, r.z0], [r.x1, r.y - 0.02, r.z0], [r.x1, r.y - 0.02, r.z1], [r.x0, r.y - 0.02, r.z1]], [0, -1, 0], [[0, 0], [1, 0], [1, 1], [0, 1]], [[0.35, 0.3, 0.3]]);
+    roofTrim(B, r, rc);
+  }
+}
+// ridge cap, barge boards up the gable edges and gutters under the eaves (r.plain skips them)
+function roofTrim(B, r, rc) {
+  if (r.plain) return;
+  const yt = r.y + r.h, TR = 0xf1ead8;
+  const cap = new THREE.Color(rc[0] * 0.6, rc[1] * 0.6, rc[2] * 0.6).getHex();
+  if (r.ridge === 'x') {
+    const zm = (r.z0 + r.z1) / 2;
+    beam(B, 'trim', [r.x0 - 0.05, yt + 0.04, zm], [r.x1 + 0.05, yt + 0.04, zm], 0.24, 0.12, cap);
+    for (const x of [r.x0 - 0.02, r.x1 + 0.02]) {
+      beam(B, 'trim', [x, r.y - 0.06, r.z1 + 0.02], [x, yt + 0.06, zm], 0.08, 0.24, TR);
+      beam(B, 'trim', [x, r.y - 0.06, r.z0 - 0.02], [x, yt + 0.06, zm], 0.08, 0.24, TR);
+    }
+    gutter(B, r.x0, r.z1 + 0.02, r.x1, r.z1 + 0.18, r.y);
+    gutter(B, r.x0, r.z0 - 0.18, r.x1, r.z0 - 0.02, r.y);
+  } else {
+    const xm = (r.x0 + r.x1) / 2;
+    beam(B, 'trim', [xm, yt + 0.04, r.z0 - 0.05], [xm, yt + 0.04, r.z1 + 0.05], 0.24, 0.12, cap);
+    for (const z of [r.z0 - 0.02, r.z1 + 0.02]) {
+      beam(B, 'trim', [r.x1 + 0.02, r.y - 0.06, z], [xm, yt + 0.06, z], 0.08, 0.24, TR);
+      beam(B, 'trim', [r.x0 - 0.02, r.y - 0.06, z], [xm, yt + 0.06, z], 0.08, 0.24, TR);
+    }
+    gutter(B, r.x1 + 0.02, r.z0, r.x1 + 0.18, r.z1, r.y);
+    gutter(B, r.x0 - 0.18, r.z0, r.x0 - 0.02, r.z1, r.y);
   }
 }
 
