@@ -79,7 +79,7 @@ Order: Phase 1 Crossy Road → Phase 2 Nosy Neighbour visual rebuild → Phase 3
   room-facing face of every wall its wallpaper, the floor slab its floor and the ceiling its finish, and
   adds skirting, dado rails and crown moulding. Walls that run past a room are *split* (same space, same
   collision), never moved. Trim boxes are visual only (`deco`, no collision, no sight blocking).
-- **Furniture models** (`js/furniture.js`, 50 models): `furnish()` hides an existing collision box and draws a
+- **Furniture models** (`js/furniture.js`, 44 models): `furnish()` hides an existing collision box and draws a
   model in its footprint, so physics, navigation, hiding and sight lines are unchanged. Props without
   collision (`prop()`) are only decoration.
 - **Material library** (`js/textures.js`): procedural full-colour wallpapers (damask, florals, stripes,
