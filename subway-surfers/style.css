@@ -38,3 +38,14 @@ h2 { margin: 0; font-size: 46px; color: #ffd23f; }
 .final small { font-size: 18px; } .final b { font-size: 60px; color: #fff; } .final span { font-size: 18px; color: #ffd23f; }
 .final.small { display: flex; align-items: center; gap: 8px; } .final.small b { font-size: 30px; color: #ffd23f; }
 .row { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.trophy { position: fixed; right: 72px; top: max(16px, env(safe-area-inset-top)); }
+.world { font-size: 16px; color: #ffd23f; }
+.rank { margin: 0; font-size: 20px; text-shadow: 0 3px 0 #1d2a4a; min-height: 1em; }
+.rank.gold { color: #ffd23f; }
+.lb-form { display: flex; gap: 8px; }
+.lb-form input { font: 800 18px system-ui, sans-serif; padding: 10px 14px; border-radius: 14px; border: 4px solid #1d2a4a; width: 190px; color: #1d2a4a; }
+.small-btn { padding: 8px 18px; font-size: 18px; }
+.lb-list { margin: 0; padding: 12px 18px 12px 44px; width: min(420px, 92vw); max-height: 55vh; overflow-y: auto; background: rgba(29, 42, 74, .75); border-radius: 18px; font: 800 18px system-ui, sans-serif; }
+.lb-list li { padding: 4px 0; display: flex; justify-content: space-between; gap: 12px; }
+.lb-list li.me { color: #ffd23f; }
+.lb-list li span:last-child { font-variant-numeric: tabular-nums; }

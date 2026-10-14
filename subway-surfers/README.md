@@ -10,6 +10,10 @@ onto the train roofs, grab coins and keep ahead of the inspector and his dog.
 - Coin lines on the tracks, over hurdles and along train roofs. Power-ups: **magnet** (pulls in coins),
   **super sneakers** (jump onto trains) and **double score**. The score multiplier rises every 1000 m and
   the run speeds up as you go.
+- **Global leaderboard**: after a run, add your name to post your score and see your world rank; the 🏆 button
+  shows the world top 20. The server keeps each name's best in a JSON file on a Railway volume at `/data` and
+  rejects scores that couldn't have been run in the time since the run started. `?autopilot` and `?seed=` runs
+  never post.
 - Coins are banked between runs to unlock Tricky, Fresh and Yutani. Best score is saved.
 - The track is generated so there is always a way through: every stretch keeps a train-free lane, safe lanes
   move one step at a time, each stretch starts with a clear gap, oncoming trains only roll once you are

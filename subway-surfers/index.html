@@ -23,6 +23,7 @@
 <div id="title" class="screen">
   <h1><span>SUBWAY</span><span>SURFERS</span></h1>
   <p class="best" id="t-best"></p>
+  <p class="best world" id="t-world" hidden></p>
   <div class="skins">
     <button id="s-prev" class="icon" aria-label="Previous character">◀</button>
     <div class="skin"><b id="s-name">Jake</b><small id="s-info"></small></div>
@@ -32,13 +33,23 @@
   <p class="keys" id="keys">Arrows / WASD: change lane, jump, roll • Swipe on touch</p>
   <div class="bank"><span class="coin"></span><b id="bank">0</b></div>
   <button id="mute" class="icon mute" aria-label="Mute">🔊</button>
+  <button id="trophy" class="icon trophy" aria-label="Leaderboard">🏆</button>
 </div>
 
 <div id="over" class="screen dim" hidden>
   <h2 id="o-why">Busted!</h2>
   <div class="final"><small>Score</small><b id="o-score">0</b><span id="o-best"></span></div>
   <div class="final small"><span class="coin"></span><b id="o-coins">0</b></div>
-  <div class="row"><button id="again" class="big">Play again</button><button id="menu" class="big alt">Menu</button></div>
+  <p id="o-rank" class="rank" hidden></p>
+  <form id="o-form" class="lb-form" hidden><input id="o-name" maxlength="14" placeholder="Your name" autocomplete="nickname" aria-label="Name for the leaderboard"><button class="big small-btn">Save</button></form>
+  <div class="row"><button id="again" class="big">Play again</button><button id="menu" class="big alt">Menu</button><button id="o-board" class="big alt">🏆</button></div>
+</div>
+
+<div id="board" class="screen dim" hidden>
+  <h2>🏆 World top 20</h2>
+  <ol id="b-list" class="lb-list"></ol>
+  <p id="b-msg" class="rank"></p>
+  <div class="row"><button id="b-name" class="big alt">Set your name</button><button id="b-close" class="big">Close</button></div>
 </div>
 
 <div id="paused" class="screen dim" hidden>

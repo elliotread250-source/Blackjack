@@ -1,5 +1,6 @@
 import { Run, botStep, POWER_TIME } from './logic.js';
 import { Renderer, SKINS } from './render.js';
+import { Leaderboard } from './leaderboard.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -40,6 +41,8 @@ const sfx = {
 // ---------------------------------------------------------------- game flow
 let run = new Run(), state = 'title', last = performance.now(), deadAt = 0;
 const autopilot = params.has('autopilot');
+// practice runs (?autopilot, ?seed=) never post scores
+const board = new Leaderboard(!autopilot && !params.has('seed'));
 function updateTitle() {
   const ids = Object.keys(SKINS), s = SKINS[profile.skin];
   $('s-name').textContent = s.name;
@@ -57,6 +60,7 @@ function toTitle() {
   $('title').hidden = false; $('hud').hidden = true; $('over').hidden = true; $('paused').hidden = true;
   if (!profile.owned.includes(profile.skin)) profile.skin = 'jake';
   updateTitle();
+  showWorldBest();
 }
 function play() {
   const s = SKINS[profile.skin];
@@ -65,6 +69,7 @@ function play() {
     profile.bank -= s.price; profile.owned.push(profile.skin); save(); sfx.power(); updateTitle(); return;
   }
   run = new Run(params.has('seed') ? +params.get('seed') : undefined);
+  board.startRun();
   state = 'play';
   $('title').hidden = true; $('hud').hidden = false; $('over').hidden = true;
 }
@@ -78,7 +83,62 @@ function gameOver() {
   $('o-best').textContent = isBest && score ? '🏆 New best!' : 'Best ' + Math.floor(profile.best).toLocaleString();
   $('o-coins').textContent = '+' + run.coins;
   $('over').hidden = false; $('hud').hidden = true;
+  lastScore = score; postScore(score);
 }
+
+// ---------------------------------------------------------------- global leaderboard
+let lastScore = 0, boardFrom = 'title';
+function setRank(text, gold) { $('o-rank').textContent = text; $('o-rank').classList.toggle('gold', !!gold); $('o-rank').hidden = !text; }
+function postScore(score) {
+  $('o-form').hidden = true; setRank('');
+  if (!board.enabled || score <= 0) return;
+  if (!board.name) { setRank('Add your name to join the world leaderboard'); $('o-form').hidden = false; $('o-name').focus(); return; }
+  setRank('Sending score…');
+  board.submit(score, profile.skin).then(d => {
+    setRank(d.rank ? `World rank #${d.rank}${d.rank <= 3 ? ' 🏆' : ''}` : 'Not in the top 100 yet', d.rank && d.rank <= 20);
+    showWorldBest();
+  }).catch(e => {
+    setRank(e.message);
+    if (/name/i.test(e.message)) { $('o-name').value = board.name; $('o-form').hidden = false; }
+  });
+}
+$('o-form').addEventListener('submit', e => {
+  e.preventDefault();
+  const n = $('o-name').value.replace(/\s+/g, ' ').trim().slice(0, 14);
+  if (!n) return;
+  board.setName(n); $('o-form').hidden = true; postScore(lastScore);
+});
+function renderBoard(rows, msg) {
+  const me = board.name.toLowerCase();
+  const esc = t => String(t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  $('b-list').innerHTML = rows.map(r => `<li class="${r.name.toLowerCase() === me ? 'me' : ''}"><span>${esc(r.name)}</span><span>${Number(r.score).toLocaleString()}</span></li>`).join('');
+  $('b-msg').textContent = msg || (rows.length ? '' : 'No scores yet. Be the first!');
+  $('b-name').textContent = board.name ? `Playing as ${board.name} · change` : 'Set your name';
+}
+function openBoard() {
+  boardFrom = state; state = 'board';
+  $('board').hidden = false; $('title').hidden = true; $('over').hidden = true;
+  renderBoard(board.top, board.top.length ? '' : 'Loading…');
+  board.fetchTop().then(rows => { if (state === 'board') renderBoard(rows); }).catch(() => { if (state === 'board' && !board.top.length) renderBoard([], 'Leaderboard offline. Try again soon.'); });
+}
+function closeBoard() {
+  $('board').hidden = true;
+  if (boardFrom === 'over') { state = 'over'; $('over').hidden = false; } else toTitle();
+}
+function showWorldBest() {
+  if (!board.enabled) return;
+  board.fetchTop().then(rows => {
+    const b = rows[0];
+    $('t-world').hidden = !b; if (b) $('t-world').textContent = `World best: ${b.name} · ${Number(b.score).toLocaleString()}`;
+  }).catch(() => {});
+}
+$('trophy').addEventListener('click', openBoard);
+$('o-board').addEventListener('click', openBoard);
+$('b-close').addEventListener('click', closeBoard);
+$('b-name').addEventListener('click', () => {
+  const n = (prompt('Name for the leaderboard (max 14 letters):', board.name) || '').replace(/\s+/g, ' ').trim().slice(0, 14);
+  if (n) { board.setName(n); renderBoard(board.top); }
+});
 function act(a) {
   if (state === 'title' && (a === 'jump' || a === 'tap')) return play();
   if (state !== 'play' || run.p.dead) return;
@@ -89,6 +149,7 @@ function act(a) {
 const KEYS = { ArrowLeft: 'left', a: 'left', A: 'left', ArrowRight: 'right', d: 'right', D: 'right', ArrowUp: 'jump', w: 'jump', W: 'jump', ' ': 'jump', ArrowDown: 'roll', s: 'roll', S: 'roll' };
 addEventListener('keydown', e => {
   if (e.repeat) return;
+  if (e.target.tagName === 'INPUT') return;
   if ((e.key === 'Escape' || e.key === 'p') && state === 'play') { pause(); return; }
   if (e.key === 'Enter' && state === 'over') { play(); return; }
   if (KEYS[e.key]) { e.preventDefault(); act(KEYS[e.key]); }
@@ -142,7 +203,7 @@ function frame(now) {
     for (const e of run.takeEvents()) {
       if (e.type === 'coin') sfx.coin(); else if (e.type === 'jump') sfx.jump(); else if (e.type === 'roll') sfx.roll(); else if (e.type === 'swipe') sfx.swipe();
       else if (e.type === 'land') sfx.land(); else if (e.type === 'stumble') sfx.stumble(); else if (e.type === 'power') sfx.power();
-      else if (e.type === 'crash') { sfx.crash(); deadAt = now; state = 'dying'; if (navigator.vibrate) try { navigator.vibrate(80); } catch { /* fine */ } }
+      else if (e.type === 'crash') { sfx.crash(); deadAt = now; state = 'dying'; if (navigator.vibrate && matchMedia('(pointer: coarse)').matches && navigator.userActivation?.hasBeenActive) try { navigator.vibrate(80); } catch { /* fine */ } }
     }
     hud();
   } else if (state === 'dying' && now - deadAt > 1100) gameOver();
