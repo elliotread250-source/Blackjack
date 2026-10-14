@@ -168,6 +168,128 @@ const DRAW = {
   glass(g, n) { g.fillStyle = '#fff'; g.fillRect(0, 0, n, n); },
 };
 
+// ---- Hello Neighbor style: bolder, chunkier, cartoonier versions of the main surfaces
+Object.assign(DRAW, {
+  brick(g, n, r) {
+    g.fillStyle = grey(95); g.fillRect(0, 0, n, n);
+    const rows = 6, bw = n / 3, bh = n / rows;
+    for (let y = 0; y < rows; y++) for (let x = -1; x < 4; x++) {
+      const ox = (y % 2) * bw / 2, v = 205 + r() * 50;
+      g.fillStyle = grey(v); g.fillRect(x * bw + ox + 4, y * bh + 4, bw - 8, bh - 8);
+      g.fillStyle = grey(v + 25); g.fillRect(x * bw + ox + 6, y * bh + 6, bw - 14, 4);             // highlight
+      g.fillStyle = 'rgba(0,0,0,0.18)'; g.fillRect(x * bw + ox + 4, y * bh + bh - 9, bw - 8, 5);   // shadow
+    }
+    noise(g, n, r, 18, 2);
+  },
+  siding(g, n, r) {
+    const rows = 6, h = n / rows;
+    for (let y = 0; y < rows; y++) {
+      const grd = g.createLinearGradient(0, y * h, 0, (y + 1) * h);
+      grd.addColorStop(0, grey(255)); grd.addColorStop(0.75, grey(232)); grd.addColorStop(1, grey(120));
+      g.fillStyle = grd; g.fillRect(0, y * h, n, h);
+      g.fillStyle = grey(70); g.fillRect(0, (y + 1) * h - 3, n, 3);
+    }
+    noise(g, n, r, 10, 2);
+    for (let i = 0; i < 4; i++) { g.fillStyle = grey(150); g.fillRect(r() * n, 0, 3, n); }             // seams
+  },
+  shingle(g, n, r) {
+    const rows = 6, h = n / rows, w = n / 5;
+    g.fillStyle = grey(60); g.fillRect(0, 0, n, n);
+    for (let y = 0; y < rows; y++) for (let x = -1; x < 6; x++) {
+      const ox = (y % 2) * w / 2, v = 180 + r() * 60;
+      g.fillStyle = grey(v); g.beginPath();
+      g.moveTo(x * w + ox + 2, y * h); g.lineTo(x * w + ox + w - 2, y * h); g.lineTo(x * w + ox + w - 2, y * h + h * 0.7);
+      g.quadraticCurveTo(x * w + ox + w / 2, y * h + h + 4, x * w + ox + 2, y * h + h * 0.7); g.fill();
+      g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(x * w + ox + 2, y * h + h * 0.62, w - 4, 3);
+    }
+  },
+  paper1(g, n, r) {
+    // fat candy stripes with a thin pinstripe
+    for (let i = 0; i < 6; i++) { g.fillStyle = grey(i % 2 ? 175 : 245); g.fillRect(i * n / 6, 0, n / 6, n); }
+    g.fillStyle = grey(110); for (let i = 0; i < 6; i++) g.fillRect(i * n / 6 + n / 12 - 1.5, 0, 3, n);
+    noise(g, n, r, 10, 2); stains(g, n, r);
+  },
+  paper2(g, n, r) {
+    // big polka dots with dark rims
+    g.fillStyle = grey(240); g.fillRect(0, 0, n, n);
+    const s = n / 3;
+    for (let y = 0; y < 4; y++) for (let x = 0; x < 4; x++) {
+      const cx = x * s + (y % 2) * s / 2, cy = y * s;
+      g.fillStyle = grey(110); g.beginPath(); g.arc(cx, cy, s * 0.3, 0, 7); g.fill();
+      g.fillStyle = grey(175); g.beginPath(); g.arc(cx, cy, s * 0.24, 0, 7); g.fill();
+      g.fillStyle = grey(225); g.beginPath(); g.arc(cx - s * 0.07, cy - s * 0.07, s * 0.07, 0, 7); g.fill();
+    }
+    noise(g, n, r, 10, 2); stains(g, n, r);
+  },
+  paper3(g, n, r) {
+    // zig-zag chevrons
+    g.fillStyle = grey(240); g.fillRect(0, 0, n, n);
+    const rows = 6, h = n / rows;
+    for (let y = 0; y < rows; y++) {
+      g.strokeStyle = grey(y % 2 ? 140 : 190); g.lineWidth = h * 0.42; g.lineJoin = 'miter';
+      g.beginPath(); for (let x = -1; x <= 8; x++) g.lineTo(x * n / 8, y * h + (x % 2 ? h * 0.25 : h * 0.75)); g.stroke();
+    }
+    noise(g, n, r, 10, 2); stains(g, n, r);
+  },
+  woodfloor(g, n, r) {
+    const rows = 6, h = n / rows;
+    for (let y = 0; y < rows; y++) {
+      const off = r() * n;
+      g.fillStyle = grey(175 + r() * 70); g.fillRect(0, y * h, n, h);
+      for (let k = 0; k < 10; k++) { g.strokeStyle = `rgba(60,40,20,${0.08 + r() * 0.12})`; g.lineWidth = 1 + r() * 1.5; g.beginPath(); const yy = y * h + 4 + r() * (h - 8); g.moveTo(0, yy); g.bezierCurveTo(n / 3, yy + (r() - 0.5) * 8, n * 2 / 3, yy + (r() - 0.5) * 8, n, yy); g.stroke(); }
+      g.fillStyle = grey(60); g.fillRect(0, y * h, n, 3); g.fillRect(off, y * h, 4, h);
+      g.fillStyle = 'rgba(0,0,0,0.25)'; g.beginPath(); g.arc(off + 14, y * h + h / 2, 2.5, 0, 7); g.arc(off - 14, y * h + h / 2, 2.5, 0, 7); g.fill();
+    }
+  },
+  carpet(g, n, r) {
+    // diamond-pattern rug
+    g.fillStyle = grey(200); g.fillRect(0, 0, n, n); noise(g, n, r, 30, 1);
+    const s = n / 4;
+    for (let y = 0; y <= 4; y++) for (let x = 0; x <= 4; x++) {
+      g.fillStyle = (x + y) % 2 ? grey(140) : grey(240);
+      g.beginPath(); g.moveTo(x * s, y * s - s * 0.4); g.lineTo(x * s + s * 0.4, y * s); g.lineTo(x * s, y * s + s * 0.4); g.lineTo(x * s - s * 0.4, y * s); g.fill();
+    }
+    g.strokeStyle = grey(90); g.lineWidth = 6; g.strokeRect(4, 4, n - 8, n - 8);
+  },
+  tile(g, n, r) {
+    g.fillStyle = grey(80); g.fillRect(0, 0, n, n);
+    const k = 4, s = n / k;
+    for (let y = 0; y < k; y++) for (let x = 0; x < k; x++) {
+      g.fillStyle = grey(230 + r() * 25); g.fillRect(x * s + 3, y * s + 3, s - 6, s - 6);
+      g.fillStyle = 'rgba(255,255,255,0.5)'; g.fillRect(x * s + 6, y * s + 6, s * 0.4, 4);
+    }
+  },
+  checker(g, n, r) {
+    const k = 4, s = n / k;
+    for (let y = 0; y < k; y++) for (let x = 0; x < k; x++) { g.fillStyle = (x + y) % 2 ? grey(45) : grey(245); g.fillRect(x * s, y * s, s, s); }
+    noise(g, n, r, 10, 2);
+  },
+  fence(g, n, r) {
+    const k = 6, w = n / k;
+    g.fillStyle = grey(50); g.fillRect(0, 0, n, n);
+    for (let i = 0; i < k; i++) {
+      g.fillStyle = grey(205 + r() * 40); g.fillRect(i * w + 4, 0, w - 8, n);
+      g.fillStyle = 'rgba(255,255,255,0.35)'; g.fillRect(i * w + 6, 0, 3, n);
+      for (let j = 0; j < 3; j++) { g.fillStyle = 'rgba(0,0,0,0.3)'; g.beginPath(); g.arc(i * w + w / 2, n * (0.2 + j * 0.3), 2.5, 0, 7); g.fill(); }
+    }
+  },
+  block(g, n, r) {
+    g.fillStyle = grey(90); g.fillRect(0, 0, n, n);
+    const rows = 4, bw = n / 2, bh = n / rows;
+    for (let y = 0; y < rows; y++) for (let x = -1; x < 3; x++) { const ox = (y % 2) * bw / 2; g.fillStyle = grey(200 + r() * 40); g.fillRect(x * bw + ox + 5, y * bh + 5, bw - 10, bh - 10); g.fillStyle = 'rgba(0,0,0,0.15)'; g.fillRect(x * bw + ox + 5, y * bh + bh - 12, bw - 10, 7); }
+    noise(g, n, r, 20, 2);
+  },
+  hedge(g, n, r) {
+    g.fillStyle = grey(90); g.fillRect(0, 0, n, n);
+    for (let i = 0; i < n; i++) { const v = 120 + r() * 135; g.fillStyle = grey(v); g.beginPath(); g.arc(r() * n, r() * n, 4 + r() * 7, 0, 7); g.fill(); g.fillStyle = grey(Math.min(255, v + 40)); g.beginPath(); g.arc(r() * n, r() * n, 2, 0, 7); g.fill(); }
+  },
+  grass(g, n, r) {
+    g.fillStyle = grey(205); g.fillRect(0, 0, n, n);
+    for (let i = 0; i < n * 4; i++) { g.fillStyle = grey(150 + r() * 105); const x = r() * n, y = r() * n; g.beginPath(); g.moveTo(x, y); g.lineTo(x + 2, y - 6 - r() * 5); g.lineTo(x + 3, y); g.fill(); }
+    for (let i = 0; i < 6; i++) { g.fillStyle = 'rgba(255,255,255,0.5)'; g.beginPath(); g.arc(r() * n, r() * n, 2.5, 0, 7); g.fill(); }
+  },
+});
+
 function wood(g, n, r, vertical) {
   g.fillStyle = grey(205); g.fillRect(0, 0, n, n);
   for (let i = 0; i < 70; i++) {

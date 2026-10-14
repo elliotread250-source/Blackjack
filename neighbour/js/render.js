@@ -45,11 +45,15 @@ export class Renderer {
 
   makeMaterials() {
     const m = {};
+    // three-step toon ramp: chunky cartoon shading instead of smooth gradients
+    const ramp = new THREE.DataTexture(new Uint8Array([90, 90, 90, 255, 175, 175, 175, 255, 255, 255, 255, 255]), 3, 1, THREE.RGBAFormat);
+    ramp.minFilter = ramp.magFilter = THREE.NearestFilter; ramp.needsUpdate = true;
+    this.toonRamp = ramp;
     for (const k of Object.keys(TEX_SCALE)) {
       if (!this.tex[k]) continue;
       if (k === 'emissive') m[k] = new THREE.MeshBasicMaterial({ vertexColors: true });
       else if (k === 'glass') m[k] = new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.32, depthWrite: false, emissive: 0x1a2430 });
-      else m[k] = new THREE.MeshLambertMaterial({ map: this.tex[k], vertexColors: true });
+      else m[k] = new THREE.MeshToonMaterial({ map: this.tex[k], vertexColors: true, gradientMap: ramp });
     }
     this.glassMat = new THREE.MeshLambertMaterial({ color: 0xa8cce8, transparent: true, opacity: 0.28, depthWrite: false, emissive: 0x223040 });
     return m;

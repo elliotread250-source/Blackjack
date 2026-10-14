@@ -5,6 +5,13 @@ import * as THREE from 'three';
 import { TEX_SCALE } from './textures.js';
 
 const tmpC = new THREE.Color();
+// Cartoon look: every colour gets pushed brighter and more saturated, like the wacky Hello Neighbor houses.
+const HSL = {};
+function vivid(hex) {
+  tmpC.setHex(hex); tmpC.getHSL(HSL);
+  if (HSL.s > 0.04) tmpC.setHSL(HSL.h, Math.min(1, HSL.s * 1.5 + 0.08), Math.min(0.92, HSL.l * 1.04 + 0.02));
+  return tmpC;
+}
 const tmpV = new THREE.Vector3();
 const tmpN = new THREE.Vector3();
 const tmpM3 = new THREE.Matrix3();
@@ -52,7 +59,7 @@ export class GeoBuilder {
       const m = typeof mat === 'string' ? mat : (mat[face] || mat.all || 'trim');
       if (!m) continue;
       const hex = typeof color === 'number' ? color : (color[face] !== undefined ? color[face] : color.all !== undefined ? color.all : 0xffffff);
-      tmpC.setHex(hex);
+      vivid(hex);
       const base = [tmpC.r, tmpC.g, tmpC.b];
       const sc = TEX_SCALE[m] || 1;
       const uv = opts.local ? LUV : v.map(p => { const q = uvf(p); return [q[0] / sc, q[1] / sc]; });
@@ -69,7 +76,7 @@ export class GeoBuilder {
     const g = this.grp(mat);
     const P = geo.attributes.position, Nn = geo.attributes.normal, U = geo.attributes.uv;
     tmpM3.getNormalMatrix(matrix);
-    tmpC.setHex(color);
+    vivid(color);
     const s = g.n;
     for (let i = 0; i < P.count; i++) {
       tmpV.fromBufferAttribute(P, i).applyMatrix4(matrix);
@@ -227,16 +234,33 @@ export function addDecor(B, d) {
       break;
     }
     case 'car': {
-      const c = d.c || 0x37506e;
-      rbox(B, 'paint', d.x, 0.28, d.z, 4.0, 0.62, 1.8, ry + Math.PI / 2, c);
-      rbz(B, 'paint', at(0.0, -0.2), 0.9, 2.2, 0.5, 1.6, ry + Math.PI / 2, c);
-      rbz(B, 'glass', at(0.0, -0.2), 0.92, 2.1, 0.46, 1.64, ry + Math.PI / 2, 0x9ac8e8);
-      for (const [wx, wz] of [[-0.85, -1.3], [0.85, -1.3], [-0.85, 1.3], [0.85, 1.3]]) {
-        const [cx, cz] = at(wz, wx);
-        B.geom('metal', geo('cyl'), mat(cx, 0.32, cz, Math.PI / 2, ry + Math.PI / 2, 0, 0.32, 0.22, 0.32), 0x1a1a1a);
+      // A rounded little hatchback. P(along, side) places things along the car's length / across it.
+      const c = d.c || 0x37506e, yaw = ry + Math.PI / 2, P = (a, b) => at(b, -a);
+      const dark = 0x2a3442, trimC = 0xd8dce4;
+      rbz(B, 'paint', P(0, 0), 0.22, 4.1, 0.6, 1.84, yaw, c);                 // body
+      rbz(B, 'paint', P(1.45, 0), 0.82, 1.2, 0.14, 1.76, yaw, c);             // bonnet hump
+      rbz(B, 'paint', P(-0.35, 0), 0.82, 2.1, 0.6, 1.66, yaw, c);             // cabin
+      rbz(B, 'paint', P(-0.35, 0), 1.42, 1.9, 0.08, 1.56, yaw, 0xf2f2ea);     // white roof
+      rbz(B, 'paint', P(0.74, 0), 0.9, 0.06, 0.46, 1.5, yaw, dark);           // windscreen
+      rbz(B, 'paint', P(-1.44, 0), 0.9, 0.06, 0.44, 1.5, yaw, dark);          // rear window
+      for (const sd of [-0.84, 0.84]) {
+        rbz(B, 'paint', P(-0.05, sd), 0.92, 0.8, 0.42, 0.04, yaw, dark);      // side windows
+        rbz(B, 'paint', P(-0.95, sd), 0.92, 0.7, 0.42, 0.04, yaw, dark);
+        rbz(B, 'paint', P(0.65, sd + Math.sign(sd) * 0.12), 0.95, 0.12, 0.1, 0.18, yaw, c);   // mirrors
+        rbz(B, 'emissive', P(2.06, sd * 0.72), 0.5, 0.04, 0.16, 0.34, yaw, 0xfff2c0);         // headlights
+        rbz(B, 'emissive', P(-2.06, sd * 0.74), 0.55, 0.04, 0.14, 0.3, yaw, 0xff3a2a);        // tail lights
+        rbz(B, 'paint', P(0, sd * 1.0), 0.42, 3.4, 0.08, 0.02, yaw, trimC);                   // chrome strip
       }
-      rbz(B, 'emissive', at(-2.0, 0.6), 0.55, 0.05, 0.14, 0.3, ry + Math.PI / 2, 0xffe8b0);
-      rbz(B, 'emissive', at(-2.0, -0.6), 0.55, 0.05, 0.14, 0.3, ry + Math.PI / 2, 0xffe8b0);
+      rbz(B, 'paint', P(2.08, 0), 0.16, 0.12, 0.2, 1.9, yaw, 0x3a3a42);       // bumpers
+      rbz(B, 'paint', P(-2.08, 0), 0.16, 0.12, 0.2, 1.9, yaw, 0x3a3a42);
+      rbz(B, 'paint', P(2.07, 0), 0.38, 0.03, 0.18, 0.7, yaw, 0x2a2a30);       // grille
+      for (const [a, b] of [[1.35, -0.86], [1.35, 0.86], [-1.3, -0.86], [-1.3, 0.86]]) {
+        const [cx, cz] = P(a, b);
+        // wheels: axle across the car (Rz turns the cylinder on its side, then Ry yaws it with the car)
+        B.geom('metal', geo('cyl'), mat(cx, 0.36, cz, 0, ry, Math.PI / 2, 0.36, 0.28, 0.36), 0x1a1a1e);
+        B.geom('metal', geo('cyl'), mat(cx, 0.36, cz, 0, ry, Math.PI / 2, 0.2, 0.3, 0.2), 0xc8ccd4);
+        rbz(B, 'paint', P(a, b * 1.02), 0.62, 0.95, 0.1, 0.12, yaw, c);         // wheel arch lip
+      }
       break;
     }
     case 'litwindow': {
@@ -296,8 +320,8 @@ function vecAt(xz, y) { return [xz[0], y, xz[1]]; }
 // ---------------------------------------------------------------- roofs
 // gable roof over [x0,x1]x[z0,z1] from height y, ridge h above, along x (or z); a spire is a pyramid
 export function addRoof(B, r) {
-  tmpC.setHex(r.tint); const rc = [tmpC.r, tmpC.g, tmpC.b];
-  tmpC.setHex(r.gable); const gc = [tmpC.r, tmpC.g, tmpC.b];
+  vivid(r.tint); const rc = [tmpC.r, tmpC.g, tmpC.b];
+  vivid(r.gable); const gc = [tmpC.r, tmpC.g, tmpC.b];
   const sc = TEX_SCALE.shingle;
   if (r.spire) {
     const cx = (r.x0 + r.x1) / 2, cz = (r.z0 + r.z1) / 2, ap = [cx, r.y + r.h * 1.6, cz];
