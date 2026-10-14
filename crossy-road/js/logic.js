@@ -11,7 +11,7 @@
 export const TPS = 60;                 // fixed simulation rate
 export const TICK = 1 / TPS;
 export const COLS = 4;                 // playable columns are -4..4
-export const HOP_TICKS = 8;            // one hop takes 8 ticks (0.133 s)
+export const HOP_TICKS = 5;            // one hop takes 5 ticks (0.083 s): snappy
 export const HALF = 18;                // lanes wrap at x = +-18 (well outside the view)
 export const WRAP = HALF * 2;
 export const EDGE_DEATH = 5.4;         // carried this far out on a log = gone
@@ -20,7 +20,7 @@ export const AHEAD = 32;               // rows generated ahead of the player
 export const KEEP_BEHIND = 14;         // rows kept behind the player
 export const WALL_ROW = -4;            // rows at or below this are solid forest
 export const IDLE_LIMIT = 9 * 60;       // ticks without a hop before the eagle comes
-export const MAX_QUEUE = 2;            // buffered hops
+export const MAX_QUEUE = 3;            // buffered hops, so quick taps are never dropped
 export const PLAYER_HALF = 0.28;       // player half width for collisions
 
 export const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);

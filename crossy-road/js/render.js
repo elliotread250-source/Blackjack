@@ -518,7 +518,7 @@ export class Renderer {
         const u = pose.u;
         sy = 1 + 0.2 * Math.sin(Math.PI * u) - (u < 0.2 ? 0.28 * (1 - u / 0.2) : 0);
       } else {
-        const since = (g.tick - p.landTick) / 7;
+        const since = (g.tick - p.landTick) / 5;
         if (since < 1) sy = 1 - 0.22 * Math.sin(Math.PI * since);
         else sy = 1 + Math.sin(t * 3.2) * 0.025;
         const bump = (g.tick - p.bumpTick) / 8;
