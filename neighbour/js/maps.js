@@ -4,6 +4,7 @@
 // target, restore power, then reach `exit`.
 import { makeBox } from './geom.js';
 import { roundedLoop, act3Objective } from './act3.js';
+import { dressRooms, furnish, prop, trimShell } from './dress.js';
 
 const H = 3.2, U = 6.4;
 
@@ -35,19 +36,29 @@ function kit(L) {
       breakable: opts.breakable !== false, name, outside: opts.outside || 1, learned: false, entry: opts.entry || null });
     return [c, w, sill, sill + (opts.h || 1.2)];
   }
-  function lamp(name, x, y, z, color = 0xffce8b, power = false, intensity = 3.5) {
-    detail(x - 0.3, y - 0.06, z - 0.3, x + 0.3, y + 0.06, z + 0.3, 'emissive', color);
-    L.lights.push({ name, x, y: y - 0.15, z, color, intensity, dist: 9, power });
+  // Furniture models over collision boxes (see dress.js); the boxes keep doing the physics.
+  const fur = (kind, b, o) => furnish(L, kind, b, o);
+  const pr = (kind, x, y, z, w, d, h, o) => prop(L, kind, x, y, z, w, d, h, o);
+  // A ceiling light: the fitting is a model (L.lampStyle 'bulb' for basements, else a glass dome).
+  function lamp(name, x, y, z, color = 0xffce8b, power = false, intensity = 3.5, o = {}) {
+    const fx = o.fixture || L.lampStyle || 'dome';
+    if (fx === 'bulb') pr('bulb', x, y + 0.1, z, 0.3, 0.3, 0.4, { c: color, drop: 0.22 });
+    else if (fx === 'pendant') pr('pendant', x, y + 0.08, z, 0.6, 0.6, 0.8, { c: color, drop: o.drop ?? 0.5 });
+    else if (fx === 'dome') pr('ceilinglamp', x, y + 0.06, z, 0.6, 0.6, 0.2, { c: color });
+    else detail(x - 0.3, y - 0.06, z - 0.3, x + 0.3, y + 0.06, z + 0.3, 'emissive', color);
+    L.lights.push({ name, x, y: y - 0.15, z, color, intensity, dist: 9, power, ...(o.flicker ? { flicker: o.flicker } : {}) });
   }
-  function table(x, y, z, color = 0x775b3f, w = 1, d = 0.48) {
-    box(x - w, y + 0.72, z - d, x + w, y + 0.86, z + d, 'woodfloor', color);
-    for (const dx of [-w + 0.18, w - 0.18]) for (const dz of [-d + 0.14, d - 0.14]) box(x + dx - 0.06, y, z + dz - 0.06, x + dx + 0.06, y + 0.72, z + dz + 0.06, 'wood', color);
+  function table(x, y, z, color = 0x775b3f, w = 1, d = 0.48, o = {}) {
+    const parts = [box(x - w, y + 0.72, z - d, x + w, y + 0.86, z + d, 'woodfloor', color)];
+    for (const dx of [-w + 0.18, w - 0.18]) for (const dz of [-d + 0.14, d - 0.14]) parts.push(box(x + dx - 0.06, y, z + dz - 0.06, x + dx + 0.06, y + 0.72, z + dz + 0.06, 'wood', color));
+    fur(o.kind || 'table', parts, { c: color, ...o });
   }
-  function shelves(x, y, z, axis = 'x', tint = 0x92765a) {
-    const [hx, hz] = axis === 'x' ? [0.8, 0.34] : [0.34, 0.8];
-    if (axis === 'x') { box(x - hx, y, z - hz, x - hx + 0.1, y + 2.1, z + hz, 'metal', 0x45565b); box(x + hx - 0.1, y, z - hz, x + hx, y + 2.1, z + hz, 'metal', 0x45565b); }
-    else { box(x - hx, y, z - hz, x + hx, y + 2.1, z - hz + 0.1, 'metal', 0x45565b); box(x - hx, y, z + hz - 0.1, x + hx, y + 2.1, z + hz, 'metal', 0x45565b); }
-    for (const sy of [0.15, 0.8, 1.5, 2.05]) box(x - hx, y + sy, z - hz, x + hx, y + sy + 0.08, z + hz, 'board', tint);
+  function shelves(x, y, z, axis = 'x', tint = 0x92765a, o = {}) {
+    const [hx, hz] = axis === 'x' ? [0.8, 0.34] : [0.34, 0.8], parts = [];
+    if (axis === 'x') { parts.push(box(x - hx, y, z - hz, x - hx + 0.1, y + 2.1, z + hz, 'metal', 0x45565b), box(x + hx - 0.1, y, z - hz, x + hx, y + 2.1, z + hz, 'metal', 0x45565b)); }
+    else { parts.push(box(x - hx, y, z - hz, x + hx, y + 2.1, z - hz + 0.1, 'metal', 0x45565b), box(x - hx, y, z + hz - 0.1, x + hx, y + 2.1, z + hz, 'metal', 0x45565b)); }
+    for (const sy of [0.15, 0.8, 1.5, 2.05]) parts.push(box(x - hx, y + sy, z - hz, x + hx, y + sy + 0.08, z + hz, 'board', tint));
+    fur(o.kind || 'shelving', parts, { faces: axis === 'x' ? '+z' : '+x', h: 2.15, c: tint, ...o });
   }
   const item = (id, type, x, y, z, name) => L.items.push({ id, type, x, y, z, missionName: name });
   // Open-fronted locker; `face` is the side the opening points to: '+z', '-z', '+x' or '-x'.
@@ -84,7 +95,7 @@ function kit(L) {
       detail(Math.min(xa, xb) + (dir > 0 ? 0 : 0.34), y0 + (i + 1) * 0.2, z0 + 0.02, Math.min(xa, xb) + (dir > 0 ? 0.06 : 0.4), y0 + (i + 1) * 0.2 + 0.012, z1 - 0.02, 'trim', 0xd9bc72);
     }
   }
-  return { box, detail, wall, door, win, lamp, table, shelves, item, hide, poi, stairs, stairsX, room, mount };
+  return { box, detail, wall, door, win, lamp, table, shelves, item, hide, poi, stairs, stairsX, room, mount, fur, pr };
 }
 
 function base(mission, extra) {
@@ -102,10 +113,10 @@ function base(mission, extra) {
 //   red-padlocked vault -> the jar -> back up the stairs to the hatch.
 function buildCellar() {
   const L = base(1, {
-    targets: ['jar'], indoor: true, outdoorLight: 0.25, groundVisualY: -0.05,
+    targets: ['jar'], indoor: true, outdoorLight: 0.25, groundVisualY: -0.05, lampStyle: 'bulb',
     titleCamera: { from: [10, 4.7, 2.6], to: [4, 0.6, -12] },
   });
-  const { box, detail, wall, door, win, lamp, table, shelves, item, hide, poi, stairs, room, mount } = kit(L);
+  const { box, detail, wall, door, win, lamp, table, shelves, item, hide, poi, stairs, room, mount, fur, pr } = kit(L);
   const wallH = 3.05, stone = 0x7d7468, damp = 0x6d6a62;
 
   // Shell: floor, outer walls and a ceiling slab with the stair shaft cut out.
@@ -153,37 +164,42 @@ function buildCellar() {
   wall('x', -18.2, -3.8, 13.8, 0, wallH, [door('crawl', 'x', -18.2, 9, 0, null, 'Crawlspace door')], 'block', stone);
 
   // Laundry: two washing machines, a mangle, hanging sheets, and the fuse on the folding table.
-  for (const x of [-13.2, -12.2]) { box(x, 0, 2.1, x + 0.9, 0.9, 2.95, 'metal', 0xd7d9d2); detail(x + 0.2, 0.35, 2.08, x + 0.7, 0.75, 2.1, 'glass', 0x7d97a6); }
-  box(-6.5, 0, 1.9, -4.3, 0.9, 2.95, 'counter', 0x9aa79a);
+  for (const x of [-13.2, -12.2]) fur('washer', box(x, 0, 2.1, x + 0.9, 0.9, 2.95, 'metal', 0xd7d9d2), { faces: '-z' });
+  fur('counter', box(-6.5, 0, 1.9, -4.3, 0.9, 2.95, 'counter', 0x9aa79a), { faces: '-z', sink: true, c: 0x7a8a7a });
+  pr('basin', -10.6, 0, 2.7, 0.7, 0.5, 0.9, { faces: '-z' });
+  pr('pipes', -8.9, 2.75, 2.8, 9.6, 0.4, 0.2, { n: 2 });
   for (const x of [-12, -10, -8]) detail(x, 1.2, -2.6, x + 1.4, 2.4, -2.55, 'fabric', 0xe2ddd0);
   detail(-13.8, 2.45, -2.6, -4.2, 2.5, -2.55, 'metal', 0x555b5f);
   table(-9, 0, 0.6, 0x8a7457);
   item('fuse', 'fuse', -9, 0.87, 0.6, 'Fuse');
-  lamp('laundry', -9, 2.95, -1, 0xfff0c8);
+  lamp('laundry', -9, 2.95, -1, 0xfff0c8, false, 3.5, { flicker: 0.3 });
+  pr('crates', -13.1, 0, -5.8, 1.2, 1.2, 1, {});
 
   // Workshop: the boiler, a workbench, paint tins, pipes, and a locker to hide in.
-  box(-3.4, 0, 1.4, -1.6, 2.3, 2.95, 'metal', 0x5a7681); detail(-3.2, 1.1, 1.38, -1.8, 1.25, 1.4, 'emissive', 0xf0a040);
-  for (const x of [-3, -2]) detail(x, 2.3, 1.9, x + 0.14, 3.05, 2.04, 'metal', 0x8e5c42);
-  table(2, 0, 2.3, 0x6b5136, 1.3, 0.5);
-  box(5.6, 0, 2.2, 8.6, 1.4, 2.95, 'board', 0x6d5a45);
+  fur('boiler', box(-3.4, 0, 1.4, -1.6, 2.3, 2.95, 'metal', 0x5a7681), { faces: '-z' });
+  pr('pipes', -2.5, 2.8, 0.6, 2.4, 0.4, 0.2, { faces: '+x', n: 2, valve: true });
+  table(2, 0, 2.3, 0x6b5136, 1.3, 0.5, { kind: 'workbench', faces: '-z' });
+  L.decor.push({ t: 'pegboard', x: 2, y: 1.7, z: 2.98, ry: Math.PI });
+  fur('shelving', box(5.6, 0, 2.2, 8.6, 1.4, 2.95, 'board', 0x6d5a45), { faces: '-z' });
+  pr('barrel', -3.2, 0, -5.9, 0.7, 0.7, 0.95, { c: 0x5a6a3a });
   hide('workLocker', 7.6, 0, -5.9, '+z');
-  lamp('stove', 1, 2.95, -2);
+  lamp('stove', 1, 2.95, -2, 0xffce8b, false, 3.5, { flicker: 0.2 });
   poi('stove', 1, 0, -2, 3);
 
   // Corridor clutter and things to throw.
-  for (const x of [-13.5, 13.4]) detail(x, 2.55, -10, x + 0.12, 2.7, -7, 'metal', 0x8e5c42);
-  detail(-13.9, 2.6, -8.6, 13.7, 2.74, -8.46, 'metal', 0x8e5c42);
+  pr('pipes', -0.1, 2.7, -8.55, 27.6, 0.5, 0.2, { n: 3 });
+  for (const x of [-13.45, 13.45]) pr('pipes', x, 2.62, -8.5, 3, 0.3, 0.2, { faces: '+x', n: 1 });
+  pr('pipes', 4, 2.4, -7.1, 7.6, 0.2, 0.2, { n: 1, valve: true });
   item('can1', 'can', -2, 0, -8.4); item('bottle1', 'bottle', 5.5, 0, -8.3); item('can2', 'can', -12.5, 0, -9.2);
-  lamp('corridor', -7, 2.95, -8.5, 0xffd9a0); lamp('corridor2', 6, 2.95, -8.5, 0xffd9a0);
+  lamp('corridor', -7, 2.95, -8.5, 0xffd9a0, false, 3.5, { flicker: 0.7 }); lamp('corridor2', 6, 2.95, -8.5, 0xffd9a0);
   poi('corridor', -5, 0, -8.5, 3); poi('stairfoot', 10, 0, -8.6, 1);
 
   // Vault (red padlock): wine racks, a chained chest, and the jar on a draped table.
-  for (const [x, z] of [[-12.6, -22], [-12.6, -17], [-5.3, -22], [-5.3, -17]]) shelves(x, 0, z, 'z', 0x5c3a2e);
-  for (const [x, z] of [[-12.6, -22], [-12.6, -17], [-5.3, -22], [-5.3, -17]]) for (const dy of [0.25, 0.9, 1.6]) detail(x - 0.25, dy, z - 0.7, x + 0.25, dy + 0.12, z + 0.7, 'glass', 0x3c5a3a);
+  for (const [x, z] of [[-12.6, -22], [-12.6, -17], [-5.3, -22], [-5.3, -17]]) shelves(x, 0, z, 'z', 0x5c3a2e, { kind: 'winerack', faces: x < -9 ? '+x' : '-x' });
   table(-9, 0, -23.5, 0x4a3226);
   detail(-10, 0.86, -24, -8, 0.88, -23, 'fabric', 0x6e1f1f);
   item('jar', 'vase', -9, 0.87, -23.5, 'The jar with his name on it');
-  box(-13.5, 0, -14, -11.5, 0.7, -12.6, 'wood', 0x5a4030);
+  fur('chest', box(-13.5, 0, -14, -11.5, 0.7, -12.6, 'wood', 0x5a4030), { faces: '+x', chain: true, c: 0x5a4030 });
   lamp('basement', -9, 2.95, -18, 0xe0604a);
 
   // Cold room (electric lock): steel shelving, hanging hooks, and the red key on the counter.
@@ -194,8 +210,11 @@ function buildCellar() {
   lamp('cold', 0, 2.95, -14, 0x9fd6ff, true);
 
   // Pump room: sump pump, pressure tank, and the fuse box on the east wall.
-  box(6, 0, -17.6, 7.6, 1.2, -16.2, 'metal', 0x4f6e6a); box(10.8, 0, -17.6, 12.4, 2.2, -16, 'metal', 0x6b7d86);
-  detail(7.6, 0.9, -16.95, 10.8, 1.05, -16.8, 'metal', 0x8e5c42);
+  fur('tank', box(6, 0, -17.6, 7.6, 1.2, -16.2, 'metal', 0x4f6e6a), { c: 0x4f6e6a });
+  fur('boiler', box(10.8, 0, -17.6, 12.4, 2.2, -16, 'metal', 0x6b7d86), { faces: '+z' });
+  pr('pipes', 9.2, 0.97, -16.9, 3.2, 0.3, 0.2, { n: 1, valve: true });
+  pr('elecbox', 13.66, 0.6, -15.2, 0.6, 0.24, 0.7, { faces: '-x' });
+  pr('pipes', 9, 2.75, -10.9, 9.4, 0.4, 0.2, { n: 2 });
   L.fusebox = { x: 13.6, y: 1.35, z: -13.5 };
   lamp('pump', 9, 2.95, -14, 0xffc890);
   poi('pump', 9.5, 0, -13, 2);
@@ -205,8 +224,9 @@ function buildCellar() {
   for (const [x, z] of [[0, -21], [6, -24], [11, -21.5]]) { box(x - 0.9, 0, z - 0.6, x + 0.9, 0.9, z + 0.6, 'fabric', 0xb9b2a2); }
   item('crate1', 'crate', 3.5, 0, -20); item('crate2', 'crate', 8.5, 0, -24.6); item('ball1', 'ball', -2, 0, -24);
   hide('crawlLocker', -1.6, 0, -25.2, '+z');
-  detail(-3.8, 2.6, -22.1, 13.8, 2.74, -21.95, 'metal', 0x8e5c42);
-  lamp('crawl', 5, 2.95, -22, 0xd8b583, false, 2.4);
+  pr('pipes', 5, 2.67, -22.03, 17.6, 0.4, 0.2, { n: 2, valve: true });
+  pr('crates', 12.6, 0, -24.7, 1.8, 1.6, 1.2, {}); pr('barrel', -3, 0, -19, 0.7, 0.7, 0.95, { c: 0x6a4a2a });
+  lamp('crawl', 5, 2.95, -22, 0xd8b583, false, 2.4, { flicker: 1 });
   poi('crawl', 5, 0, -19.6, 2);
 
   room(-14, -0.1, -26, 14, 3.05, 3.2, 0.34);
@@ -223,6 +243,17 @@ function buildCellar() {
     if (w.doorById.basement.locked) return 'Unlock the red padlock on the vault door (north-west).';
     return 'Take the jar from the vault.';
   };
+  const R = (name, x0, z0, x1, z1, wall, floor, ceil, o = {}) => ({ name, x0, z0, x1, z1, y: 0, h: 3.05, wall, floor, ceil, ...o });
+  L.rooms = [
+    R('laundry', -13.8, -6.8, -4, 3, 'wp_basement', 'tile', 'planks', { full: true, trim: 0x8a8070, floorTint: 0x8a867a }),
+    R('workshop', -3.8, -6.8, 8.8, 3, 'block', 'concrete', 'planks', { tint: 0x8a8478, trim: 0x6a5a48, floorTint: 0x8a8a84 }),
+    R('corridor', -13.8, -10, 13.8, -7, 'stone', 'concrete', 'concrete', { tint: 0x8a8274, trim: 0x5a5248, floorTint: 0x7a7c7e }),
+    R('vault', -13.8, -25.8, -4, -10.2, 'brick', 'stone', 'concrete', { tint: 0x7a4a3e, trim: 0x3a2a22, floorTint: 0x8a8070 }),
+    R('cold', -3.8, -18, 4, -10.2, 'tile', 'tile', 'concrete', { tint: 0xc8dde6, trim: 0x8aa0aa, floorTint: 0xaab8c0 }),
+    R('pump', 4.2, -18, 13.8, -10.2, 'concrete', 'concrete', 'concrete', { tint: 0x7a8078, trim: 0x4a4e4a, floorTint: 0x6e7270 }),
+    R('crawl', -3.8, -25.8, 13.8, -18.2, 'stone', 'concrete', 'planks', { tint: 0x6e665a, trim: 0x4a4238, floorTint: 0x6a645a }),
+  ];
+  dressRooms(L);
   return L;
 }
 

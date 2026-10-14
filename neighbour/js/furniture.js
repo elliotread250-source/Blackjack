@@ -352,6 +352,75 @@ export function buildFurniture(B, d) {
       for (const y of [0.15, 0.5, 0.85]) cyl('metal', 0, H * y, 0, Math.min(W, D) / 2 + 0.01, 0.05, 0x4a4a4a);
       break;
     }
+    case 'f_bulb': {                    // bare bulb on a flex, with a wire cage (d.y is the ceiling)
+      const drop = d.drop ?? 0.35;
+      cyl('metal', 0, -drop / 2, 0, 0.012, drop, BLACK);
+      cyl('metal', 0, -drop - 0.04, 0, 0.035, 0.08, 0x3a3a3a);
+      ball('emissive', 0, -drop - 0.12, 0, 0.07, d.c ?? 0xffe0a0, 1.25);
+      if (d.cage !== false) for (let i = 0; i < 4; i++) box('metal', Math.cos(i * Math.PI / 2) * 0.1, -drop - 0.24, Math.sin(i * Math.PI / 2) * 0.1, 0.012, 0.2, 0.012, 0x2a2a2a);
+      break;
+    }
+    case 'f_ceilinglamp': {             // flush ceiling fitting: brass rim and a glowing glass bowl (d.y is the ceiling)
+      cyl('metal', 0, -0.02, 0, 0.26, 0.04, BRASS);
+      ball('emissive', 0, -0.05, 0, 0.22, d.c ?? 0xfff0d0, 0.45);
+      ball('metal', 0, -0.15, 0, 0.03, BRASS);
+      break;
+    }
+    case 'f_pendant': {                 // hanging shade lamp (d.y is the ceiling)
+      const drop = d.drop ?? 0.6;
+      cyl('metal', 0, -drop / 2, 0, 0.012, drop, BLACK);
+      cyl('fabric', 0, -drop - 0.1, 0, 0.26, 0.22, d.c2 ?? 0xd8c890, 'y', 'cone');
+      ball('emissive', 0, -drop - 0.16, 0, 0.08, d.c ?? 0xffe6b0);
+      break;
+    }
+    case 'f_chest': {                   // old trunk: body, curved lid, iron bands, a padlock, chains
+      box('wood', 0, 0, 0, W, H * 0.7, D, c1);
+      cyl('wood', 0, H * 0.7, 0, D / 2, W, c1, 'x');
+      for (const x of [-W * 0.3, W * 0.3]) { box('metal', x, -0.005, 0, 0.06, H * 0.71, D + 0.02, 0x3a3a3a); cyl('metal', x, H * 0.7, 0, D / 2 + 0.01, 0.06, 0x3a3a3a, 'x'); }
+      box('metal', 0, H * 0.5, D / 2 + 0.01, 0.12, 0.14, 0.04, BRASS);
+      if (d.chain) for (let i = 0; i < 8; i++) cyl('metal', -W / 2 + 0.1 + i * (W - 0.2) / 7, H * 0.95, D * 0.1, 0.05, 0.02, 0x8a8a8a, 'z', 'torus');
+      break;
+    }
+    case 'f_tank': {                    // pressure / oil tank on legs, with a gauge and a valve
+      const r = Math.min(D, H) * 0.45;
+      for (const x of [-W * 0.3, W * 0.3]) box('metal', x, 0, 0, 0.08, H - r * 1.4, D * 0.7, 0x3a3a3a);
+      cyl('rust', 0, H - r, 0, r, W, c1 ?? 0x6b7d86, 'x');
+      for (const sx of [-1, 1]) ball('rust', sx * W / 2, H - r, 0, r, c1 ?? 0x6b7d86, 1);
+      cyl('metal', W * 0.15, H - r * 0.05, 0, 0.07, 0.03, CREAM);
+      cyl('metal', -W * 0.2, H + 0.05, 0, 0.04, 0.3, 0x8e5c42);
+      cyl('metal', -W * 0.2, H + 0.18, 0, 0.08, 0.02, 0xd83a2a, 'y', 'torus');
+      break;
+    }
+    case 'f_winerack': {                // wooden rack of diamond cubbies full of bottles
+      box('wood', 0, 0, -D / 2 + 0.02, W, H, 0.04, DARKW);
+      for (const sx of [-1, 1]) box('wood', sx * (W / 2 - 0.03), 0, 0, 0.06, H, D, c1);
+      box('wood', 0, H - 0.05, 0, W, 0.05, D, c1);
+      const rows = Math.max(2, Math.round(H / 0.32)), cols = Math.max(2, Math.round(W / 0.24));
+      for (let i = 0; i < rows; i++) {
+        box('wood', 0, 0.05 + i * (H - 0.1) / rows, 0, W - 0.1, 0.03, D, c1);
+        for (let j = 0; j < cols; j++) {
+          if ((i * 7 + j * 3) % 5 === 0) continue;
+          cyl('glass', -W / 2 + 0.12 + j * (W - 0.24) / (cols - 1), 0.17 + i * (H - 0.1) / rows, 0.02, 0.045, D * 0.8, [0x2a4a2a, 0x4a1a2a, 0x3a3a1a][(i + j) % 3], 'z');
+        }
+      }
+      break;
+    }
+    case 'f_trophycase': {              // glass-fronted cabinet of gold cups
+      box('wood', 0, 0, 0, W, H, D, c1);
+      box('glass', 0, 0.3, D / 2 + 0.01, W - 0.12, H - 0.45, 0.02, 0xa8cce8);
+      for (const yy of [0.35, H * 0.55]) {
+        box('wood', 0, yy - 0.03, 0.02, W - 0.12, 0.03, D - 0.1, DARKW);
+        for (const dx of [-W * 0.3, 0, W * 0.3]) { cyl('metal', dx, yy + 0.04, 0.05, 0.06, 0.06, BRASS); cyl('metal', dx, yy + 0.16, 0.05, 0.08, 0.18, BRASS, 'y', 'cone'); }
+      }
+      break;
+    }
+    case 'f_statue': {                  // a marble bust on a plinth
+      box('block', 0, 0, 0, W, H * 0.45, D, 0xd8cdb8);
+      cyl('block', 0, H * 0.55, 0, W * 0.28, H * 0.2, 0xeeeae0);
+      ball('block', 0, H * 0.78, 0, W * 0.24, 0xeeeae0, 1.2);
+      ball('block', 0, H * 0.67, 0, W * 0.34, 0xeeeae0, 0.45);
+      break;
+    }
     case 'f_clutter': {                 // small things on a surface: books, a cup, a radio, papers
       box('paint', -W * 0.25, 0, 0, 0.22, 0.05, 0.16, 0x8a2a2a, 0, 0.2); box('paint', -W * 0.25, 0.05, 0, 0.2, 0.04, 0.15, 0x2a4a8a, 0, -0.1);
       cyl('paint', W * 0.2, 0.05, 0.05, 0.04, 0.1, 0xf2ead8);
