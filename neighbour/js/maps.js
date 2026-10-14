@@ -1307,7 +1307,7 @@ function buildAct3() {
   poi('attic', 4, F4x, -38.5, 1);
   room(-3, F4x, -44, 9, F4x + 2.8, -30.2, 0.4);
   // the windmill on the north-west corner of the roof
-  box(-12.5, F4x, -43.5, -9.5, F4x + 7, -40.5, 'board', 0xf0e0c0);
+  fur('windmill', box(-12.5, F4x, -43.5, -9.5, F4x + 7, -40.5, 'board', 0xf0e0c0), { faces: '+z', c: 0xf0e0c0 });
   L.roofs.push({ x0: -13, x1: -9, z0: -44, z1: -40, y: F4x + 7, h: 1.6, spire: true, tint: ROOFR, gable: 0xf0e0c0 });
   L.act3.windmill = { x: -11, y: F4x + 6, z: -40.3 };
   // chimney stacks leaning every which way

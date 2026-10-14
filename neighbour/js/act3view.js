@@ -16,7 +16,7 @@ export class Act3View {
     // ---------------------------------------------------------------- the track (built once)
     {
       const B = new GeoBuilder(), loop = A.loop, y = L.tram.y;
-      const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), P = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+      const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), S = new THREE.Vector3(), P = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0), E3 = new THREE.Euler();
       const put = (m, x, yy, z, yaw, sx, sy, sz, c) => { Q.setFromAxisAngle(up, yaw); P.set(x, yy, z); S.set(sx, sy, sz); M.compose(P, Q, S); B.geom(m, primGeo('box'), M, c); };
       for (let s0 = 0; s0 < loop.len; s0 += 1) {
         const a = loop.at(s0), b = loop.at(s0 + 1), mx = (a.x + b.x) / 2, mz = (a.z + b.z) / 2, yaw = Math.atan2(-(b.x - a.x), -(b.z - a.z));
@@ -27,6 +27,15 @@ export class Act3View {
           const ox = Math.cos(yaw) * sd, oz = -Math.sin(yaw) * sd;
           put('metal', mx + ox, y - 0.58, mz + oz, yaw, 0.1, 0.14, l, 0xb8bcc4);       // rails
         }
+        // a lattice truss under the deck: lower chord and alternating diagonals on both faces
+        for (const sd of [-0.45, 0.45]) {
+          const ox = Math.cos(yaw) * sd, oz = -Math.sin(yaw) * sd;
+          put('metal', mx + ox, y - 2.05, mz + oz, yaw, 0.12, 0.12, l, 0x2e3a48);
+          const pitch = ((Math.floor(s0) % 2) ? 1 : -1) * Math.atan2(l, 0.8);
+          E3.set(pitch, yaw, 0, 'YXZ'); Q.setFromEuler(E3); P.set(mx + ox, y - 1.65, mz + oz); S.set(0.08, Math.hypot(l, 0.8), 0.08); M.compose(P, Q, S);
+          B.geom('metal', primGeo('box'), M, 0x34424f);
+        }
+        if (Math.floor(s0) % 4 === 0) put('metal', mx, y - 2.05, mz, yaw, 1.0, 0.1, 0.1, 0x2e3a48);   // cross ties
       }
       this.track = B.build(R.mats, { shadows });
       this.group.add(this.track);
@@ -158,10 +167,17 @@ export class Act3View {
       g.position.set(wm.x, wm.y, wm.z);
       const mat = new THREE.MeshToonMaterial({ color: 0xf4ecd8, gradientMap: R.toonRamp });
       const hub = new THREE.Mesh(primGeo('cyl'), new THREE.MeshToonMaterial({ color: 0x8a2c26, gradientMap: R.toonRamp })); hub.rotation.x = Math.PI / 2; hub.scale.set(0.35, 0.4, 0.35); g.add(hub);
+      // four lattice sails: a stock, a frame of rails and bars, and a patched canvas over most of it
+      const wood = new THREE.MeshToonMaterial({ color: 0x5a3a26, gradientMap: R.toonRamp });
+      const canvas = new THREE.MeshToonMaterial({ color: 0xf4ecd8, gradientMap: R.toonRamp, transparent: true, opacity: 0.88, side: THREE.DoubleSide });
+      const bar = (parent, m, sx, sy, sz, x, y, z) => { const b = new THREE.Mesh(primGeo('box'), m); b.scale.set(sx, sy, sz); b.position.set(x, y, z); b.castShadow = shadows; parent.add(b); return b; };
       for (let i = 0; i < 4; i++) {
         const arm = new THREE.Group(); arm.rotation.z = i * Math.PI / 2;
-        const bl = new THREE.Mesh(primGeo('box'), mat); bl.scale.set(0.9, 4.2, 0.06); bl.position.set(0.25, 2.3, 0.15); bl.castShadow = shadows; arm.add(bl);
-        const sp = new THREE.Mesh(primGeo('box'), new THREE.MeshToonMaterial({ color: 0x5a3a26, gradientMap: R.toonRamp })); sp.scale.set(0.12, 4.4, 0.1); sp.position.set(-0.2, 2.3, 0.18); arm.add(sp);
+        bar(arm, wood, 0.14, 4.6, 0.12, 0, 2.5, 0.18);                                  // stock
+        for (const x of [0.12, 1.0]) bar(arm, wood, 0.05, 3.9, 0.05, x, 2.75, 0.2);     // rails
+        for (let k = 0; k < 9; k++) bar(arm, wood, 0.95, 0.04, 0.04, 0.56, 0.9 + k * 0.45, 0.2);
+        const sail = bar(arm, i % 2 ? canvas : mat, 0.82, i === 2 ? 2.6 : 3.4, 0.02, 0.56, i === 2 ? 3.3 : 2.9, 0.23);
+        sail.material = i === 1 ? canvas : sail.material;
         g.add(arm);
       }
       this.windmill = g; this.group.add(g);

@@ -421,6 +421,16 @@ export function buildFurniture(B, d) {
       ball('block', 0, H * 0.67, 0, W * 0.34, 0xeeeae0, 0.45);
       break;
     }
+    case 'f_windmill': {                // six-sided plank tower: stone base, banded planking, a door, lit windows, a cap ring
+      const r = Math.min(W, D) / 2;
+      cyl('block', 0, 0.3, 0, r + 0.08, 0.6, 0xa8a090, 'y', 'cyl6');
+      for (let i = 0; i < 4; i++) cyl('board', 0, 0.6 + i * (H - 1.2) / 4 + (H - 1.2) / 8, 0, r * (1 - i * 0.02), (H - 1.2) / 4 - 0.04, i % 2 ? c1 : mix(c1, 0x8a6a4a, 0.25), 'y', 'cyl6');
+      for (let i = 1; i < 4; i++) cyl('wood', 0, 0.6 + i * (H - 1.2) / 4, 0, r + 0.03, 0.08, 0x6a4a30, 'y', 'cyl6');
+      box('door', 0, 0.6, D / 2 - 0.02, 0.8, 1.9, 0.08, 0x8a2c26);
+      for (const yy of [2.6, 4.3]) { box('emissive', 0, yy, D / 2 - 0.01, 0.4, 0.55, 0.04, 0xffc870); box('trim', 0, yy - 0.06, D / 2, 0.52, 0.06, 0.08, 0xf4ecd8); }
+      cyl('board', 0, H - 0.2, 0, r + 0.12, 0.4, mix(c1, 0x8a2c26, 0.5), 'y', 'cyl6');      // cap ring under the roof
+      break;
+    }
     case 'f_clutter': {                 // small things on a surface: books, a cup, a radio, papers
       box('paint', -W * 0.25, 0, 0, 0.22, 0.05, 0.16, 0x8a2a2a, 0, 0.2); box('paint', -W * 0.25, 0.05, 0, 0.2, 0.04, 0.15, 0x2a4a8a, 0, -0.1);
       cyl('paint', W * 0.2, 0.05, 0.05, 0.04, 0.1, 0xf2ead8);

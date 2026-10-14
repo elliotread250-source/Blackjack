@@ -319,6 +319,8 @@ export function addDecor(B, d) {
       else if (d.sym === 'bell') { s(0, 1.52, 0.42, 0.06); s(0, 1.58, 0.32, 0.1); s(0, 1.68, 0.22, 0.1); s(0, 1.78, 0.08, 0.06); s(0, 1.48, 0.07, 0.05); }
       else if (d.sym === 'bulb') { s(0, 1.62, 0.26, 0.26); s(0, 1.56, 0.34, 0.14); s(0, 1.5, 0.14, 0.08); }
       else { s(-0.05, 1.7, 0.3, 0.06); s(0.12, 1.66, 0.06, 0.14); s(-0.05, 1.55, 0.36, 0.06); }
+      // a glowing frame in the door's own colour, so Fear doors read from across a room
+      for (const [x, yy, w, h] of [[-0.78, 0, 0.06, 2.42], [0.78, 0, 0.06, 2.42], [0, 2.42, 1.62, 0.06]]) rbz(B, 'emissive', at(x, 0.075), y + yy, w, h, 0.02, ry, c);
       // a painted eye above every Fear door
       B.geom('paint', geo('sphere'), mat(...vecAt(at(0, 0.07), y + 2.75), 0, ry, 0, 0.3, 0.16, 0.04), 0xf8f4ea);
       B.geom('emissive', geo('sphere'), mat(...vecAt(at(0, 0.1), y + 2.75), 0, ry, 0, 0.1, 0.1, 0.03), d.sym === 'exit' ? 0x2a8a3a : 0x8a1020);
