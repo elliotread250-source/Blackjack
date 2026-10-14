@@ -2,7 +2,7 @@
 // (depth-first, forward first) through the time-expanded world until it finds one that gets a
 // few rows further without dying. Used by the unit tests to prove generated worlds are passable
 // and by the in-browser demo (?autopilot).
-import { HOP_TICKS, TPS } from './logic.js';
+import { TPS } from './logic.js';
 
 const ACTIONS = ['up', 'wait', 'left', 'right', 'down'];
 const WAIT_TICKS = 4;
@@ -16,7 +16,7 @@ function advance(g, action) {
   g.step();
   if (g.player.dead) return false;
   if (g.player.bumpTick === g.tick) return null; // blocked by a tree or the edge
-  for (let i = 0; i < HOP_TICKS + 1 && (g.player.hop || g.player.queue.length); i++) {
+  for (let i = 0; i < g.hopTicks + 1 && (g.player.hop || g.player.queue.length); i++) {
     g.step();
     if (g.player.dead) return false;
   }

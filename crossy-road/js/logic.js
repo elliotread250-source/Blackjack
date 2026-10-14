@@ -11,7 +11,8 @@
 export const TPS = 60;                 // fixed simulation rate
 export const TICK = 1 / TPS;
 export const COLS = 4;                 // playable columns are -4..4
-export const HOP_TICKS = 4;            // one hop takes 4 ticks (0.067 s): snappy
+export const HOP_TICKS = 4;            // default hop length in ticks (Fast); Classic is 8
+export const HOP_CHOICES = [4, 8];     // the movement-speed setting: ticks per hop
 export const HALF = 18;                // lanes wrap at x = +-18 (well outside the view)
 export const WRAP = HALF * 2;
 export const EDGE_DEATH = 5.4;         // carried this far out on a log = gone
@@ -69,10 +70,10 @@ export const VEHICLES = {
 // The world changes biome every BIOME_ROWS rows (see render.js for what each one looks like).
 export const BIOME_ROWS = 60;
 export const zoneOf = row => Math.floor(Math.max(0, row) / BIOME_ROWS);
-export const GEM_VALUE = 5;
+export const GEM_VALUE = 3;            // the blue jewel: one constant shared by the game and the server replay
 export const TRAIN_CAR = 3.2;          // length of one train carriage
 export const TRAIN_SPEED = 30;         // tiles per second
-export const TRAIN_WARN = 1.6;         // seconds of flashing light before the train
+export const TRAIN_WARN = 2.2;         // seconds of warning lights before the train
 
 // Where each moving thing is at time t.
 export function entityX(lane, e, t) {
@@ -352,6 +353,25 @@ const DIRS = {
 };
 
 export const DEATHS = ['car', 'drown', 'train', 'eagle', 'drift'];
+// rows where we note how many sideways hops it took to get there (for "few sideways hops" challenges)
+export const SIDE_CHECKS = [10, 20, 30, 40, 50, 60, 70, 80, 90, 100];
+export const MAX_RUN_TICKS = 60 * 60 * 45;   // a 45-minute run is the longest the server will replay
+
+// Replays a run from its seed and the hop inputs; the server uses this to work out the real
+// score, coins and challenge stats instead of trusting the browser.
+export function replayRun({ seed, hopTicks = HOP_TICKS, inputs = [], fast = [], endTick }) {
+  const g = new Game({ seed, hopTicks });
+  const evs = inputs.map(([t, d]) => ({ t: t | 0, d })).concat(fast.map(t => ({ t: t | 0, fast: true })))
+    .filter(e => e.t >= 0).sort((a, b) => a.t - b.t);
+  const stop = Math.min(MAX_RUN_TICKS, Number.isFinite(endTick) ? endTick : MAX_RUN_TICKS);
+  let i = 0;
+  while (g.tick < stop && !g.player.dead) {
+    while (i < evs.length && evs[i].t <= g.tick) { const e = evs[i++]; if (e.fast) g.makeInvincible(); else g.input(e.d); }
+    g.step();
+    g.events.length = 0;
+  }
+  return { score: g.score, coins: g.coins, ticks: g.tick, dead: g.player.dead ? g.player.dead.type : null, practice: g.fastTicks.length > 0, stats: g.runStats() };
+}
 
 export class Game {
   constructor(opts = {}) {
@@ -366,7 +386,12 @@ export class Game {
     this.taken = new Set();           // collected coins "row:col"
     this.coins = 0;
     this.invUntil = 0;                // tick when the "fast" invincibility wears off
-    this.stats = { roads: 0, rails: 0, rivers: 0, logs: 0 };
+    this.hopTicks = HOP_CHOICES.includes(opts.hopTicks) ? opts.hopTicks : HOP_TICKS;
+    // everything the challenges measure, from real gameplay events
+    this.stats = { roads: 0, rails: 0, rivers: 0, logs: 0, fwd: 0, side: 0, back: 0, ordCoins: 0, gems: 0, firstBackRow: null, sideAt: {} };
+    this.logSet = new Set();          // distinct moving logs landed on ("row:idx")
+    this.inputs = [];                 // [tick, dir] for every accepted hop: the server replays these
+    this.fastTicks = [];              // ticks where "fast" was typed (a practice run)
     this.player = {
       row: 0, x: 0, face: 0, hop: null, onLog: null, dead: null,
       queue: [], landTick: -100, bumpTick: -100, maxRow: 0, idle: 0,
@@ -381,12 +406,18 @@ export class Game {
   // The "fast" cheat: nothing can hurt you for a while. Typing it again restarts the clock.
   makeInvincible(seconds = INVINCIBLE_SECONDS) {
     if (this.player.dead) return false;
+    if (!this.noEvents) this.fastTicks.push(this.tick);
     this.invUntil = this.tick + Math.round(seconds * TPS);
     this.usedFast = true;            // challenges don't count on a cheat run
     this.emit('invincible', { seconds });
     return true;
   }
-  runStats() { return { score: this.score, coins: this.coins, ...this.stats }; }
+  runStats() {
+    const s = this.stats;
+    return { score: this.score, coins: this.coins, roads: s.roads, rails: s.rails, rivers: s.rivers, logs: s.logs,
+      fwd: s.fwd, side: s.side, back: s.back, ordCoins: s.ordCoins, gems: s.gems,
+      noBackRow: s.firstBackRow === null ? this.score : s.firstBackRow, sideAt: { ...s.sideAt } };
+  }
 
   ensure(row) {
     if (this.readonly) return;
@@ -416,7 +447,9 @@ export class Game {
     g.taken = this.taken;           // planners never collect for real
     g.coins = this.coins;
     g.invUntil = this.invUntil;
-    g.stats = { ...this.stats };
+    g.stats = { ...this.stats, sideAt: { ...this.stats.sideAt } };
+    g.hopTicks = this.hopTicks;
+    g.logSet = new Set(this.logSet);
     const p = this.player;
     g.player = { ...p, hop: p.hop && { ...p.hop }, onLog: p.onLog && { ...p.onLog }, queue: [...p.queue], dead: p.dead && { ...p.dead } };
     g.events = [];
@@ -433,6 +466,7 @@ export class Game {
     if (p.dead || !DIRS[dir]) return false;
     if (p.queue.length >= MAX_QUEUE) return false;
     p.queue.push(dir);
+    if (!this.noEvents) this.inputs.push([this.tick, dir]);
     return true;
   }
 
@@ -459,7 +493,7 @@ export class Game {
     const m = DIRS[dir];
     const toRow = p.row + m.dr;
     const lane = this.lane(toRow);
-    const landT = (this.tick + HOP_TICKS) * TICK;
+    const landT = (this.tick + this.hopTicks) * TICK;
     if (lane.type === 'river') {
       let baseX;
       if (m.dr === 0) {
@@ -500,6 +534,8 @@ export class Game {
     p.hop = { fromRow: p.row, fromX: p.x, toRow: plan.toRow, toX: plan.toX, k: 0, float: plan.float, water: plan.water, dir };
     p.onLog = null;
     p.idle = 0;
+    const st = this.stats;
+    if (dir === 'up') st.fwd++; else if (dir === 'down') { st.back++; if (st.firstBackRow === null) st.firstBackRow = p.maxRow; } else st.side++;
     if (!this.started) { this.started = true; this.scroll = 0; }
     this.emit('hop', { dir });
     return true;
@@ -524,7 +560,7 @@ export class Game {
   curRow() {
     const h = this.player.hop;
     if (!h) return this.player.row;
-    return h.k < HOP_TICKS / 2 ? h.fromRow : h.toRow;
+    return h.k < this.hopTicks / 2 ? h.fromRow : h.toRow;
   }
 
   step() {
@@ -537,8 +573,8 @@ export class Game {
     if (p.hop) {
       const h = p.hop;
       h.k++;
-      p.x = lerp(h.fromX, h.toX, h.k / HOP_TICKS);
-      if (h.k >= HOP_TICKS) this.land();
+      p.x = lerp(h.fromX, h.toX, h.k / this.hopTicks);
+      if (h.k >= this.hopTicks) this.land();
       if (p.dead) return;
     }
     // 2. start a buffered hop the moment we're on the ground
@@ -572,10 +608,18 @@ export class Game {
     const lane = this.lane(p.row);
     if (p.row > p.maxRow) {
       p.maxRow = p.row;
-      if (lane.type === 'road') this.stats.roads++; else if (lane.type === 'rail') this.stats.rails++; else if (lane.type === 'river') this.stats.rivers++;
+      // the lane you just got past counts as crossed; a river section counts once you're out of it
+      const st = this.stats, left = this.lane(p.row - 1);
+      if (left.type === 'road') st.roads++;
+      else if (left.type === 'rail') st.rails++;
+      else if (left.type === 'river' && lane.type !== 'river') st.rivers++;
+      if (SIDE_CHECKS.includes(p.maxRow)) st.sideAt[p.maxRow] = st.side;
       this.emit('score', { score: p.maxRow });
     }
-    if (h.float) this.stats.logs++;
+    if (h.float && lane.speed) {
+      const key = p.row + ':' + h.float.idx;
+      if (!this.logSet.has(key)) { this.logSet.add(key); this.stats.logs++; }
+    }
     if (h.water) { this.die('drown'); return; }
     if (h.float) p.onLog = { row: p.row, idx: h.float.idx, offset: h.float.offset };
     if (!this.readonly && lane.coin !== null && lane.coin !== undefined && lane.type !== 'river') {
@@ -584,6 +628,7 @@ export class Game {
         this.taken.add(key);
         const value = lane.gem ? GEM_VALUE : 1;
         this.coins += value;
+        if (lane.gem) this.stats.gems++; else this.stats.ordCoins++;
         this.emit('coin', { row: p.row, col: lane.coin, value, gem: !!lane.gem });
       }
     }
@@ -604,7 +649,7 @@ export class Game {
         if (b > vx - half && a < vx + half) {
           // hopping into a car's side bounces you off it; standing in its path gets you run over
           const how = p.hop ? 'side' : v.len >= 2.4 ? 'flat' : 'launch';
-          this.die('car', { row, vehicle: i, dir: lane.dir, how, hopDir: p.hop ? p.hop.dir : null, y: p.hop ? Math.sin(Math.PI * p.hop.k / HOP_TICKS) * 0.42 : 0 });
+          this.die('car', { row, vehicle: i, dir: lane.dir, how, hopDir: p.hop ? p.hop.dir : null, y: p.hop ? Math.sin(Math.PI * p.hop.k / this.hopTicks) * 0.42 : 0 });
           return;
         }
       }
@@ -623,8 +668,8 @@ export class Game {
     const t = (this.tick + alpha) * TICK;
     if (p.hop && !p.dead) {
       const h = p.hop;
-      const k = Math.min(HOP_TICKS, h.k + alpha);
-      const u = k / HOP_TICKS;
+      const k = Math.min(this.hopTicks, h.k + alpha);
+      const u = k / this.hopTicks;
       return { x: lerp(h.fromX, h.toX, u), z: lerp(h.fromRow, h.toRow, u), y: Math.sin(Math.PI * u) * 0.42, u, hopping: true };
     }
     let x = p.x;
@@ -674,6 +719,46 @@ export const CHARACTERS = [
   { id: 'astronaut', name: 'Astronaut', price: 450, theme: 'space' },
   { id: 'dragon', name: 'Dragon', price: 500, theme: 'desert' },
 ];
+// The 30-strong 2026 collection: bought with coins like the originals (never from the prize machine
+// above PRIZE_MAX_PRICE, so the premium ones can't be won cheaply).
+CHARACTERS.push(
+  { id: 'foresthog', name: 'Forest Hedgehog', price: 25, theme: 'autumn' },
+  { id: 'squirrel', name: 'Squirrel', price: 35, theme: 'autumn' },
+  { id: 'goldfish', name: 'Goldfish', price: 50, theme: 'classic' },
+  { id: 'hamster', name: 'Hamster', price: 60, theme: 'classic' },
+  { id: 'chick', name: 'Baby Chick', price: 75, theme: 'classic' },
+  { id: 'raccoon', name: 'Raccoon', price: 85, theme: 'night' },
+  { id: 'goat', name: 'Mountain Goat', price: 95, theme: 'snow' },
+  { id: 'toucan', name: 'Toucan', price: 110, theme: 'jungle' },
+  { id: 'sloth', name: 'Sloth', price: 125, theme: 'jungle' },
+  { id: 'koala', name: 'Koala', price: 140, theme: 'jungle' },
+  { id: 'beaver', name: 'Beaver', price: 150, theme: 'autumn' },
+  { id: 'otter', name: 'Otter', price: 170, theme: 'classic' },
+  { id: 'axolotl', name: 'Axolotl', price: 190, theme: 'candy' },
+  { id: 'redpanda', name: 'Red Panda', price: 200, theme: 'autumn' },
+  { id: 'peacock', name: 'Peacock', price: 225, theme: 'jungle' },
+  { id: 'wolf', name: 'Timber Wolf', price: 250, theme: 'snow' },
+  { id: 'boar', name: 'Wild Boar', price: 275, theme: 'autumn' },
+  { id: 'flamingo', name: 'Flamingo', price: 300, theme: 'candy' },
+  { id: 'arcticfox', name: 'Arctic Fox', price: 325, theme: 'snow' },
+  { id: 'meerkat', name: 'Meerkat', price: 350, theme: 'desert' },
+  { id: 'wyvern', name: 'Jade Wyvern', price: 375, theme: 'jungle' },
+  { id: 'goldknight', name: 'Golden Knight', price: 400, theme: 'retro' },
+  { id: 'sorcerer', name: 'Forest Sorcerer', price: 450, theme: 'spooky' },
+  { id: 'pirateparrot', name: 'Pirate Parrot', price: 500, theme: 'classic' },
+  { id: 'samurai', name: 'Samurai Warrior', price: 550, theme: 'night' },
+  { id: 'cyberfox', name: 'Cyber Fox', price: 600, theme: 'metro' },
+  { id: 'deer', name: 'Celestial Deer', price: 700, theme: 'space' },
+  { id: 'crystalgolem', name: 'Crystal Golem', price: 800, theme: 'space' },
+  { id: 'whale', name: 'Galaxy Whale', price: 900, theme: 'space' },
+  { id: 'royalphoenix', name: 'Royal Phoenix', price: 1000, theme: 'volcano', premium: true },
+);
+export const NEW_2026 = new Set(['foresthog', 'squirrel', 'goldfish', 'hamster', 'chick', 'raccoon', 'goat', 'toucan', 'sloth', 'koala', 'beaver', 'otter', 'axolotl', 'redpanda', 'peacock', 'wolf', 'boar', 'flamingo', 'arcticfox', 'meerkat', 'wyvern', 'goldknight', 'sorcerer', 'pirateparrot', 'samurai', 'cyberfox', 'deer', 'crystalgolem', 'whale', 'royalphoenix']);
+// Shop quality bands by price (purely presentation)
+export const qualityOf = c => (c.code ? 'Secret' : c.challenge ? 'Challenge' : c.price >= 800 ? 'Legendary' : c.price >= 450 ? 'Epic' : c.price >= 200 ? 'Rare' : c.price >= 100 ? 'Uncommon' : 'Common');
+// The prize machine only hands out ordinary characters up to this price, each equally likely.
+export const PRIZE_MAX_PRICE = 300;
+
 // Secret and challenge skins: you can't buy these. `code` = redeem code, `challenge` = run goal.
 CHARACTERS.push(
   { id: 'golden', name: 'Golden Chicken', price: null, theme: 'desert', code: 'golden' },
@@ -769,7 +854,7 @@ export class Profile {
   setMuted(m) { this.muted = !!m; this.save(); }
   // Prize machine: a random character you don't own yet, for PRIZE_PRICE coins.
   prize(rnd = Math.random) {
-    const left = CHARACTERS.filter(c => !this.owned.has(c.id) && c.price !== null);
+    const left = CHARACTERS.filter(c => !this.owned.has(c.id) && c.price !== null && c.price <= PRIZE_MAX_PRICE);
     if (!left.length || this.coins < PRIZE_PRICE) return null;
     const c = left[Math.floor(rnd() * left.length)];
     this.coins -= PRIZE_PRICE;
