@@ -112,3 +112,5 @@ button { font: inherit; color: inherit; }
   .buildings { overflow: visible; }
 }
 @media (prefers-reduced-motion: reduce) { .cookie, .golden { animation: none; } }
+
+button, select, .cell, .sq { touch-action: manipulation; }
