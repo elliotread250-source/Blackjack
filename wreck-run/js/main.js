@@ -85,7 +85,7 @@ for (const b of document.querySelectorAll('#touch button')) {
 }
 function readInput() {
   const k = x => keys.has(x) || touchKeys.has(x);
-  return { throttle: (k('gas') ? 1 : 0) - (k('brake') ? 1 : 0), steer: (k('right') ? 1 : 0) - (k('left') ? 1 : 0), handbrake: k('drift'), boost: k('nitro') };
+  return { throttle: (k('gas') ? 1 : 0) - (k('brake') ? 1 : 0), steer: (k('left') ? 1 : 0) - (k('right') ? 1 : 0)   /* +steer turns towards +x, which is screen-left from the chase camera */, handbrake: k('drift'), boost: k('nitro') };
 }
 
 // ---------------------------------------------------------------- game flow
