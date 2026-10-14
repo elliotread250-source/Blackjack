@@ -52,6 +52,16 @@ export class Renderer {
     this.shieldMesh2 = new THREE.Mesh(new THREE.SphereGeometry(0.62, 18, 12), new THREE.MeshBasicMaterial({ color: 0xffc93a, transparent: true, opacity: 0.16, depthWrite: false }));
     this.shieldMesh2.position.y = 0.45; this.shieldMesh2.visible = false;
     this.player.add(this.shieldMesh2);
+    // dizzy stars (bonked off a car) and a ripple ring (fell in the water)
+    this.stars = new THREE.Group();
+    for (let i = 0; i < 4; i++) {
+      const st = new THREE.Mesh(new THREE.OctahedronGeometry(0.09), new THREE.MeshBasicMaterial({ color: 0xffd23f }));
+      st.position.set(Math.cos(i / 4 * Math.PI * 2) * 0.38, Math.sin(i * 2.1) * 0.06, Math.sin(i / 4 * Math.PI * 2) * 0.38);
+      this.stars.add(st);
+    }
+    this.stars.visible = false; this.scene.add(this.stars);
+    this.ripple = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.04, 6, 30), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7, depthWrite: false }));
+    this.ripple.rotation.x = Math.PI / 2; this.ripple.visible = false; this.scene.add(this.ripple);
     this.face = 0;
 
     const ep = M.eagleParts();
@@ -364,12 +374,13 @@ export class Renderer {
   onDeath(game) {
     const d = game.player.dead;
     const x = d.x, z = -d.row;
-    if (d.type === 'drown' || d.type === 'drift') {
-      this.burst(x, -0.2, z, 22, [0xffffff, 0xd8f3ff, 0x9fdcff], 2.2, 0.16, 0.8, 1.4);
-    } else if (d.type === 'car' || d.type === 'train') {
-      const cols = this.charColors();
-      this.burst(x, 0.4, z, 16, cols, 3.5, 0.13, 0.9);
-    }
+    const cols = this.charColors();
+    if (d.type === 'drown') this.burst(x, -0.2, z, 30, [0xffffff, 0xd8f3ff, 0x9fdcff], 2.6, 0.17, 0.9, 1.6);
+    else if (d.type === 'drift') this.burst(x, -0.2, z, 10, [0xffffff, 0xd8f3ff], 1.2, 0.12, 0.6, 1);
+    else if (d.type === 'train') { this.burst(x, 0.4, z, 30, cols, 6, 0.15, 1.1, 1.4); this.burst(x, 0.3, z, 10, [0xffd23f, 0xff8a2a, 0xffffff], 4, 0.1, 0.5); }
+    else if (d.type === 'car' && d.how === 'side') this.burst(x, 0.6, z, 8, [0xffd23f, 0xffffff], 2.4, 0.09, 0.5);
+    else if (d.type === 'car' && d.how === 'launch') this.burst(x, 0.4, z, 12, cols, 3, 0.12, 0.8);
+    else if (d.type === 'car') this.burst(x, 0.1, z, 20, cols, 2.6, 0.12, 0.7, 0.6);
   }
 
   charColors() {
@@ -492,6 +503,7 @@ export class Renderer {
     this.eagle.visible = false;
     P.visible = true;
     mesh.rotation.set(0, 0, 0);
+    if (!p.dead) { this.stars.visible = false; this.ripple.visible = false; }
     if (!p.dead) {
       // facing
       let d = p.face - this.face;
@@ -515,11 +527,16 @@ export class Renderer {
       // squash and stretch
       let sy = 1;
       if (p.hop) {
-        const u = pose.u;
-        sy = 1 + 0.2 * Math.sin(Math.PI * u) - (u < 0.2 ? 0.28 * (1 - u / 0.2) : 0);
+        const u = pose.u, arc = Math.sin(Math.PI * u);
+        if (this.hopRef !== p.hop) { this.hopRef = p.hop; this.waddle = -(this.waddle || 1); }
+        sy = 1 + 0.26 * arc - (u < 0.25 ? 0.32 * (1 - u / 0.25) : 0);
+        // a cheeky hop: lean into it, rock to one side (alternating), a little twist, tuck at the top
+        mesh.rotation.x = -0.42 * arc;
+        mesh.rotation.z = this.waddle * 0.32 * arc;
+        mesh.rotation.y = this.waddle * 0.25 * Math.sin(2 * Math.PI * u);
       } else {
         const since = (g.tick - p.landTick) / 5;
-        if (since < 1) sy = 1 - 0.22 * Math.sin(Math.PI * since);
+        if (since < 1) { sy = 1 - 0.26 * Math.sin(Math.PI * since); mesh.rotation.z = -(this.waddle || 1) * 0.12 * Math.sin(Math.PI * since); }
         else sy = 1 + Math.sin(t * 3.2) * 0.025;
         const bump = (g.tick - p.bumpTick) / 8;
         if (bump < 1) { mesh.rotation.x = -Math.sin(bump * Math.PI) * 0.25; sy *= 1 - 0.1 * Math.sin(bump * Math.PI); }
@@ -530,23 +547,63 @@ export class Renderer {
     }
     // ---- deaths
     const d = p.dead;
+    this.stars.visible = false; this.ripple.visible = false;
     const s = (g.tick - d.tick) * TICK + 0; // seconds since death
     const z = -d.row;
-    if (d.type === 'car') {
-      P.position.set(d.x, baseY(g.lane(d.row)) + 0.01, z);
-      const k = Math.min(1, s * 12);
-      mesh.scale.set(lerp(1, 1.45, k), lerp(1, 0.1, k), lerp(1, 1.45, k));
-    } else if (d.type === 'train') {
-      const dir = d.dir || 1;
-      P.position.set(d.x + dir * s * 24, baseY(g.lane(d.row)) + 0.4 + s * 7 - s * s * 5, z + s * 1.5);
-      mesh.rotation.set(s * 9, 0, s * 13 * dir);
-      mesh.scale.setScalar(1);
-      if (s > 1.4) P.visible = false;
-    } else if (d.type === 'drown' || d.type === 'drift') {
-      const k = Math.min(1, s * 2.2);
-      P.position.set(d.x, -0.3 - k * 1.2, z);
+    const by = baseY(g.lane(d.row));
+    if (d.type === 'car' && d.how === 'side') {
+      // bonk! bounced off the side of the car, tumble backwards, land on your back seeing stars
+      const back = { up: [0, -1], down: [0, 1], left: [1, 0], right: [-1, 0] }[d.hopDir] || [0, -1];
+      const fly = Math.min(s, 0.45), u = fly / 0.45;
+      P.position.set(d.x + back[0] * u * 1.1, by + (d.y || 0) + Math.sin(Math.PI * u) * 0.9, z - back[1] * u * 1.1);
+      const lie = Math.min(1, s / 0.45);
+      mesh.rotation.set(lie * 1.45, 0, 0);   // flat on your back (the model faces -z)
       mesh.scale.set(1, 1, 1);
-      mesh.rotation.z = d.side ? -d.side * k : 0;
+      if (s > 0.45) { const w = Math.sin((s - 0.45) * 14) * 0.08 * Math.max(0, 1 - (s - 0.45)); P.position.y = by + 0.05 + Math.abs(w); }
+      this.stars.visible = s > 0.4;
+      this.stars.position.set(P.position.x, by + 0.9, P.position.z);
+      this.stars.rotation.y = s * 6;
+    } else if (d.type === 'car' && d.how === 'launch') {
+      // smacked by a little car: launched spinning into the air, bounce, flop
+      const dir = d.dir || 1, air = 0.75;
+      const u = Math.min(s, air);
+      const bounce = s > air ? Math.abs(Math.sin((s - air) * 9)) * 0.35 * Math.max(0, 1 - (s - air) * 1.5) : 0;
+      P.position.set(d.x + dir * (u * 4.2 + Math.max(0, s - air) * 0.8 * Math.max(0, 1 - (s - air))), by + Math.max(0, u * 6 - u * u * 8) + bounce + 0.02, z);
+      mesh.rotation.set(s < air ? s * 3 : 0, 0, s < air ? -dir * s * 16 : -dir * Math.PI / 2);
+      mesh.scale.setScalar(1);
+    } else if (d.type === 'car') {
+      // run over by something big: squashed flat, then stuck there like a sticker
+      P.position.set(d.x, by + 0.01, z);
+      const k = Math.min(1, s * 14);
+      const wob = s > 0.08 ? Math.sin(s * 30) * 0.06 * Math.max(0, 1 - s * 2) : 0;
+      mesh.scale.set(lerp(1, 1.6, k) + wob, lerp(1, 0.07, k), lerp(1, 1.6, k) - wob);
+      mesh.rotation.y = k * 0.4 * (d.dir || 1);
+    } else if (d.type === 'train') {
+      // blasted off the tracks and out of sight
+      const dir = d.dir || 1;
+      P.position.set(d.x + dir * s * 24, by + 0.4 + s * 7 - s * s * 5, z + s * 1.5);
+      mesh.rotation.set(s * 9, 0, s * 13 * dir);
+      mesh.scale.setScalar(1 + s * 0.3);
+      if (s > 1.4) P.visible = false;
+    } else if (d.type === 'drown') {
+      // splash, flail with arms up for a moment, then glug glug down
+      const flail = Math.min(s, 0.7);
+      const sink = Math.max(0, s - 0.7);
+      P.position.set(d.x + Math.sin(s * 11) * 0.04, -0.25 + Math.sin(flail * 14) * 0.1 * (1 - flail / 0.7) - sink * sink * 2.4, z);
+      mesh.rotation.set(Math.sin(s * 9) * 0.25, s * 2, Math.sin(s * 13) * 0.35);
+      mesh.scale.set(1, 1, 1);
+      this.ripple.visible = s < 1.6;
+      this.ripple.position.set(d.x, -0.2, z);
+      this.ripple.scale.setScalar(0.4 + s * 1.4);
+      this.ripple.material.opacity = Math.max(0, 0.7 - s * 0.45);
+      if (sink > 0.7) P.visible = false;
+      if (Math.floor(s * 10) !== this.bubbleT && sink > 0) { this.bubbleT = Math.floor(s * 10); this.burst(d.x, -0.25, z, 2, [0xffffff, 0xd8f3ff], 0.4, 0.07, 0.6, 0.6, -2); }
+    } else if (d.type === 'drift') {
+      // swept off the edge on your log: spin away into the distance
+      const k = Math.min(1, s * 1.6), side = d.side || 1;
+      P.position.set(d.x + side * s * 5, -0.2 - k * 0.6, z + Math.sin(s * 3) * 0.3);
+      mesh.rotation.set(0, s * 10, side * k * 1.2);
+      mesh.scale.setScalar(1 - k * 0.5);
       if (k >= 1) P.visible = false;
     } else if (d.type === 'eagle') {
       this.eagle.visible = true;

@@ -420,7 +420,7 @@ function handleEvents() {
     switch (e.type) {
       case 'hop': sound.hop(); break;
       case 'bump': sound.bump(); break;
-      case 'land': if (e.log) sound.plop(); break;
+      case 'land': if (e.log) sound.plop(); else if (e.lane !== 'river') renderer.burst(game.player.x, 0.05, -game.player.row, 3, [0xffffff, 0xece4d4], 0.9, 0.07, 0.35, 0.4); break;
       case 'score': {
         updateHud();
         checkChallenges();

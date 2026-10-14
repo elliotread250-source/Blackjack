@@ -11,7 +11,7 @@
 export const TPS = 60;                 // fixed simulation rate
 export const TICK = 1 / TPS;
 export const COLS = 4;                 // playable columns are -4..4
-export const HOP_TICKS = 5;            // one hop takes 5 ticks (0.083 s): snappy
+export const HOP_TICKS = 4;            // one hop takes 4 ticks (0.067 s): snappy
 export const HALF = 18;                // lanes wrap at x = +-18 (well outside the view)
 export const WRAP = HALF * 2;
 export const EDGE_DEATH = 5.4;         // carried this far out on a log = gone
@@ -601,7 +601,12 @@ export class Game {
         const v = lane.items[i];
         const vx = entityX(lane, v, t);
         const half = v.len / 2 - 0.08;
-        if (b > vx - half && a < vx + half) { this.die('car', { row, vehicle: i, dir: lane.dir }); return; }
+        if (b > vx - half && a < vx + half) {
+          // hopping into a car's side bounces you off it; standing in its path gets you run over
+          const how = p.hop ? 'side' : v.len >= 2.4 ? 'flat' : 'launch';
+          this.die('car', { row, vehicle: i, dir: lane.dir, how, hopDir: p.hop ? p.hop.dir : null, y: p.hop ? Math.sin(Math.PI * p.hop.k / HOP_TICKS) * 0.42 : 0 });
+          return;
+        }
       }
     } else if (lane.type === 'rail') {
       const s = trainState(lane, t);

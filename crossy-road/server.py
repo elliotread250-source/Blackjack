@@ -37,7 +37,7 @@ BOARD_FILE = os.path.join(DATA_DIR, "leaderboard.json")
 KEEP = 100            # entries kept on disk (one per name)
 SHOW = 20             # entries sent to clients
 MAX_SCORE = 10000
-HOPS_PER_SEC = 12     # one hop is 5 ticks at 60 Hz, so nobody can beat this
+HOPS_PER_SEC = 15     # one hop is 4 ticks at 60 Hz, so nobody can beat this
 RUN_TTL = 6 * 3600
 CHARS = {"chicken", "duck", "frog", "pig", "cat", "penguin", "fox", "panda", "robot", "unicorn", "dog",
          "bunny", "mouse", "sheep", "cow", "turtle", "bee", "owl", "camel", "lizard", "monkey", "parrot",
