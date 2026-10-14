@@ -133,7 +133,7 @@ export class Renderer {
       if (!b.vis || !b.m) continue;
       let color = b.c;
       if (b.tf) { color = { all: b.c }; for (const f in b.tf) if (b.tf[f] !== undefined) color[f] = b.tf[f]; }
-      B.box(b.m, b.x0, b.y0, b.z0, b.x1, b.y1, b.z1, color, { ao: b.m !== 'glass' });
+      B.box(b.m, b.x0, b.y0, b.z0, b.x1, b.y1, b.z1, color, { ao: b.m !== 'glass', local: typeof b.m === 'string' && b.m.startsWith('rug_') });
     }
     // grass, minus the building footprints
     const holes = L.holes;

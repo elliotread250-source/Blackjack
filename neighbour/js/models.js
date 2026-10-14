@@ -3,6 +3,7 @@
 // the props you can carry, the bear trap, the camera and the neighbour himself.
 import * as THREE from 'three';
 import { TEX_SCALE } from './textures.js';
+import { buildFurniture } from './furniture.js';
 
 const tmpC = new THREE.Color();
 // Cartoon look: every colour gets pushed brighter and more saturated, like the wacky Hello Neighbor houses.
@@ -157,6 +158,7 @@ export function addDecor(B, d) {
     raised.geom = (m, g, matrix, c) => B.geom(m, g, new THREE.Matrix4().multiplyMatrices(T, matrix), c);
     return addDecor(raised, Object.assign({}, d, { lift: 0, y: d.y - d.lift }));
   }
+  if (d.t && d.t.startsWith('f_')) { buildFurniture(B, d); return; }
   const ry = d.ry || 0, L = local(d.x, d.z, ry);
   const at = (x, z) => L(x, z);
   switch (d.t) {

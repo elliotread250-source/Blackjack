@@ -11,6 +11,7 @@ import { buildGrid, makePather, findNode, smoothPath, nodePos } from './nav.js';
 import { sightRate, hearNoise, lightAt, lineOfSight, NOISE } from './perception.js';
 import { Neighbour, DIFFICULTY, EYE } from './ai.js';
 import * as Learn from './learning.js';
+import { stepMaterial } from './dress.js';
 import { initAct3, act3Dyn, act3Look, act3Hint, act3Use, act3Step, rideStep, act3Pickup, sightBlocked, act3Save, act3Load } from './act3.js';
 
 export const PLAYER = {
@@ -1044,6 +1045,8 @@ function matOf(b) {
   const m = b.m;
   const top = typeof m === 'string' ? m : m && (m.py || m.all);
   if (!top) return 'wood';
+  const fine = stepMaterial(top);
+  if (fine) return fine;
   if (top === 'checker' || top === 'tile' || top === 'counter') return 'tile';
   if (top === 'concrete' || top === 'paving' || top === 'roofflat' || top === 'brick' || top === 'shingle') return 'concrete';
   if (top === 'carpet' || top === 'fabric') return 'carpet';
