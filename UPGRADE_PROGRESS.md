@@ -72,7 +72,7 @@ Order: Phase 1 Crossy Road → Phase 2 Nosy Neighbour visual rebuild → Phase 3
 - Follow-up (on the branch, ships with the next deploy): the title screen no longer flashes under
   "Loading…" before the sign-in screen.
 
-## Phase 2 — Nosy Neighbour visual rebuild (complete on the branch, not deployed)
+## Phase 2 — Nosy Neighbour visual rebuild (deployed 2026-10-14)
 
 ### Approach (gameplay-safe by construction)
 - **Dressing pass** (`js/dress.js` `dressRooms`): each map lists its rooms (`L.rooms`); the pass gives the
@@ -120,3 +120,13 @@ door; Act 3 TV unit vs party-room door. Each was shifted clear of its doorway; a
 - Browser (local preview): every map built and rendered with no console errors; rooms, exteriors, windmill,
   tram truss and neighbour checked by screenshot. Draw calls: L1 351, L2 51, L3 274, L4 326, L5 551.
 - Not verified: `tools/smoke.cjs` (needs Playwright, not installed here); real GPU frame times on phones.
+- **Deployed 2026-10-14** (permission given): `claude/modest-tesla-7rfcgo` at `f39348d`; Railway neighbour and
+  crossy-road deployments SUCCESS. Live checks: new modules served, Medium preset in the menu, L1 (15 rooms,
+  351 draw calls) and L5 (24 rooms, 551 calls) built and rendered on the production site with no console
+  errors; Crossy Road /healthz ok, title-flash fix live, leaderboard data intact.
+
+## Arcade hub redesign — EMBER//ARCADE (in progress, branch `redesign/ember-arcade`)
+- Stage 1 audit: 39 registry entries (38 live + Candy Match pending), all on Railway; play-count keys come from
+  the old `slug(name)` and must be preserved; online multiplayer present in code for Pool, Kart Racer, Pong,
+  Connect 4 (this repo) and Apex GP (live `net.js`); Space Invaders is same-screen co-op; Tic Tac Toe and Chess
+  are local 2-player. Before screenshots in `docs/arcade-redesign/`.
