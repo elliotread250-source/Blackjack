@@ -1,5 +1,5 @@
 // Glue: screens, the fixed-timestep loop, input, sound and saved progress.
-import { Game, Profile, TICK, CHARACTERS, charById, entityX, trainState, zoneOf, PRIZE_PRICE } from './logic.js';
+import { Game, Profile, TICK, CHARACTERS, charById, entityX, trainState, zoneOf, PRIZE_PRICE, SECRET_WORDS, INVINCIBLE_SECONDS } from './logic.js';
 import { BIOME_NAMES } from './models.js';
 import { Renderer } from './render.js';
 import { Sound } from './audio.js';
@@ -25,7 +25,7 @@ const autopilot = params.has('autopilot') ? new Autopilot() : null;
 const board = new Leaderboard(!params.has('autopilot') && !params.has('seed'));
 const touchUI = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
 
-const THEME_NOTE = { snow: 'Comes with a snowy world', autumn: 'Comes with an autumn world', night: 'Comes with a night world', candy: 'Comes with a candy world', desert: 'Comes with a desert world', jungle: 'Comes with a jungle world', spooky: 'Comes with a spooky world', space: 'Comes with a space world' };
+const THEME_NOTE = { metro: 'Comes with a hero city world', volcano: 'Comes with a volcano world', retro: 'Comes with a retro world', snow: 'Comes with a snowy world', autumn: 'Comes with an autumn world', night: 'Comes with a night world', candy: 'Comes with a candy world', desert: 'Comes with a desert world', jungle: 'Comes with a jungle world', spooky: 'Comes with a spooky world', space: 'Comes with a space world' };
 const DEATH_TEXT = {
   car: ['Splat!', 'Flattened!', 'Road pizza!'],
   train: ['Choo choo!', 'Derailed!', 'Train wreck!'],
@@ -51,7 +51,8 @@ function newGame() {
   renderer.setCharacter(profile.selected);
   renderer.reset(game);
   board.startRun();
-  lastZone = 0;
+  lastZone = 0; suited = false;
+  if (pendingFast) { pendingFast = false; game.makeInvincible(); }
   updateHud();
   prevPhase.clear(); passed.clear();
 }
@@ -107,6 +108,7 @@ function gameOver() {
   state = 'over';
   lastOver = performance.now();
   const score = game.score;
+  checkChallenges();
   const isBest = profile.submit(score) && score > 0;
   const lines = DEATH_TEXT[game.player.dead ? game.player.dead.type : 'car'];
   $('o-why').textContent = lines[Math.floor(Math.random() * lines.length)];
@@ -252,6 +254,12 @@ function updateChars() {
     btn.disabled = isSel;
     btn.className = 'btn green';
     $('c-info').textContent = note || (isSel ? 'Ready to cross' : 'Unlocked');
+  } else if (c.challenge || c.code) {
+    btn.textContent = c.code ? '🎟️ Secret' : '🏆 Challenge';
+    btn.disabled = true;
+    btn.className = 'btn';
+    const ch = c.challenge;
+    $('c-info').textContent = ch ? `${ch.text} (best ${Math.min(profile.records[ch.stat] || 0, ch.goal)}/${ch.goal})` + (note ? ' • ' + note.toLowerCase() : '') : 'Unlocked with a secret redeem code';
   } else {
     btn.innerHTML = '<span class="coin-ic"></span>' + c.price;
     btn.disabled = profile.coins < c.price;
@@ -259,7 +267,7 @@ function updateChars() {
     $('c-info').textContent = (profile.coins < c.price ? 'Need ' + (c.price - profile.coins) + ' more coins' : 'Unlock ' + c.name) + (note ? ' • ' + note.toLowerCase() : '');
   }
   $('c-dots').textContent = `${sel + 1} / ${CHARACTERS.length} • ${profile.owned.size} unlocked`;
-  const left = CHARACTERS.length - profile.owned.size;
+  const left = CHARACTERS.filter(x => x.price !== null && !profile.owned.has(x.id)).length;
   $('c-prize').disabled = !left || profile.coins < PRIZE_PRICE;
   $('c-prize').innerHTML = left ? `🎁 Prize machine <span class="coin-ic"></span>${PRIZE_PRICE}` : '🎁 You have everyone!';
 }
@@ -357,6 +365,16 @@ click('c-prev', () => charsStep(-1));
 click('c-next', () => charsStep(1));
 click('c-action', charsAction);
 click('c-prize', prize);
+click('t-redeem', askCode);
+click('c-redeem', askCode);
+// phones: hold the score during a run to type a code
+{
+  let holdT = 0;
+  const sc = document.querySelector('#hud .score');
+  sc.style.pointerEvents = 'auto';
+  sc.addEventListener('pointerdown', e => { e.stopPropagation(); clearTimeout(holdT); holdT = setTimeout(askCode, 700); });
+  for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) sc.addEventListener(ev, () => clearTimeout(holdT));
+}
 for (const b of document.querySelectorAll('.mute')) b.addEventListener('click', e => { e.stopPropagation(); toggleMute(); b.blur(); });
 // buttons should never start a hop underneath them
 for (const b of document.querySelectorAll('button, a')) b.addEventListener('pointerdown', e => e.stopPropagation());
@@ -380,13 +398,17 @@ function handleEvents() {
       case 'land': if (e.log) sound.plop(); break;
       case 'score': {
         updateHud();
+        checkChallenges();
         const zone = zoneOf(e.score);
         if (zone !== lastZone) { lastZone = zone; banner(BIOME_NAMES[renderer.themeForZone(zone)] || '', 'Entering'); }
         else if (e.score % 50 === 0) banner(e.score + ' rows!', 'Milestone');
         break;
       }
+      case 'invincible': sound.buy(); banner('INVINCIBLE ' + e.seconds + 's', '⚡ fast'); renderer.burst(game.player.x, 0.6, -game.player.row, 24, [0xc8202a, 0xffc93a, 0x9ff4ff], 3, 0.14, 0.9); break;
+      case 'shrug': sound.bump(); break;
       case 'coin':
         profile.addCoins(e.value || 1);
+        checkChallenges();
         sound.coin();
         if (e.gem) { setTimeout(() => sound.coin(), 90); setTimeout(() => sound.coin(), 180); }
         renderer.collectCoin(e.row);
@@ -406,6 +428,51 @@ function handleEvents() {
     }
   }
 }
+
+// ------------------------------------------------------------ secret words, codes, challenges
+let pendingFast = false, suited = false, typed = '';
+function checkChallenges() {
+  if (!game) return;
+  for (const c of profile.recordRun(game.runStats())) {
+    sound.buy();
+    setTimeout(() => banner(c.name + ' unlocked!', '🏆 Challenge complete'), 300);
+  }
+}
+function secret(word, src) {
+  if (word === 'fast') {
+    if (state === 'playing' || state === 'dying') { if (game && !game.player.dead) game.makeInvincible(); }
+    else { pendingFast = true; banner('Invincible next run!', '⚡ fast'); sound.buy(); }
+    return true;
+  }
+  const c = profile.redeem(word);
+  if (c) {
+    sound.buy(); banner(c.name + '!', 'Code redeemed');
+    if (renderer.carousel.length) renderer.setCarouselOwned(profile.owned);
+    if (state === 'chars') { sel = CHARACTERS.indexOf(c); updateChars(); }
+    else if (state === 'title') { renderer.setTheme(charById(profile.selected).theme); renderer.setCharacter(profile.selected); }
+    updateHud();
+    return true;
+  }
+  if (src === 'prompt') banner('Unknown code', 'Hmm');
+  return false;
+}
+function askCode() {
+  const w = (prompt('Enter a code:') || '').trim().toLowerCase();
+  if (w) secret(w, 'prompt');
+}
+// Typing a secret word: the letters that would make you hop (a, s, d...) are swallowed while
+// you're partway through a word, so "fast" doesn't walk you into traffic.
+window.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey || e.repeat) return;
+  if (e.target && /INPUT|TEXTAREA/.test(e.target.tagName)) return;
+  if (!/^[a-z]$/i.test(e.key)) { typed = ''; return; }
+  const next = (typed + e.key.toLowerCase()).slice(-12);
+  for (const w of SECRET_WORDS) if (next.endsWith(w)) { typed = ''; secret(w); e.stopImmediatePropagation(); e.preventDefault(); return; }
+  typed = next;
+  // swallow movement keys only once a word has clearly started (2+ letters of it typed)
+  const started = SECRET_WORDS.some(w => { for (let k = 2; k < w.length; k++) if (next.endsWith(w.slice(0, k))) return true; return false; });
+  if (started && /^[wasd]$/i.test(e.key)) { e.stopImmediatePropagation(); e.preventDefault(); }
+}, true);
 
 let lastZone = 0, bannerTimer = 0;
 function banner(text, kicker) {
@@ -479,6 +546,14 @@ function frame(now) {
     }
     if (state === 'dying' && now - deathTime > (game.player.dead.type === 'eagle' ? 1500 : 1150)) gameOver();
     ambient();
+  }
+  if (game) {
+    // while "fast" is on you're in the iron suit, with a countdown
+    const inv = game.invincible && !game.player.dead;
+    if (inv !== suited) { suited = inv; renderer.setCharacter(inv ? 'ironsuit' : profile.selected); }
+    $('inv').hidden = !inv || state === 'over';
+    if (inv) { const l = game.invLeft(); $('inv-t').textContent = Math.ceil(l); $('inv').classList.toggle('low', l < 3); }
+    renderer.shield = inv ? game.invLeft() : 0;
   }
   renderer.update(state === 'paused' ? 0 : acc / TICK, state === 'paused' ? 0 : dt);
   renderer.render();

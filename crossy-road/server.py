@@ -36,7 +36,7 @@ RUN_TTL = 6 * 3600
 CHARS = {"chicken", "duck", "frog", "pig", "cat", "penguin", "fox", "panda", "robot", "unicorn", "dog",
          "bunny", "mouse", "sheep", "cow", "turtle", "bee", "owl", "camel", "lizard", "monkey", "parrot",
          "tiger", "polarbear", "snowman", "pumpkin", "bat", "ghost", "skeleton", "zombie", "gingerbread",
-         "ninja", "dino", "alien", "astronaut", "dragon"}
+         "ninja", "dino", "alien", "astronaut", "dragon", "golden", "ironsuit", "starshield", "thunder", "brute", "crawler", "panther", "miner", "hedgehog", "knight", "marine", "golem"}
 BLOCKED = re.compile(r"fuck|shit|cunt|nigg|fag|bitch|whore|slut|rape|nazi|hitler|penis|cock|dick|pussy|wank", re.I)
 
 _lock = threading.Lock()

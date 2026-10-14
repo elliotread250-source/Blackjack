@@ -365,6 +365,8 @@ export class Game {
     this.events = [];
     this.taken = new Set();           // collected coins "row:col"
     this.coins = 0;
+    this.invUntil = 0;                // tick when the "fast" invincibility wears off
+    this.stats = { roads: 0, rails: 0, rivers: 0, logs: 0 };
     this.player = {
       row: 0, x: 0, face: 0, hop: null, onLog: null, dead: null,
       queue: [], landTick: -100, bumpTick: -100, maxRow: 0, idle: 0,
@@ -374,6 +376,16 @@ export class Game {
 
   get t() { return this.tick * TICK; }
   get score() { return this.player.maxRow; }
+  get invincible() { return this.tick < this.invUntil; }
+  invLeft() { return Math.max(0, (this.invUntil - this.tick) * TICK); }
+  // The "fast" cheat: nothing can hurt you for a while. Typing it again restarts the clock.
+  makeInvincible(seconds = INVINCIBLE_SECONDS) {
+    if (this.player.dead) return false;
+    this.invUntil = this.tick + Math.round(seconds * TPS);
+    this.emit('invincible', { seconds });
+    return true;
+  }
+  runStats() { return { score: this.score, coins: this.coins, ...this.stats }; }
 
   ensure(row) {
     if (this.readonly) return;
@@ -402,6 +414,8 @@ export class Game {
     g.scroll = this.scroll;
     g.taken = this.taken;           // planners never collect for real
     g.coins = this.coins;
+    g.invUntil = this.invUntil;
+    g.stats = { ...this.stats };
     const p = this.player;
     g.player = { ...p, hop: p.hop && { ...p.hop }, onLog: p.onLog && { ...p.onLog }, queue: [...p.queue], dead: p.dead && { ...p.dead } };
     g.events = [];
@@ -493,6 +507,13 @@ export class Game {
   die(type, extra = {}) {
     const p = this.player;
     if (p.dead) return;
+    if (this.invincible) {
+      // shrug it off: cars and trains pass through, water holds you up, the eagle gives up
+      if (type === 'drift') { p.onLog = null; p.x = clamp(Math.round(p.x), -COLS, COLS); }
+      if (type === 'eagle') { this.scroll = Math.min(this.scroll, p.row); p.idle = 0; }
+      if (this.tick - (this.lastShrug || -99) > 20) { this.lastShrug = this.tick; this.emit('shrug', { kind: type }); }
+      return;
+    }
     p.dead = { type, tick: this.tick, x: p.x, row: p.row, ...extra };
     p.queue.length = 0;
     this.emit('death', { kind: type, ...extra });
@@ -526,6 +547,8 @@ export class Game {
       p.x = this.playerXAt(t);
       if (Math.abs(p.x) > EDGE_DEATH) { this.die('drift', { side: Math.sign(p.x) }); return; }
     }
+    // invincibility ran out while standing on the water
+    if (!p.hop && !p.onLog && !this.invincible && this.lane(p.row).type === 'river') { this.die('drown'); return; }
     // 4. traffic and trains
     this.collide(t);
     if (p.dead) return;
@@ -546,7 +569,12 @@ export class Game {
     p.x = h.toX;
     p.landTick = this.tick;
     const lane = this.lane(p.row);
-    if (p.row > p.maxRow) { p.maxRow = p.row; this.emit('score', { score: p.maxRow }); }
+    if (p.row > p.maxRow) {
+      p.maxRow = p.row;
+      if (lane.type === 'road') this.stats.roads++; else if (lane.type === 'rail') this.stats.rails++; else if (lane.type === 'river') this.stats.rivers++;
+      this.emit('score', { score: p.maxRow });
+    }
+    if (h.float) this.stats.logs++;
     if (h.water) { this.die('drown'); return; }
     if (h.float) p.onLog = { row: p.row, idx: h.float.idx, offset: h.float.offset };
     if (!this.readonly && lane.coin !== null && lane.coin !== undefined && lane.type !== 'river') {
@@ -640,6 +668,24 @@ export const CHARACTERS = [
   { id: 'astronaut', name: 'Astronaut', price: 450, theme: 'space' },
   { id: 'dragon', name: 'Dragon', price: 500, theme: 'desert' },
 ];
+// Secret and challenge skins: you can't buy these. `code` = redeem code, `challenge` = run goal.
+CHARACTERS.push(
+  { id: 'golden', name: 'Golden Chicken', price: null, theme: 'desert', code: 'golden' },
+  { id: 'ironsuit', name: 'Iron Suit', price: null, theme: 'metro', challenge: { stat: 'score', goal: 75, text: 'Reach 75 rows in one run' } },
+  { id: 'starshield', name: 'Star Shield', price: null, theme: 'classic', challenge: { stat: 'roads', goal: 40, text: 'Cross 40 roads in one run' } },
+  { id: 'thunder', name: 'Thunder God', price: null, theme: 'snow', challenge: { stat: 'rails', goal: 15, text: 'Cross 15 train tracks in one run' } },
+  { id: 'brute', name: 'Smash Brute', price: null, theme: 'jungle', challenge: { stat: 'score', goal: 150, text: 'Reach 150 rows in one run' } },
+  { id: 'crawler', name: 'Wall Crawler', price: null, theme: 'metro', challenge: { stat: 'logs', goal: 30, text: 'Ride 30 logs in one run' } },
+  { id: 'panther', name: 'Panther King', price: null, theme: 'night', challenge: { stat: 'coins', goal: 25, text: 'Grab 25 coins in one run' } },
+  { id: 'miner', name: 'Block Miner', price: null, theme: 'retro', challenge: { stat: 'score', goal: 50, text: 'Reach 50 rows in one run' } },
+  { id: 'hedgehog', name: 'Turbo Hedgehog', price: null, theme: 'desert', challenge: { stat: 'roads', goal: 80, text: 'Cross 80 roads in one run' } },
+  { id: 'knight', name: 'Pixel Knight', price: null, theme: 'retro', challenge: { stat: 'rails', goal: 30, text: 'Cross 30 train tracks in one run' } },
+  { id: 'marine', name: 'Space Marine', price: null, theme: 'space', challenge: { stat: 'score', goal: 250, text: 'Reach 250 rows in one run' } },
+  { id: 'golem', name: 'Lava Golem', price: null, theme: 'volcano', challenge: { stat: 'logs', goal: 60, text: 'Ride 60 logs in one run' } },
+);
+export const CHALLENGES = CHARACTERS.filter(c => c.challenge);
+export const INVINCIBLE_SECONDS = 20;
+export const SECRET_WORDS = ['fast', 'golden'];
 export const PRIZE_PRICE = 100;
 export const charById = id => CHARACTERS.find(c => c.id === id) || CHARACTERS[0];
 
@@ -656,6 +702,24 @@ export class Profile {
     const sel = storage.get('selected', 'chicken');
     this.selected = this.owned.has(sel) ? sel : 'chicken';
     this.muted = !!storage.get('muted', false);
+    const rec = storage.get('records', {});
+    this.records = {};
+    for (const k of ['score', 'roads', 'rails', 'logs', 'coins']) this.records[k] = num(rec && rec[k]);
+  }
+  // Best-ever run stats; returns the challenge skins this run has just unlocked.
+  recordRun(stats) {
+    for (const k in this.records) if (num(stats[k]) > this.records[k]) this.records[k] = num(stats[k]);
+    const won = [];
+    for (const c of CHALLENGES) if (!this.owned.has(c.id) && num(stats[c.challenge.stat]) >= c.challenge.goal) { this.owned.add(c.id); won.push(c); }
+    this.save();
+    return won;
+  }
+  // Redeem codes. Returns the character unlocked, or null.
+  redeem(code) {
+    const c = CHARACTERS.find(x => x.code && x.code === String(code || '').trim().toLowerCase());
+    if (!c) return null;
+    this.owned.add(c.id); this.selected = c.id; this.save();
+    return c;
   }
   save() {
     this.s.set('best', this.best);
@@ -663,6 +727,7 @@ export class Profile {
     this.s.set('owned', [...this.owned]);
     this.s.set('selected', this.selected);
     this.s.set('muted', this.muted);
+    this.s.set('records', this.records);
   }
   addCoins(n) { this.coins += n; this.save(); }
   submit(score) {
@@ -671,7 +736,7 @@ export class Profile {
     this.save();
     return isBest;
   }
-  canBuy(id) { const c = charById(id); return c.id === id && !this.owned.has(id) && this.coins >= c.price; }
+  canBuy(id) { const c = charById(id); return c.id === id && c.price !== null && !this.owned.has(id) && this.coins >= c.price; }
   buy(id) {
     if (!this.canBuy(id)) return false;
     this.coins -= charById(id).price;
@@ -689,7 +754,7 @@ export class Profile {
   setMuted(m) { this.muted = !!m; this.save(); }
   // Prize machine: a random character you don't own yet, for PRIZE_PRICE coins.
   prize(rnd = Math.random) {
-    const left = CHARACTERS.filter(c => !this.owned.has(c.id));
+    const left = CHARACTERS.filter(c => !this.owned.has(c.id) && c.price !== null);
     if (!left.length || this.coins < PRIZE_PRICE) return null;
     const c = left[Math.floor(rnd() * left.length)];
     this.coins -= PRIZE_PRICE;

@@ -154,6 +154,10 @@
   .board-list .sc { font-weight: 900; font-size: 19px; }
   .board-list .msg { display: block; text-align: center; padding: 30px 10px; color: #7a8299; }
   .board-name { align-self: center; color: #fff; font-weight: 800; font-size: 14px; text-decoration: underline; opacity: 0.9; padding: 6px; }
+.inv { position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 74px); transform: translateX(-50%); z-index: 6; padding: 6px 16px; border-radius: 999px; background: linear-gradient(90deg, #c8202a, #ffc93a); color: #fff; font: 900 20px/1.2 system-ui, sans-serif; letter-spacing: 1px; pointer-events: none; animation: invpulse .6s ease-in-out infinite alternate; }
+.inv b { font-variant-numeric: tabular-nums; margin-left: 6px; }
+.inv.low { animation-duration: .15s; }
+@keyframes invpulse { from { box-shadow: 0 0 8px #ffc93a; } to { box-shadow: 0 0 26px #9ff4ff; } }
 </style>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 </head>
@@ -162,6 +166,7 @@
 <a class="arcade" id="arcade" href="https://open-arcade.up.railway.app">&larr; Arcade</a>
 
 <div id="banner" class="banner" aria-live="polite"></div>
+<div id="inv" class="inv outline" hidden>⚡ INVINCIBLE <b id="inv-t">20</b></div>
 <div id="hud" hidden>
   <div class="score outline"><div id="score">0</div><div id="top">Top 0</div></div>
   <div class="right">
@@ -185,6 +190,7 @@
       <button class="btn orange" id="t-chars"><svg viewBox="0 0 24 24"><path d="M12 3a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm0 10c4.4 0 8 2 8 4.5V21H4v-3.5C4 15 7.6 13 12 13z"/></svg>Characters</button>
       <button class="btn round mute" aria-label="Mute"></button>
     </div>
+    <button class="btn" id="t-redeem" style="font-size:15px;padding:8px 16px">🎟️ Redeem code</button>
     <div class="keys outline pass" id="t-keys"></div>
   </div>
 </div>
@@ -243,7 +249,7 @@
       <button class="btn green" id="c-action">Select</button>
       <button class="btn round" id="c-next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="M8.6 19.4a1.5 1.5 0 0 1 0-2.1l5.3-5.3-5.3-5.3a1.5 1.5 0 1 1 2.1-2.1l6.4 6.4a1.5 1.5 0 0 1 0 2.1l-6.4 6.4a1.5 1.5 0 0 1-2.1 0z"/></svg></button>
     </div>
-    <button class="btn orange" id="c-prize">🎁 Prize machine</button>
+    <div class="row"><button class="btn orange" id="c-prize">🎁 Prize machine</button><button class="btn" id="c-redeem" style="font-size:15px">🎟️ Code</button></div>
   </div>
 </div>
 

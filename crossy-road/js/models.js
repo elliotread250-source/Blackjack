@@ -113,9 +113,33 @@ export const THEMES = {
     log: 0x5a5a74, logEnd: 0x9aa0c8, pad: 0x9a7aff, hemi: [0xc8d0ff, 0x4a3a7a, 1.4], sun: 1.9, fog: 0x14112e,
   },
 };
+// worlds for the challenge heroes
+Object.assign(THEMES, {
+  metro: {
+    sky: 0x2a2450, grass: [0x5a5a6e, 0x52526a], grassSide: 0x3a3a4c, road: 0x2e2e3a, roadSide: 0x1e1e28, line: 0xff4ad8,
+    water: 0x2a6ad8, waterDeep: 0x1f55c0, rail: 0x5a5a6a, tie: 0x3a3030, steel: 0xc8d0e8,
+    trunk: 0x3a3a48, leaves: [0x4af0ff, 0xff4ad8, 0xffe04a, 0x7aff6a], rock: [0x7a7a8a, 0x6a6a7a], style: 'crystal',
+    flowers: [0xff4ad8, 0x4af0ff, 0xffe04a], flowerStyle: 'glow',
+    log: 0x6a6a7a, logEnd: 0xa8a8c0, pad: 0x4a8aff, hemi: [0xd8c8ff, 0x4a3a6a, 1.4], sun: 1.9, fog: 0x2a2450,
+  },
+  volcano: {
+    sky: 0x5a2a24, grass: [0x4a4040, 0x423838], grassSide: 0x2a2222, road: 0x2a2424, roadSide: 0x1a1414, line: 0xff8a2a,
+    water: 0xff6a1a, waterDeep: 0xe0480e, rail: 0x5a4a44, tie: 0x2a1a14, steel: 0xb8a8a0,
+    trunk: 0x2a1a14, leaves: [0x3a2a2a, 0x4a3030], rock: [0x5a4a4a, 0x4a3a3a], style: 'spooky',
+    flowers: [0xff6a1a, 0xffc020, 0xff3a10], flowerStyle: 'glow',
+    log: 0x3a3232, logEnd: 0x6a5a5a, pad: 0x4a3a3a, hemi: [0xffd0b0, 0x6a2a20, 1.4], sun: 2.0, fog: 0x6a3020,
+  },
+  retro: {
+    sky: 0x6ad0ff, grass: [0x6ae04a, 0x5cd040], grassSide: 0x3a9a2a, road: 0x4a4a5a, roadSide: 0x34343e, line: 0xffffff,
+    water: 0x3a8aff, waterDeep: 0x2a6ae8, rail: 0x8a7a6a, tie: 0x8a4a2a, steel: 0xd8d8e0,
+    trunk: 0x8a4a1a, leaves: [0x2ab83a, 0x3ac84a, 0x22a030, 0x4ad85a], rock: [0xa8a8b8, 0x9898a8],
+    flowers: [0xff3a3a, 0xffe03a, 0xffffff], flowerStyle: 'flower',
+    log: 0xa8622a, logEnd: 0xe8a860, pad: 0x3ad85a, hemi: [0xffffff, 0x8aa8c8, 1.45], sun: 2.5, fog: 0x6ad0ff,
+  },
+});
 // The order the world cycles through on a long run (starting from the character's own world).
-export const BIOME_ORDER = ['classic', 'autumn', 'desert', 'jungle', 'snow', 'spooky', 'night', 'candy', 'space'];
-export const BIOME_NAMES = { classic: 'Meadow', autumn: 'Autumn Woods', desert: 'Desert', jungle: 'Jungle', snow: 'Snowfields', spooky: 'Spooky Hollow', night: 'Night Town', candy: 'Candy Land', space: 'Outer Space' };
+export const BIOME_ORDER = ['classic', 'autumn', 'desert', 'jungle', 'snow', 'spooky', 'night', 'candy', 'space', 'metro', 'volcano', 'retro'];
+export const BIOME_NAMES = { classic: 'Meadow', autumn: 'Autumn Woods', desert: 'Desert', jungle: 'Jungle', snow: 'Snowfields', spooky: 'Spooky Hollow', night: 'Night Town', candy: 'Candy Land', space: 'Outer Space', metro: 'Hero City', volcano: 'Volcano', retro: 'Retro Land' };
 for (const [k, f, st] of [['classic', [0xff6a8a, 0xffd23f, 0xffffff, 0xa86aff], 'flower'], ['snow', [0xffffff, 0xe8f4ff], 'mound'], ['autumn', [0xe8742c, 0xd9452b, 0xf2b53a], 'leaves'], ['night', [0x6affd8, 0xb8ff6a, 0x8ad8ff], 'glow'], ['candy', [0xff6fa8, 0x8fe39a, 0xffd36f, 0xa98bff], 'gumdrop']]) {
   THEMES[k].flowers = f; THEMES[k].flowerStyle = st;
 }

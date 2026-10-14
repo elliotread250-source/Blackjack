@@ -44,6 +44,14 @@ export class Renderer {
     this.playerMesh.castShadow = true;
     this.player.add(this.playerMesh);
     this.scene.add(this.player);
+    // the invincibility force field
+    this.shield = 0;
+    this.shieldMesh = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.05, 8, 28), new THREE.MeshBasicMaterial({ color: 0x9ff4ff, transparent: true, opacity: 0.8, depthWrite: false }));
+    this.shieldMesh.rotation.x = Math.PI / 2; this.shieldMesh.visible = false;
+    this.player.add(this.shieldMesh);
+    this.shieldMesh2 = new THREE.Mesh(new THREE.SphereGeometry(0.62, 18, 12), new THREE.MeshBasicMaterial({ color: 0xffc93a, transparent: true, opacity: 0.16, depthWrite: false }));
+    this.shieldMesh2.position.y = 0.45; this.shieldMesh2.visible = false;
+    this.player.add(this.shieldMesh2);
     this.face = 0;
 
     const ep = M.eagleParts();
@@ -472,6 +480,15 @@ export class Renderer {
   updatePlayer(g, pose, t, dt) {
     const p = g.player;
     const P = this.player, mesh = this.playerMesh;
+    {
+      const on = this.shield > 0 && !p.dead && (this.shield > 3 || Math.floor(t * 8) % 2 === 0);
+      this.shieldMesh.visible = this.shieldMesh2.visible = on;
+      if (on) {
+        this.shieldMesh.position.y = 0.1 + (Math.sin(t * 5) * 0.5 + 0.5) * 0.8;
+        this.shieldMesh.scale.setScalar(1 + Math.sin(t * 9) * 0.08);
+        this.shieldMesh2.material.opacity = 0.12 + Math.sin(t * 6) * 0.06;
+      }
+    }
     this.eagle.visible = false;
     P.visible = true;
     mesh.rotation.set(0, 0, 0);

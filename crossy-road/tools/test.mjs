@@ -1,6 +1,6 @@
 // node tools/test.mjs [seeds] [rows] — rules, characters, shop and a passability run with the autopilot.
 import assert from 'node:assert/strict';
-import { Game, Profile, CHARACTERS, memoryStorage, zoneOf, BIOME_ROWS, VEHICLES, PRIZE_PRICE, GEM_VALUE } from '../js/logic.js';
+import { Game, Profile, CHARACTERS, memoryStorage, zoneOf, BIOME_ROWS, VEHICLES, PRIZE_PRICE, GEM_VALUE, CHALLENGES, TPS } from '../js/logic.js';
 import { MODELS } from '../js/characters.js';
 import { Autopilot } from '../js/autopilot.js';
 
@@ -48,5 +48,34 @@ for (let s = 1; s <= seeds; s++) {
   while (!w.player.dead && w.score < rows && w.tick < rows * 60 * 4) { pilot.update(w); w.step(); }
   worst = Math.min(worst, w.score);
   ok(w.score >= rows, `seed ${s * 7919}: autopilot reached ${w.score}${w.player.dead ? ' (died: ' + w.player.dead.type + ')' : ''}`);
+}
+// "fast": 20 s of invincibility against everything, and it can be used again and again
+{
+  const g = new Game({ seed: 77 });
+  ok(g.makeInvincible() && g.invincible && Math.abs(g.invLeft() - 20) < 0.02, 'fast gives 20 s of invincibility');
+  for (const kind of ['car', 'train', 'drown', 'drift', 'eagle']) { g.die(kind); ok(!g.player.dead, 'invincible to ' + kind); }
+  // hop straight ahead for 15 s through whatever comes: never dies
+  const dirs = ['up', 'up', 'up', 'left', 'up', 'right', 'up', 'right'];
+  for (let i = 0; i < 15 * TPS; i++) { if (i % 9 === 0) g.input(dirs[(i / 9) % dirs.length]); g.step(); }
+  ok(!g.player.dead && g.score > 5, `ran ${g.score} rows blind without dying`);
+  for (let i = 0; i < 6 * TPS; i++) g.step();
+  ok(!g.invincible, 'it wears off');
+  g.die('car'); ok(g.player.dead, 'then cars hurt again');
+  const h = new Game({ seed: 78 }); h.makeInvincible(); for (let i = 0; i < 19 * TPS; i++) h.step(); h.makeInvincible();
+  ok(Math.abs(h.invLeft() - 20) < 0.02, 'typing it again restarts the 20 s');
+}
+// codes and challenge skins
+{
+  const pr = new Profile(memoryStorage({ coins: 99999 }));
+  ok(!pr.canBuy('golden') && !pr.buy('ironsuit'), 'secret and challenge skins cannot be bought');
+  ok(pr.redeem('nope') === null && pr.redeem(' GOLDEN ')?.id === 'golden' && pr.owned.has('golden') && pr.selected === 'golden', 'redeem "golden" -> Golden Chicken');
+  ok(CHALLENGES.length >= 10 && CHALLENGES.every(c => ['classic', 'autumn', 'desert', 'jungle', 'snow', 'spooky', 'night', 'candy', 'space', 'metro', 'volcano', 'retro'].includes(c.theme)), `${CHALLENGES.length} challenge skins, each with a world`);
+  const won = pr.recordRun({ score: 80, roads: 41, rails: 2, logs: 5, coins: 3 });
+  ok(won.some(c => c.id === 'ironsuit') && won.some(c => c.id === 'starshield') && won.some(c => c.id === 'miner') && !pr.owned.has('marine'), 'a 80-row, 41-road run unlocks Iron Suit, Star Shield and Block Miner');
+  ok(pr.records.score === 80 && pr.recordRun({ score: 10 }).length === 0 && pr.records.score === 80, 'best stats are kept');
+  for (let i = 0; i < 40; i++) pr.prize?.(() => 0.99);
+  ok(!CHALLENGES.some(c => pr.owned.has(c.id) && !['ironsuit', 'starshield', 'miner'].includes(c.id)), 'the prize machine never gives challenge skins');
+  const g = new Game({ seed: 5 }); for (let i = 0; i < 600; i++) { if (i % 12 === 0) g.input('up'); g.step(); if (g.player.dead) break; }
+  const st = g.runStats(); ok(st.roads + st.rails + st.rivers <= st.score && st.score >= 0, 'run stats count lanes crossed');
 }
 console.log(`${n} crossy road checks passed (autopilot reached ${rows}+ on ${seeds} seeds, worst ${worst})`);
