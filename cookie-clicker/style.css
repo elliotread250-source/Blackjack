@@ -124,3 +124,5 @@ button, select, .cell, .sq { touch-action: manipulation; }
 .lb-list small { color: var(--dim); }
 .lb-me { margin: 0 0 10px; color: var(--dim); }
 .lb-msg { color: var(--dim); min-height: 1em; }
+
+#bakery-name { cursor: default; -webkit-touch-callout: none; touch-action: none; }

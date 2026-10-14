@@ -103,6 +103,13 @@ function spawnGolden(now, mega = false) {
   goldenEl.style.top = (60 + Math.random() * (innerHeight - 200)) + 'px';
   goldenGone = now + (mega ? 20000 : 13000);
 }
+// Phones have no keyboard: hold the bakery name for a second and type the secret word.
+let holdT = 0;
+$('bakery-name').addEventListener('pointerdown', () => { clearTimeout(holdT); holdT = setTimeout(() => {
+  const w = (prompt('Secret word?') || '').trim().toLowerCase();
+  if (w === 'golden') { spawnGolden(Date.now(), true); sound.golden(); toast('✨ A <b>secret golden cookie</b> appeared! Click it!'); }
+}, 900); });
+for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) $('bakery-name').addEventListener(ev, () => clearTimeout(holdT));
 // Type "golden" anywhere to summon the secret golden cookie.
 let typed = '';
 addEventListener('keydown', e => {
