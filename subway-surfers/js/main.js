@@ -35,6 +35,7 @@ const sfx = {
   land: () => tone(120, 0, 0.08, 'sine', 0.25),
   stumble: () => { tone(200, 0, 0.2, 'square', 0.15, 0.6); tone(90, 0.05, 0.25, 'sine', 0.3); },
   crash: () => { tone(160, 0, 0.5, 'sawtooth', 0.25, 0.3); tone(80, 0, 0.6, 'square', 0.15, 0.5); },
+  horn: () => { tone(311, 0, 0.5, 'sawtooth', 0.07); tone(370, 0, 0.5, 'sawtooth', 0.06); },
   power: () => [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, i * 0.05, 0.15, 'triangle', 0.15)),
 };
 
@@ -78,7 +79,7 @@ function gameOver() {
   const score = Math.floor(run.score), isBest = score > profile.best;
   if (isBest) profile.best = score;
   profile.bank += run.coins; save();
-  $('o-why').textContent = { caught: 'Caught!', train: 'Crash!', oncoming: 'Crash!', hurdle: 'Tripped!', bar: 'Ouch!' }[run.p.dead.why] || 'Busted!';
+  $('o-why').textContent = { train: 'Crash!', oncoming: 'Crash!', hurdle: 'Tripped!', bar: 'Ouch!' }[run.p.dead.why] || 'Busted!';
   $('o-score').textContent = score.toLocaleString();
   $('o-best').textContent = isBest && score ? '🏆 New best!' : 'Best ' + Math.floor(profile.best).toLocaleString();
   $('o-coins').textContent = '+' + run.coins;
@@ -190,7 +191,7 @@ function hud() {
   $('coins').textContent = run.coins;
   $('mult').textContent = '×' + run.mult;
   $('powers').innerHTML = Object.entries(run.power).filter(([, v]) => v > 0).map(([k, v]) => `<div>${ICON[k]}<i style="width:${(v / POWER_TIME[k]) * 100}%"></i></div>`).join('');
-  $('warn').textContent = run.chased && !run.p.dead ? 'The inspector is on your tail!' : '';
+  $('warn').textContent = run.slow > 0 && !run.p.dead ? 'Bump!' : '';
 }
 function frame(now) {
   requestAnimationFrame(frame);
@@ -202,7 +203,7 @@ function frame(now) {
     while (left > 1e-6) { const h = Math.min(1 / 120, left); if (autopilot) botStep(run); run.step(h); left -= h; }
     for (const e of run.takeEvents()) {
       if (e.type === 'coin') sfx.coin(); else if (e.type === 'jump') sfx.jump(); else if (e.type === 'roll') sfx.roll(); else if (e.type === 'swipe') sfx.swipe();
-      else if (e.type === 'land') sfx.land(); else if (e.type === 'stumble') sfx.stumble(); else if (e.type === 'power') sfx.power();
+      else if (e.type === 'land') sfx.land(); else if (e.type === 'stumble') sfx.stumble(); else if (e.type === 'power') sfx.power(); else if (e.type === 'horn') sfx.horn();
       else if (e.type === 'crash') { sfx.crash(); deadAt = now; state = 'dying'; if (navigator.vibrate && matchMedia('(pointer: coarse)').matches && navigator.userActivation?.hasBeenActive) try { navigator.vibrate(80); } catch { /* fine */ } }
     }
     hud();

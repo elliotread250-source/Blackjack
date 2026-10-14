@@ -17,6 +17,8 @@ const DT = 1 / 60;
   }
   const kinds = new Set(tr.things.map(t => t.kind + (t.ramp ? '+ramp' : '') + (t.speed ? '+moving' : '')));
   for (const k of ['train', 'train+ramp', 'train+moving', 'hurdle', 'bar']) ok(kinds.has(k), 'track has ' + k);
+  ok(tr.things.some(t => t.speed && t.z0 < 400), 'moving trains turn up early in a run');
+  ok(tr.things.filter(t => t.speed).length >= 30, `plenty of moving trains (${tr.things.filter(t => t.speed).length} in 8 km)`);
 }
 // jumping clears a hurdle, rolling clears a barrier, standing still hits both
 function lane0(things) { const r = new Run(1); r.track.things = things; r.track.coins = []; r.track.powers = []; r.track.genZ = 1e9; return r; }
@@ -35,8 +37,8 @@ function lane0(things) { const r = new Run(1); r.track.things = things; r.track.
   r = lane0([{ kind: 'train', lane: 0, z0: 10, z1: 30, ramp: true, speed: 0 }]);
   let top = 0; for (let i = 0; i < 90; i++) { r.step(DT); top = Math.max(top, r.p.y); } ok(!r.p.dead && Math.abs(top - TRAIN_H) < 0.01, 'a ramp takes you onto the roof');
   r = lane0([{ kind: 'train', lane: 1, z0: -5, z1: 40, ramp: false, speed: 0 }]);
-  r.step(DT); r.input('right'); ok(r.p.lane === 0 && r.chased, 'swiping into a train stumbles');
-  r.step(DT); r.input('right'); ok(r.p.dead?.why === 'caught', 'a second stumble gets you caught');
+  r.step(DT); r.input('right'); ok(r.p.lane === 0 && r.slow > 0 && r.takeEvents().some(e => e.type === 'stumble'), 'swiping into a train bumps you back');
+  r.step(DT); r.input('right'); ok(!r.p.dead, 'bumps never end the run (no inspector)');
 }
 // coins, magnet, power-ups
 {

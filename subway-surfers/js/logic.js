@@ -1,5 +1,5 @@
 // Rules for the subway runner: track generation, running, jumping, rolling, lane changes, trains,
-// ramps, hurdles, barriers, coins, power-ups, stumbles and the inspector. No three.js here, so the
+// ramps, hurdles, barriers, coins, power-ups and stumbles. No three.js here, so the
 // Node tests can run whole games with a bot.
 //
 // Coordinates: z is distance along the track (grows forward), x is sideways (lanes at -LANE_W, 0,
@@ -8,7 +8,7 @@
 export const LANE_W = 2.3, LANES = [-1, 0, 1];
 export const GRAVITY = 34, JUMP_V = 12, SUPER_JUMP_V = 18.5, ROLL_TIME = 0.62;
 export const TRAIN_H = 3.1, RAMP_LEN = 5, HURDLE_H = 1.0, BAR_LOW = 1.25, BAR_HIGH = 2.9;
-export const STUMBLE_WINDOW = 8, START_GAP = 46;
+export const STUMBLE_SLOW = 0.9, START_GAP = 46;
 export const POWER_TIME = { magnet: 10, sneakers: 10, double: 15 };
 
 export class Rng {
@@ -62,7 +62,7 @@ export class Track {
     this.segments.push({ z0, z1: b, safe });
     for (const lane of LANES) {
       if (lane === safe) { this.hops(lane, a, b, 0.55 + d * 0.3); this.coinLine(lane, a + 2, Math.min(b - 2, a + r.range(14, 30)), 0); continue; }
-      const kind = pickWeighted(r, [['train', 4], ['twoTrains', 1.5 + d * 2], ['moving', d > 0.12 ? 1 + d * 2 : 0], ['hops', 2], ['empty', 1.2 - d * 0.8]]);
+      const kind = pickWeighted(r, [['train', 4], ['twoTrains', 1.5 + d * 2], ['moving', 1.8 + d * 2], ['hops', 2], ['empty', 1.2 - d * 0.8]]);
       if (kind === 'train') this.train(lane, a + r.range(0, 6), Math.min(b - 1, a + r.range(14, 34)), r.chance(0.45));
       else if (kind === 'twoTrains') {
         // leave room to drop off the first roof and still get out of the way of the second train
@@ -136,12 +136,11 @@ export class Run {
     this.p = { lane: 0, from: 0, x: 0, y: 0, vy: 0, z: 0, ground: true, roll: 0, dead: null };
     this.t = 0; this.dist = 0; this.score = 0; this.coins = 0;
     this.power = { magnet: 0, sneakers: 0, double: 0 };
-    this.stumbleAt = -99; this.events = [];
+    this.stumbleAt = -99; this.slow = 0; this.events = [];
     this.track.ensure(220);
   }
-  get speed() { return speedAt(this.p.z); }
+  get speed() { return speedAt(this.p.z) * (this.slow > 0 ? 0.72 : 1); }
   get mult() { return 1 + Math.floor(this.p.z / 1000) + (this.power.double > 0 ? 1 : 0); }
-  get chased() { return this.t - this.stumbleAt < STUMBLE_WINDOW; }
   emit(type, data = {}) { this.events.push({ type, ...data }); }
 
   // Height of whatever you would be standing on in `lane` at z (ground, a ramp or a train roof).
@@ -181,9 +180,9 @@ export class Run {
     }
   }
 
+  // bumping a train's side or the wall knocks you back and slows you for a moment
   stumble(why) {
-    if (this.chased) return this.die('caught');
-    this.stumbleAt = this.t; this.emit('stumble', { why });
+    this.stumbleAt = this.t; this.slow = STUMBLE_SLOW; this.emit('stumble', { why });
   }
   die(why) { if (!this.p.dead) { this.p.dead = { why, t: this.t }; this.emit('crash', { why }); } }
 
@@ -196,7 +195,11 @@ export class Run {
     this.dist += v * dt;
     this.score += v * dt * this.mult;
     for (const k in this.power) if (this.power[k] > 0) this.power[k] = Math.max(0, this.power[k] - dt);
-    for (const t of this.track.things) if (t.speed && t.z0 - (t.travel || 0) - p.z < t.wake) t.travel = (t.travel || 0) + t.speed * dt;
+    if (this.slow > 0) this.slow -= dt;
+    for (const t of this.track.things) if (t.speed && t.z0 - (t.travel || 0) - p.z < t.wake) {
+      if (!t.travel) this.emit('horn', { lane: t.lane });
+      t.travel = (t.travel || 0) + t.speed * dt;
+    }
     // sideways glide
     const tx = laneX(p.lane), lat = LANE_W / 0.15 * dt;
     p.x += Math.max(-lat, Math.min(lat, tx - p.x));

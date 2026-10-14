@@ -1,12 +1,12 @@
 # Subway Surfers
 
 A 3D endless runner down the subway tracks: dodge trains, jump hurdles, roll under barriers, run up ramps
-onto the train roofs, grab coins and keep ahead of the inspector and his dog.
+onto the train roofs and grab coins.
 
 - Three lanes. Swipe or use the arrows / WASD: left and right to change lane, up to jump, down to roll
   (rolling in the air drops you fast).
-- Static trains, trains with ramps you can run up onto, and trains driving towards you. Clip the side of
-  a train and you stumble — the inspector closes in, and a second stumble gets you caught.
+- Static trains, trains with ramps you can run up onto, and lots of trains driving towards you (they sound
+  their horn as they start rolling). Clip the side of a train and you bounce back and slow down for a moment.
 - Coin lines on the tracks, over hurdles and along train roofs. Power-ups: **magnet** (pulls in coins),
   **super sneakers** (jump onto trains) and **double score**. The score multiplier rises every 1000 m and
   the run speeds up as you go.

@@ -60,7 +60,6 @@ export class Renderer {
     this.coinGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.1, 18).rotateX(Math.PI / 2);
     this.coinMat = new THREE.MeshStandardMaterial({ color: 0xffd23f, emissive: 0x8a5a00, emissiveIntensity: 0.6, metalness: 0.6, roughness: 0.35 });
     this.player = this.makeRunner('jake'); this.scene.add(this.player.group);
-    this.chaser = this.makeInspector(); this.scene.add(this.chaser.group);
     this.camX = 0; this.camY = 4;
     this.resize();
   }
@@ -110,18 +109,6 @@ export class Renderer {
     this.scene.remove(this.player.group);
     this.player = this.makeRunner(skin); this.scene.add(this.player.group);
   }
-  makeInspector() {
-    const group = new THREE.Group();
-    const m = new THREE.Mesh(mergeBoxes([
-      [-0.17, 0, 0, 0.24, 0.8, 0.26, 0x1d2a4a], [0.17, 0, 0, 0.24, 0.8, 0.26, 0x1d2a4a], [0, 0.8, 0, 0.8, 0.85, 0.5, 0x2a3a6a], [0, 1.65, 0, 0.5, 0.5, 0.46, 0xf0c49a],
-      [0, 2.15, 0, 0.6, 0.14, 0.56, 0x1d2a4a], [0, 2.15, -0.32, 0.52, 0.06, 0.2, 0x1d2a4a], [0, 1.6, -0.24, 0.3, 0.1, 0.04, 0x6a4a2a], [-0.5, 0.95, 0, 0.18, 0.7, 0.22, 0x2a3a6a], [0.5, 0.95, 0, 0.18, 0.7, 0.22, 0x2a3a6a],
-      // the dog
-      [1.0, 0.25, -0.2, 0.36, 0.36, 0.8, 0x9a6a3a], [1.0, 0.45, -0.7, 0.32, 0.32, 0.34, 0x9a6a3a], [1.0, 0.0, -0.4, 0.3, 0.25, 0.1, 0x6a4a2a], [1.0, 0.0, 0.05, 0.3, 0.25, 0.1, 0x6a4a2a],
-    ]), this.mat);
-    m.castShadow = true; group.add(m); group.visible = false;
-    return { group };
-  }
-
   // ---- obstacles, coins and power-ups near the runner
   objFor(thing) {
     let o = this.objs.get(thing); if (o) return o;
@@ -209,10 +196,6 @@ export class Renderer {
     R.body.rotation.z = (p.x - laneX(p.lane)) * -0.12;
     if (p.dead) { R.body.rotation.x = -1.4; R.body.position.y = 0.3; }
     R.group.rotation.y = title ? Math.PI + Math.sin(t) * 0.3 : 0;
-    // inspector + dog close in after a stumble (or when caught)
-    const C = this.chaser.group;
-    C.visible = run.chased || p.dead?.why === 'caught';
-    if (C.visible) { const gap = p.dead ? 1.3 : 3.2; C.position.set(p.x * 0.8, 0, Z + gap); }
     // camera
     const k = 1 - Math.exp(-dt * 7);
     this.camX += (p.x * 0.75 - this.camX) * k;
