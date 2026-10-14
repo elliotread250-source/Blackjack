@@ -541,7 +541,7 @@ function buildMulberry() {
   table(7.3, H, -25.3, 0x6b5136, 1.6, 0.45, { kind: 'workbench' });
   L.decor.push({ t: 'pegboard', x: 7.3, y: H + 1.7, z: -25.78, ry: 0 });
   L.decor.push({ t: 'tires', x: 6, y: H, z: -13.2 });
-  shelves(11.3, H, -24.2, 'z');
+  shelves(11.3, H, -25, 'z');                              // (was half across the side door)
   item('crate1', 'crate', 7.5, H, -21); item('crate2', 'crate', 6.2, H, -15.5);
   hide('garageLocker', 5.7, H, -23, '+x', 0x476469);
   lamp('garage', 7.5, H + 2.6, -18, 0xf2f2e0);
@@ -729,7 +729,7 @@ function buildMansion() {
   lamp('hall', 0, 9.1, -24, 0xffe1b0, false, 4.5); lamp('hall2', 0, 6, -37, 0xffe1b0);
   poi('hall', 0, H, -23, 3); poi('hallBack', 3, H, -37, 1);
   // library: bookcases, reading chairs, a fireplace, wardrobe
-  for (const x of [-16.5, -14, -11.5, -9]) shelves(x, H, -29.6, 'x', 0x6b4430, { kind: 'bookshelf', faces: '-z', h: 2.4 });
+  for (const x of [-16.5, -14.4, -9.9, -8.3]) shelves(x, H, -29.6, 'x', 0x6b4430, { kind: 'bookshelf', faces: '-z', h: 2.4 });   // gap left for the dining-room door
   fur('fireplace', box(-17.8, H, -24, -17.2, H + 1.3, -22, 'brick', 0x7a4a3a), { faces: '+x' });
   for (const x of [-11.9, -8.9]) fur('armchair', box(x - 0.6, H, -23.5, x + 0.6, H + 0.5, -22.3, 'fabric', 0x6a2a3a), { faces: '-x', h: 1.15, c: 0x6a2a3a });
   table(-10.4, H, -25.5, 0x5b3a26, 0.8, 0.5); item('book1', 'book', -10.4, H + 0.86, -25.5);
@@ -762,7 +762,7 @@ function buildMansion() {
   fur('counter', box(6.4, H, -39.8, 9.2, H + 0.9, -39, 'counter', 0xb7c2b0), { faces: '+z', c: 0x6a7a8a });
   fur('counter', box(10.8, H, -39.8, 15.4, H + 0.9, -39, 'counter', 0xb7c2b0), { faces: '+z', c: 0x6a7a8a, sink: true, clutter: true });
   fur('stove', box(6.4, H, -38, 7.2, H + 0.92, -36.4, 'metal', 0x2a2c2f), { faces: '+x' }); L.decor.push({ t: 'hood', x: 6.8, y: H + 1.9, z: -37.2 });
-  pr('fridge', 9.9, H, -39.4, 0.9, 0.7, 2, { faces: '+z' });
+  pr('fridge', 17.35, H, -30.9, 0.9, 0.7, 2, { faces: '-x' });
   table(11, H, -34.5, 0x8a6a48, 1.4, 0.6, { cloth: 0xd8d0b8 });
   item('can1', 'can', 10.4, H + 0.86, -34.4); item('apple1', 'apple', 11.6, H + 0.86, -34.6);
   hide('pantry', 6.9, H, -31.4, '+x', 0x6b5136);
@@ -797,7 +797,7 @@ function buildMansion() {
   lamp('study', -12, U + 2.85, -35, 0xc8e0ff, true);
   // bedrooms
   fur('bed', [box(-16.5, U, -25.6, -13.5, U + 0.5, -21.4, 'wood', WOOD), box(-16.5, U + 0.5, -25.6, -13.5, U + 0.75, -21.4, 'fabric', 0x8a3a5a), box(-16.5, U, -21.6, -13.5, U + 1.4, -21.4, 'wood', WOOD)], { faces: '-z', c: WOOD, c2: 0x8a3a5a });
-  rug(-17, U, -28.6, -12, -25.8, 'rug_blue'); pr('dresser', -12, U, -29.6, 1.4, 0.5, 0.9, { faces: '+z', mirror: true, c: WOOD });
+  rug(-17, U, -28.6, -12, -25.8, 'rug_blue'); pr('dresser', -15.6, U, -29.6, 1.4, 0.5, 0.9, { faces: '+z', mirror: true, c: WOOD });
   hide('bedWWardrobe', -7, U, -24, '-x', WOOD); item('ballW', 'ball', -10, U, -26);
   lamp('bedW', -12, U + 2.85, -25, 0xffd2a0);
   fur('bed', [box(13.5, U, -25.6, 16.5, U + 0.5, -21.4, 'wood', WOOD), box(13.5, U + 0.5, -25.6, 16.5, U + 0.75, -21.4, 'fabric', 0x3a5a8a), box(13.5, U, -21.6, 16.5, U + 1.4, -21.4, 'wood', WOOD)], { faces: '-z', c: WOOD, c2: 0x3a5a8a });
@@ -808,7 +808,7 @@ function buildMansion() {
   poi('bedroom', 11, U, -26, 1);
   // trophy room: cabinets of cups and the stairs up to the attic along the north wall
   stairsX(-39.6, -37.6, 7, 1, U, 0x6b4430, 'wood');
-  for (const x of [10, 14]) fur('trophycase', box(x - 0.9, U, -31.2, x + 0.9, U + 1.8, -30.4, 'wood', WOOD), { faces: '-z', c: WOOD });
+  for (const x of [11.4, 15]) fur('trophycase', box(x - 0.9, U, -31.2, x + 0.9, U + 1.8, -30.4, 'wood', WOOD), { faces: '-z', c: WOOD });   // clear of the bedroom door
   for (const z of [-36, -33]) L.decor.push({ t: 'portrait', x: 17.78, y: U + 1.9, z, ry: -Math.PI / 2 });
   lamp('trophy', 12, U + 2.85, -35, 0xffe1b0);
 
@@ -1090,7 +1090,7 @@ function buildAct3() {
   // living room: the Supermarket Fear door on the west wall
   fur('sofa', [box(-12.6, H, -20, -8.6, H + 0.45, -19, 'fabric', 0x3a7ac0), box(-12.6, H + 0.45, -19.2, -8.6, H + 1.15, -18.8, 'fabric', 0x2f6aa8)], { faces: '-z', c: 0x3a7ac0 });
   fur('table', box(-11, H, -25, -9.4, H + 0.42, -23.8, 'wood', 0x7a4a2a), { c: 0x7a4a2a }); item('vase1', 'vase', -10.2, H + 0.42, -24.4);
-  fur('tv', box(-11.5, H, -29.9, -9.5, H + 0.5, -29.3, 'wood', 0x4a3a2c), { faces: '+z', h: 1.3, c: 0x4a3a2c });
+  fur('tv', box(-12.6, H, -29.9, -10.6, H + 0.5, -29.3, 'wood', 0x4a3a2c), { faces: '+z', h: 1.3, c: 0x4a3a2c });   // clear of the party-room door
   rug(-12.4, H, -27.4, -7.6, -21.2, 'rug_blue'); pr('armchair', -6.2, H, -25, 1, 0.9, 1.1, { faces: '-x', c: 0xd8a83a });
   L.decor.push({ t: 'standlamp', x: -5, y: H, z: -19.2 });
   L.decor.push({ t: 'feardoor', x: -13.79, y: H, z: -26.5, ry: Math.PI / 2, c: 0xe03a3a, sym: 'cart' });

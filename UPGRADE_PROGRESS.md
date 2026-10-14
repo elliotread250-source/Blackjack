@@ -72,4 +72,51 @@ Order: Phase 1 Crossy Road → Phase 2 Nosy Neighbour visual rebuild → Phase 3
 - Follow-up (on the branch, ships with the next deploy): the title screen no longer flashes under
   "Loading…" before the sign-in screen.
 
-## Phase 2 — Nosy Neighbour visual rebuild (in progress)
+## Phase 2 — Nosy Neighbour visual rebuild (complete on the branch, not deployed)
+
+### Approach (gameplay-safe by construction)
+- **Dressing pass** (`js/dress.js` `dressRooms`): each map lists its rooms (`L.rooms`); the pass gives the
+  room-facing face of every wall its wallpaper, the floor slab its floor and the ceiling its finish, and
+  adds skirting, dado rails and crown moulding. Walls that run past a room are *split* (same space, same
+  collision), never moved. Trim boxes are visual only (`deco`, no collision, no sight blocking).
+- **Furniture models** (`js/furniture.js`, 50 models): `furnish()` hides an existing collision box and draws a
+  model in its footprint, so physics, navigation, hiding and sight lines are unchanged. Props without
+  collision (`prop()`) are only decoration.
+- **Material library** (`js/textures.js`): procedural full-colour wallpapers (damask, florals, stripes,
+  burgundy, kids', peeling basement), floors (walnut, honey, parquet, kitchen and bath tiles, aged boards,
+  attic), rugs, plus richer siding, brick, shingle, stone, rust and planks. All original/procedural.
+- **Exterior**: shared roofs gain ridge caps, barge boards and gutters on every map; `trimShell()` adds corner
+  boards and downpipes; plinths, cornices and quoins per house.
+
+### Per map
+- **The Basement (L1)**: 15 rooms dressed, full furniture conversion, rugs, curtains, pictures, chimney cap/pots.
+- **The Cold Cellar (L2)**: basement redesign — boilers, pressure tank, pipe runs with valves, electrical box,
+  wine racks, chained chest, crates/barrels, caged bulbs that flicker, plank ceilings, tiled cold room.
+- **Mulberry Close (L3)**: 11 rooms dressed above and below ground, boiler room, exterior trim; your house
+  and the street houses dressed too. *Fix:* a hedge collision box sat inside his living room — moved
+  outside under the front windows.
+- **The Mansion (L4)**: 15 rooms (damask grand hall and gallery, panelled library/study, parquet, wine
+  cellar), fireplace, armchairs, piano, trophy cases, statues, dining set, stone cornices and plinth.
+- **The Nightmare House (L5)**: 23 rooms in clashing per-floor palettes; crooked silhouette (timber struts
+  under every overhanging floor, gabled porch, pitched tower roof, cornice bands, extra chimney); tram
+  track lattice truss; windmill rebuilt (plank tower, door, lit windows, lattice sails); glowing Fear-door
+  frames.
+- **Neighbour model**: rebuilt on the same skeleton/API (rounded head and belly, round glasses, bushy brows
+  and moustache, stubble, collar, rolled sleeves, apron pocket and bow, boots) + blinking, breathing and
+  scowling brows when chasing. AI untouched.
+- **Graphics presets**: Low / Medium / High (`GFX` in `render.js`): textures, anisotropy, shadow-map size,
+  MSAA, real lights, resolution cap. Touch devices still default to Low.
+
+### Layout fixes found by the new tests (furniture that overlapped doorways in the original layouts)
+Mulberry garage shelf vs side door; Mansion library bookcase vs dining door, trophy cabinet vs bedroom
+door; Act 3 TV unit vs party-room door. Each was shifted clear of its doorway; all gameplay suites still pass.
+
+### Tests
+- `node tools/test.cjs` 25 ✓ · `node tools/maps.cjs` 184 ✓ (the "biggest house" check now measures interior
+  volume + solid geometry, since dressing inflates raw box counts) · **new** `node tools/visual.cjs` 339 ✓:
+  every material and model exists, trim never collides, furnished boxes keep collision, re-dressing keeps
+  collision/sight volume identical, every room has paper/floor/skirting, no furniture in any doorway,
+  presets ordered by cost.
+- Browser (local preview): every map built and rendered with no console errors; rooms, exteriors, windmill,
+  tram truss and neighbour checked by screenshot. Draw calls: L1 351, L2 51, L3 274, L4 326, L5 551.
+- Not verified: `tools/smoke.cjs` (needs Playwright, not installed here); real GPU frame times on phones.

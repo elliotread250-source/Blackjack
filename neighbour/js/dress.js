@@ -43,7 +43,7 @@ const overlap = (a0, a1, b0, b1) => Math.min(a1, b1) - Math.max(a0, b0);
 export function dressRooms(L) {
   const rooms = L.rooms || [];
   if (!rooms.length) return;
-  const detail = (x0, y0, z0, x1, y1, z1, m, c) => L.boxes.push(makeBox(x0, y0, z0, x1, y1, z1, { m, c, col: false, op: false, vis: true }));
+  const detail = (x0, y0, z0, x1, y1, z1, m, c) => L.boxes.push(Object.assign(makeBox(x0, y0, z0, x1, y1, z1, { m, c, col: false, op: false, vis: true }), { deco: true }));
   for (const R of rooms) {
     const top = R.y + R.h;
     const wallMat = R.wall, full = !!R.full;
@@ -145,7 +145,7 @@ export function prop(L, kind, x, y, z, w, d, h, o = {}) {
 //   o = { x0, z0, x1, z1, y0, y1, c, pipes: [[x or z along the wall, side ('x0'|'x1'|'z0'|'z1'), eave height, overhang, bottom]] }
 export function trimShell(L, o) {
   const y0 = o.y0 ?? 0, c = o.c ?? 0xf1ead8;
-  const detail = (x0, y0_, z0, x1, y1, z1, m, col) => L.boxes.push(makeBox(Math.min(x0, x1), y0_, Math.min(z0, z1), Math.max(x0, x1), y1, Math.max(z0, z1), { m, c: col, col: false, op: false, vis: true }));
+  const detail = (x0, y0_, z0, x1, y1, z1, m, col) => L.boxes.push(Object.assign(makeBox(Math.min(x0, x1), y0_, Math.min(z0, z1), Math.max(x0, x1), y1, Math.max(z0, z1), { m, c: col, col: false, op: false, vis: true }), { deco: true }));
   for (const [cx, sx] of [[o.x0, -1], [o.x1, 1]]) for (const [cz, sz] of [[o.z0, -1], [o.z1, 1]]) {
     detail(cx + sx * 0.05, y0, cz + sz * 0.05, cx - sx * 0.14, o.y1, cz - sz * 0.02, 'trim', c);
     detail(cx + sx * 0.05, y0, cz + sz * 0.05, cx - sx * 0.02, o.y1, cz - sz * 0.14, 'trim', c);
