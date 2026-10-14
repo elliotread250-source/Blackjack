@@ -3,6 +3,14 @@
 // the first-person camera with the item in your hand.
 import * as THREE from 'three';
 import { makeTextures, TEX_SCALE } from './textures.js';
+
+// Graphics presets. Low: no shadows, small textures, only the important lights, low resolution.
+// Medium: sun shadows at a lower resolution, full textures, every light, no MSAA. High: everything.
+export const GFX = {
+  low: { tex: 128, aniso: 1, shadows: false, shadowMap: 0, aa: false, allLights: false, ratio: [1.25, 1] },
+  medium: { tex: 256, aniso: 2, shadows: true, shadowMap: 1024, aa: false, allLights: true, ratio: [1.5, 1.25] },
+  high: { tex: 256, aniso: 4, shadows: true, shadowMap: 2048, aa: true, allLights: true, ratio: [2, 1.5] },
+};
 import { GeoBuilder, addDecor, addRoof, propMesh, trapMesh, setTrapState, cameraMesh, buildNeighbour, animateNeighbour, handMesh, primGeo } from './models.js';
 import { windowCenter, doorCenter, F1 } from './level.js';
 import { lightAt } from './perception.js';
@@ -15,13 +23,13 @@ export class Renderer {
     this.canvas = canvas;
     this.world = world;
     this.touch = !!opts.touch;
-    this.quality = opts.quality || 'high';
-    const high = this.quality === 'high';
-    const r = this.gl = new THREE.WebGLRenderer({ canvas, antialias: high && !this.touch, powerPreference: 'high-performance' });
+    this.quality = GFX[opts.quality] ? opts.quality : 'high';
+    const G = this.gfx = GFX[this.quality];
+    const r = this.gl = new THREE.WebGLRenderer({ canvas, antialias: G.aa && !this.touch, powerPreference: 'high-performance' });
     r.outputColorSpace = THREE.SRGBColorSpace;
     r.toneMapping = THREE.ACESFilmicToneMapping;
     r.toneMappingExposure = 1.25;
-    r.shadowMap.enabled = high;
+    r.shadowMap.enabled = G.shadows;
     r.shadowMap.type = THREE.PCFSoftShadowMap;
     r.autoClear = false;
     this.scene = new THREE.Scene();
@@ -29,7 +37,7 @@ export class Renderer {
     this.camera.rotation.order = 'YXZ';
     this.handScene = new THREE.Scene();
     this.handCam = new THREE.PerspectiveCamera(60, 1, 0.01, 10);
-    this.tex = makeTextures(high ? 256 : 128, high ? 4 : 1);
+    this.tex = makeTextures(G.tex, G.aniso);
     this.mats = this.makeMaterials();
     this.t = 0;
     this.eyeY = null;
@@ -95,7 +103,7 @@ export class Renderer {
   }
 
   buildLights() {
-    const s = this.scene, high = this.quality === 'high';
+    const s = this.scene, G = this.gfx;
     this.hemi = new THREE.HemisphereLight(0xb4b8ff, 0x5a5468, 1.55);
     this.hemi.intensity = this.world.level.indoor ? 0.75 : 1.55;
     s.add(this.hemi);
@@ -103,18 +111,18 @@ export class Renderer {
     this.sunLight.intensity = this.world.level.indoor ? 0 : 2.6;
     this.sunLight.position.copy(SUN_DIR).multiplyScalar(60).add(new THREE.Vector3(0, 0, -20));
     this.sunLight.target.position.set(0, 0, -20);
-    if (high) {
+    if (G.shadows) {
       this.sunLight.castShadow = true;
       const sc = this.sunLight.shadow.camera;
       sc.left = -42; sc.right = 42; sc.top = 42; sc.bottom = -42; sc.near = 5; sc.far = 140;
-      const n = this.touch ? 1024 : 2048;
+      const n = this.touch ? Math.min(1024, G.shadowMap) : G.shadowMap;
       this.sunLight.shadow.mapSize.set(n, n);
       this.sunLight.shadow.bias = -0.0006;
       this.sunLight.shadow.normalBias = 0.04;
     }
     s.add(this.sunLight, this.sunLight.target);
     this.points = [];
-    const keep = high ? null : new Set(['kitchen', 'basement', 'porch', 'home', 'living', ...(this.world.level.keepLights || [])]);
+    const keep = G.allLights ? null : new Set(['kitchen', 'basement', 'porch', 'home', 'living', ...(this.world.level.keepLights || [])]);
     for (const L of this.world.level.lights) {
       if (keep && !keep.has(L.name)) continue;
       const p = new THREE.PointLight(L.color, L.intensity * 2.2, L.dist * 1.25, 1.6);
@@ -154,7 +162,7 @@ export class Renderer {
     for (const d of L.decor) addDecor(B, d);
     this.addOpeningTrim(B);
     if (!L.exit) this.addBackdrop(B);
-    this.staticGroup = B.build(this.mats, { shadows: this.quality === 'high' });
+    this.staticGroup = B.build(this.mats, { shadows: this.gfx.shadows });
     this.scene.add(this.staticGroup);
   }
 
@@ -248,7 +256,7 @@ export class Renderer {
         const m = new THREE.Matrix4().compose(d.axis === 'x' ? new THREE.Vector3(fe, 1.0, k * 0.06) : new THREE.Vector3(k * 0.06, 1.0, fe), new THREE.Quaternion(), new THREE.Vector3(0.045, 0.045, 0.045));
         B.geom('metal', primGeo('sphere'), m, 0xc8a050);
       }
-      const leaf = B.build(this.mats, { shadows: this.quality === 'high' });
+      const leaf = B.build(this.mats, { shadows: this.gfx.shadows });
       const pivot = new THREE.Group();
       const hp = d.axis === 'x' ? [d.c + d.hinge * d.w / 2, d.y, (d.t0 + d.t1) / 2] : [(d.t0 + d.t1) / 2, d.y, d.c + d.hinge * d.w / 2];
       pivot.position.set(...hp);
@@ -422,7 +430,7 @@ export class Renderer {
   // ------------------------------------------------------------------ per frame
   resize() {
     const w = window.innerWidth, h = window.innerHeight;
-    const cap = this.quality === 'high' ? (this.touch ? 1.5 : 2) : (this.touch ? 1 : 1.25);
+    const cap = this.gfx.ratio[this.touch ? 1 : 0];
     this.gl.setPixelRatio(Math.min(cap, window.devicePixelRatio || 1));
     this.gl.setSize(w, h, false);
     this.camera.aspect = w / h;

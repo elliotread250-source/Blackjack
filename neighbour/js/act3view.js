@@ -12,7 +12,7 @@ export class Act3View {
     this.R = R;
     const W = R.world, A = W.a3, L = W.level.act3, s = R.dynGroup;
     this.group = new THREE.Group(); s.add(this.group);
-    const shadows = R.quality === 'high';
+    const shadows = R.gfx.shadows;
     // ---------------------------------------------------------------- the track (built once)
     {
       const B = new GeoBuilder(), loop = A.loop, y = L.tram.y;

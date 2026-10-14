@@ -604,63 +604,95 @@ export function buildNeighbour(tex) {
   const SKIN = 0xe0a882, SHIRT = 0xc59a34, APRON = 0xe8e0cc, TROUSER = 0x4a3a2c, BOOT = 0x241c18, HAIR = 0x9a9a96, MOUST = 0x1c1614;
   const mSkin = LAMB(SKIN), mShirt = LAMB(SHIRT, { map: tex.fabric }), mApron = LAMB(APRON, { map: tex.fabric }), mTrou = LAMB(TROUSER, { map: tex.fabric });
   const mBoot = LAMB(BOOT), mHair = LAMB(HAIR), mMoust = LAMB(MOUST), mBlack = LAMB(0x111111), mWhite = LAMB(0xf4f4f0), mStain = LAMB(0x7a2e1e), mGlass = LAMB(0x2a2a2a);
-  const box = (parent, m, w, h, d, x, y, z, rx = 0, ry = 0, rz = 0) => {
-    const mesh = new THREE.Mesh(geo('box'), m); mesh.scale.set(w, h, d); mesh.position.set(x, y, z); mesh.rotation.set(rx, ry, rz);
+  const mStubble = LAMB(0xb88a6a), mCheek = LAMB(0xe88a72), mBrass = LAMB(0xc8a040), mShirtDark = LAMB(0x9a7424, { map: tex.fabric }), mLens = LAMB(0xcfe6f0, { transparent: true, opacity: 0.25 });
+  const add = (parent, g, m, w, h, d, x, y, z, rx = 0, ry = 0, rz = 0) => {
+    const mesh = new THREE.Mesh(geo(g), m); mesh.scale.set(w, h, d); mesh.position.set(x, y, z); mesh.rotation.set(rx, ry, rz);
     mesh.castShadow = true; parent.add(mesh); return mesh;
   };
+  const box = (parent, m, w, h, d, x, y, z, rx, ry, rz) => add(parent, 'box', m, w, h, d, x, y, z, rx, ry, rz);
+  const ball = (parent, m, rx_, ry_, rz_, x, y, z) => add(parent, 'sphere2', m, rx_, ry_, rz_, x, y, z);
+  const cyl = (parent, m, r, h, x, y, z, rx = 0, ry = 0, rz = 0) => add(parent, 'cyl', m, r, h, r, x, y, z, rx, ry, rz);
   const root = new THREE.Group();
   const body = new THREE.Group(); root.add(body);              // bobs and leans
   const hips = new THREE.Group(); hips.position.y = 0.98; body.add(hips);
-  // legs (pivot at the hip)
+  // legs (pivot at the hip): baggy trousers, turn-ups, heavy boots with round toe caps
   const leg = s => {
     const p = new THREE.Group(); p.position.set(s * 0.15, 0, 0); hips.add(p);
-    box(p, mTrou, 0.2, 0.86, 0.22, 0, -0.43, 0);
-    box(p, mBoot, 0.22, 0.14, 0.34, 0, -0.91, -0.05);
+    cyl(p, mTrou, 0.115, 0.5, 0, -0.25, 0);
+    cyl(p, mTrou, 0.1, 0.4, 0, -0.66, 0);
+    cyl(p, mTrou, 0.112, 0.06, 0, -0.84, 0);                              // turn-up
+    box(p, mBoot, 0.22, 0.13, 0.3, 0, -0.915, -0.03);
+    ball(p, mBoot, 0.11, 0.075, 0.1, 0, -0.92, -0.17);                      // toe cap
+    box(p, mBlack, 0.23, 0.03, 0.34, 0, -0.97, -0.05);                      // sole
     return p;
   };
   const legL = leg(-1), legR = leg(1);
-  // torso
+  // torso: a barrel chest and a big belly under a stained apron
   const torso = new THREE.Group(); hips.add(torso);
-  box(torso, mShirt, 0.62, 0.72, 0.38, 0, 0.36, 0);
-  box(torso, mShirt, 0.58, 0.32, 0.46, 0, 0.18, -0.03);                 // belly
-  box(torso, mApron, 0.54, 0.62, 0.04, 0, 0.32, -0.27);                 // bib + front
-  const apronLow = box(hips, mApron, 0.6, 0.72, 0.04, 0, -0.34, -0.28); // hangs over the legs
+  box(torso, mShirt, 0.6, 0.66, 0.36, 0, 0.39, 0);
+  ball(torso, mShirt, 0.32, 0.3, 0.26, 0, 0.2, -0.05);                     // belly
+  ball(torso, mShirt, 0.14, 0.12, 0.16, -0.32, 0.64, 0); ball(torso, mShirt, 0.14, 0.12, 0.16, 0.32, 0.64, 0); // shoulders
+  box(torso, mShirtDark, 0.3, 0.06, 0.3, 0, 0.74, 0.0);                     // collar
+  for (const s of [-1, 1]) box(torso, mShirtDark, 0.12, 0.08, 0.02, s * 0.07, 0.7, -0.18, 0, 0, s * 0.5);
+  box(torso, mApron, 0.5, 0.56, 0.04, 0, 0.34, -0.3);                       // bib
+  box(torso, mApron, 0.22, 0.14, 0.02, 0, 0.3, -0.325);                     // pocket
+  box(torso, mBlack, 0.01, 0.12, 0.012, 0.06, 0.32, -0.34);                 // pencil in the pocket
+  const apronLow = box(hips, mApron, 0.6, 0.72, 0.04, 0, -0.34, -0.31);     // hangs over the legs
   box(torso, mApron, 0.04, 0.5, 0.04, -0.2, 0.72, -0.15, 0.5); box(torso, mApron, 0.04, 0.5, 0.04, 0.2, 0.72, -0.15, 0.5);
-  for (const [x, y, w, h] of [[-0.12, 0.25, 0.12, 0.08], [0.1, 0.42, 0.08, 0.14], [0.04, 0.1, 0.16, 0.06]]) box(torso, mStain, w, h, 0.01, x, y, -0.295);
-  box(hips, mStain, 0.14, 0.1, 0.01, 0.14, -0.4, -0.305); box(hips, mStain, 0.08, 0.2, 0.01, -0.18, -0.55, -0.305);
-  box(torso, mTrou, 0.64, 0.08, 0.4, 0, 0.0, 0);                         // belt line
-  // arms (pivot at the shoulder)
+  box(torso, mApron, 0.66, 0.035, 0.42, 0, 0.06, 0);                        // apron strings round the waist
+  box(torso, mApron, 0.06, 0.18, 0.02, -0.04, -0.04, 0.22, 0, 0, 0.3); box(torso, mApron, 0.06, 0.18, 0.02, 0.04, -0.04, 0.22, 0, 0, -0.3); // the bow
+  for (const [x, y, w, h] of [[-0.12, 0.25, 0.12, 0.08], [0.1, 0.42, 0.08, 0.14], [0.04, 0.1, 0.16, 0.06]]) box(torso, mStain, w, h, 0.01, x, y, -0.325);
+  box(hips, mStain, 0.14, 0.1, 0.01, 0.14, -0.4, -0.335); box(hips, mStain, 0.08, 0.2, 0.01, -0.18, -0.55, -0.335);
+  box(torso, mTrou, 0.64, 0.08, 0.4, 0, 0.0, 0);                            // belt line
+  box(torso, mBrass, 0.1, 0.07, 0.02, 0, 0.0, -0.21);                       // buckle (peeks out under the apron)
+  // arms (pivot at the shoulder): rolled-up sleeves, hairy forearms, big mitts
   const arm = s => {
     const p = new THREE.Group(); p.position.set(s * 0.4, 0.66, 0); torso.add(p);
-    box(p, mShirt, 0.19, 0.4, 0.2, 0, -0.18, 0);
+    cyl(p, mShirt, 0.105, 0.36, 0, -0.17, 0);
+    cyl(p, mShirtDark, 0.11, 0.07, 0, -0.35, 0);                           // rolled cuff
     const fore = new THREE.Group(); fore.position.set(0, -0.38, 0); p.add(fore);
-    box(fore, mSkin, 0.15, 0.36, 0.15, 0, -0.17, 0);
-    box(fore, mSkin, 0.17, 0.16, 0.12, 0, -0.42, -0.02);                 // big hands
+    cyl(fore, mSkin, 0.08, 0.34, 0, -0.16, 0);
+    for (let i = 0; i < 3; i++) box(fore, mStubble, 0.02, 0.05, 0.01, s * 0.02 + (i - 1) * 0.03, -0.12 - i * 0.05, -0.078);
+    ball(fore, mSkin, 0.1, 0.1, 0.08, 0, -0.42, -0.02);                     // big hands
+    box(fore, mSkin, 0.05, 0.08, 0.05, s * -0.08, -0.4, -0.06, 0, 0, s * 0.4); // thumb
     return { p, fore };
   };
   const A = arm(-1), Bm = arm(1);
-  // head
+  // head: round and bald on top, grey tufts at the sides, a jutting chin
   const neck = new THREE.Group(); neck.position.set(0, 0.74, 0); torso.add(neck);
-  box(neck, mSkin, 0.16, 0.12, 0.16, 0, 0.04, 0);
-  const head = new THREE.Group(); head.position.set(0, 0.1, 0); neck.add(head);
-  box(head, mSkin, 0.38, 0.42, 0.36, 0, 0.21, 0);
-  box(head, mSkin, 0.4, 0.06, 0.38, 0, 0.43, 0);                          // bald dome
-  box(head, mHair, 0.06, 0.16, 0.26, -0.21, 0.24, 0.04); box(head, mHair, 0.06, 0.16, 0.26, 0.21, 0.24, 0.04);
-  box(head, mHair, 0.3, 0.14, 0.05, 0, 0.24, 0.19);
-  box(head, mSkin, 0.06, 0.1, 0.06, -0.21, 0.2, -0.02); box(head, mSkin, 0.06, 0.1, 0.06, 0.21, 0.2, -0.02); // ears
-  box(head, mSkin, 0.08, 0.12, 0.1, 0, 0.17, -0.22);                     // nose
-  box(head, mMoust, 0.34, 0.08, 0.08, 0, 0.09, -0.2);                    // moustache
-  box(head, mMoust, 0.1, 0.06, 0.06, -0.19, 0.06, -0.19, 0, 0, 0.6); box(head, mMoust, 0.1, 0.06, 0.06, 0.19, 0.06, -0.19, 0, 0, -0.6);
-  box(head, mMoust, 0.13, 0.04, 0.05, -0.09, 0.32, -0.19, 0, 0, -0.15); box(head, mMoust, 0.13, 0.04, 0.05, 0.09, 0.32, -0.19, 0, 0, 0.15); // brows
+  cyl(neck, mSkin, 0.1, 0.14, 0, 0.04, 0);
+  const head = new THREE.Group(); head.position.set(0, 0.1, 0); head.scale.setScalar(1.12); neck.add(head);   // a slightly big cartoon head
+  ball(head, mSkin, 0.205, 0.23, 0.2, 0, 0.24, 0);
+  box(head, mSkin, 0.3, 0.14, 0.24, 0, 0.08, -0.05);                         // jaw
+  box(head, mStubble, 0.31, 0.1, 0.2, 0, 0.06, -0.06);                       // five o'clock shadow
   for (const s of [-1, 1]) {
-    box(head, mWhite, 0.08, 0.06, 0.02, s * 0.085, 0.25, -0.185);
-    box(head, mBlack, 0.035, 0.04, 0.02, s * 0.085, 0.25, -0.193);
-    box(head, mGlass, 0.12, 0.012, 0.012, s * 0.085, 0.29, -0.2); box(head, mGlass, 0.12, 0.012, 0.012, s * 0.085, 0.21, -0.2);
-    box(head, mGlass, 0.012, 0.09, 0.012, s * 0.145, 0.25, -0.2); box(head, mGlass, 0.012, 0.09, 0.012, s * 0.025, 0.25, -0.2);
+    ball(head, mHair, 0.06, 0.1, 0.12, s * 0.19, 0.26, 0.05);                // grey tufts
+    ball(head, mSkin, 0.035, 0.06, 0.04, s * 0.205, 0.2, -0.01);             // ears
+    ball(head, mCheek, 0.05, 0.035, 0.02, s * 0.12, 0.15, -0.17);            // ruddy cheeks
   }
-  const mouth = box(head, mBlack, 0.12, 0.02, 0.02, 0, 0.03, -0.185);
-  root.traverse(o => { if (o.isMesh) o.castShadow = true; });
-  return { root, body, hips, torso, head, neck, legL, legR, armL: A.p, armR: Bm.p, foreL: A.fore, foreR: Bm.fore, mouth, apronLow };
+  ball(head, mHair, 0.16, 0.06, 0.06, 0, 0.26, 0.17);                        // back of the hair
+  ball(head, mSkin, 0.055, 0.06, 0.07, 0, 0.17, -0.22);                      // nose
+  ball(head, mCheek, 0.03, 0.025, 0.02, 0, 0.15, -0.28);
+  // moustache: a bushy bar with drooping ends
+  ball(head, mMoust, 0.17, 0.05, 0.06, 0, 0.1, -0.2);
+  ball(head, mMoust, 0.05, 0.05, 0.045, -0.15, 0.065, -0.18); ball(head, mMoust, 0.05, 0.05, 0.045, 0.15, 0.065, -0.18);
+  // eyes, glasses and brows (brows and lids are animated)
+  const eyes = [], brows = [];
+  for (const s of [-1, 1]) {
+    const eye = new THREE.Group(); eye.position.set(s * 0.085, 0.25, -0.18); head.add(eye);
+    ball(eye, mWhite, 0.045, 0.035, 0.015, 0, 0, 0);
+    ball(eye, mBlack, 0.02, 0.022, 0.01, 0, 0, -0.012);
+    eyes.push(eye);
+    add(head, 'torus', mGlass, 0.06, 0.05, 0.5, s * 0.085, 0.25, -0.205);
+    add(head, 'plane', mLens, 0.1, 0.085, 1, s * 0.085, 0.25, -0.206, 0, Math.PI, 0);
+    const brow = box(head, mMoust, 0.13, 0.045, 0.05, s * 0.09, 0.32, -0.19, 0, 0, s * 0.12);
+    brows.push(brow);
+  }
+  box(head, mGlass, 0.05, 0.012, 0.012, 0, 0.26, -0.205);                    // bridge
+  for (const s of [-1, 1]) box(head, mGlass, 0.012, 0.012, 0.2, s * 0.15, 0.26, -0.1);  // arms of the glasses
+  const mouth = box(head, mBlack, 0.12, 0.02, 0.02, 0, 0.04, -0.195);
+  root.traverse(o => { if (o.isMesh) o.castShadow = o.material !== mLens; });
+  return { root, body, hips, torso, head, neck, legL, legR, armL: A.p, armR: Bm.p, foreL: A.fore, foreR: Bm.fore, mouth, apronLow, eyes, brows };
 }
 
 export function animateNeighbour(N, ai, t, dt) {
@@ -693,6 +725,20 @@ export function animateNeighbour(N, ai, t, dt) {
   N.body.position.y = bob;
   N.mouth.scale.y += (mouth - N.mouth.scale.y) * k;
   N.apronLow.rotation.x = -Math.abs(legA) * 0.25;
+  // breathing, blinking and brows: scowling when he chases or grabs, raised when he searches
+  if (N.eyes) {
+    N.torso.scale.set(1, 1 + Math.sin(t * (anim === 'run' ? 7 : 1.9)) * (anim === 'run' ? 0.02 : 0.012), 1);
+    N.blink = (N.blink ?? 2 + Math.random() * 3) - dt;
+    const shut = N.blink < 0.12;
+    if (N.blink < 0) N.blink = 2 + Math.random() * 4;
+    for (const e of N.eyes) e.scale.y = shut ? 0.12 : 1;
+    const angry = anim === 'run' || anim === 'grab' || anim === 'kick', lift = anim === 'search' || anim === 'stunned' ? 0.03 : 0;
+    N.brows.forEach((b, i) => {
+      const s = i ? 1 : -1;
+      b.rotation.z += ((angry ? -s * 0.35 : s * 0.12) - b.rotation.z) * k;
+      b.position.y += ((angry ? 0.3 : 0.32 + lift) - b.position.y) * k;
+    });
+  }
 }
 
 export function handMesh() {
