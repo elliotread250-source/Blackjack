@@ -157,3 +157,30 @@ door; Act 3 TV unit vs party-room door. Each was shifted clear of its doorway; a
   suggestions viewing still refuses a wrong code; production page renders 39 cards, the featured four and
   Most played from real counts, no broken images, at desktop and phone sizes. After screenshots in
   `docs/arcade-redesign/`.
+
+## Phase 3 — Multiplayer (in progress)
+### Audit findings (tested with two independent clients, locally and against production)
+| Game | Multiplayer before | Finding |
+|---|---|---|
+| Pong | online rooms (host-authoritative relay) | **Broken**: upgrade answered `HTTP/1.0 101` + `Connection: close`; browsers refuse it. Also relayed any message, no rate limit, rooms never expired. |
+| Pool | online rooms (shooter-authoritative) | **Broken**: same HTTP/1.0 handshake bug. |
+| Kart Racer | online rooms up to 8 (relay + lobby) | **Broken**: same HTTP/1.0 handshake bug. |
+| Connect 4 | online, server-authoritative, quick match, reconnect | Working (the only one setting HTTP/1.1). |
+| Chess, Tic Tac Toe | same-screen only | No online play. |
+| Apex GP (separate repo) | WebRTC via the public PeerJS broker, STUN only | Fragile: no TURN relay, so strict NATs / mobile networks can fail; depends on a third-party broker. Not fixed yet. |
+| Space Invaders (separate service) | same-screen co-op | Labelled as such in the hub. |
+
+### Built and deployed 2026-10-15 (permission given), `claude/modest-tesla-7rfcgo` at `5ca3fce`
+- `shared/wsnet.py` transport (HTTP/1.1 101, key/version validation, fragmentation, ping/pong, close, size caps,
+  masking enforced, rate limiting), vendored into pong, pool, kart, connect-4, chess, tic-tac-toe.
+- `shared/turnrooms.py` server-authoritative 2-player rooms (codes, quick match, seat tokens + reconnect grace,
+  resign, draw offers, rematch, expiry); Connect 4 migrated with identical messages.
+- Online Chess (moves validated by `chess/chess_rules.py`, a port of `js/chess.js` proven identical by perft and
+  9078 plies of random games) and online Tic Tac Toe, with `shared/arcade-net.js` (keepalive, RTT, reconnect,
+  resume across reloads, invite links). Pong's server rewritten with per-role allowlists, limits and expiry.
+- Tests: `python3 tools/test_wsnet.py` 21 ✓, `node tools/mp-turn-test.mjs <url> c4|chess|ttt` 21/21/22 ✓
+  (locally and against production), `python3 chess/tools/test_rules.py` 124 ✓, existing game suites ✓.
+- Live verification: all six servers answer `HTTP/1.1 101`; Pong, Pool and Kart pair two clients in production;
+  Connect 4, Chess and Tic Tac Toe pass the full protocol suite in production; Chess played between two real
+  browser tabs over wss (RTT ~160 ms, no console errors). Hub now lists Chess and Tic Tac Toe as online.
+- Still to do in Phase 3: Crossy Road shared-seed race, Apex GP server relay, Pool/Kart reconnect review.

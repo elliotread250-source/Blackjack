@@ -551,7 +551,7 @@
    "name": "Tic Tac Toe",
    "kind": "game",
    "url": "https://tic-tac-toe-production-4cd6.up.railway.app",
-   "blurb": "Neon noughts and crosses. Beat the computer on Easy or Medium, try to draw against Impossible, or play a friend.",
+   "blurb": "Neon noughts and crosses. Beat the computer on Easy or Medium, try to draw against Impossible, or play a friend on the same device or online.",
    "genres": [
     "Board game",
     "Classic"
@@ -563,6 +563,7 @@
     "multiplayer"
    ],
    "features": [
+    "online",
     "local2p",
     "bots"
    ],
@@ -595,7 +596,7 @@
    "name": "Block Blast",
    "kind": "game",
    "url": "https://block-blast-production-8f44.up.railway.app",
-   "blurb": "Drag blocks onto an 8×8 board, fill rows and columns to blast them and chain combos for a high score.",
+   "blurb": "Drag blocks onto an 8\u00d78 board, fill rows and columns to blast them and chain combos for a high score.",
    "genres": [
     "Puzzle",
     "Blocks"
@@ -616,7 +617,7 @@
    "name": "Chess",
    "kind": "game",
    "url": "https://chess-production-34bd.up.railway.app",
-   "blurb": "The full game of kings. Take on the computer at Easy, Medium or Hard, or play a friend on the same device.",
+   "blurb": "The full game of kings. Take on the computer at Easy, Medium or Hard, play a friend on the same device, or play online with a room code or quick match.",
    "genres": [
     "Board game",
     "Strategy"
@@ -628,6 +629,7 @@
     "multiplayer"
    ],
    "features": [
+    "online",
     "local2p",
     "bots"
    ],
