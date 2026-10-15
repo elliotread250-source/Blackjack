@@ -150,3 +150,10 @@ door; Act 3 TV unit vs party-room door. Each was shifted clear of its doorway; a
   substring false positives ("car"→cards, "pac"→space).
 - Not done: no light theme (by design); no "recently added" sort (no verified dates); no cross-device
   favourites (no hub accounts); share image is square (Quick Look renders square only).
+- **Deployed 2026-10-15** (permission given): `claude/modest-tesla-7rfcgo` at `5d6199e`, Railway hub service
+  (root `/arcade`, `/data` volume, variables unchanged); rollback point is deployment `36260fe8`. Live checks:
+  /healthz 200; historic play counts intact; /api/status reports all 38 live games `up` from server-side
+  checks; every page asset, logo, thumbnail, PNG icon and share image 200 with the right types; /data 404;
+  suggestions viewing still refuses a wrong code; production page renders 39 cards, the featured four and
+  Most played from real counts, no broken images, at desktop and phone sizes. After screenshots in
+  `docs/arcade-redesign/`.
