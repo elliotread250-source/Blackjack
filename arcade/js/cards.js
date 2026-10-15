@@ -15,7 +15,8 @@ export function wireLaunch(a, g) {
   a.addEventListener('click', go);
   a.addEventListener('auxclick', e => { if (e.button === 1) go(); });
 }
-export function launch(g) { countPlay(g.id); recordLaunch(g.id); location.assign(g.url); }
+// navigation goes through one function so tests can observe it (window.__oaNavigate) without leaving
+export function launch(g) { countPlay(g.id); recordLaunch(g.id); (window.__oaNavigate || (u => location.assign(u)))(g.url); }
 
 export function img(src, alt, cls, w, h, lazy = true) {
   const i = document.createElement('img');

@@ -125,15 +125,28 @@ door; Act 3 TV unit vs party-room door. Each was shifted clear of its doorway; a
   351 draw calls) and L5 (24 rooms, 551 calls) built and rendered on the production site with no console
   errors; Crossy Road /healthz ok, title-flash fix live, leaderboard data intact.
 
-## Arcade hub redesign — EMBER//ARCADE (in progress, branch `redesign/ember-arcade`)
-- Stage 1 audit: 39 registry entries (38 live + Candy Match pending), all on Railway; play-count keys come from
-  the old `slug(name)` and must be preserved; online multiplayer present in code for Pool, Kart Racer, Pong,
-  Connect 4 (this repo) and Apex GP (live `net.js`); Space Invaders is same-screen co-op; Tic Tac Toe and Chess
-  are local 2-player. Before screenshots in `docs/arcade-redesign/`.
-- WIP (not deployed, not yet browser-tested): `arcade/registry.json` (39 entries, legacy ids), server `/api/status`
-  (allowlisted, cached, no redirects) + asset caching, new brand assets in `arcade/assets/branding/`, new
-  `index.html` shell, `css/` design system, `js/` modules (registry, cards, featured/popular/recent/favourites,
-  library search/filter/sort, Ctrl/Cmd+K palette, settings, ambient effects, suggestions with the same API),
-  art generator `arcade/tools/art/` with all 39 thumbnails drafted (thumbs1–3.mjs).
-- Next: square logos (logos.mjs), build script writing `assets/game-logos|game-thumbnails/*.svg` + manifest,
-  apple-touch PNG, tests (`arcade/tests/`), browser QA at all widths, then Phase 3 multiplayer.
+## Arcade hub redesign — EMBER//ARCADE
+- Audit: 39 registry entries (38 live + Candy Match pending), all on Railway; play-count keys come from the
+  old `slug(name)` and are preserved as registry ids; online multiplayer verified in code for Pool, Kart
+  Racer, Pong, Connect 4 (this repo) and Apex GP (live `net.js`); Space Invaders is same-screen co-op; Tic
+  Tac Toe and Chess are same-screen 2P. Before screenshots in `docs/arcade-redesign/`.
+- Built: single `registry.json`; server `/api/status` (allowlisted, cached, no redirects, honest states) and
+  asset caching; brand (emblem `|>` = cursor + chevron, mono/inverse/wordmark/favicon/touch icon/share image);
+  new page (sticky header with active underline, mobile drawer, cinematic hero with portal, floating art,
+  terminal, ambient canvas, featured showcase, recently played, most played, library with search, 13
+  categories, sort, favourites, Ctrl/Cmd+K palette with easter egg, settings for animation/background/density,
+  terminal-style suggestion box with the same API, footer, back-to-top); 39 original logos + 39 original
+  16:9 thumbnails from `arcade/tools/art/`, plus hover moments for 11 games.
+- Tests: `node arcade/tests/test_registry.mjs` 792 ✓ (ids = legacy slugs, URLs unchanged, verified
+  multiplayer only, every asset present/valid/small/unique/no remote refs, page references resolve, no secrets
+  in client JS); `python3 arcade/tests/test_server.py` 21 ✓ (health, types and caching, plays counted once and
+  persisted, status allowlist ignores request input, suggestions with right/wrong code).
+- Browser QA (local server): no horizontal overflow at 360/390/430/768/1024/1440/1920; desktop and 390 px
+  visually checked (hero, featured, charts, library, favourites, suggestions, footer, drawer); search,
+  filters, favourites (no launch, persisted), launches (one count + history), Surprise Me (live games only),
+  palette (keyboard, ignores shortcut while typing), settings persisted, Reduced/Off motion, focus names.
+  Fixed during QA: `[hidden]` overridden by component display rules, canvas error when the window is 0 px,
+  start-up isolation, re-sort animation on load, rank art aspect, phone headliner overflow, search
+  substring false positives ("car"→cards, "pac"→space).
+- Not done: no light theme (by design); no "recently added" sort (no verified dates); no cross-device
+  favourites (no hub accounts); share image is square (Quick Look renders square only).

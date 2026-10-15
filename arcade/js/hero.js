@@ -1,5 +1,5 @@
 // Hero: truthful counts, a short typewriter on the decorative terminal, and Surprise Me.
-import { live, GAMES } from './registry.js';
+import { live, thumb } from './registry.js';
 import { launch } from './cards.js';
 
 export function initHero() {
@@ -11,6 +11,7 @@ export function initHero() {
     const g = pool[Math.floor(Math.random() * pool.length)];
     launch(g);
   });
+  document.querySelectorAll('.float-panel img').forEach(img => { const id = img.getAttribute('src').match(/([\w-]+)\.svg/)[1]; img.src = thumb(id); });
   typewriter();
   try { sessionStorage.setItem('oa.intro', '1'); } catch { /* fine */ }
 }

@@ -49,20 +49,22 @@ export function setCat(k, { scroll } = {}) {
   for (const b of document.querySelectorAll('.chip')) b.setAttribute('aria-pressed', String(b.dataset.cat === k));
   const active = document.querySelector(`.chip[data-cat="${k}"]`);
   if (active) active.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
-  render();
+  render({ animate: true });
   if (scroll) $('library').scrollIntoView({ behavior: document.documentElement.dataset.anim === 'off' ? 'auto' : 'smooth' });
 }
 function save() { set('oa.library', { cat: st.cat, sort: st.sort }); }
 
-export function render() {
+// animate only when the user changed something (search, chip, sort); data arriving re-sorts quietly
+export function render({ animate = false } = {}) {
   const grid = $('lib-grid'), list = results(), hl = highlighter(st.q);
-  const anim = document.documentElement.dataset.anim === 'full';
+  const anim = animate && document.documentElement.dataset.anim === 'full';
   const first = new Map();
   if (anim) for (const [id, el] of els) if (el.isConnected) first.set(id, el.getBoundingClientRect());
   const frag = document.createDocumentFragment();
   for (const g of list) {
     let el = els.get(g.id);
     if (!el || el._hl !== st.q) { el = card(g, { highlight: hl }); el._hl = st.q; els.set(g.id, el); }
+    else refreshCard(el, g);
     frag.append(el);
   }
   grid.textContent = ''; grid.append(frag);
@@ -86,9 +88,9 @@ export function initLibrary() {
   const q = $('lib-search'), sort = $('lib-sort');
   sort.value = st.sort;
   let t;
-  q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { st.q = q.value; render(); }, 70); });
-  q.addEventListener('keydown', e => { if (e.key === 'Escape' && q.value) { q.value = ''; st.q = ''; render(); } });
-  sort.addEventListener('change', () => { st.sort = sort.value; save(); render(); });
+  q.addEventListener('input', () => { clearTimeout(t); t = setTimeout(() => { st.q = q.value; render({ animate: true }); }, 70); });
+  q.addEventListener('keydown', e => { if (e.key === 'Escape' && q.value) { q.value = ''; st.q = ''; render({ animate: true }); } });
+  sort.addEventListener('change', () => { st.sort = sort.value; save(); render({ animate: true }); });
   $('lib-reset').addEventListener('click', () => { q.value = ''; st.q = ''; setCat('all'); q.focus(); });
   onPlays(() => { if (st.sort === 'plays') render(); else for (const [id, el] of els) refreshCard(el, byId.get(id)); });
   onStatus(() => { for (const [id, el] of els) refreshCard(el, byId.get(id)); });

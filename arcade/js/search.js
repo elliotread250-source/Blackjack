@@ -3,10 +3,10 @@
 import { FEATURE_LABELS, CATEGORIES } from './registry.js';
 const norm = s => String(s).toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '');
 const CAT_LABEL = Object.fromEntries(CATEGORIES);
-const ALIASES = { car: 'racing driving', cars: 'racing driving', race: 'racing', mp: 'multiplayer online', online: 'multiplayer online', friends: 'multiplayer online',
-  '2 player': 'multiplayer', 'two player': 'multiplayer', word: 'word', words: 'word', cards: 'cards board', shooter: 'shooter', retro: 'classic', classics: 'classic' };
+const ALIASES = { car: 'racing driving', cars: 'racing driving', race: 'racing', mp: 'multiplayer', online: 'online', friends: 'online multiplayer',
+  '2 player': 'multiplayer', 'two player': 'multiplayer', word: 'word', words: 'word', cards: 'cards', board: 'board', shooter: 'shooter', retro: 'classic', classics: 'classic' };
 export function haystack(g) {
-  return norm([g.name, g.genres.join(' '), g.keywords, g.categories.map(c => c + ' ' + (CAT_LABEL[c] || '')).join(' '), g.features.map(f => FEATURE_LABELS[f] || '').join(' '), g.kind].join(' '));
+  return norm([g.name, g.genres.join(' '), g.keywords, g.categories.map(c => c === 'board' ? 'board games' : c + ' ' + (CAT_LABEL[c] || '')).join(' '), g.features.map(f => FEATURE_LABELS[f] || '').join(' '), g.kind].join(' '));
 }
 export function score(g, q) {
   q = norm(q).trim(); if (!q) return 1;
@@ -14,9 +14,14 @@ export function score(g, q) {
   let s = 0;
   for (const t of terms) {
     const alt = (ALIASES[t] || '').split(' ').filter(Boolean);
+    const word = w => new RegExp('(^|[^a-z0-9])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^a-z0-9]|$)').test(hay);
     let hit = 0;
-    if (name.startsWith(t)) hit = 6; else if (name.includes(t)) hit = 4;
-    else if (hay.includes(t)) hit = 2; else if (alt.some(a => hay.includes(a))) hit = 1.5;
+    const pre = (str, w) => new RegExp('(^|[^a-z0-9])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(str);   // starts a word
+    if (name.startsWith(t)) hit = 6; else if (pre(name, t)) hit = 4;
+    // words with a known meaning ("car", "online"…) match whole words or their synonyms, not substrings
+    // (so "car" finds racing games, not "cards")
+    else if (alt.length) hit = word(t) ? 2 : alt.some(a => word(a)) ? 1.5 : 0;
+    else if (pre(hay, t)) hit = 2;
     if (!hit) return 0;
     s += hit;
   }

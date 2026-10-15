@@ -81,7 +81,7 @@ THUMBS['doodle-jump'] = () => {
 THUMBS['crossy-road'] = () => {
   const defs = lg('bg', 0, 0, 0, 1, [[0, '#8ad8ff'], [1, '#c8f0ff']]) + blur('sh', 2);
   let b = rect(0, 0, W, H, 'url(#bg)');
-  const I = iso(330, -40, 22);
+  const I = iso(455, 168, 20);
   // lanes running along x; y picks the lane
   const lane = (y0, y1, c, x0 = -12, x1 = 14) => I.box(x0, y0, -1, x1 - x0, y1 - y0, 1, c, shade(c, -.2), shade(c, -.35));
   b += lane(0, 2, '#7ad04a') + lane(2, 5, '#4a4f5a') + lane(5, 6, '#8ad85a') + lane(6, 8, '#3aa8e8') + lane(8, 9, '#7ad04a') + lane(9, 10, '#8a7a6a') + lane(10, 14, '#7ad04a');
@@ -93,14 +93,15 @@ THUMBS['crossy-road'] = () => {
   // logs on the river
   b += voxel(I, -6, 6.2, 0, 4, .8, .5, '#8a5a2a') + voxel(I, 3, 6.9, 0, 3.4, .8, .5, '#8a5a2a');
   // a car and a truck
-  b += voxel(I, -5, 2.4, 0, 2, 1, .7, '#e8322c') + voxel(I, -4.5, 2.5, .7, 1.1, .8, .5, '#f4f4f0') + voxel(I, 4, 3.6, 0, 3.2, 1.1, 1.3, '#2a6ae8') + voxel(I, 6.9, 3.6, 0, .9, 1.1, 1, '#f4c430');
+  b += voxel(I, -9, 2.4, 0, 2, 1, .7, '#e8322c') + voxel(I, -8.5, 2.5, .7, 1.1, .8, .5, '#f4f4f0') + voxel(I, 4, 3.6, 0, 3.2, 1.1, 1.3, '#2a6ae8') + voxel(I, 6.9, 3.6, 0, .9, 1.1, 1, '#f4c430');
   // the train on the tracks
-  b += voxel(I, 8, 9, .2, 5, 1, 1.5, '#d8d8e0') + voxel(I, 8, 9, 1.7, 5, 1, .2, '#e8322c') + voxel(I, 8.3, 9.05, .9, 1.2, .1, .4, '#2a3a5a');
-  // the chicken, mid-hop
-  const cx = -1.6, cy = 5.4, cz = 1.4;
-  b += ell(...I.P(cx + .5, cy + .5, 0), 18, 8, '#000', 'opacity=".25"');
-  b += voxel(I, cx, cy, cz, 1, 1, 1, '#ffffff') + voxel(I, cx + .55, cy + .1, cz + 1, .45, .8, .5, '#ffffff') + voxel(I, cx + .62, cy + .3, cz + 1.5, .3, .4, .25, '#e8322c') + voxel(I, cx + 1, cy + .35, cz + 1.1, .25, .3, .2, '#f49a1a') + voxel(I, cx + .3, cy + .2, cz - .3, .15, .15, .3, '#f49a1a') + voxel(I, cx + .3, cy + .65, cz - .3, .15, .15, .3, '#f49a1a') + voxel(I, cx - .15, cy + .2, cz + .4, .25, .6, .4, '#eeeeee');
-  const [ex, ey] = I.P(cx + 1, cy + .55, cz + 1.35); b += rect(ex - 2, ey - 2, 4, 4, '#111');
+  b += voxel(I, 1, 9, .2, 6, 1, 1.5, '#d8d8e0') + voxel(I, 1, 9, 1.7, 6, 1, .2, '#e8322c') + voxel(I, 1.3, 9.05, .9, 1.2, .1, .4, '#2a3a5a');
+  // the chicken, mid-hop (drawn 1.7x so it reads as the hero)
+  const cx = -2.6, cy = 4.4, cz = 1.1, k = 1.8, C = (x, y, z, w, d, h, c) => voxel(I, cx + x * k, cy + y * k, cz + z * k, w * k, d * k, h * k, c);
+  b += ell(...I.P(cx + .9, cy + .9, 0), 26, 11, '#000', 'opacity=".25"');
+  b += C(.3, .2, -.3, .15, .15, .3, '#f49a1a') + C(.3, .65, -.3, .15, .15, .3, '#f49a1a') + C(0, 0, 0, 1, 1, 1, '#ffffff') + C(-.15, .2, .4, .25, .6, .4, '#eeeeee') + C(.55, .1, 1, .45, .8, .5, '#ffffff') + C(.62, .3, 1.5, .3, .4, .25, '#e8322c') + C(1, .35, 1.1, .25, .3, .2, '#f49a1a');
+  const [ex, ey] = I.P(cx + 1 * k, cy + .55 * k, cz + 1.35 * k); b += rect(ex - 3, ey - 3, 6, 6, '#111');
+  for (let i = 0; i < 3; i++) { const [px, py] = I.P(cx - .8 - i * .7, cy + .5, cz + .2 - i * .2); b += circ(px, py, 3 - i * .6, '#fff', 'opacity=".7"'); }
   return T(defs, b, finish('v', .4));
 };
 

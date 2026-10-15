@@ -9,6 +9,7 @@ const level = () => root.dataset.anim;
 function layout() {
   const c = document.getElementById('ambient'); if (!c) return;
   dpr = Math.min(1.5, devicePixelRatio || 1); W = innerWidth; H = innerHeight;
+  if (W < 2 || H < 2) { ctx = null; return; }           // hidden or not laid out yet: try again on resize
   c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
   ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const small = W < 700, G = small ? 44 : 56;
@@ -43,6 +44,7 @@ function frame(t) {
   raf = requestAnimationFrame(frame);
 }
 function draw(dt, time) {
+  if (!ctx || !gridImg || !gridImg.width) return;
   ctx.clearRect(0, 0, W, H);
   ctx.drawImage(gridImg, 0, 0, W, H);
   // signal nodes with a short tail

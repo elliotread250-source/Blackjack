@@ -149,15 +149,17 @@ THUMBS['space-invaders'] = () => {
     ['00011111000', '01111111110', '11100100111', '11111111111', '00111011100', '01100000110', '00110001100', '11000000011'],
     ['00001110000', '00111111100', '01101110110', '11111111111', '01011111010', '00010001000', '00101010100', '01000000010'],
   ];
-  const alien = (x, y, m, c, s = 4) => { let o = ''; m.forEach((row, j) => [...row].forEach((v, i) => { if (v === '1') o += rect(x + i * s, y + j * s, s, s, c); })); return o; };
+  // each alien shape is defined once (horizontal pixel runs merged) and reused
+  const shape = (m, s = 4) => { let d = ''; m.forEach((row, j) => { for (const r of row.matchAll(/1+/g)) d += `M${r.index * s} ${j * s}h${r[0].length * s}v${s}h${-r[0].length * s}Z`; }); return d; };
+  const adefs = A.map((m, i) => `<path id="al${i}" d="${shape(m)}"/>`).join('');
   const cols = ['#3af0ff', '#ff4fd8', '#b44bff', '#7dff3a'];
   let al = '';
-  for (let r = 0; r < 4; r++) for (let c = 0; c < 8; c++) if (!(r === 3 && (c === 2 || c === 5))) al += alien(70 + c * 64 + (r % 2) * 10, 30 + r * 46, A[r % 3], cols[r]);
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 8; c++) if (!(r === 3 && (c === 2 || c === 5))) al += `<use href="#al${r % 3}" x="${70 + c * 64 + (r % 2) * 10}" y="${30 + r * 46}" fill="${cols[r]}"/>`;
   b += g('filter="url(#gl2)" opacity=".7"', al) + al;
   b += rect(206, 140, 4, 60, '#ff4fd8') + rect(206, 140, 4, 60, '#ff4fd8', 'filter="url(#gl)"') + rect(430, 180, 4, 50, '#3af0ff') + rect(318, 230, 4, 44, '#fff') + rect(318, 230, 4, 44, '#fff', 'filter="url(#gl)"');
   const R = rng(4); for (let i = 0; i < 14; i++) b += rect(250 + R() * 60, 180 + R() * 40, 4, 4, ['#ffd21f', '#ff6a1a', '#fff'][i % 3]);
   b += g('transform="translate(296 290)"', rect(0, 12, 48, 14, '#7dff3a') + rect(4, 6, 40, 8, '#7dff3a') + rect(20, 0, 8, 8, '#7dff3a')) + rect(296, 290, 48, 26, '#7dff3a', 'filter="url(#gl2)" opacity=".5"');
-  return svg(W, H, defs + finish('v', .6).defs, b + finish('v', .6).body, { pixel: true });
+  return svg(W, H, defs + adefs + finish('v', .6).defs, b + finish('v', .6).body, { pixel: true });
 };
 
 THUMBS['pong'] = () => {
@@ -229,8 +231,10 @@ THUMBS['2048'] = () => {
     return rect(x + 3, y + 6, s, s, '#000', 'rx="9" opacity=".3"') + rect(x, y, s, s, c, 'rx="9"') + rect(x + 4, y + 4, s - 8, s * .3, '#fff', 'rx="6" opacity=".12"') + text(x + s / 2, y + s / 2 + fs * .36, n, fs, ink, `${SANS} text-anchor="middle"`);
   };
   b += g('transform="translate(80 40) skewY(6) skewX(-8)"', rect(-10, -10, 330, 330, '#8a7462', 'rx="16"') + (() => { let o = ''; const grid = [[2, 8, 0, 4], [16, 64, 32, 2], [128, 256, 8, 0], [512, 0, 4, 2]]; grid.forEach((r, j) => r.forEach((n, i) => { o += n ? tile(i * 78 + 2, j * 78 + 2, n) : rect(i * 78 + 2, j * 78 + 2, 70, 70, '#a39080', 'rx="9"'); })); return o; })());
-  b += g('transform="translate(360 108) rotate(-6)"', tile(-8, 8, 1024, 96) + tile(108, 0, 1024, 96)) + path('M455 160 l18 -10 v20Z', '#ffe08a', 'opacity=".8"');
-  b += g('transform="translate(420 100) rotate(4)"', tile(0, 0, 2048, 150));
+  // two 1024s sliding together into a glowing 2048
+  b += g('transform="translate(392 40) rotate(-4)"', tile(0, 0, 1024, 78)) + g('transform="translate(392 238) rotate(4)"', tile(0, 0, 1024, 78));
+  b += path('M440 124 Q450 150 470 158 M440 236 Q450 210 470 202', 'none', 'stroke="#ffe08a" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 9" opacity=".9"');
+  b += g('transform="translate(478 106) rotate(3)"', tile(0, 0, 2048, 140));
   for (const [x, y, r] of [[440, 90, 3], [600, 120, 2], [580, 270, 3], [470, 290, 2]]) b += circ(x, y, r, '#ffe08a');
   return T(defs, b);
 };
@@ -272,19 +276,18 @@ THUMBS['solitaire'] = () => {
 THUMBS['wordle'] = () => {
   const defs = rg('bg', .5, .3, .9, [[0, '#2a2f3a'], [1, '#0c0e12']]) + blur('gl', 10);
   let b = rect(0, 0, W, H, 'url(#bg)');
-  const rows = [['STORE', 'xxxxx'], ['PLANE', 'gyxxy'], ['PIXEL', 'ggggg']];
+  const rows = [['STORE', 'xxxxx'], ['PLANE', 'gyxxy'], ['PIXEL', 'ggggg'], null];
   const C = { g: '#4aa860', y: '#d8b440', x: '#3a3e46' };
-  const S = 52, ox = 320 - (5 * S + 4 * 8) / 2, oy = 34;
-  for (let r = 0; r < 6; r++) for (let i = 0; i < 5; i++) {
-    const x = ox + i * (S + 8), y = oy + r * (S + 8) * .82;
-    const row = rows[r];
-    if (row) b += rect(x, y, S, S * .82, C[row[1][i]], 'rx="5"') + text(x + S / 2, y + S * .62, row[0][i], 28, '#fff', `${SANS} text-anchor="middle"`);
-    else b += rect(x, y, S, S * .82, 'none', 'rx="5" stroke="#3a3e46" stroke-width="2"');
-  }
-  b += rect(ox - 10, oy + 2 * (S + 8) * .82 - 6, 5 * S + 52, S * .82 + 12, '#4aa860', 'rx="10" opacity=".35" filter="url(#gl)"');
+  const S = 52, gap = 7, ox = 320 - (5 * S + 4 * gap) / 2, oy = 16;
+  b += rect(ox - 12, oy + 2 * (S + gap) - 10, 5 * S + 4 * gap + 24, S + 20, '#4aa860', 'rx="12" opacity=".4" filter="url(#gl)"');
+  rows.forEach((row, r) => { for (let i = 0; i < 5; i++) {
+    const x = ox + i * (S + gap), y = oy + r * (S + gap);
+    if (row) b += rect(x, y, S, S, C[row[1][i]], 'rx="6"') + rect(x + 3, y + 3, S - 6, 8, '#fff', 'opacity=".12" rx="4"') + text(x + S / 2, y + S * .7, row[0][i], 30, '#fff', `${SANS} text-anchor="middle"`);
+    else b += rect(x, y, S, S, 'none', 'rx="6" stroke="#4a4e58" stroke-width="2"') + (i === 0 ? rect(x + 18, y + 14, 3, 24, '#ff7518') : '');
+  } });
   const keys = ['QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
   const kc = { P: 'g', I: 'g', X: 'g', E: 'g', L: 'g', S: 'x', T: 'x', O: 'x', R: 'x', A: 'x', N: 'x' };
-  keys.forEach((row, j) => [...row].forEach((k, i) => { const x = 320 - row.length * 16 + i * 32, y = 270 + j * 28; b += rect(x, y, 28, 24, kc[k] ? C[kc[k]] : '#5a606c', 'rx="4"') + text(x + 14, y + 17, k, 12, '#fff', `${SANS} text-anchor="middle"`); }));
+  keys.forEach((row, j) => [...row].forEach((k, i) => { const x = 320 - row.length * 17 + i * 34, y = 260 + j * 32; b += rect(x, y, 30, 27, kc[k] ? C[kc[k]] : '#5a606c', 'rx="5"') + text(x + 15, y + 19, k, 13, '#fff', `${SANS} text-anchor="middle"`); }));
   return T(defs, b);
 };
 

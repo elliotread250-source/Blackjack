@@ -128,7 +128,7 @@ mark { background: rgba(255, 117, 24, .28); color: inherit; border-radius: 3px; 
 .rank { position: relative; overflow: hidden; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--panel); transition: border-color var(--t-fast), transform var(--t-card) var(--ease-out); }
 .rank:hover { border-color: var(--orange-50); transform: translateY(-4px); }
 .rank a { display: block; text-decoration: none; }
-.rank img.r-art { aspect-ratio: 16 / 9; width: 100%; object-fit: cover; }
+.rank img.r-art { aspect-ratio: 16 / 9; width: 100%; height: auto; object-fit: cover; }
 .rank .r-body { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
 .rank .r-n { font: 700 2rem/1 var(--font-display); color: transparent; -webkit-text-stroke: 1.5px var(--orange); min-width: 1.4ch; }
 .rank:first-child .r-n { color: var(--orange); text-shadow: 0 0 20px rgba(255, 117, 24, .5); }

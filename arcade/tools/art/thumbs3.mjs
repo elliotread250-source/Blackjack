@@ -90,7 +90,7 @@ THUMBS['wreck-run'] = () => {
   b += g('transform="translate(500 210) rotate(-40)"', rect(-16, -22, 32, 44, '#3a8a4a', 'rx="4"') + rect(-18, -26, 36, 8, '#2a6a3a', 'rx="3"'));
   b += g('transform="translate(410 90) rotate(-25)"', path('M-10 0 L0 -26 L10 0Z', '#e8222c') + circ(0, 6, 10, '#f0c8a0') + path('M-10 10 Q0 30 10 10Z', '#fff') + rect(-10, 16, 20, 16, '#3a6ae8', 'rx="4"'));
   for (let i = 0; i < 16; i++) { const a = -1 + i * .14, d = 40 + (i % 4) * 18; b += line(400 + Math.cos(a) * 20, 190 + Math.sin(a) * 20, 400 + Math.cos(a) * d, 190 + Math.sin(a) * d, '#fff2a0', 3, 'stroke-linecap="round"'); }
-  b += text(500, 70, 'x6 COMBO', 26, '#fff', `${SANS} font-style="italic" stroke="#5a2a0a" stroke-width="5" paint-order="stroke"`);
+  b += text(36, 62, 'x6 COMBO', 26, '#fff', `${SANS} font-style="italic" stroke="#5a2a0a" stroke-width="5" paint-order="stroke"`);
   return T(defs, b, finish('v', .45));
 };
 
@@ -124,7 +124,7 @@ THUMBS['getting-over-it'] = () => {
   b += path('M260 150 L320 168 L300 200 L230 190Z M380 110 L470 130 L440 160 L370 150Z', '#6a7078');
   for (const [x, y, r] of [[120, 300, 40], [560, 260, 50], [330, 280, 30]]) b += ell(x, y, r, r * .7, '#5a6068') + ell(x - r * .3, y - r * .3, r * .3, r * .15, '#b8c0c8', 'opacity=".5"');
   // the man in the pot with his hammer on the ledge
-  b += g('transform="translate(300 152)"', path('M-26 0 Q-30 34 0 36 Q30 34 26 0Z', '#1d1c1b') + ell(0, 0, 27, 7, '#33312e') + circ(0, -14, 11, '#e8b890') + rect(-12, -10, 24, 12, '#4a6a3a', 'rx="4"') + path('M-4 -30 q10 -4 12 4 Z', '#3a2a1a') + line(6, -6, 70, -60, '#8a6a4a', 5, 'stroke-linecap="round"') + rect(58, -78, 30, 16, '#4a4a52', 'rx="3" transform="rotate(-40 73 -70)"'));
+  b += g('transform="translate(296 140) scale(1.9)"', path('M-26 0 Q-30 34 0 36 Q30 34 26 0Z', '#1d1c1b') + ell(0, 0, 27, 7, '#33312e') + circ(0, -14, 11, '#e8b890') + rect(-12, -10, 24, 12, '#4a6a3a', 'rx="4"') + path('M-4 -30 q10 -4 12 4 Z', '#3a2a1a') + line(6, -6, 70, -60, '#8a6a4a', 5, 'stroke-linecap="round"') + rect(58, -78, 30, 16, '#4a4a52', 'rx="3" transform="rotate(-40 73 -70)"'));
   for (const [x, y] of [[480, 40], [500, 52], [180, 60]]) b += path(`M${x} ${y} q6 -6 12 0 q6 -6 12 0`, 'none', 'stroke="#3a4a5a" stroke-width="2"');
   return T(defs, b, finish('v', .4));
 };
@@ -156,7 +156,7 @@ THUMBS['apex-gp'] = () => {
   b += path('M-20 220 Q320 150 660 190', 'none', 'stroke="#fff" stroke-width="10" stroke-dasharray="22 22"') + path('M-20 220 Q320 150 660 190', 'none', 'stroke="#e8222c" stroke-width="10" stroke-dasharray="22 22" stroke-dashoffset="22"');
   for (let i = 0; i < 12; i++) b += line(0, 230 + i * 10, 200 - i * 8, 236 + i * 10, '#fff', 1.5, `opacity="${.25 - i * .015}"`);
   // open-wheel car, three-quarter side view, original livery
-  b += g('transform="translate(360 262) rotate(-5)"',
+  b += g('transform="translate(330 238) rotate(-5) scale(1.38)"',
     ell(0, 40, 200, 14, '#000', 'opacity=".55"') +
     path('M-190 10 L-150 -6 L-40 -16 L30 -30 L90 -30 L130 -14 L190 -6 L200 12 L-190 22Z', 'url(#body)') +
     path('M-40 -16 L30 -30 L90 -30 L110 -18Z', '#f0f0f4') + path('M10 -30 Q30 -52 60 -30Z', 'url(#carbon)') + circ(38, -38, 9, '#f4c430') +
