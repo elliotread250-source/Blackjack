@@ -1,15 +1,15 @@
-// Recently played: real launches from this browser (id + time), newest first, at most 8.
+// Recently played: real launches from this browser (id + time), newest first, at most 10.
 import { get, set, del } from './store.js';
-const KEY = 'oa.recent', MAX = 8;
+const KEY = 'oa.recent', MAX = 10;
 let list = (get(KEY, []) || []).filter(r => r && typeof r.id === 'string' && Number.isFinite(r.t));
 const listeners = new Set();
 export const onRecent = fn => listeners.add(fn);
 export const recentList = () => list.slice();
-export function recordLaunch(id) {
-  list = [{ id, t: Date.now() }, ...list.filter(r => r.id !== id)].slice(0, MAX);
-  set(KEY, list); listeners.forEach(fn => fn());
-}
-export function clearRecent() { list = []; del(KEY); listeners.forEach(fn => fn()); }
+const save = () => { if (list.length) set(KEY, list); else del(KEY); listeners.forEach(fn => fn()); };
+export function recordLaunch(id) { list = [{ id, t: Date.now() }, ...list.filter(r => r.id !== id)].slice(0, MAX); save(); }
+export function removeRecent(id) { list = list.filter(r => r.id !== id); save(); }
+export function clearRecent() { const old = list; list = []; save(); return old; }
+export function restoreRecent(old) { list = old; save(); }
 export function ago(t) {
   const s = Math.max(1, Math.round((Date.now() - t) / 1000));
   if (s < 60) return 'just now';

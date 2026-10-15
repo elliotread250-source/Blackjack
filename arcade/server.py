@@ -282,6 +282,21 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json(*add_suggestion(self._ip(), body))
         return self._json(*view_suggestions(self._ip(), body))
 
+    def send_error(self, code, message=None, explain=None):
+        # a missing page gets the themed GAME OVER screen (still a real 404); API routes answer JSON as before
+        page = os.path.join(ROOT, "404.html")
+        if code == 404 and self.command in ("GET", "HEAD") and os.path.isfile(page):
+            with open(page, "rb") as f:
+                body = f.read()
+            self.send_response(404)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            if self.command == "GET":
+                self.wfile.write(body)
+            return
+        super().send_error(code, message, explain)
+
     def log_message(self, fmt, *args):
         if self.path.split("?")[0] != "/healthz":
             super().log_message(fmt, *args)

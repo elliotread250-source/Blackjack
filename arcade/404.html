@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en" data-anim="full">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Game over — Open Arcade</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#080b10">
+<link rel="icon" href="/assets/branding/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<script>
+  (function () { var d = document.documentElement, s = {};
+    try { s = JSON.parse(localStorage.getItem('oa.settings') || '{}') || {}; } catch (e) {}
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    d.dataset.anim = s.anim || (reduce ? 'reduced' : 'full'); })();
+</script>
+<link rel="stylesheet" href="/css/tokens.css">
+<link rel="stylesheet" href="/css/base.css">
+<link rel="stylesheet" href="/css/motion.css">
+<link rel="stylesheet" href="/css/components/button.css">
+<style>
+  body { display: grid; place-items: center; min-height: 100svh; padding: 24px; text-align: center; }
+  .go { display: grid; justify-items: center; gap: 22px; max-width: 640px; }
+  .go-title { font: 700 clamp(3rem, 1rem + 9vw, 8rem)/.9 var(--font-display); letter-spacing: -.03em; background: var(--grad-heat); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 30px rgba(255, 117, 24, .4)); }
+  .go-code { font: 700 .9rem/1 var(--font-mono); letter-spacing: .3em; color: var(--faint); }
+  .go-q { font: 700 clamp(1.4rem, 1rem + 2vw, 2.4rem)/1 var(--font-mono); letter-spacing: .2em; color: var(--orange-hover); text-shadow: var(--glow-text); }
+  .go-n { font: 700 clamp(4rem, 2rem + 6vw, 7rem)/1 var(--font-mono); color: var(--gold); text-shadow: var(--glow-text); font-variant-numeric: tabular-nums; min-height: 1em; }
+  .go p { color: var(--muted); }
+  .go-sugg a { color: var(--amber); }
+  :root[data-anim="full"] .go-title { animation: neon 3s steps(1) infinite; }
+  body::after { content: ''; position: fixed; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .18) 0 1px, transparent 1px 3px), radial-gradient(130% 120% at 50% 50%, transparent 60%, rgba(0, 0, 0, .6)); }
+</style>
+</head>
+<body>
+<main class="go">
+  <p class="go-code">ERROR 404 · CABINET NOT FOUND</p>
+  <h1 class="go-title">GAME OVER</h1>
+  <p>There's no page at this address. Maybe it was moved, or the link has a typo.</p>
+  <p class="go-q" aria-hidden="true">CONTINUE?</p>
+  <p class="go-n" id="n" aria-live="off" aria-hidden="true">10</p>
+  <a class="btn btn-primary btn-xl" href="/" id="start"><span>Press start to return</span></a>
+  <p class="go-sugg" id="sugg" hidden></p>
+</main>
+<script>
+  (function () {
+    var n = 10, el = document.getElementById('n'), full = document.documentElement.dataset.anim === 'full';
+    var t = setInterval(function () { n--; el.textContent = Math.max(0, n); if (n <= 0) { clearInterval(t); el.textContent = '0'; document.querySelector('.go-q').textContent = 'PRESS START'; } }, full ? 1000 : 1000);
+    fetch('/registry.json').then(function (r) { return r.json(); }).then(function (reg) {
+      var live = reg.games.filter(function (g) { return !g.pending && g.kind === 'game'; });
+      if (!live.length) return;
+      var g = live[Math.floor(Math.random() * live.length)], p = document.getElementById('sugg'), a = document.createElement('a');
+      a.href = g.url; a.textContent = g.name; p.textContent = 'Or jump straight into a random cabinet: '; p.appendChild(a); p.hidden = false;
+    }).catch(function () {});
+  })();
+</script>
+</body>
+</html>
