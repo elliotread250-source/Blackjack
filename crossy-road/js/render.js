@@ -6,6 +6,18 @@ import * as THREE from 'three';
 import { TICK, COLS, TRAIN_WARN, entityX, trainState, CHARACTERS, lerp, clamp } from './logic.js';
 import * as M from './models.js';
 
+function nameTexture(name) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+  const x = c.getContext('2d');
+  x.font = '900 34px system-ui, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+  const w = Math.min(248, x.measureText(name).width + 28);
+  x.fillStyle = 'rgba(20, 28, 48, 0.72)';
+  x.beginPath(); x.roundRect ? x.roundRect(128 - w / 2, 8, w, 48, 22) : x.rect(128 - w / 2, 8, w, 48); x.fill();
+  x.fillStyle = '#fff'; x.fillText(name, 128, 33, 230);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 const VIEW_BEHIND = 13;
 const VIEW_AHEAD = 24;
 const CAM_DIR = new THREE.Vector3(-0.26, 1.15, 0.8).normalize();
@@ -525,6 +537,7 @@ export class Renderer {
 
     this.syncLanes();
     for (const v of this.views.values()) this.updateLane(v, t);
+    this.updateGhosts(dt);
 
     // player
     this.updatePlayer(g, pose, t, dt);
@@ -750,6 +763,53 @@ export class Renderer {
       const f = Math.sin(s * (s < swoop ? 10 : 24)) * 0.6;
       this.wingL.rotation.z = f;
       this.wingR.rotation.z = -f;
+    }
+  }
+
+  // ---- online race: the other racers as see-through ghosts with a name tag. Positions come from the
+  // network (row, x) and are eased toward; lanes are only read if already built, never generated.
+  setGhosts(list) {
+    if (!this.ghosts) {
+      this.ghosts = new Map();
+      this.ghostMat = new THREE.MeshLambertMaterial({ vertexColors: true, transparent: true, opacity: 0.5, depthWrite: false });
+    }
+    const keep = new Set(list.map(g => g.id));
+    for (const [id, gh] of this.ghosts) if (!keep.has(id)) { this.scene.remove(gh.group); gh.tag.material.map.dispose(); gh.tag.material.dispose(); this.ghosts.delete(id); }
+    for (const g of list) {
+      let gh = this.ghosts.get(g.id);
+      if (!gh) {
+        const group = new THREE.Group();
+        const mesh = new THREE.Mesh(this.charGeo(g.ch), this.ghostMat);
+        group.add(mesh);
+        const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: nameTexture(g.name), depthTest: false, transparent: true }));
+        tag.scale.set(1.6, 0.4, 1); tag.position.set(0, 1.25, 0); tag.renderOrder = 5;
+        group.add(tag);
+        group.visible = false;
+        this.scene.add(group);
+        gh = { group, mesh, tag, x: g.x || 0, row: g.r || 0, face: 0, seen: false };
+        this.ghosts.set(g.id, gh);
+      }
+      gh.tx = g.x; gh.tr = g.r; gh.dead = g.d; gh.has = g.r !== undefined && g.r !== null;
+    }
+  }
+
+  updateGhosts(dt) {
+    if (!this.ghosts || !this.game) return;
+    const k = 1 - Math.exp(-dt * 12);
+    for (const gh of this.ghosts.values()) {
+      if (!gh.has) { gh.group.visible = false; continue; }
+      if (!gh.seen) { gh.x = gh.tx; gh.row = gh.tr; gh.seen = true; }
+      const dx = gh.tx - gh.x, dr = gh.tr - gh.row;
+      if (Math.abs(dx) > 0.02 || Math.abs(dr) > 0.02) gh.face = Math.atan2(dx, -dr);
+      gh.x += dx * k; gh.row += dr * k;
+      const lane = this.game.lanes.get(Math.round(gh.row));
+      const near = gh.row > this.camRow - VIEW_BEHIND && gh.row < this.camRow + VIEW_AHEAD;
+      gh.group.visible = near && !!lane;
+      if (!gh.group.visible) continue;
+      const hop = Math.abs(gh.tr - gh.row) > 0.05 ? Math.sin(Math.min(1, Math.abs(gh.tr - gh.row)) * Math.PI) * 0.35 : 0;
+      gh.group.position.set(gh.x, (lane.type === 'river' ? 0.05 : baseY(lane)) + hop, -gh.row);
+      gh.mesh.rotation.y = gh.face;
+      gh.mesh.rotation.z = gh.dead ? Math.PI / 2 : 0;   // knocked over once they're out
     }
   }
 

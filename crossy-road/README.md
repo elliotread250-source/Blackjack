@@ -73,6 +73,25 @@ Tests: `node tools/test.mjs` (game rules, replays, catalogue, characters) and
 `python3 tools/test_server.py` (accounts, devices, runs, coins, dailies, shop, crown, admin).
 The leaderboard editor is opened by entering the `ADMIN_CODE` environment variable as a redeem code.
 
+## Online races (2026)
+
+**🏁 Race online** on the title screen: 2–4 players hop through the **same world** (same seed) at the
+same time, for up to 3 minutes. Quick race pairs you with whoever else is looking (it starts by itself
+12 s after a second racer arrives, or at once with four); **Create a room** gives a 4-letter code and an
+invite link (`?race=CODE`), and the host picks Classic or Fast and starts. You see the others as
+see-through ghosts with name tags, plus a live bar of everyone's rows and the clock.
+
+When your run ends (out, time's up, or you stop) its hops go to the server, which replays them with the
+same code as solo runs (`tools/worker.mjs`): only replayed scores reach the standings. A run longer than
+the real time since the start, past the limit, or using `fast` is disqualified. Equal scores share a
+place. Races never pay coins, change records or reach the leaderboard, and they work for guests.
+A dropped connection (or a reload) rejoins the same seat with a token kept for the tab; the run keeps
+going in the browser and is sent once the connection is back.
+
+Server: `race.py` over `/ws` (transport `wsnet.py`, a copy of `shared/wsnet.py`). Tests:
+`python3 tools/test_race.py` (rooms with a fake clock) and `node tools/race-e2e.mjs http://localhost:PORT`
+(two raw clients against a running server, scores checked against `replayRun`).
+
 ## Controls
 
 | Action | Keyboard | Touch / mouse |
@@ -108,4 +127,5 @@ autopilot play each seed to prove the world stays passable.
 - `js/autopilot.js`: the planner used by the tests and the `?autopilot` demo
 - `js/render.js`, `js/models.js`, `js/characters.js`: three.js scene and voxel models
 - `js/audio.js`, `js/input.js`, `js/store.js`, `js/main.js`: sound, input, saving and screens
+- `js/race.js`, `race.py`, `wsnet.py`: online races (client, rooms, WebSocket transport)
 - `vendor/`: three.js r170 (MIT, see `vendor/LICENSE-three.txt`)

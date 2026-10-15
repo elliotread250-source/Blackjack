@@ -39,6 +39,7 @@ API (JSON; POSTs must be same-origin):
   POST /api/daily/claim {day, id}                   idempotent
   GET  /api/leaderboard                             {top, legacy, champion}
   POST /api/admin {code, action, board, rows}       board editor (ADMIN_CODE env var)
+  GET  /ws                                          online races (race.py): same seed, live ghosts, replayed results
 """
 
 import hashlib
@@ -53,6 +54,9 @@ import threading
 import time
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+
+import race
+import wsnet
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.environ.get("DATA_DIR") or ("/data" if os.path.isdir("/data") else os.path.join(ROOT, "data"))
@@ -127,6 +131,14 @@ class Worker:
 
 
 worker = Worker()
+
+
+def race_replay(seed, hop_ticks, inputs, fast, end_tick):
+    """A race result comes from the same replay as a solo run (never what the browser says)."""
+    return worker.call("replay", seed=seed, hopTicks=hop_ticks, inputs=inputs, fast=fast, endTick=end_tick)
+
+
+races = race.RaceServer(race_replay)
 
 
 def catalog():
@@ -918,9 +930,11 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?")[0]
+        if wsnet.is_upgrade(self):
+            return races.serve_socket(self)
         if path.startswith("/api/"):
             return self._api("GET")
-        if path == "/data" or path.startswith("/data/") or path.startswith("/tools/") or path.endswith(".py") or path.endswith(".db"):
+        if path in ("/data", "/ws") or path.startswith("/data/") or path.startswith("/tools/") or path.endswith(".py") or path.endswith(".db"):
             return self._json(404, {"error": "Not found"})
         return super().do_GET()
 
@@ -938,7 +952,7 @@ class Handler(SimpleHTTPRequestHandler):
         return super().send_head()
 
     def log_message(self, fmt, *args):
-        if self.path.split("?")[0] != "/healthz":
+        if self.path.split("?")[0] not in ("/healthz", "/ws"):
             super().log_message(fmt, *args)
 
 
@@ -971,6 +985,7 @@ def main():
     load_legacy()
     catalog()
     threading.Thread(target=daily_backups, daemon=True).start()
+    races.start_thread()
     n = q1("SELECT COUNT(*) FROM users")[0]
     print(f"crossy-road: {n} accounts, {len(_legacy)} classic scores, db {DB_FILE}", flush=True)
     port = int(os.environ.get("PORT", "8080"))

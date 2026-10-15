@@ -8,6 +8,7 @@ import { Input } from './input.js';
 import { store } from './store.js';
 import { Autopilot } from './autopilot.js';
 import { api, GuestProfile, AccountProfile, localSave } from './account.js';
+import { RaceClient, raceFromUrl, raceLink } from './race.js';
 
 const $ = id => document.getElementById(id);
 const params = new URLSearchParams(location.search);
@@ -38,7 +39,7 @@ const DEATH_TEXT = {
 
 let game = null;
 let ticket = null;              // the server seed this run is played on (accounts)
-let state = 'boot';             // boot | account | title | playing | dying | over | paused | chars | board | challenges | settings | shop
+let state = 'boot';             // boot | account | title | playing | dying | over | paused | chars | board | challenges | settings | shop | race | countdown
 let pausedFrom = null;
 let deathTime = 0;
 let runSeed = params.has('seed') ? Number(params.get('seed')) >>> 0 : null;
@@ -86,7 +87,7 @@ function newGame() {
   prevPhase.clear(); passed.clear();
 }
 
-const SCREENS = ['s-title', 's-pause', 's-over', 's-chars', 's-board', 's-challenges', 's-account', 's-settings', 's-shop'];
+const SCREENS = ['s-title', 's-pause', 's-over', 's-chars', 's-board', 's-challenges', 's-account', 's-settings', 's-shop', 's-race'];
 function show(id) {
   for (const s of SCREENS) $(s).hidden = s !== id;
   $('arcade').hidden = !(id === 's-title' || id === 's-over' || id === 's-account');
@@ -145,6 +146,7 @@ function pause() {
   pausedFrom = state;
   state = 'paused';
   show('s-pause');
+  $('p-racenote').hidden = !racing();
   sound.rumble(0);
 }
 
@@ -157,12 +159,14 @@ function resume() {
 
 // leaving a run from the pause menu still sends it (its coins and progress count)
 function quitRun() {
+  if (racing()) { raceRunOver('quit'); return; }
   if (game && game.started && !game.player.dead && ticket) profile.finishRun(game, ticket, { autopilot: !!autopilot }).then(updateHud);
   ticket = null;
   toTitle();
 }
 
 async function gameOver() {
+  if (racing()) { raceRunOver('out'); return; }
   state = 'over';
   lastOver = performance.now();
   const g = game, t = ticket;
@@ -777,6 +781,7 @@ function onKey(e) {
     return true;
   }
   if (k === 'KeyC' && (state === 'title' || state === 'over')) { sound.unlock(); openChars(); return true; }
+  if (state === 'race' && k === 'Escape') { leaveRace(); return true; }
   return false;
 }
 
@@ -853,7 +858,7 @@ function handleEvents() {
       case 'invincible': sound.buy(); banner('INVINCIBLE ' + e.seconds + 's', '⚡ fast · practice run'); $('practice').hidden = false; $('practice').textContent = 'Practice run — no coins or progress'; renderer.burst(game.player.x, 0.6, -game.player.row, 24, [0xc8202a, 0xffc93a, 0x9ff4ff], 3, 0.14, 0.9); break;
       case 'shrug': sound.bump(); break;
       case 'coin':
-        profile.runCoin(e.value || 1);
+        if (!racing()) profile.runCoin(e.value || 1);
         dailyLive();
         sound.coin();
         if (e.gem) { setTimeout(() => sound.coin(), 90); setTimeout(() => sound.coin(), 180); renderer.burst(game.player.x, 0.7, -game.player.row, 10, [0x3ac8ff, 0x9ff4ff, 0xffffff], 2, 0.09, 0.6); banner('+' + GEM_VALUE, '💎 Blue jewel'); }
@@ -879,6 +884,7 @@ function handleEvents() {
 // ------------------------------------------------------------ secret words, codes, admin
 function secret(word, src) {
   if (word === 'fast') {
+    if (race) { banner('Not in a race!', '⚡ fast'); return true; }
     if (state === 'playing' || state === 'dying') { if (game && !game.player.dead) game.makeInvincible(); }
     else { pendingFast = true; banner('Invincible next run!', '⚡ fast · practice'); sound.buy(); }
     return true;
@@ -1007,6 +1013,257 @@ function ambient() {
   }
 }
 
+// ------------------------------------------------------------ online race (race.js / race.py)
+// Everyone plays the same seed at the same time; the others show up as ghosts and in the bar at the
+// top. When your run ends (out, time, or you quit) its hops go to the server, which replays them: the
+// standings only ever show replayed scores. Races never pay coins or touch records.
+const net = new RaceClient();
+let race = null;       // { code, you, host, players: Map, phase, no, seed, hopTicks, startAt, limit, live: Map, results: Map, running, sent, final, speed }
+let lastPosSent = 0, goShown = 0;
+const RACE_ERR = {
+  'no room': 'No room with that code.', 'room full': 'That room is full (4 players).', racing: 'That race has already started — try again when it ends.',
+  'need two': 'You need at least two players to start.', busy: 'The race server is busy — try again shortly.', expired: 'The room closed after a while with no races.',
+  'slow down': 'Slow down a little.', 'no session': 'That race has finished.',
+};
+const racing = () => !!(race && race.running && !race.sent && game && game.practiceReason === 'race');
+const raceName = () => (store.get('race.name', '') || (!profile.isGuest && profile.username) || '').slice(0, 16);
+function raceStatus(msg, err) { $('r-status').textContent = msg || ''; $('r-status').classList.toggle('err', !!err); }
+function raceStep(step) {
+  for (const sec of document.querySelectorAll('#s-race [data-rstep]')) sec.hidden = sec.dataset.rstep !== step;
+  if (race) race.step = step;
+}
+function openRace() {
+  state = 'race';
+  show('s-race');
+  $('r-name').value = raceName();
+  if (race && race.code) { renderLobby(); raceStep(race.final ? 'results' : race.phase === 'lobby' ? 'lobby' : 'results'); if (race.final) renderStandings(); }
+  else { raceStep('menu'); raceStatus(''); }
+}
+function ensureRace() { if (!race) race = { players: new Map(), live: new Map(), results: new Map(), speed: 8 }; return race; }
+function wantName() {
+  const n = $('r-name').value.trim();
+  if (!n) { raceStatus('Type a name first.', true); $('r-name').focus(); return null; }
+  store.set('race.name', n);
+  return n;
+}
+function leaveRace() {
+  net.close();
+  race = null;
+  renderer.setGhosts([]);
+  $('racebar').hidden = true; $('countdown').hidden = true;
+  if (location.search.includes('race=')) history.replaceState(null, '', location.pathname);
+  toTitle();
+}
+function renderLobby() {
+  if (!race) return;
+  $('r-room').textContent = race.code || '····';
+  const me = race.you;
+  $('r-players').innerHTML = [...race.players.values()].map(p =>
+    `<li class="${p.id === me ? 'me' : ''}">${esc(p.name)}<span class="tag">${esc(charById(p.ch).name)}${p.id === race.host ? ' · host' : ''}${p.away ? ' · away' : ''}</span></li>`).join('');
+  const host = race.host === me;
+  $('r-host').hidden = !host || race.quick;
+  for (const b of $('r-speed').children) b.setAttribute('aria-checked', String(Number(b.dataset.v) === race.speed));
+  if (race.phase === 'lobby') {
+    const n = race.players.size;
+    raceStatus(race.quick ? (n < 2 ? 'Waiting for another racer…' : race.soonAt ? '' : 'Starting soon…')
+      : host ? (n < 2 ? 'Share the code or link. You need at least two players.' : 'Ready when you are.') : 'Waiting for the host to start…');
+  }
+}
+function standingsRows() {
+  if (race.final) return race.final;
+  // live: verified results first, then the people still running by their current rows
+  const rows = [...race.players.values()].map(p => {
+    const r = race.results.get(p.id), l = race.live.get(p.id);
+    return { id: p.id, name: p.name, ch: p.ch, score: r ? r.score : (l ? l.s : 0), status: r ? r.status : 'running' };
+  });
+  return rows.sort((a, b) => (a.status === 'dq') - (b.status === 'dq') || b.score - a.score);
+}
+function renderStandings() {
+  if (!race) return;
+  const rows = standingsRows(), me = race.you;
+  const label = r => r.status === 'dq' ? 'disqualified' : r.status === 'dnf' ? 'didn’t finish' : r.status === 'running' ? 'still going' : race.final ? '' : 'out';
+  $('r-standings').innerHTML = rows.map((r, i) =>
+    `<li class="${r.id === me ? 'me' : ''}"><span class="pl">${race.final ? (r.place || '–') : i + 1}</span>${esc(r.name)}${label(r) ? `<span class="tag">${label(r)}</span>` : ''}<span class="sc">${fmt(r.score)}</span></li>`).join('');
+  $('r-again-row').hidden = !race.final || (!race.quick && race.host !== me);
+  $('r-again').textContent = race.quick ? 'Find another race' : 'Race again';
+}
+function syncGhosts() {
+  if (!race) { renderer.setGhosts([]); return; }
+  const list = [];
+  for (const p of race.players.values()) {
+    if (p.id === race.you) continue;
+    const l = race.live.get(p.id);
+    list.push({ id: p.id, name: p.name, ch: p.ch, r: l ? l.r : null, x: l ? l.x : 0, d: l ? l.d : false });
+  }
+  renderer.setGhosts(race.running || race.sent ? list : []);
+}
+function setPlayers(list) {
+  race.players = new Map(list.map(p => [p.id, p]));
+}
+
+function beginRace(m) {
+  ensureRace();
+  race.no = m.race; race.seed = m.seed; race.hopTicks = m.hopTicks; race.limit = m.limit;
+  race.startAt = performance.now() + (m.in || 0) - (m.elapsed || 0);
+  race.you = m.you || race.you;
+  setPlayers(m.players);
+  race.live = new Map(); race.results = new Map(); race.final = null;
+  race.running = true; race.sent = false; race.phase = 'countdown';
+  ticket = null; pendingFast = false;
+  game = new Game({ seed: m.seed, hopTicks: m.hopTicks });
+  game.practiceReason = 'race';
+  renderer.setTheme(charById(profile.selected).theme);
+  renderer.setCharacter(profile.selected);
+  renderer.setCrown(false);
+  renderer.reset(game);
+  lastZone = 0; suited = false; announced = new Set();
+  prevPhase.clear(); passed.clear();
+  state = 'countdown';
+  show(null);
+  $('hint').hidden = true;
+  $('practice').hidden = true;        // the race bar says it all; races never pay coins
+  $('racebar').hidden = false;
+  goShown = 0;
+  updateHud(); syncGhosts(); renderRaceBar(performance.now());
+  sound.click();
+}
+
+// your run is over (out, time's up, or quit): send it for the replay and watch the others
+function raceRunOver(why) {
+  if (!race || race.sent) return;
+  race.sent = true;
+  net.finish({ inputs: game.inputs, endTick: game.tick, fast: game.fastTicks });
+  race.live.set(race.you, { r: game.player.row, x: game.player.x, s: game.score, d: true });
+  state = 'race';
+  show('s-race');
+  raceStep('results');
+  renderStandings();
+  raceStatus((why === 'time' ? 'Time’s up! ' : why === 'quit' ? 'You stopped. ' : 'Out! ') + `${fmt(game.score)} rows — checking your run and waiting for the others…`);
+  sound.over();
+}
+
+function renderRaceBar(now) {
+  if (!race || !race.running) return;
+  const left = Math.max(0, race.limit * 1000 - (now - race.startAt));
+  const sec = Math.ceil(Math.min(left, race.limit * 1000) / 1000);
+  $('rb-time').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+  $('rb-time').classList.toggle('low', sec <= 15);
+  const me = race.you;
+  const rows = [...race.players.values()].map(p => {
+    const l = p.id === me && game ? { s: game.score, d: !!game.player.dead } : race.live.get(p.id) || { s: 0, d: false };
+    const r = race.results.get(p.id);
+    return { id: p.id, name: p.id === me ? 'You' : p.name, s: r ? r.score : l.s, out: !!(r || l.d) };
+  }).sort((a, b) => b.s - a.s);
+  $('rb-list').innerHTML = rows.map(r => `<li class="${r.id === me ? 'me' : ''}${r.out ? ' out' : ''}"><span class="n">${esc(r.name)}</span><b>${r.s}</b></li>`).join('');
+}
+
+let barT = 0;
+function raceFrame(now) {
+  if (!race.running) return;
+  const cd = $('countdown');
+  if (state === 'countdown') {
+    const left = race.startAt - now;
+    if (left > 0) { cd.hidden = false; const n = String(Math.ceil(left / 1000)); if (cd.textContent !== n) { cd.textContent = n; sound.click(); } return; }
+    state = 'playing'; last = now; acc = 0; goShown = now;
+    cd.textContent = 'GO!'; cd.hidden = false; sound.cheer();
+  }
+  if (goShown && now - goShown > 700) { cd.hidden = true; goShown = 0; }
+  if (now - barT > 250) { barT = now; renderRaceBar(now); }
+  if (race.sent || !game) return;
+  if (now - race.startAt >= race.limit * 1000 && (state === 'playing' || state === 'dying' || state === 'paused')) { raceRunOver('time'); return; }
+  if (now - lastPosSent > 125 && (state === 'playing' || state === 'dying' || state === 'paused')) {
+    lastPosSent = now;
+    const pose = game.pose(0);
+    net.pos({ k: game.tick, r: Math.round(pose.z * 100) / 100, x: Math.round(pose.x * 100) / 100, s: game.score, d: !!game.player.dead });
+  }
+}
+
+net.on('lobby', m => {
+  ensureRace();
+  race.code = m.code; race.you = m.you; race.host = m.host; race.quick = m.quick;
+  const wasRunning = race.running;
+  setPlayers(m.players);
+  race.phase = m.phase;
+  if (m.phase === 'lobby') {
+    race.running = false; race.final = null;
+    if (state === 'race') { raceStep('lobby'); }
+  } else if (m.phase === 'done' && m.standings) {
+    race.final = m.standings; race.running = false;
+    if (state === 'race') { raceStep('results'); renderStandings(); }
+  } else if ((m.phase === 'countdown' || m.phase === 'racing') && m.race && !(wasRunning && race.no === m.race.race)) {
+    // a race is on that this page isn't playing (e.g. after a reload): watch it, join the next one
+    race.no = m.race.race; race.limit = m.race.limit; race.running = false;
+    if (state === 'race') { raceStep('results'); renderStandings(); raceStatus('A race is under way — you’ll be in the next one.'); }
+  }
+  renderLobby();
+  if (state === 'race' && race.step === 'menu') raceStep(race.final ? 'results' : 'lobby');
+});
+net.on('start', beginRace);
+net.on('soon', m => { if (race && state === 'race') raceStatus(`Starting in ${Math.ceil(m.in / 1000)} seconds…`); });
+net.on('pos', m => {
+  if (!race) return;
+  race.live.set(m.id, m);
+  syncGhosts();
+  if (state === 'race' && race.step === 'results' && !race.final) renderStandings();
+});
+net.on('result', m => {
+  if (!race) return;
+  race.results.set(m.id, m);
+  if (m.id === race.you && state === 'race') raceStatus(m.status === 'ok' ? `Your run checks out: ${fmt(m.score)} rows. Waiting for the others…` : 'Your run couldn’t be verified, so it doesn’t count this time.', m.status !== 'ok');
+  if (state === 'race' && race.step === 'results') renderStandings();
+});
+net.on('final', m => {
+  if (!race) return;
+  race.final = m.standings; race.running = false; race.phase = 'done';
+  if (!race.sent && game && game.practiceReason === 'race') race.sent = true;   // the server closed the race (time)
+  $('racebar').hidden = true; $('countdown').hidden = true;
+  renderer.setGhosts([]);
+  const mine = m.standings.find(r => r.id === race.you);
+  if (state !== 'race') { state = 'race'; show('s-race'); }
+  raceStep('results'); renderStandings();
+  const firsts = m.standings.filter(r => r.place === 1).length;
+  const hostName = (race.players.get(race.host) || {}).name || 'the host';
+  const next = race.quick ? '' : race.host === race.you ? ' Race again whenever you like.' : ` Waiting for ${hostName} to start another race.`;
+  raceStatus((mine && mine.place === 1 ? (firsts > 1 ? '🤝 A tie for first!' : '🏆 You won!') : mine && mine.place ? `You came ${ordinal(mine.place)}.` : 'Race over.') + next);
+  if (mine && mine.place === 1) sound.best(); else sound.over();
+});
+net.on('away', m => { if (race && race.players.get(m.id)) { race.players.get(m.id).away = true; renderLobby(); } });
+net.on('back', m => { if (race && race.players.get(m.id)) { race.players.get(m.id).away = false; renderLobby(); } });
+net.on('left', m => { if (race) { race.players.delete(m.id); race.live.delete(m.id); syncGhosts(); renderLobby(); if (race.step === 'results') renderStandings(); } });
+net.on('error', msg => {
+  if (msg === 'expired' || msg === 'no session') { race = null; renderer.setGhosts([]); $('racebar').hidden = true; if (state === 'race') { raceStep('menu'); } }
+  if (state === 'race') raceStatus(RACE_ERR[msg] || 'Something went wrong.', true);
+  else banner(RACE_ERR[msg] || 'Race problem', '🏁');
+});
+net.on('lost', () => { if (state === 'race') raceStatus('Lost the connection to the race server.', true); else banner('Lost the race connection', '🏁'); });
+const ordinal = n => n + (['th', 'st', 'nd', 'rd'][(n % 100 - 20) % 10] || ['th', 'st', 'nd', 'rd'][n % 100] || 'th');
+
+click('t-race', () => { sound.click(); openRace(); });
+click('r-close', () => { sound.click(); leaveRace(); });
+click('r-quick', () => { const n = wantName(); if (!n) return; sound.click(); ensureRace(); raceStatus('Finding a race…'); net.quick(n, profile.selected); });
+click('r-create', () => { const n = wantName(); if (!n) return; sound.click(); ensureRace(); raceStatus('Opening a room…'); net.create(n, profile.selected); });
+$('r-joinf').addEventListener('submit', e => {
+  e.preventDefault();
+  const n = wantName(); if (!n) return;
+  const code = $('r-code').value.trim().toUpperCase();
+  if (code.length !== 4) { raceStatus('Room codes are 4 letters.', true); $('r-code').focus(); return; }
+  sound.click(); ensureRace(); raceStatus('Joining…'); net.join(code, n, profile.selected);
+});
+click('r-copy', () => {
+  if (!race || !race.code) return;
+  const link = raceLink(race.code);
+  (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject()).then(() => raceStatus('Invite link copied.'), () => raceStatus(link));
+});
+for (const b of $('r-speed').children) b.addEventListener('click', e => { e.stopPropagation(); if (race) { race.speed = Number(b.dataset.v); renderLobby(); } });
+click('r-go', () => { if (race) { sound.click(); net.go(race.speed); } });
+click('r-again', () => {
+  if (!race) return;
+  sound.click();
+  if (race.quick) { race.final = null; raceStep('lobby'); raceStatus('Finding a race…'); net.quick(raceName() || 'Player', profile.selected); }
+  else net.go(race.speed);
+});
+for (const id of ['r-name', 'r-code']) $(id).addEventListener('keydown', e => e.stopPropagation());
+
 // ------------------------------------------------------------ main loop (fixed 60 Hz simulation)
 let last = performance.now();
 let acc = 0;
@@ -1021,7 +1278,8 @@ function frame(now) {
     return;
   }
   if (state === 'boot') { renderer.render(); return; }
-  if (state !== 'paused' && game) {
+  if (race) raceFrame(now);
+  if (state !== 'paused' && state !== 'countdown' && game) {
     acc += dt;
     let n = 0;
     while (acc >= TICK) {
@@ -1055,19 +1313,25 @@ async function boot() {
   newGame();
   requestAnimationFrame(frame);
   if (testRun) { $('loading').hidden = true; toTitle(); if (autopilot) startPlaying(); return; }
+  const inviteCode = raceFromUrl();
   try { session = await api('/api/session'); } catch { session = null; }
   $('loading').hidden = true;
   if (session && session.champion) setChampion(session.champion);
-  if (session && session.user) { await signedIn(session.user); return; }
-  if (store.get('guest', false) || !session) {
+  if (session && session.user) { await signedIn(session.user); raceAtBoot(inviteCode); return; }
+  if (store.get('guest', false) || !session || inviteCode) {
     toTitle();
+    raceAtBoot(inviteCode);
     if (!session) banner('Offline — playing as a guest', 'No connection');
     return;
   }
   newGame();
   openAccount('welcome');
 }
+function raceAtBoot(code) {
+  if (code) { openRace(); $('r-code').value = code; raceStatus(raceName() ? 'Press Join to enter room ' + code + '.' : 'Type your name, then press Join.'); if (raceName()) $('r-code').form.requestSubmit(); return; }
+  if (net.resume()) { ensureRace(); openRace(); raceStep('lobby'); raceStatus('Reconnecting to your race…'); }
+}
 boot();
 
 // test hook
-window.__crossy = { get state() { return state; }, get game() { return game; }, get profile() { return profile; }, renderer, sound, api, resume, openChallenges, openShop, openSettings };
+window.__crossy = { get state() { return state; }, get game() { return game; }, get race() { return race; }, net, get profile() { return profile; }, renderer, sound, api, resume, openChallenges, openShop, openSettings };
