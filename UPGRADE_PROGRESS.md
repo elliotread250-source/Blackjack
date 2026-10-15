@@ -281,7 +281,7 @@ Plan in `docs/arcade-20x/PLAN.md`; full build log in `docs/arcade-20x/LOG.md`; b
   - `claude/modest-tesla-7rfcgo` was fast-forwarded to `1d49697`.
   - Railway hub deployment `3c4067e3` succeeded.
   - Rollback point: deployment `0d86c16b`.
-  - Only the hub was deployed. The Crossy Road, Pool, Kart and Apex GP Phase 3 changes on that branch were NOT deployed: their services were not triggered.
+  - This deploy only triggered the hub. Crossy Road, Pool and Kart were redeployed separately at 18:47 UTC by another session (see Phase 3 above). Apex GP is unchanged.
 - **Live checks:**
   - /healthz returns 200.
   - Pages, CSS, JS, style guide and moments all return 200 with the right types.
@@ -290,3 +290,7 @@ Plan in `docs/arcade-20x/PLAN.md`; full build log in `docs/arcade-20x/LOG.md`; b
 - **Read-only browser check** (Chromium at 1440 and 390, WebKit at 1440):
   - 39 cards, no broken images, no overflow.
   - No console errors or failed requests.
+- **Fix deployed 2026-10-15:** no cursor was visible over modal dialogs such as Surprise me.
+  - Cause: modal dialogs sit in the browser's top layer, above the custom cursor, while the native cursor was hidden.
+  - Fix: the native cursor now comes back while a modal is open.
+  - Two e2e checks were added for this.
