@@ -1,0 +1,22 @@
+/* your arcade: scoreboard stats and badges */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 12px; margin-bottom: 40px; }
+.stats div { display: grid; gap: 10px; padding: 18px; border-radius: var(--r-lg); background: #05070a; box-shadow: var(--bezel); }
+.stats dt { font: 600 .66rem/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--faint); }
+.stats dd { font: 700 clamp(1.4rem, 1rem + 1.4vw, 2.2rem)/1 var(--font-mono); color: var(--gold); text-shadow: var(--glow-text); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.stats dd.small { font-size: 1.05rem; }
+.badges-h { font: 600 .78rem/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--orange-hover); margin-bottom: 14px; }
+.badges-h span { color: var(--faint); }
+.badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 186px), 1fr)); gap: 12px; }
+.badge { perspective: 600px; }
+.badge-in { position: relative; display: grid; justify-items: center; gap: 8px; padding: 18px 12px; border-radius: var(--r-lg); text-align: center; background: linear-gradient(180deg, var(--panel), var(--surface)); box-shadow: var(--bezel);
+  transform-style: preserve-3d; transition: transform var(--d-cinema) var(--ease-overshoot); overflow: hidden; }
+.badge .bd-ic { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: var(--grad-heat-v); color: var(--ink); box-shadow: 0 0 22px rgba(255, 117, 24, .45); }
+.badge .bd-ic svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.badge b { font: 700 .82rem/1.1 var(--font-mono); letter-spacing: .1em; }
+.badge small { font-size: .74rem; color: var(--faint); }
+.badge.locked .bd-ic { background: var(--raised); color: var(--faint); box-shadow: none; filter: brightness(.6); }
+.badge.locked b { color: var(--faint); }
+.badge.fresh .badge-in { animation: badge-flip var(--d-epic) var(--ease-overshoot) 1; }
+.badge.fresh .badge-in::after { content: ''; position: absolute; inset: 0; background: var(--grad-sheen); background-size: 250% 100%; animation: sheen-sweep 1.2s .5s var(--ease-out) both; pointer-events: none; }
+@keyframes badge-flip { 0% { transform: rotateY(180deg) scale(.8); } 60% { transform: rotateY(-12deg) scale(1.05); } 100% { transform: none; } }
+.profile-reset { margin-top: 26px; }
