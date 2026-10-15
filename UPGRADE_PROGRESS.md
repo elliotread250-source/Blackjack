@@ -207,7 +207,7 @@ door; Act 3 TV unit vs party-room door. Each was shifted clear of its doorway; a
   `test_race.py` 38 ✓, crossy `test.mjs` 339 ✓, `test_server.py` 61 ✓, `test_wsnet.py` 22 ✓,
   `mp-reconnect-test.mjs` pool 10 ✓ / kart 9 ✓. Apex GP's relay (separate repo) is still unpushed.
 
-## Arcade hub 20× rebuild (branch `upgrade/arcade-20x`, not deployed)
+## Arcade hub 20× rebuild (branch `upgrade/arcade-20x`)
 Plan in `docs/arcade-20x/PLAN.md`; full build log in `docs/arcade-20x/LOG.md`; before and after screenshots and clips are in `docs/arcade-20x/`.
 
 ### What was kept the same
@@ -275,3 +275,18 @@ Plan in `docs/arcade-20x/PLAN.md`; full build log in `docs/arcade-20x/LOG.md`; b
   - CSS is about 136 KB (43 KB gzipped) against a budget of about 90 KB.
 - **View Transitions:** `motion/flip.js` has a helper for them, but nothing uses it yet. All layout changes use FLIP, which works in every browser.
 - **Not tested:** VoiceOver by hand, and real phones (emulated only).
+
+### Deployed 2026-10-15 (user: "publish the website asap as long as its complete")
+- **Release:**
+  - `claude/modest-tesla-7rfcgo` was fast-forwarded to `1d49697`.
+  - Railway hub deployment `3c4067e3` succeeded.
+  - Rollback point: deployment `0d86c16b`.
+  - Only the hub was deployed. The Crossy Road, Pool, Kart and Apex GP Phase 3 changes on that branch were NOT deployed: their services were not triggered.
+- **Live checks:**
+  - /healthz returns 200.
+  - Pages, CSS, JS, style guide and moments all return 200 with the right types.
+  - Unknown pages get the themed 404. /data returns a JSON 404. The suggestions viewer refuses a wrong code (403).
+  - Historic play counts are intact and still growing.
+- **Read-only browser check** (Chromium at 1440 and 390, WebKit at 1440):
+  - 39 cards, no broken images, no overflow.
+  - No console errors or failed requests.

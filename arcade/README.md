@@ -77,4 +77,4 @@ Review art with `tools/art/sheet.html` and `tools/art/view.html?id=…` on a loc
   cached 90 s, only when the hub is visited) and reports `up` / `down` / `checking`. Nothing in the request
   can change which hosts are contacted.
 - `/assets/*` is cached for a day; asset URLs carry `?v=artVersion`, so new art shows immediately.
-- Any other unknown page (GET/HEAD) gets the themed `404.html` with status 404; `/api/*` and `/data` 404s stay JSON.
+- Any unknown path (GET/HEAD) gets the themed `404.html` with status 404. `/data` and the API's own errors stay JSON, as before.
