@@ -1,7 +1,8 @@
 // Custom cursor (fine pointers, Settings > Cursor effects): an orange dot plus a spring-trailing ring that grows over
 // links, becomes a PLAY pill over game cards, gets out of the way over text fields and squashes on click. A faint
 // ember trail follows fast movement. The native cursor is hidden only while the script is actively tracking; if a
-// frame is missed for 250 ms, it comes back.
+// frame is missed for 250 ms, it comes back. Modal dialogs sit in the browser's top layer, above any z-index, so
+// while one is open the custom cursor steps aside and the native cursor is shown.
 import { addTask, spring, finePointer, isFull, quality } from '../motion/engine.js';
 import { burst } from '../motion/particles.js';
 
@@ -12,13 +13,15 @@ export function initCursor() {
   const sx = spring(0, { k: 260, d: 24 }), sy = spring(0, { k: 260, d: 24 });
   let x = -100, y = -100, lx = x, ly = y, stop = null, lastSeen = 0, inside = false;
   const enabled = () => root.dataset.cursor === 'on' && root.dataset.anim !== 'off';
-  const off = () => { root.classList.remove('cursor-live', 'cursor-hide'); if (stop) { stop(); stop = null; } };
+  const modalOpen = () => { try { return !!document.querySelector('dialog:modal'); } catch { return !!document.querySelector('dialog[open]'); } };
+  const off = () => { root.classList.remove('cursor-live', 'cursor-hide', 'cursor-modal'); if (stop) { stop(); stop = null; } };
   const start = () => {
     if (stop || !enabled()) return;
-    root.classList.add('cursor-live', 'cursor-hide');
+    const m0 = modalOpen(); root.classList.add('cursor-live'); root.classList.toggle('cursor-hide', !m0); root.classList.toggle('cursor-modal', m0);
     stop = addTask(dt => {
       if (!enabled()) { off(); return false; }
       lastSeen = performance.now();
+      const m = modalOpen(); root.classList.toggle('cursor-modal', m); if (m) root.classList.remove('cursor-hide');
       sx.step(x, dt); sy.step(y, dt);
       dot.style.transform = `translate(${x}px, ${y}px)`;
       ring.style.transform = `translate(${sx.value.toFixed(1)}px, ${sy.value.toFixed(1)}px)`;
@@ -44,5 +47,5 @@ export function initCursor() {
   addEventListener('pointerdown', () => ring.classList.add('down'));
   addEventListener('pointerup', () => ring.classList.remove('down'));
   // safety: if the loop stalls, give the native cursor back
-  setInterval(() => { if (root.classList.contains('cursor-hide') && performance.now() - lastSeen > 250) root.classList.remove('cursor-hide'); else if (stop && performance.now() - lastSeen < 250) root.classList.add('cursor-hide'); }, 200);
+  setInterval(() => { if (root.classList.contains('cursor-hide') && performance.now() - lastSeen > 250) root.classList.remove('cursor-hide'); else if (stop && performance.now() - lastSeen < 250 && !modalOpen()) root.classList.add('cursor-hide'); }, 200);
 }

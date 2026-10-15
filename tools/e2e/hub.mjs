@@ -170,7 +170,12 @@ async function run(name) {
   ok(await p.evaluate(() => document.getElementById('slot').open) && /railway\.app/.test(href) && await p.isVisible('#slot-actions'), T('slot machine lands on a live game'));
   await p.click('#slot-again'); await p.waitForTimeout(300); await p.waitForSelector('#slot-actions', { state: 'visible', timeout: 8000 }).catch(() => {});
   ok(await p.isVisible('#slot-actions'), T('spin again'));
-  await p.keyboard.press('Escape');
+  // modal dialogs sit in the top layer above the custom cursor, so the native cursor must come back while one is open
+  { const bx = await p.locator('#slot-again').boundingBox(); await p.mouse.move(bx.x + 5, bx.y + 5); await p.mouse.move(bx.x + bx.width / 2, bx.y + bx.height / 2); await p.waitForTimeout(150); }
+  ok(await p.evaluate(() => { const live = document.documentElement.classList.contains('cursor-live'); return !live || (getComputedStyle(document.getElementById('slot-again')).cursor !== 'none' && getComputedStyle(document.getElementById('cursor-dot')).opacity === '0'); }), T('native cursor shows over the slot machine'));
+  await p.keyboard.press('Escape'); await p.waitForTimeout(300);
+  await p.mouse.move(300, 300); await p.mouse.move(320, 320); await p.waitForTimeout(150);
+  ok(await until(p, () => { const c = document.documentElement.classList; return !c.contains('cursor-live') || (c.contains('cursor-hide') && !c.contains('cursor-modal')); }), T('custom cursor returns after the dialog closes'));
 
   // palette: Ctrl/Cmd+K, search, commands, NO SIGNAL
   await p.keyboard.press(name === 'webkit' ? 'Meta+k' : 'Control+k'); await p.waitForTimeout(300);

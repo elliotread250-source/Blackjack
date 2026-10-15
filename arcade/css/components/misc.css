@@ -4,6 +4,7 @@
    script confirms it is tracking (html.cursor-live), and comes back over text fields and on any hiccup. */
 .cursor-dot, .cursor-ring { position: fixed; left: 0; top: 0; z-index: var(--z-cursor); pointer-events: none; opacity: 0; transition: opacity var(--d-fast); }
 .cursor-live .cursor-dot, .cursor-live .cursor-ring { opacity: 1; }
+.cursor-live.cursor-modal .cursor-dot, .cursor-live.cursor-modal .cursor-ring { opacity: 0; }
 .cursor-dot { width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 12px var(--orange); }
 .cursor-ring { width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%; border: 1.5px solid var(--orange-70); display: grid; place-items: center;
   transition: opacity var(--d-fast), width var(--d-base) var(--ease-spring), height var(--d-base) var(--ease-spring), margin var(--d-base) var(--ease-spring), border-radius var(--d-base) var(--ease-spring), background var(--d-fast), border-color var(--d-fast); }
