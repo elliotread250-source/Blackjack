@@ -183,4 +183,22 @@ door; Act 3 TV unit vs party-room door. Each was shifted clear of its doorway; a
 - Live verification: all six servers answer `HTTP/1.1 101`; Pong, Pool and Kart pair two clients in production;
   Connect 4, Chess and Tic Tac Toe pass the full protocol suite in production; Chess played between two real
   browser tabs over wss (RTT ~160 ms, no console errors). Hub now lists Chess and Tic Tac Toe as online.
-- Still to do in Phase 3: Crossy Road shared-seed race, Apex GP server relay, Pool/Kart reconnect review.
+### Built 2026-10-15 (branch `phase3/more`, not yet deployed)
+- **Crossy Road online races** (`crossy-road/race.py`, `js/race.js`): 2–4 players, same server-picked seed, live
+  ghosts and standings, 3-minute limit; every run replayed by the existing node worker, only replayed scores
+  count (too fast / over the limit / `fast` = disqualified); seat tokens for reconnects; no coins or records.
+  Tests: `tools/test_race.py` 38 ✓, `tools/race-e2e.mjs` 10 ✓ (real replays), two-browser race checked.
+- **Apex GP relay** (repo `elliotread250-source/apex-gp`, commit `15d3d1d`, not pushed): `server.py` serves the game
+  and relays multiplayer over `/ws` (sender ids stamped by the server, players → host only, host broadcasts,
+  size/rate caps, origin allowlist incl. the GitHub Pages copy). `js/net.js` keeps its API; no PeerJS/WebRTC.
+  `railway.json` switches the service from the Caddy start command to the Dockerfile. `tools/relay-test.mjs`
+  16 ✓; two-browser race through the relay checked.
+- **Pool reconnects**: seat tokens; a dropped player's seat is held 60 s ("away"); resume (same tab or after a
+  reload) restores the seat; the returning side re-sends its last result and both sides exchange a full table
+  sync, newest shot count wins; nobody can shoot while a player is away.
+- **Kart reconnects**: seat token in `hello`; a dropped racer keeps their seat 30 s while their kart keeps
+  driving locally; resume takes the seat back with the same id (finishes still count); after the grace the
+  host role passes to someone present (existing bot hand-over). After a reload you rejoin the lobby.
+- Tests: `node tools/mp-reconnect-test.mjs pool|kart <url> 3` (servers with `SEAT_GRACE=3`) 10 / 9 ✓;
+  browser checks: Pool drop + reload keep identical tables; Kart drop mid-race resumes and keeps streaming.
+- Phase 3 is complete once these are deployed.

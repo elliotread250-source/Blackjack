@@ -32,6 +32,7 @@ export class Net {
           clearTimeout(to);
           this.open = true;
           this.id = msg.id;
+          this.token = msg.tok || null;   // this socket's seat token (for resuming after a drop)
           if (typeof msg.s === 'number') this.offset = msg.s - performance.now();
           this.burstPing();
           resolve();

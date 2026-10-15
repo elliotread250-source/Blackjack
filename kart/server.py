@@ -8,12 +8,18 @@ every client simulates its own kart and streams its state, which the server rela
 rest of the room together with item events; the host's client also drives the bots. Finish
 times are reported here, and the server builds the results and sends everyone back to the
 lobby. Railway gives us the port in $PORT and checks /healthz.
+
+Reconnects: every socket gets a secret token in "hello". If a socket drops without saying goodbye its
+seat is kept for GRACE seconds (the racer's own browser keeps driving its kart) and the others are told
+"away". {resume, code, id, tok} on a new socket takes the seat back, id and all; the grace running out
+counts as leaving (the host role then passes on and the new host's browser adopts the bots).
 """
 
 import json
 import math
 import os
 import random
+import secrets
 import string
 import threading
 import time
@@ -39,6 +45,7 @@ KART_TYPES = ("standard", "speedster", "drifter", "heavy", "rally")
 WHEELS = ("sport", "classic", "stealth", "offroad")
 DRIVERS = ("oobi", "oodi", "ooli", "oopi", "oozi")
 EVENTS = {"box", "ban", "sh", "hit", "fx"}
+GRACE = int(os.environ.get("SEAT_GRACE", "30"))   # seconds a dropped racer keeps their seat
 
 rooms = {}          # code -> Room
 lock = threading.RLock()
@@ -57,6 +64,8 @@ class Conn(wsnet.Conn):
         self.id = "p" + "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(7))
         self.kart = clean_kart(None)
         self.ready = False
+        self.token = secrets.token_urlsafe(12)
+        self.away = None             # monotonic time the socket dropped (seat kept)
 
     def send_raw(self, data):
         """Send pre-encoded JSON bytes (kart encodes a broadcast once, then frames it per socket)."""
@@ -139,7 +148,7 @@ def snapshot(room, conn):
         "state": room.state, "public": room.public, "settings": room.settings, "race": room.race,
         "players": [
             {"id": p.id, "name": p.name, "kart": p.kart, "ready": p.ready,
-             "racing": room.state == "race" and p.id in room.humans}
+             "racing": room.state == "race" and p.id in room.humans, "away": p.away is not None}
             for p in room.players
         ],
     }
@@ -171,7 +180,7 @@ def leave(conn, notify=True):
             rooms.pop(room.code, None)
             return
         if room.host is conn:
-            room.host = room.players[0]
+            room.host = next((p for p in room.players if p.away is None), room.players[0])
         if notify:
             for p in room.players:
                 p.send({"t": "left", "id": conn.id, "name": conn.name, "host": room.host.id})
@@ -312,6 +321,8 @@ def handle(conn, msg):
                 best = Room(code, public=True)
                 rooms[code] = best
             join_room(conn, best)
+    elif t == "resume":
+        resume(conn, msg)
     elif t == "leave":
         leave(conn)
         conn.send({"t": "leftroom"})
@@ -432,7 +443,7 @@ def handle_socket(conn):
         if full:
             conn.send({"t": "error", "msg": "busy"})
             return
-        conn.send({"t": "hello", "id": conn.id, "s": now_ms()})
+        conn.send({"t": "hello", "id": conn.id, "tok": conn.token, "s": now_ms()})
         while True:
             raw = conn.recv()
             if raw is None:
@@ -450,9 +461,48 @@ def handle_socket(conn):
                     print("handle error:", repr(exc), flush=True)
     finally:
         conn.closed = True
-        leave(conn)
+        drop(conn)
         with lock:
             conn_count -= 1
+
+
+def drop(conn):
+    """The socket went without a goodbye: keep the seat for a while, tell the others."""
+    with lock:
+        room = rooms.get(conn.room)
+        if not room or conn not in room.players:
+            return
+        conn.away = time.monotonic()
+        conn.ready = False
+        relay(room, conn, {"t": "away", "id": conn.id, "name": conn.name})
+        broadcast_room(room)
+
+
+def resume(conn, msg):
+    code = "".join(ch for ch in str(msg.get("code", "")).upper() if ch.isalpha())[:4]
+    pid, tok = str(msg.get("id") or ""), str(msg.get("tok") or "")
+    with lock:
+        room = rooms.get(code)
+        old = next((p for p in room.players if p.id == pid), None) if room else None
+        if old is None or not tok or not secrets.compare_digest(old.token, tok):
+            conn.send({"t": "error", "msg": "no session"})
+            return
+        if conn.room and conn.room != code:
+            leave(conn)
+        conn.id, conn.token, conn.name, conn.kart = old.id, old.token, old.name, old.kart
+        conn.ready, conn.away = False, None
+        room.players[room.players.index(old)] = conn
+        if room.host is old:
+            room.host = conn
+        conn.room = code
+        old.room = None
+        room.last_active = time.monotonic()
+        racing = room.state == "race" and conn.id in room.humans
+        conn.send({"t": "resumed", "id": conn.id, "race": room.race if racing else 0, "host": room.host.id if room.host else None})
+        relay(room, conn, {"t": "back", "id": conn.id, "name": conn.name})
+        broadcast_room(room)
+    if old is not conn:
+        old.close()
 
 
 def janitor():
@@ -462,13 +512,19 @@ def janitor():
         now = time.monotonic()
         with lock:
             for code, room in list(rooms.items()):
-                room.players = [p for p in room.players if not p.closed]
+                for p in [p for p in room.players if p.closed and (p.away is None or now - p.away > GRACE)]:
+                    leave(p)                     # the grace ran out: they've left (host passes on)
+                if code not in rooms:
+                    continue
                 if not room.players:
                     rooms.pop(code, None)
                     continue
                 if room.host not in room.players:
                     room.host = room.players[0]
                     broadcast_room(room)
+                if all(p.away is not None for p in room.players) and now - max(p.away for p in room.players) > GRACE:
+                    rooms.pop(code, None)
+                    continue
                 if room.state == "race":
                     if room.first_finish is not None and now - room.first_finish > RACE_TIMEOUT:
                         maybe_finish(room, force=True)

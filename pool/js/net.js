@@ -70,6 +70,8 @@
       if (state === 'open' && ws) { try { ws.send(data); } catch (e) { /* closing */ } }
       else if (state === 'connecting') queue.push(data);
     },
+    // tests: end the socket the way a dropped network would (the close handler runs as usual)
+    _drop: function () { if (ws) { try { ws.close(); } catch (e) { /* ignore */ } } },
     close: function () {
       clearInterval(pingTimer);
       if (ws) { var s = ws; ws = null; try { s.close(); } catch (e) { /* ignore */ } }

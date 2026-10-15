@@ -7,12 +7,19 @@ shooter sends the resting ball positions and rules state and the other side
 snaps to it. The server only pairs two sockets (by a 4-letter room code or
 through the quick-match queue), hands out the rack seed and who breaks, runs
 the rematch vote, and relays game messages between the two players.
+
+Reconnects: each seat gets a secret token with the first frame. If a socket drops mid-game (a phone
+locking, a train tunnel) the seat is held for GRACE seconds and the other player is told "away".
+Coming back with {resume, code, token} (same tab or after a reload) restores the seat; the player who
+stayed is asked to send a full table sync ("fullsync", relayed), and the returning one re-sends its
+last shot result in case it was lost. Only an explicit leave, or the grace running out, ends the game.
 Railway hands us the port on $PORT and checks /healthz.
 """
 
 import json
 import os
 import random
+import secrets
 import threading
 import time
 from functools import partial
@@ -30,7 +37,8 @@ ROOM_WAIT_TTL = 20 * 60      # a room nobody joins expires after this
 IDLE_TIMEOUT = 90            # seconds without any frame from a client (they ping every 15s)
 RATE_PER_SEC = 40            # relayed messages per second per socket (burst 80)
 RULES = ("pub", "wpa")
-RELAY = {"aim", "shot", "state", "sync", "emote"}
+RELAY = {"aim", "shot", "state", "sync", "emote", "fullsync"}
+GRACE = int(os.environ.get("SEAT_GRACE", "60"))   # seconds a dropped player keeps their seat
 
 rooms = {}          # code -> Room
 queues = {r: [] for r in RULES}   # quick match: rules -> [Conn]
@@ -54,6 +62,9 @@ class Room:
         self.rematch = set()
         self.frame = 0
         self.breaker = 0
+        self.seed = 0
+        self.tokens = [secrets.token_urlsafe(12), secrets.token_urlsafe(12)]
+        self.away = [None, None]     # monotonic time a seat's socket dropped
 
 
 def clean_name(value):
@@ -81,15 +92,56 @@ def start_frame(room):
     """Tell both players a frame is starting (new rack seed, who breaks)."""
     room.frame += 1
     room.rematch.clear()
-    seed = random.randint(1, 2**31 - 1)
-    names = [p.name if p else "Player" for p in room.players]
+    room.seed = random.randint(1, 2**31 - 1)
     for side, p in enumerate(room.players):
         if p:
-            p.send({
-                "t": "start", "side": side, "code": room.code, "seed": seed,
-                "breaker": room.breaker, "names": names, "rules": room.rules,
-                "callBlack": room.call_black, "frame": room.frame,
-            })
+            p.send({"t": "start", **seat_info(room, side)})
+
+
+def seat_info(room, side):
+    names = [p.name if p else "Player" for p in room.players]
+    return {"side": side, "code": room.code, "seed": room.seed, "breaker": room.breaker, "names": names, "rules": room.rules,
+            "callBlack": room.call_black, "frame": room.frame, "token": room.tokens[side]}
+
+
+def drop(conn):
+    """A socket closed without saying goodbye: hold the seat if a game is on, else leave."""
+    with lock:
+        room = rooms.get(conn.room)
+        if room and None not in room.players and conn in room.players and room.frame > 0:
+            side = room.players.index(conn)
+            room.away[side] = time.monotonic()
+            other = room.players[1 - side]
+        else:
+            room = None
+    if room is None:
+        leave(conn)
+        return
+    if other and not other.closed:
+        other.send({"t": "away"})
+
+
+def resume(conn, msg):
+    code = "".join(ch for ch in str(msg.get("code", "")).upper() if ch.isalpha())[:4]
+    token = str(msg.get("token") or "")
+    with lock:
+        room = rooms.get(code)
+        side = next((i for i in (0, 1) if room and token and secrets.compare_digest(room.tokens[i], token)), None)
+        if side is None:
+            conn.send({"t": "error", "msg": "no session"})
+            return
+        old = room.players[side]
+        conn.name = old.name if old else conn.name
+        room.players[side] = conn
+        room.away[side] = None
+        conn.room = code
+        other = room.players[1 - side]
+    if old is not None and old is not conn:
+        old.room = None
+        old.close()
+    conn.send({"t": "resumed", **seat_info(room, side)})
+    if other and not other.closed:
+        other.send({"t": "back", "sync": True})
 
 
 def leave(conn, notify=True):
@@ -100,7 +152,7 @@ def leave(conn, notify=True):
                 q.remove(conn)
         room = rooms.get(conn.room)
         other = None
-        if room:
+        if room and conn in room.players:      # (a replaced, stale socket must not end the game)
             other = room.players[1] if room.players[0] is conn else room.players[0]
             rooms.pop(room.code, None)
         conn.room = None
@@ -162,6 +214,8 @@ def handle(conn, msg):
             else:
                 q.append(conn)
                 conn.send({"t": "queued", "rules": rules})
+    elif t == "resume":
+        resume(conn, msg)
     elif t in ("cancel", "leave"):
         leave(conn)
         conn.send({"t": "cancelled"})
@@ -209,7 +263,7 @@ def handle_socket(conn):
                 handle(conn, msg)
     finally:
         conn.closed = True
-        leave(conn)
+        drop(conn)
         with lock:
             conn_count -= 1
 
@@ -217,13 +271,20 @@ def handle_socket(conn):
 def janitor():
     """Expire rooms nobody joined and drop dead sockets from the queues."""
     while True:
-        time.sleep(30)
+        time.sleep(5)
         now = time.monotonic()
-        stale = []
+        stale, left = [], []
         with lock:
             for code, room in list(rooms.items()):
                 host, guest = room.players
-                if (host is None or host.closed) and (guest is None or guest.closed):
+                gone = [a is not None and now - a > GRACE for a in room.away]
+                if any(gone):
+                    rooms.pop(code, None)
+                    for side, p in enumerate(room.players):
+                        if p is not None and not gone[side] and room.away[side] is None:
+                            p.room = None
+                            left.append(p)
+                elif (host is None or host.closed) and (guest is None or guest.closed) and not any(room.away):
                     rooms.pop(code, None)
                 elif guest is None and now - room.created > ROOM_WAIT_TTL:
                     rooms.pop(code, None)
@@ -234,6 +295,8 @@ def janitor():
             if host:
                 host.room = None
                 host.send({"t": "error", "msg": "expired"})
+        for p in left:
+            p.send({"t": "left"})
 
 
 class Handler(SimpleHTTPRequestHandler):

@@ -119,6 +119,7 @@
   function cur() { return G.st ? G.players[G.st.turn] : null; }
   function isLocalTurn() {
     if (!G.st || G.phase !== 'aim') return false;
+    if (G.mode === 'online' && (G.reconnecting || G.oppAway)) return false;   // the table waits for both players
     var p = G.players[G.st.turn];
     return p.kind === 'human';
   }
@@ -195,6 +196,7 @@
 
   function quitToMenu() {
     if (G.mode === 'online') { Net.send({ t: 'leave' }); Net.close(); }
+    forgetSeat(); G.reconnecting = false; G.oppAway = false;
     G.mode = null; G.st = null; G.players = null; G.phase = 'menu'; G.bot = null; G.cueView = null;
     G.sinking = [];
     clearToast();
@@ -229,6 +231,7 @@
   function startTurn(first) {
     var st = G.st;
     G.phase = 'aim';
+    if (G.syncOwed) setTimeout(sendFullSync, 0);
     G.power = 0; G.spin = [0, 0]; G.call = -1; G.callLocked = false;
     G.bot = null; G.remote = null;
     prepareInHand();
@@ -307,6 +310,7 @@
   function finishShot() {
     var sim = G.sim;
     sim.stopAll();
+    if (G.pendingFull) { var pf = G.pendingFull; G.pendingFull = null; G.phase = 'aim'; onFullSync(pf); if (G.phase !== 'strike' && G.phase !== 'roll') return; }
     G.rawSnap = sim.snapshot();       // the table as the shot left it
     var res = Rules.evaluate(G.st, sim.summary(G.shot.call));
     if (G.mode === 'online' && G.shotBy !== G.me) {
@@ -333,12 +337,14 @@
     var msgs = Rules.describe(prev, res, names());
     if (res.rerack) G.sinking = [];
     if (authoritative && G.mode === 'online') {
-      Net.send({ t: 'state', n: G.shotN, b: G.rawSnap.map(function (b) { return b || 0; }), r: G.st, rk: res.rerack ? G.seed : 0 });
+      G.lastState = { t: 'state', n: G.shotN, b: G.rawSnap.map(function (b) { return b || 0; }), r: G.st, rk: res.rerack ? G.seed : 0 };
+      Net.send(G.lastState);
     }
     if (res.winner >= 0) {
       if (msgs.length) toast(msgs.join(' · '), res.winner === prev.turn ? 'good' : 'foul', 3000);
       G.phase = 'over';
       gameOver(res);
+      if (G.syncOwed) setTimeout(sendFullSync, 0);
       return;
     }
     if (res.foul) Audio.foul();
@@ -744,6 +750,10 @@
       G.roomLink = link;
     } else if (t === 'queued') {
       /* waiting */
+    } else if (t === 'error' && msg.msg === 'no session') {
+      forgetSeat();
+      if (G.mode === 'online') opponentGone('The game ended while you were away.');
+      return;
     } else if (t === 'error') {
       var text = msg.msg === 'no room' ? 'No room with that code.' : msg.msg === 'room full' ? 'That room is already full.' : msg.msg === 'expired' ? 'The room expired.' : 'Server busy, try again.';
       if (G.mode === 'online') return;
@@ -751,6 +761,14 @@
       show('online'); onlineError(text);
     } else if (t === 'start') {
       startOnline(msg);
+    } else if (t === 'resumed') {
+      onResumed(msg);
+    } else if (t === 'away') {
+      if (G.mode === 'online') { G.oppAway = true; toast(G.players[1 - G.me].name + "'s connection dropped — waiting for them…", 'foul', 4000); updateHUD(true); }
+    } else if (t === 'back') {
+      if (G.mode === 'online') { G.oppAway = false; toast(G.players[1 - G.me].name + ' is back', 'good'); G.syncOwed = true; if (G.phase === 'aim' || G.phase === 'over') sendFullSync(); updateHUD(true); }
+    } else if (t === 'fullsync') {
+      if (G.mode === 'online') onFullSync(msg);
     } else if (t === 'left') {
       if (G.mode === 'online') opponentGone('Your opponent left the game.');
       else if (!$('lobby').hidden) { show('online'); onlineError('Your opponent left.'); }
@@ -768,13 +786,71 @@
     }
   });
   Net.on('close', function () {
+    if (G.mode === 'online' && G.seatToken) { reconnectSoon(); return; }
     if (G.mode === 'online') opponentGone('Connection to the server was lost.');
     else if (!$('lobby').hidden) { show('online'); onlineError('Could not reach the server.'); }
   });
   Net.on('quality', function () { updateHUD(false); });
 
+  // ---- reconnects: the server holds a dropped seat for a minute (pool/server.py)
+  var reconnectTimer = 0;
+  function forgetSeat() { G.seatToken = null; try { sessionStorage.removeItem('pool.online'); } catch (e) { /* fine */ } }
+  function reconnectSoon() {
+    if (!G.reconnecting) { G.reconnecting = true; G.reconnectSince = performance.now(); toast('Connection lost — reconnecting…', 'foul', 60000); updateHUD(true); }
+    if (performance.now() - G.reconnectSince > 55000) { G.reconnecting = false; forgetSeat(); opponentGone('Connection to the server was lost.'); return; }
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(function () {
+      if (G.mode !== 'online' || !G.reconnecting) return;
+      Net.connect();
+      Net.send({ t: 'resume', code: G.roomCode, token: G.seatToken });
+    }, Math.min(4000, 400 + (performance.now() - G.reconnectSince) / 4));
+  }
+  function onResumed(msg) {
+    if (G.mode !== 'online') {
+      // a reload: rebuild the frame, then the full sync from the other side puts the balls back
+      startOnline(msg);
+      G.phase = 'resync';
+      updateHUD(true);
+    }
+    G.reconnecting = false;
+    G.seatToken = msg.token || G.seatToken;
+    clearToast(); toast('Reconnected', 'good');
+    if (G.lastState) Net.send(G.lastState);           // in case our last result never arrived
+    G.syncOwed = true;
+    if (G.phase === 'aim' || G.phase === 'over') sendFullSync();
+    updateHUD(true);
+  }
+  // the whole table and rules state; the side that has seen more shots wins
+  function sendFullSync() {
+    if (G.mode !== 'online' || !G.st || G.reconnecting) return;
+    if (G.phase !== 'aim' && G.phase !== 'over') return;      // after the shot in progress
+    G.syncOwed = false;
+    var snap = G.sim.snapshot();
+    Net.send({ t: 'fullsync', n: G.shotNo, b: snap.map(function (b) { return b || 0; }), r: G.st, f: G.frames.slice(), seed: G.seed, over: G.phase === 'over' });
+  }
+  function onFullSync(m) {
+    if (!Array.isArray(m.b) || m.b.length !== 16 || !num(m.n)) return;
+    if (G.phase === 'roll' || G.phase === 'strike') { G.pendingFull = m; return; }
+    if (m.n < G.shotNo || (m.n === G.shotNo && G.phase !== 'resync')) return;   // ours is as new or newer
+    var st = Rules.sanitize(m.r);
+    if (!st) return;
+    var sim = G.sim;
+    for (var i = 0; i < 16; i++) {
+      var b = m.b[i];
+      if (b && Array.isArray(b) && num(b[0]) && num(b[1])) { sim.place(i, b[0], b[1]); renderer.spriteDirty[i] = true; }
+      else sim.remove(i, -1);
+    }
+    G.st = st; G.shotNo = m.n | 0; G.seed = (m.seed | 0) || G.seed;
+    if (Array.isArray(m.f) && m.f.length === 2) G.frames = [m.f[0] | 0, m.f[1] | 0];
+    G.sinking = []; G.pendingState = null; G.localRes = null;
+    if (m.over && st.winner >= 0) { G.phase = 'over'; updateHUD(true); return; }
+    startTurn(false);
+  }
+
   function startOnline(msg) {
     var side = msg.side === 1 ? 1 : 0;
+    G.roomCode = msg.code; G.seatToken = msg.token || null; G.reconnecting = false; G.oppAway = false; G.syncOwed = false; G.lastState = null;
+    try { sessionStorage.setItem('pool.online', JSON.stringify({ code: msg.code, token: msg.token })); } catch (e) { /* storage blocked */ }
     var nm = Array.isArray(msg.names) ? msg.names : ['Player', 'Player'];
     G.mode = 'online';
     G.me = side;
@@ -859,6 +935,7 @@
   function opponentGone(text) {
     if (G.mode !== 'online') return;
     Net.close();
+    forgetSeat(); G.reconnecting = false; G.oppAway = false;
     var wasOver = G.phase === 'over';
     G.mode = 'online-ended';
     $('dialog-title').textContent = wasOver ? 'Opponent left' : 'Game interrupted';
@@ -944,6 +1021,9 @@
         if (st.outOfBaulk && !st.free && !st.brk) hint = (hint ? hint + ' · ' : '') + 'play out of baulk';
       } else if (st.free) hint = 'Free shot';
     } else if (G.phase === 'sync') status = 'Syncing…';
+    else if (G.phase === 'resync') status = 'Reconnecting…';
+    if (G.mode === 'online' && G.reconnecting) status = 'Reconnecting…';
+    else if (G.mode === 'online' && G.oppAway && G.players) status = 'Waiting for ' + G.players[1 - G.me].name + '…';
     else if (G.phase === 'over') status = 'Frame over';
     else status = G.lastStatus || '';
     if (G.phase === 'aim' || G.phase === 'sync' || G.phase === 'over') G.lastStatus = status;
@@ -1175,6 +1255,12 @@
   // share links: ?room=CODE joins straight away
   var qs = new URLSearchParams(location.search);
   var roomParam = (qs.get('room') || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
-  if (roomParam.length === 4) { $('join-code').value = roomParam; goOnline('join', roomParam); }
+  var savedSeat = null;
+  try { savedSeat = JSON.parse(sessionStorage.getItem('pool.online') || 'null'); } catch (e) { savedSeat = null; }
+  if (savedSeat && savedSeat.code && savedSeat.token) {
+    G.roomCode = savedSeat.code; G.seatToken = savedSeat.token;
+    Net.connect();
+    Net.send({ t: 'resume', code: savedSeat.code, token: savedSeat.token });
+  } else if (roomParam.length === 4) { $('join-code').value = roomParam; goOnline('join', roomParam); }
   requestAnimationFrame(frame);
 })();

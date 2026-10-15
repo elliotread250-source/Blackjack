@@ -512,6 +512,7 @@ $('on-join').onclick = () => { sound.play('click'); doJoin($('on-code').value); 
 $('on-code').addEventListener('keydown', e => { if (e.key === 'Enter') doJoin(e.target.value); });
 function leaveRoom() {
   if (app.net) app.net.send({ t: 'leave' });
+  forgetSeat();
   app.room = null;
   endSession();
   try { history.replaceState(null, '', location.pathname); } catch {}
@@ -519,7 +520,33 @@ function leaveRoom() {
   go('online', false);
 }
 $('lb-leave').onclick = () => { sound.play('back'); leaveRoom(); };
-function onNetClose() {
+// ---- reconnects: the server keeps a dropped seat for 30 s (kart/server.py); our own kart keeps driving
+const SEAT_KEY = 'kart.online';
+function saveSeat() { try { sessionStorage.setItem(SEAT_KEY, JSON.stringify(app.seat)); } catch {} }
+function forgetSeat() { app.seat = null; app.reconnecting = false; try { sessionStorage.removeItem(SEAT_KEY); } catch {} }
+let reconnectTimer = 0;
+async function tryResume() {
+  if (!app.seat || !app.reconnecting) return;
+  if (performance.now() - app.reconnectSince > 25000) { giveUp(); return; }
+  try {
+    await app.net.connect();
+    app.net.send({ t: 'resume', code: app.seat.code, id: app.seat.id, tok: app.seat.tok });
+  } catch {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(tryResume, 1500);
+  }
+}
+function giveUp() {
+  forgetSeat();
+  onNetClose(true);
+}
+function onNetClose(final) {
+  if (final !== true && app.seat && app.room) {
+    if (!app.reconnecting) { app.reconnecting = true; app.reconnectSince = performance.now(); toast('Connection lost — reconnecting…', 4000); }
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(tryResume, 600);
+    return;
+  }
   const wasRoom = !!app.room;
   app.room = null;
   if (app.session && app.session.online) { endSession(); }
@@ -564,7 +591,7 @@ function renderLobby() {
   $('lb-count').textContent = `Players ${R.players.length}/8`;
   $('lb-players').innerHTML = R.players.map(p => {
     const k = cleanConfig(p.kart);
-    const status = R.state === 'race' ? (p.racing ? 'racing' : 'waiting') : p.id === R.host ? 'host' : p.ready ? 'ready' : 'not ready';
+    const status = p.away ? 'reconnecting…' : R.state === 'race' ? (p.racing ? 'racing' : 'waiting') : p.id === R.host ? 'host' : p.ready ? 'ready' : 'not ready';
     return `<div class="pl"><div class="kc" style="background:${k.body};border-color:${k.accent}"></div><div><b>${esc(p.name)}${p.id === app.me ? ' (you)' : ''}</b><br><small>${KART_BY_ID[k.type].name} · #${k.num}</small></div><span class="rd ${p.ready || p.id === R.host ? 'ok' : ''}">${status}</span></div>`;
   }).join('');
   const me = R.players.find(p => p.id === app.me);
@@ -584,6 +611,9 @@ function onNetMessage(msg) {
       const firstJoin = !app.room;
       app.room = msg;
       app.me = msg.you;
+      if (!app.seat || app.seat.code !== msg.code || app.seat.id !== msg.you) {
+        if (app.net.id === msg.you && app.net.token) { app.seat = { code: msg.code, id: msg.you, tok: app.net.token }; saveSeat(); }
+      }
       try { history.replaceState(null, '', `${location.pathname}?room=${msg.code}`); } catch {}
       if (firstJoin && !s) { stack.length = 0; stack.push('title', 'online'); go('lobby', false); }
       else if (current === 'lobby') renderLobby();
@@ -605,12 +635,20 @@ function onNetMessage(msg) {
       break;
     }
     case 'error': {
+      if (msg.msg === 'no session') { if (app.reconnecting || app.seat) giveUp(); else forgetSeat(); break; }
       const m = { 'no room': 'That room does not exist (check the code).', 'room full': 'That room is full.', busy: 'The server is busy. Try again soon.', 'not ready': 'Not everyone is ready yet.', expired: 'The room expired.' }[msg.msg] || 'Something went wrong.';
       if (current === 'online') onlineStatus(m); else toast(m);
       if (msg.msg === 'expired') { app.room = null; go('online', false); }
       break;
     }
     case 'leftroom': app.room = null; break;
+    case 'resumed':
+      if (app.reconnecting) toast('Reconnected');
+      app.reconnecting = false;
+      app.me = msg.id; app.net.id = msg.id;
+      break;
+    case 'away': toast(`${msg.name} lost their connection…`); break;
+    case 'back': toast(`${msg.name} is back`); break;
   }
 }
 function startOnline(msg) {
@@ -763,7 +801,15 @@ window.__kart = {
   resize();
   const room = new URLSearchParams(location.search).get('room');
   go('title', false);
-  if (room) {
+  let seat = null;
+  try { seat = JSON.parse(sessionStorage.getItem(SEAT_KEY) || 'null'); } catch { seat = null; }
+  if (seat && seat.code && seat.id && seat.tok) {
+    // a reload: take our seat back (the race carries on without us; we rejoin the lobby)
+    app.seat = seat;
+    stack.length = 0; stack.push('title');
+    go('online', false);
+    ensureNet().then(okNet => { if (okNet) app.net.send({ t: 'resume', code: seat.code, id: seat.id, tok: seat.tok }); });
+  } else if (room) {
     stack.length = 0; stack.push('title');
     go('online', false);
     doJoin(room);
