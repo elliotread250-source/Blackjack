@@ -136,7 +136,7 @@
   function onNet(m) {
     if (!net) return;
     if (m.t === 'room') { net.code = m.code; net.status = 'waiting'; history.replaceState(null, '', '?room=' + m.code); }
-    else if (m.t === 'error') { const msg = m.msg === 'no room' ? 'NO ROOM WITH THAT CODE' : m.msg === 'room full' ? 'THAT ROOM IS FULL' : 'SERVER BUSY'; leaveOnline(); flashMsg(msg); }
+    else if (m.t === 'error') { const msg = m.msg === 'no room' ? 'NO ROOM WITH THAT CODE' : m.msg === 'room full' ? 'THAT ROOM IS FULL' : m.msg === 'expired' ? 'ROOM EXPIRED' : 'SERVER BUSY'; leaveOnline(); flashMsg(msg); }
     else if (m.t === 'start') { net.side = m.side; net.status = 'playing'; net.code = m.code; history.replaceState(null, '', location.pathname); newGame(2); beep(459, 60); }
     else if (m.t === 'left') { net = null; mode = 'menu'; flashMsg('OPPONENT LEFT'); }
     else if (m.t === 'p' && isHost()) guestY = m.y;

@@ -4,3 +4,5 @@ crossy-road/data/
 neighbour/data/
 subway-surfers/data/
 wreck-run/data/
+__pycache__/
+*.pyc

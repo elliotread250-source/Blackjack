@@ -60,7 +60,7 @@ h1 .t { color: var(--gold); text-shadow: 0 0 18px rgba(255, 209, 102, .5); }
 .strike.show line { animation: ink .35s .15s ease-out forwards; }
 
 .controls { width: 100%; display: grid; gap: 10px; }
-.seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 4px; }
+.seg { display: grid; grid-template-columns: 1fr 1fr 1fr; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 4px; }
 .seg button { border: 0; background: none; color: var(--dim); font: inherit; font-weight: 700; padding: 10px; border-radius: 10px; cursor: pointer; }
 .seg button[aria-checked="true"] { background: linear-gradient(135deg, var(--x), #8a5cff); color: #fff; }
 .row { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
@@ -76,3 +76,15 @@ select option { color: #111; }
 @media (prefers-reduced-motion: reduce) { * { animation-duration: .01s !important; transition: none !important; } }
 
 button, select, .cell, .sq { touch-action: manipulation; }
+
+/* online play */
+.online { display: grid; gap: 10px; padding: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+.ol-block { display: grid; gap: 10px; }
+.ol-name { display: grid; gap: 4px; color: var(--dim); font-size: 13px; }
+.online input { font: inherit; color: var(--text); background: rgba(0, 0, 0, .25); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+#ol-join input { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: .25em; font-weight: 700; }
+#ol-join button { flex: 0 0 auto; min-width: 96px; }
+.ol-label { margin: 0; color: var(--dim); font-size: 13px; text-align: center; }
+.ol-code { margin: 0; text-align: center; font-size: 34px; font-weight: 800; letter-spacing: .3em; color: var(--gold); }
+.ol-info { margin: 0; min-height: 1.2em; font-size: 13px; color: var(--dim); text-align: center; }
+.ol-info.warn { color: var(--gold); } .ol-info.err { color: #ff8a8a; }

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#1f2a24">
 <title>Chess</title>
-<meta name="description" content="Play chess against the computer on Easy, Medium or Hard, or against a friend on the same device.">
+<meta name="description" content="Play chess against the computer on Easy, Medium or Hard, against a friend on the same device, or online with a room code or quick match.">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="style.css">
 </head>
@@ -26,6 +26,24 @@
     <div class="seg" role="radiogroup" aria-label="Opponent">
       <button data-mode="bot" role="radio">vs Computer</button>
       <button data-mode="friend" role="radio">2 Players</button>
+      <button data-mode="online" role="radio">Online</button>
+    </div>
+    <div class="online" id="online" hidden>
+      <div id="ol-lobby">
+        <label class="ol-name">Your name <input id="ol-name" maxlength="14" autocomplete="nickname" placeholder="Player"></label>
+        <div class="row"><button id="ol-create" class="primary">Create room</button><button id="ol-quick">Quick match</button></div>
+        <form id="ol-join" class="row ol-joinrow"><input id="ol-code" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" aria-label="Room code"><button>Join</button></form>
+      </div>
+      <div id="ol-wait" hidden>
+        <p class="ol-label" id="ol-wait-label">Room code — send it to a friend</p>
+        <p class="ol-code" id="ol-code-show"></p>
+        <div class="row"><button id="ol-copy">Copy invite link</button><button id="ol-cancel">Cancel</button></div>
+      </div>
+      <div id="ol-game" hidden>
+        <div class="row" id="ol-drawreq" hidden><span class="ol-label">Draw offered</span><button id="ol-accept" class="primary">Accept</button><button id="ol-decline">Decline</button></div>
+        <div class="row"><button id="ol-draw">Offer draw</button><button id="ol-resign">Resign</button><button id="ol-rematch" class="primary" hidden>Rematch</button><button id="ol-leave">Leave</button></div>
+      </div>
+      <p class="ol-info" id="ol-info" role="status" aria-live="polite"></p>
     </div>
     <div class="row bot-only">
       <label>Level <select id="level"><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option></select></label>

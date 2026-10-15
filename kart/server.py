@@ -10,22 +10,19 @@ times are reported here, and the server builds the results and sends everyone ba
 lobby. Railway gives us the port in $PORT and checks /healthz.
 """
 
-import base64
-import hashlib
 import json
 import math
 import os
 import random
-import socket
 import string
-import struct
 import threading
 import time
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
+import wsnet
+
 ROOT = os.path.dirname(os.path.abspath(__file__))
-WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 # skip I and O so codes read cleanly
 LETTERS = "ABCDEFGHJKLMNPQRSTUVWXYZ"
 MAX_MSG = 16 * 1024
@@ -52,96 +49,18 @@ def now_ms():
     return time.time() * 1000.0
 
 
-class Conn:
-    """One WebSocket. Writes are locked because two threads can send to it."""
+class Conn(wsnet.Conn):
+    """One racer socket (transport in wsnet.py); kart profile and ready flag live here."""
 
     def __init__(self, rfile, wfile):
-        self.rfile = rfile
-        self.wfile = wfile
-        self.wlock = threading.Lock()
+        super().__init__(rfile, wfile, max_msg=MAX_MSG, rate=RATE_PER_SEC, burst=90.0)
         self.id = "p" + "".join(random.choice(string.ascii_lowercase + string.digits) for _ in range(7))
-        self.room = None
-        self.name = "Player"
         self.kart = clean_kart(None)
         self.ready = False
-        self.closed = False
-        self.tokens = 90.0
-        self.last = time.monotonic()
-
-    def send(self, obj):
-        if self.closed:
-            return
-        data = json.dumps(obj, separators=(",", ":")).encode()
-        self.send_raw(data)
 
     def send_raw(self, data):
-        if self.closed:
-            return
-        head = bytearray([0x81])
-        n = len(data)
-        if n < 126:
-            head.append(n)
-        elif n < 65536:
-            head.append(126)
-            head += struct.pack(">H", n)
-        else:
-            head.append(127)
-            head += struct.pack(">Q", n)
-        try:
-            with self.wlock:
-                self.wfile.write(bytes(head) + data)
-                self.wfile.flush()
-        except (OSError, ValueError):
-            self.closed = True
-
-    def _read(self, n):
-        data = self.rfile.read(n)
-        if data is None or len(data) < n:
-            raise EOFError
-        return data
-
-    def recv(self):
-        """Next text message as a string, or None when the socket closes."""
-        try:
-            while True:
-                hdr = self._read(2)
-                op = hdr[0] & 0x0F
-                masked = hdr[1] & 0x80
-                n = hdr[1] & 0x7F
-                if n == 126:
-                    n = struct.unpack(">H", self._read(2))[0]
-                elif n == 127:
-                    n = struct.unpack(">Q", self._read(8))[0]
-                if n > MAX_MSG:
-                    return None
-                mask = self._read(4) if masked else b"\0\0\0\0"
-                payload = bytearray(self._read(n)) if n else bytearray()
-                for i in range(len(payload)):
-                    payload[i] ^= mask[i & 3]
-                if op == 0x8:  # close
-                    return None
-                if op == 0x9:  # ping -> pong
-                    with self.wlock:
-                        self.wfile.write(bytes([0x8A, min(len(payload), 125)]) + bytes(payload[:125]))
-                        self.wfile.flush()
-                    continue
-                if op == 0xA:  # pong
-                    continue
-                if op in (0x1, 0x0):
-                    return payload.decode("utf-8", "replace")
-        except (OSError, EOFError, ValueError, struct.error):
-            return None
-
-    def allow(self, cost=1.0):
-        """Token bucket for everything a client sends."""
-        now = time.monotonic()
-        self.tokens = min(90.0, self.tokens + (now - self.last) * RATE_PER_SEC)
-        self.last = now
-        if self.tokens < cost:
-            return False
-        self.tokens -= cost
-        return True
-
+        """Send pre-encoded JSON bytes (kart encodes a broadcast once, then frames it per socket)."""
+        return self._write(wsnet.frame(data))
 
 class Room:
     def __init__(self, code, public):
@@ -578,22 +497,9 @@ class Handler(SimpleHTTPRequestHandler):
         return super().guess_type(path)
 
     def do_GET(self):
-        if self.path.split("?")[0] == "/ws" and self.headers.get("Upgrade", "").lower() == "websocket":
-            key = self.headers.get("Sec-WebSocket-Key", "")
-            accept = base64.b64encode(hashlib.sha1((key + WS_GUID).encode()).digest()).decode()
-            self.send_response_only(101, "Switching Protocols")
-            self.send_header("Upgrade", "websocket")
-            self.send_header("Connection", "Upgrade")
-            self.send_header("Sec-WebSocket-Accept", accept)
-            super().end_headers()
-            self.wfile.flush()
-            self.close_connection = True
-            try:
-                self.connection.settimeout(IDLE_TIMEOUT)
-                self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
-            except OSError:
-                pass
-            handle_socket(Conn(self.rfile, self.wfile))
+        if wsnet.is_upgrade(self):
+            if wsnet.accept(self, IDLE_TIMEOUT):
+                handle_socket(Conn(self.rfile, self.wfile))
             return
         super().do_GET()
 
