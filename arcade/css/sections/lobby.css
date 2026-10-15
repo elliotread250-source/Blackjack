@@ -1,0 +1,18 @@
+/* multiplayer lobby: SELECT YOUR MODE tabs and lobby cards */
+.lobby { display: grid; gap: 22px; }
+.lobby-tabs { position: relative; display: flex; flex-wrap: wrap; gap: 6px; width: max-content; max-width: 100%; padding: 6px; border-radius: var(--r-lg); background: #05070a; box-shadow: var(--bezel); }
+.lt { position: relative; z-index: 1; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 18px; border: 0; border-radius: 12px; background: none; color: var(--muted);
+  font: 700 .86rem/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; transition: color var(--d-fast); }
+.lt svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.lt[aria-selected="true"] { color: #140a02; }
+.lt .n { font-size: .7rem; opacity: .7; }
+.lt-ink { position: absolute; z-index: 0; top: 6px; bottom: 6px; left: 0; width: 100px; border-radius: 12px; background: var(--grad-heat); box-shadow: 0 0 22px rgba(255, 117, 24, .5); transition: transform var(--d-slow) var(--ease-overshoot), width var(--d-slow) var(--ease-overshoot); }
+.lobby-panel { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 16px; }
+.lobby-panel.swap > * { animation: fade-up var(--d-slow) var(--ease-overshoot) both; animation-delay: calc(var(--i, 0) * 60ms); }
+.lobby-card { position: relative; }
+.lobby-card .gcard { height: 100%; }
+.lobby-tag { position: absolute; left: 12px; top: -12px; z-index: 6; display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 8px; background: var(--ink); border: 1px solid var(--orange-50);
+  font: 700 .64rem/1 var(--font-mono); letter-spacing: .14em; color: var(--amber); }
+.lamp { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 10px var(--ok); animation: pulse 1.4s var(--ease-in-out) infinite; }
+.p2 { animation: blink 1.1s steps(1) infinite; color: var(--gold); }
+.lobby-explain { color: var(--muted); font-size: .9rem; max-width: 70ch; }

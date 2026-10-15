@@ -1,0 +1,47 @@
+/* pick your vibe: a tile per category with its own looping micro-illustration */
+.vibes { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 196px), 1fr)); gap: 14px; }
+.vibe { --spd: 1; perspective: 700px; }
+.vibe button { position: relative; width: 100%; aspect-ratio: 5 / 4; display: grid; align-content: end; gap: 4px; padding: 18px; border-radius: var(--r-xl); border: 0; text-align: left; overflow: hidden;
+  background: radial-gradient(120% 90% at 80% 10%, var(--orange-15), transparent 60%), linear-gradient(180deg, var(--panel), var(--surface)); box-shadow: var(--bezel);
+  transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: box-shadow var(--d-base); }
+.vibe button:hover, .vibe button:focus-visible { box-shadow: var(--bezel-hot); --spd: 2.4; }
+.vibe .ill { position: absolute; inset: 10px 10px 40% 10px; display: grid; place-items: center; }
+.vibe .ill svg { width: 100%; height: 100%; overflow: visible; }
+.vibe .v-name { font: 700 1.35rem/1 var(--font-display); text-transform: uppercase; }
+.vibe .v-n { font: 600 .74rem/1 var(--font-mono); color: var(--faint); letter-spacing: .1em; }
+.vibe .v-n b { color: var(--gold); }
+/* illustration loops: speed scales with --spd on hover */
+.vibe [class^="a-"], .vibe [class*=" a-"] { animation-duration: calc(var(--d) / var(--spd)) !important; transform-box: fill-box; transform-origin: center; }
+.a-drift { --d: 1.6s; animation: v-drift var(--d) var(--ease-in-out) infinite; }
+@keyframes v-drift { 0%, 100% { transform: translateX(-30px) rotate(-6deg); } 50% { transform: translateX(30px) rotate(10deg); } }
+.a-speed { --d: .7s; animation: v-speed var(--d) linear infinite; }
+@keyframes v-speed { from { transform: translateX(60px); opacity: 0; } 30% { opacity: 1; } to { transform: translateX(-80px); opacity: 0; } }
+.a-fall { --d: 1.8s; animation: v-fall var(--d) cubic-bezier(.5, 0, 1, .6) infinite; }
+@keyframes v-fall { 0% { transform: translateY(-60px); } 55%, 80% { transform: translateY(0); opacity: 1; } 90%, 100% { transform: translateY(0); opacity: 0; } }
+.a-clear { --d: 1.8s; animation: v-clear var(--d) steps(1) infinite; }
+@keyframes v-clear { 0%, 60% { opacity: 1; } 65% { opacity: .2; fill: #fff; } 70% { opacity: 1; } 80%, 100% { opacity: 0; } }
+.a-five { --d: 1.4s; animation: v-five var(--d) var(--ease-in-out) infinite; }
+.a-five.r { animation-name: v-five-r; }
+@keyframes v-five { 0%, 100% { transform: translateX(-40px); } 45%, 55% { transform: translateX(-4px); } }
+@keyframes v-five-r { 0%, 100% { transform: translateX(40px) scaleX(-1); } 45%, 55% { transform: translateX(4px) scaleX(-1); } }
+.a-spark { --d: 1.4s; animation: v-spark var(--d) var(--ease-out) infinite; }
+@keyframes v-spark { 0%, 40% { transform: scale(0); opacity: 0; } 50% { transform: scale(1.2); opacity: 1; } 70%, 100% { transform: scale(1.6); opacity: 0; } }
+.a-wobble { --d: 1.2s; animation: v-wobble var(--d) var(--ease-in-out) infinite; }
+@keyframes v-wobble { 0%, 100% { transform: translateY(0) skewX(0); } 25% { transform: translateY(-6px) skewX(-6deg); } 75% { transform: translateY(-3px) skewX(6deg); } }
+.a-cube { --d: 5s; animation: v-cube var(--d) linear infinite; }
+@keyframes v-cube { to { transform: rotate(360deg); } }
+.a-knight { --d: 2.4s; animation: v-knight var(--d) var(--ease-in-out) infinite; }
+@keyframes v-knight { 0%, 15% { transform: translate(0, 0); } 35%, 50% { transform: translate(0, -36px); } 70%, 85% { transform: translate(36px, -36px); } 100% { transform: translate(0, 0); } }
+.a-ball { --d: .9s; animation: v-ball var(--d) cubic-bezier(.33, 0, .66, 1) infinite alternate; }
+@keyframes v-ball { from { transform: translateY(-46px); } to { transform: translateY(0) scale(1.15, .85); } }
+.a-shadow { --d: .9s; animation: v-shadow var(--d) cubic-bezier(.33, 0, .66, 1) infinite alternate; }
+@keyframes v-shadow { from { transform: scale(.5); opacity: .3; } to { transform: scale(1); opacity: .8; } }
+.a-dice { --d: 1.6s; animation: v-dice var(--d) var(--ease-overshoot) infinite; }
+@keyframes v-dice { 0% { transform: translate(-30px, -30px) rotate(-180deg); } 45%, 100% { transform: none; } }
+.a-coin { --d: 1.2s; animation: v-coin var(--d) linear infinite; }
+@keyframes v-coin { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(.08); } }
+.a-jump { --d: 1.6s; animation: v-jump var(--d) var(--ease-in-out) infinite; }
+@keyframes v-jump { 0%, 100% { transform: translate(-50px, 0); } 25% { transform: translate(-15px, -46px); } 50% { transform: translate(20px, -26px); } 75% { transform: translate(50px, -60px); } }
+.a-boom { --d: 1.3s; animation: v-boom var(--d) var(--ease-out) infinite; }
+@keyframes v-boom { 0% { transform: scale(.2) rotate(0); opacity: 1; } 60% { transform: scale(1.25) rotate(20deg); opacity: 1; } 100% { transform: scale(1.5) rotate(30deg); opacity: 0; } }
+.a-type { --d: 1.2s; animation: blink var(--d) steps(1) infinite; }

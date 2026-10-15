@@ -10,6 +10,18 @@ no backend: the whole game runs in the browser and your bankroll lives in
 
 **Humanizer (AI text to human text, free, no API keys): https://humanizer-production-e796.up.railway.app**
 
+**Open Arcade (every game in one place): https://open-arcade.up.railway.app**
+
+**Tetris: https://tetris-production-9024.up.railway.app**
+
+**Snake: https://snake-production-7c68.up.railway.app**
+
+**Pac-Man: https://pac-man-production-74bc.up.railway.app**
+
+**2048: https://2048-production-ed21.up.railway.app**
+
+**Minesweeper: https://minesweeper-production-483e.up.railway.app**
+
 ## Rules on the table
 
 Six-deck shoe, reshuffled at the cut card (~25% penetration) so counting it down

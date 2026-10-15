@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#1d2a4a">
+<title>Wreck Run</title>
+<meta name="description" content="Drive a souped-up hatchback through a busy little town and smash everything that isn't alive. Combos, drifts, jumps and a world leaderboard.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="pops" class="pops" aria-hidden="true"></div>
+
+<div id="hud" class="hud" hidden>
+  <div class="tl"><div class="score" id="score">0</div><div class="combo" id="combo"></div></div>
+  <div class="tc"><div class="time" id="time">2:00</div></div>
+  <div class="tr"><canvas id="map" width="150" height="150" aria-label="Map"></canvas><button id="pause" class="icon" aria-label="Pause">❚❚</button></div>
+  <div class="bl"><div class="speed"><b id="speed">0</b><small>km/h</small></div><div class="nitro"><i id="nitro"></i></div></div>
+  <div id="msg" class="msg"></div>
+</div>
+
+<div id="touch" class="touch" hidden>
+  <div class="steer"><button data-k="left" aria-label="Steer left">◀</button><button data-k="right" aria-label="Steer right">▶</button></div>
+  <div class="pedals"><button data-k="nitro" class="nos" aria-label="Nitro">NOS</button><button data-k="drift" class="drift" aria-label="Handbrake">DRIFT</button><button data-k="brake" class="brake" aria-label="Brake">▼</button><button data-k="gas" class="gas" aria-label="Accelerate">▲</button></div>
+</div>
+
+<div id="title" class="screen">
+  <h1><span>WRECK</span><span>RUN</span></h1>
+  <p class="tag">Smash everything that isn't alive. Two minutes. Go.</p>
+  <p class="world" id="t-world" hidden></p>
+  <div class="cars"><button id="c-prev" class="icon" aria-label="Previous colour">◀</button><b id="c-name">Red</b><button id="c-next" class="icon" aria-label="Next colour">▶</button></div>
+  <button id="play" class="big">Start</button>
+  <div class="how" id="how"></div>
+  <div class="row"><button id="trophy" class="big alt">🏆 Leaderboard</button><button id="mute" class="big alt" aria-label="Mute">🔊</button></div>
+</div>
+
+<div id="over" class="screen dim" hidden>
+  <h2>Time's up!</h2>
+  <div class="final"><small>Score</small><b id="o-score">0</b><span id="o-best"></span></div>
+  <p class="stats" id="o-stats"></p>
+  <p id="o-rank" class="rank" hidden></p>
+  <form id="o-form" class="lb-form" hidden><input id="o-name" maxlength="14" placeholder="Your name" autocomplete="nickname" aria-label="Name for the leaderboard"><button class="big small">Save</button></form>
+  <div class="row"><button id="again" class="big">Drive again</button><button id="o-board" class="big alt">🏆</button><button id="menu" class="big alt">Menu</button></div>
+</div>
+
+<div id="board" class="screen dim" hidden>
+  <h2>🏆 World top 20</h2>
+  <ol id="b-list" class="lb-list"></ol>
+  <p id="b-msg" class="rank"></p>
+  <div class="row"><button id="b-name" class="big alt">Set your name</button><button id="b-close" class="big">Close</button></div>
+</div>
+
+<div id="paused" class="screen dim" hidden>
+  <h2>Paused</h2>
+  <div class="row"><button id="resume" class="big">Resume</button><button id="quit" class="big alt">Quit</button></div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+/* have an idea? a big glowing terminal (same API) */
+.idea { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr); gap: clamp(24px, 4vw, 60px); align-items: center; }
+.idea-side { display: grid; gap: 16px; }
+.idea-side h2 { font-size: var(--fs-h2); text-transform: uppercase; }
+.idea-side p { color: var(--muted); max-width: 40ch; }
+.lock { justify-self: start; }
+.terminal-win { position: relative; border-radius: var(--r-xl); background: #05070a; box-shadow: 0 0 0 1px var(--orange-30), 0 0 60px rgba(255, 117, 24, .16), var(--shadow-3); overflow: hidden; }
+.terminal-win::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .16) 0 1px, transparent 1px 3px); }
+.terminal-win.err { animation: shake .5s var(--ease-out) 1; box-shadow: 0 0 0 2px var(--err), 0 0 40px rgba(255, 92, 122, .3), var(--shadow-3); }
+.tw-bar { display: flex; align-items: center; gap: 7px; padding: 12px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.tw-bar i { width: 11px; height: 11px; border-radius: 50%; background: var(--raised); }
+.tw-bar i:first-child { background: var(--orange); }
+.tw-bar span { margin-left: 10px; font: 600 .76rem/1 var(--font-mono); color: var(--faint); letter-spacing: .06em; }
+.tw-body { position: relative; display: grid; gap: 14px; padding: 20px; }
+.tw-log { min-height: 0; font: 500 .82rem/1.6 var(--font-mono); color: var(--amber); }
+.tw-log p { white-space: pre-wrap; }
+.tw-log .ok { color: var(--ok); } .tw-log .bad { color: var(--err); }
+.tw-field { position: relative; display: grid; gap: 8px; }
+.tf-label { font: 600 .74rem/1 var(--font-mono); color: var(--orange-hover); letter-spacing: .08em; }
+.tf-label em { color: var(--faint); font-style: normal; }
+.tw-field textarea, .tw-field input { width: 100%; padding: 14px; border-radius: var(--r-md); border: 1px solid var(--line); background: #0a0e14; font: 500 .95rem/1.5 var(--font-mono); color: var(--text); resize: vertical; caret-color: var(--orange); }
+.tw-field textarea:focus, .tw-field input:focus { outline: none; border-color: var(--orange-50); box-shadow: 0 0 0 3px rgba(255, 117, 24, .15); }
+.tw-counter { position: absolute; right: 12px; bottom: 10px; font: 600 .72rem/1 var(--font-mono); color: var(--faint); }
+.tw-counter b { color: var(--gold); text-shadow: var(--glow-text); font-variant-numeric: tabular-nums; }
+.tw-row { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: end; }
+.sg-msg { min-height: 1.4em; font: 500 .84rem/1.4 var(--font-mono); color: var(--muted); }
+.sg-msg.ok { color: var(--ok); } .sg-msg.err { color: var(--err); }
+.upload-char { position: absolute; z-index: 3; font: 600 .9rem/1 var(--font-mono); color: var(--amber); pointer-events: none; animation: upload .7s var(--ease-in-out) forwards; }
+@keyframes upload { to { transform: translateY(-140px); opacity: 0; } }
+.plane { position: fixed; z-index: var(--z-cursor); width: 40px; height: 40px; pointer-events: none; color: var(--gold); filter: drop-shadow(0 0 10px var(--orange)); }
+.plane svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linejoin: round; }

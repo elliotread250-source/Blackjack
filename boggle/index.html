@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#14213d">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="Boggle: find words in a grid of letter cubes before the sand runs out. Classic 4x4 and Big Boggle 5x5, a daily board, and a CPU opponent. Free, no sign-up.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
+  <title>Boggle</title>
+  <link rel="icon" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app" id="app" data-screen="title">
+
+    <!-- ============ Title ============ -->
+    <section class="screen title-screen" id="title-screen" aria-labelledby="game-title">
+      <header class="top">
+        <a class="arcade-link" href="https://open-arcade.up.railway.app" title="More free games">&larr; Arcade</a>
+        <div class="top-right">
+          <button class="icon-btn btn-sound" type="button" aria-label="Sound" aria-pressed="true" title="Sound on/off">
+            <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.2L12 5.6v12.8l-4.8-3.9H4z" fill="currentColor"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.2L12 5.6v12.8l-4.8-3.9H4z" fill="currentColor"/><path d="M15.5 9.5l5 5M20.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+          <button class="icon-btn btn-stats" type="button" aria-label="Statistics" title="Statistics">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><rect x="5.2" y="11" width="3.2" height="7" rx="0.6" fill="currentColor"/><rect x="10.4" y="5" width="3.2" height="13" rx="0.6" fill="currentColor"/><rect x="15.6" y="8.5" width="3.2" height="9.5" rx="0.6" fill="currentColor"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="title-body">
+        <h1 class="logo" id="game-title" aria-label="Boggle">
+          <span class="cube" style="--i:0">B</span><span class="cube" style="--i:1">O</span><span class="cube" style="--i:2">G</span><span class="cube" style="--i:3">G</span><span class="cube" style="--i:4">L</span><span class="cube" style="--i:5">E</span>
+        </h1>
+        <p class="tagline">Shake the cubes. Find the words. Beat the clock.</p>
+
+        <div class="setup" role="group" aria-label="Game setup">
+          <div class="opt">
+            <span class="opt-label" id="lbl-size">Board</span>
+            <div class="seg" role="radiogroup" aria-labelledby="lbl-size" data-opt="size">
+              <button type="button" role="radio" data-val="4">Classic <small>4&times;4</small></button>
+              <button type="button" role="radio" data-val="5">Big <small>5&times;5</small></button>
+            </div>
+          </div>
+          <div class="opt">
+            <span class="opt-label" id="lbl-opp">Play</span>
+            <div class="seg" role="radiogroup" aria-labelledby="lbl-opp" data-opt="opponent">
+              <button type="button" role="radio" data-val="solo">Solo</button>
+              <button type="button" role="radio" data-val="easy">CPU <small>Easy</small></button>
+              <button type="button" role="radio" data-val="normal">CPU <small>Normal</small></button>
+              <button type="button" role="radio" data-val="hard">CPU <small>Hard</small></button>
+            </div>
+          </div>
+          <div class="opt">
+            <span class="opt-label" id="lbl-board">Letters</span>
+            <div class="seg" role="radiogroup" aria-labelledby="lbl-board" data-opt="daily">
+              <button type="button" role="radio" data-val="0">Random</button>
+              <button type="button" role="radio" data-val="1">Daily <small id="daily-no"></small></button>
+            </div>
+          </div>
+          <div class="opt">
+            <span class="opt-label" id="lbl-timer">Timer</span>
+            <div class="seg" role="radiogroup" aria-labelledby="lbl-timer" data-opt="timed">
+              <button type="button" role="radio" data-val="1"><span id="timer-label">3:00</span></button>
+              <button type="button" role="radio" data-val="0" id="relaxed-btn">Relaxed <small>no clock</small></button>
+            </div>
+          </div>
+          <p class="opt-note" id="opt-note"></p>
+
+          <button class="play-btn" id="play-btn" type="button" disabled>
+            <span class="play-text">Loading words&hellip;</span>
+            <span class="loadbar" aria-hidden="true"><span></span></span>
+          </button>
+          <p class="best-line" id="best-line"></p>
+        </div>
+
+        <div class="howto">
+          <h2>How to play</h2>
+          <ul>
+            <li><b>Drag</b> across touching letters (sideways, up, down or diagonal) to spell a word, then let go. Or <b>tap</b> letters one by one and tap the last one again (or Submit).</li>
+            <li>On a keyboard, just <b>type</b> the word and press <kbd>Enter</kbd>. The path lights up as you type.</li>
+            <li>Each cube once per word. Words need <b>3+ letters</b> (4+ in Big Boggle). <b>Qu</b> is one cube, two letters.</li>
+            <li>Scoring: 3&ndash;4 letters <b>1</b> &middot; 5 <b>2</b> &middot; 6 <b>3</b> &middot; 7 <b>5</b> &middot; 8+ <b>11</b>. Against the CPU, words you both find are crossed out.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ Game ============ -->
+    <section class="screen game-screen" id="game-screen" aria-label="Game">
+      <header class="top game-top">
+        <button class="text-btn" id="menu-btn" type="button" title="Pause / menu">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6v12M16 6v12" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>
+          <span>Menu</span>
+        </button>
+        <div class="timer" id="timer" role="timer" aria-live="off">3:00</div>
+        <div class="top-right">
+          <button class="icon-btn btn-sound" type="button" aria-label="Sound" aria-pressed="true" title="Sound on/off">
+            <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.2L12 5.6v12.8l-4.8-3.9H4z" fill="currentColor"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.2L12 5.6v12.8l-4.8-3.9H4z" fill="currentColor"/><path d="M15.5 9.5l5 5M20.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </header>
+
+      <div class="hud" id="hud">
+        <div class="hud-box you">
+          <span class="hud-label">You</span>
+          <span class="hud-val"><b id="my-score">0</b> pts</span>
+          <span class="hud-sub" id="my-words">0 words</span>
+        </div>
+        <div class="hud-mode" id="hud-mode">Classic</div>
+        <div class="hud-box cpu" id="cpu-box">
+          <span class="hud-label" id="cpu-label">CPU</span>
+          <span class="hud-val"><b id="cpu-words">0</b> <span id="cpu-unit">words</span></span>
+          <span class="hud-sub" id="cpu-sub">finding&hellip;</span>
+        </div>
+      </div>
+
+      <div class="main">
+        <div class="board-col">
+          <div class="preview" id="preview" aria-live="polite">
+            <div class="word-row">
+              <div class="word" id="word"></div>
+              <div class="hint" id="hint">Drag across the letters</div>
+            </div>
+            <div class="toast" id="toast" role="status"></div>
+          </div>
+
+          <div class="tray" id="tray">
+            <div class="board" id="board" role="grid" aria-label="Letter cubes"></div>
+            <svg class="path" id="path-svg" aria-hidden="true"></svg>
+            <div class="board faces" id="faces" aria-hidden="true"></div>
+            <div class="pause-cover" id="pause-cover" hidden>
+              <div class="pause-card">
+                <h2>Paused</h2>
+                <button class="btn primary" id="resume-btn" type="button">Resume</button>
+                <button class="btn" id="end-btn-2" type="button">End round</button>
+                <button class="btn ghost" id="quit-btn" type="button">Quit to menu</button>
+              </div>
+            </div>
+            <div class="float-layer" id="float-layer" aria-hidden="true"></div>
+          </div>
+
+          <div class="controls" id="controls">
+            <button class="btn ctl" id="clear-btn" type="button" title="Clear (Esc)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span>Clear</span>
+            </button>
+            <button class="btn ctl" id="rotate-btn" type="button" title="Turn the board (&rarr;)">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12a7 7 0 1 1-2.05-4.95" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M17.5 3.5v4h-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Turn</span>
+            </button>
+            <button class="btn ctl primary" id="submit-btn" type="button" title="Submit (Enter)" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Submit</span>
+            </button>
+            <button class="btn ctl" id="end-btn" type="button" title="End the round now">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5" fill="currentColor"/></svg><span>End</span>
+            </button>
+          </div>
+
+          <div class="over-actions" id="over-actions">
+            <button class="btn primary" id="again-btn" type="button">New board</button>
+            <button class="btn" id="menu-btn-2" type="button">Menu</button>
+          </div>
+        </div>
+
+        <aside class="side">
+          <div class="panel found-panel" id="found-panel">
+            <div class="panel-head">
+              <h2>Your words</h2>
+              <span class="panel-meta" id="found-meta">0</span>
+            </div>
+            <ul class="found-list" id="found-list"></ul>
+            <p class="found-empty" id="found-empty">Words you find show up here.</p>
+          </div>
+
+          <div class="panel results-panel" id="results-panel">
+            <div class="result-banner" id="result-banner"></div>
+            <div class="tabs" id="result-tabs" role="tablist"></div>
+            <div class="result-list" id="result-list" role="tabpanel"></div>
+            <p class="result-tip">Tap a word to see it on the board.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+  </div>
+
+  <!-- Statistics -->
+  <div class="modal" id="modal-stats" role="dialog" aria-modal="true" aria-labelledby="stats-title" hidden>
+    <div class="modal-card" tabindex="-1">
+      <button class="modal-close" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+      <h2 id="stats-title">Statistics</h2>
+      <div class="seg small" id="stats-tabs" role="radiogroup" aria-label="Board size">
+        <button type="button" role="radio" data-val="4" aria-checked="true">Classic 4&times;4</button>
+        <button type="button" role="radio" data-val="5" aria-checked="false">Big 5&times;5</button>
+      </div>
+      <div class="stat-grid" id="stat-grid"></div>
+      <div class="stat-extra" id="stat-extra"></div>
+    </div>
+  </div>
+
+  <noscript><p class="noscript">Boggle needs JavaScript.</p></noscript>
+
+  <script src="js/logic.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

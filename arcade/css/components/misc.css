@@ -1,0 +1,78 @@
+/* ============================================================ misc components */
+
+/* ---------- custom cursor (fine pointers, Settings > Cursor effects). The native cursor is only hidden while the
+   script confirms it is tracking (html.cursor-live), and comes back over text fields and on any hiccup. */
+.cursor-dot, .cursor-ring { position: fixed; left: 0; top: 0; z-index: var(--z-cursor); pointer-events: none; opacity: 0; transition: opacity var(--d-fast); }
+.cursor-live .cursor-dot, .cursor-live .cursor-ring { opacity: 1; }
+.cursor-live.cursor-modal .cursor-dot, .cursor-live.cursor-modal .cursor-ring { opacity: 0; }
+.cursor-dot { width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 12px var(--orange); }
+.cursor-ring { width: 38px; height: 38px; margin: -19px 0 0 -19px; border-radius: 50%; border: 1.5px solid var(--orange-70); display: grid; place-items: center;
+  transition: opacity var(--d-fast), width var(--d-base) var(--ease-spring), height var(--d-base) var(--ease-spring), margin var(--d-base) var(--ease-spring), border-radius var(--d-base) var(--ease-spring), background var(--d-fast), border-color var(--d-fast); }
+.cursor-ring span { opacity: 0; font: 800 .62rem/1 var(--font-mono); letter-spacing: .16em; color: var(--ink); transition: opacity var(--d-fast); }
+.cursor-ring.link { width: 54px; height: 54px; margin: -27px 0 0 -27px; border-color: var(--amber); background: var(--orange-08); }
+.cursor-ring.play { width: 72px; height: 32px; margin: -16px 0 0 -36px; border-radius: 999px; background: var(--orange); border-color: var(--gold); box-shadow: 0 0 22px rgba(255, 117, 24, .6); }
+.cursor-ring.play span { opacity: 1; }
+.cursor-ring.down { scale: .8 .7; }
+.cursor-ring.text { opacity: 0 !important; }
+.cursor-live.cursor-hide, .cursor-live.cursor-hide a, .cursor-live.cursor-hide button, .cursor-live.cursor-hide [role="button"], .cursor-live.cursor-hide summary, .cursor-live.cursor-hide label { cursor: none; }
+.cursor-live.cursor-hide input, .cursor-live.cursor-hide textarea, .cursor-live.cursor-hide select, .cursor-live.cursor-hide [contenteditable] { cursor: auto; }
+.cursor-live.cursor-hide input[type="range"], .cursor-live.cursor-hide select { cursor: pointer; }
+
+/* ---------- back to top: a little pixel rocket */
+.rocket { position: fixed; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); z-index: var(--z-header); width: 54px; height: 54px; display: grid; place-items: center;
+  border-radius: 16px; border: 1px solid var(--orange-50); background: rgba(16, 21, 29, .85); backdrop-filter: blur(8px); color: var(--amber); box-shadow: var(--glow-2);
+  transition: transform var(--d-base) var(--ease-overshoot), opacity var(--d-base); }
+.rocket svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linejoin: round; stroke-linecap: round; }
+.rocket:hover { transform: translateY(-4px); }
+.rocket.off { opacity: 0; transform: translateY(20px) scale(.8); pointer-events: none; }
+.rk-flame { position: absolute; left: 50%; bottom: 4px; width: 10px; height: 0; margin-left: -5px; border-radius: 50% 50% 50% 50% / 30% 30% 70% 70%; background: linear-gradient(180deg, var(--gold), var(--orange) 60%, transparent); opacity: 0; }
+.rocket.ignite { animation: shake .4s steps(4) 1; }
+.rocket.ignite .rk-flame { opacity: 1; height: 18px; bottom: -14px; animation: flame .08s steps(2) infinite; }
+.rocket.launch { transform: translateY(calc(-100vh - 80px)); transition: transform .7s var(--ease-in-out); }
+.rocket.launch .rk-flame { opacity: 1; height: 40px; bottom: -36px; }
+.rocket.land { animation: land .6s var(--ease-overshoot) 1; }
+@keyframes flame { 50% { transform: scaleY(1.3) scaleX(.8); } }
+@keyframes land { from { transform: translateY(-80px); opacity: 0; } }
+.smoke { position: fixed; z-index: var(--z-header); width: 14px; height: 14px; border-radius: 50%; background: rgba(166, 173, 186, .35); pointer-events: none; animation: smoke 1s var(--ease-out) forwards; }
+@keyframes smoke { to { transform: translate(var(--sx, 0), 40px) scale(3); opacity: 0; } }
+
+/* ---------- odometer digits */
+.odo { display: inline-flex; align-items: baseline; }
+.odo-col { display: inline-block; height: 1em; line-height: 1; overflow: hidden; }
+.odo-strip { display: flex; flex-direction: column; transition: transform var(--d-cinema) var(--ease-overshoot); }
+.odo-strip span { height: 1em; line-height: 1; }
+
+/* ---------- empty states */
+.empty { display: grid; justify-items: center; gap: 12px; padding: 56px 20px; text-align: center; color: var(--muted); border-radius: var(--r-xl); border: 1px dashed var(--line); background: rgba(16, 21, 29, .55); }
+.empty-title { font: 700 clamp(1.2rem, 1rem + 1.2vw, 2rem)/1.1 var(--font-mono); letter-spacing: .08em; color: var(--text); }
+.no-signal .empty-title { color: var(--orange-hover); text-shadow: var(--glow-text); }
+.no-signal .empty-title.glitch { animation: nosig 2.4s steps(1) infinite; }
+@keyframes nosig { 0%, 88%, 100% { transform: none; opacity: 1; } 90% { transform: translateX(-4px); opacity: .6; } 93% { transform: translateX(5px) skewX(8deg); } 96% { transform: translateX(-2px); opacity: .8; } }
+.ghost { width: 64px; height: 72px; position: relative; animation: bob 2.2s var(--ease-in-out) infinite; }
+.ghost::before { content: ''; position: absolute; inset: 0; background: var(--muted);
+  clip-path: polygon(25% 0, 75% 0, 75% 6%, 87% 6%, 87% 12%, 94% 12%, 94% 25%, 100% 25%, 100% 100%, 87% 100%, 87% 88%, 75% 88%, 75% 100%, 62% 100%, 62% 88%, 38% 88%, 38% 100%, 25% 100%, 25% 88%, 12% 88%, 12% 100%, 0 100%, 0 25%, 6% 25%, 6% 12%, 13% 12%, 13% 6%, 25% 6%); }
+.ghost i::before, .ghost i::after { content: ''; position: absolute; top: 30%; width: 14%; height: 18%; background: var(--ink); }
+.ghost i::before { left: 25%; } .ghost i::after { right: 25%; }
+.ghost i { position: absolute; inset: 0; } .ghost i { transform: translateY(var(--sad, 2px)); }
+.pixel-heart { width: 70px; height: 62px; background: var(--orange); filter: drop-shadow(0 0 18px rgba(255, 117, 24, .55)); animation: beat 1.4s var(--ease-in-out) infinite;
+  clip-path: polygon(14% 0, 43% 0, 43% 14%, 57% 14%, 57% 0, 86% 0, 86% 14%, 100% 14%, 100% 57%, 86% 57%, 86% 71%, 71% 71%, 71% 86%, 57% 86%, 57% 100%, 43% 100%, 43% 86%, 29% 86%, 29% 71%, 14% 71%, 14% 57%, 0 57%, 0 14%, 14% 14%); }
+@keyframes beat { 0%, 60%, 100% { transform: scale(1); } 15% { transform: scale(1.14); } 30% { transform: scale(.98); } 45% { transform: scale(1.08); } }
+
+/* ---------- static fallback list (without JS); replaced by the live library once it has rendered */
+.static-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; }
+.static-list a { display: flex; flex-direction: column; gap: 2px; padding: 14px 16px; border-radius: var(--r-md); background: var(--panel); border: 1px solid var(--line); text-decoration: none; min-height: 44px; }
+.static-list a:hover { border-color: var(--orange-50); }
+.static-list span { font-size: .8rem; color: var(--faint); }
+.app .static-list { display: none; }
+
+/* ---------- arcade mode (Konami): CRT intensifies, pixel edges, coin counter */
+.arcade-mode .gc-tilt, .arcade-mode .btn, .arcade-mode .icon-btn { border-radius: 2px; }
+.arcade-mode .gc-tilt { box-shadow: 0 0 0 2px var(--orange), 4px 4px 0 var(--orange-50); }
+.arcade-mode body::after { content: ''; position: fixed; inset: 0; z-index: var(--z-cursor); pointer-events: none; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .14) 0 1px, transparent 1px 3px), radial-gradient(130% 120% at 50% 50%, transparent 65%, rgba(0, 0, 0, .5)); }
+.coin-fall { position: fixed; z-index: var(--z-cursor); top: -40px; width: 28px; height: 28px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(circle at 35% 35%, var(--gold), var(--amber) 45%, var(--orange) 80%); box-shadow: 0 0 18px var(--amber), inset 0 0 0 3px rgba(255, 208, 138, .5); }
+.continue-q { position: fixed; inset: auto 0 0 0; z-index: var(--z-overlay); display: grid; justify-items: center; gap: 8px; padding: 26px 20px max(26px, env(safe-area-inset-bottom));
+  background: linear-gradient(180deg, transparent, var(--ink) 40%); text-align: center; animation: fade-up var(--d-slow) var(--ease-out) both; pointer-events: none; }
+.continue-q .btn { pointer-events: auto; }
+.cq-title { font: 700 clamp(1.6rem, 1rem + 2vw, 2.6rem)/1 var(--font-mono); letter-spacing: .2em; color: var(--orange-hover); text-shadow: var(--glow-text); }
+.cq-n { font: 700 clamp(3rem, 2rem + 4vw, 6rem)/1 var(--font-mono); color: var(--gold); text-shadow: var(--glow-text); }

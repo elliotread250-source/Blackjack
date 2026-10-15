@@ -1,0 +1,358 @@
+{
+ "generated": "tools/art/build.mjs",
+ "note": "Original vector artwork; every registry entry has its own logo and thumbnail.",
+ "games": {
+  "2048": {
+   "name": "2048",
+   "logo": "assets/game-logos/2048.svg",
+   "thumbnail": "assets/game-thumbnails/2048.svg",
+   "moment": "assets/game-moments/2048.svg",
+   "logoBytes": 1096,
+   "thumbnailBytes": 7881,
+   "momentBytes": 1334
+  },
+  "blackjack": {
+   "name": "Blackjack",
+   "logo": "assets/game-logos/blackjack.svg",
+   "thumbnail": "assets/game-thumbnails/blackjack.svg",
+   "moment": "assets/game-moments/blackjack.svg",
+   "logoBytes": 1241,
+   "thumbnailBytes": 13152,
+   "momentBytes": 1499
+  },
+  "pool": {
+   "name": "Pool",
+   "logo": "assets/game-logos/pool.svg",
+   "thumbnail": "assets/game-thumbnails/pool.svg",
+   "moment": "assets/game-moments/pool.svg",
+   "logoBytes": 1366,
+   "thumbnailBytes": 5488,
+   "momentBytes": 976
+  },
+  "kart-racer": {
+   "name": "Kart Racer",
+   "logo": "assets/game-logos/kart-racer.svg",
+   "thumbnail": "assets/game-thumbnails/kart-racer.svg",
+   "moment": "assets/game-moments/kart-racer.svg",
+   "logoBytes": 1082,
+   "thumbnailBytes": 7331,
+   "momentBytes": 1391
+  },
+  "geometry-dash": {
+   "name": "Geometry Dash Replica",
+   "logo": "assets/game-logos/geometry-dash.svg",
+   "thumbnail": "assets/game-thumbnails/geometry-dash.svg",
+   "moment": "assets/game-moments/geometry-dash.svg",
+   "logoBytes": 1095,
+   "thumbnailBytes": 6397,
+   "momentBytes": 989
+  },
+  "bloons-td-6": {
+   "name": "Bloons TD 6 Replica",
+   "logo": "assets/game-logos/bloons-td-6.svg",
+   "thumbnail": "assets/game-thumbnails/bloons-td-6.svg",
+   "moment": "assets/game-moments/bloons-td-6.svg",
+   "logoBytes": 1184,
+   "thumbnailBytes": 11855,
+   "momentBytes": 1295
+  },
+  "flappy-bird": {
+   "name": "Flappy Bird Replica",
+   "logo": "assets/game-logos/flappy-bird.svg",
+   "thumbnail": "assets/game-thumbnails/flappy-bird.svg",
+   "moment": "assets/game-moments/flappy-bird.svg",
+   "logoBytes": 1318,
+   "thumbnailBytes": 11482,
+   "momentBytes": 1239
+  },
+  "space-invaders": {
+   "name": "Space Invaders Extreme",
+   "logo": "assets/game-logos/space-invaders.svg",
+   "thumbnail": "assets/game-thumbnails/space-invaders.svg",
+   "moment": "assets/game-moments/space-invaders.svg",
+   "logoBytes": 6078,
+   "thumbnailBytes": 14561,
+   "momentBytes": 1295
+  },
+  "pong": {
+   "name": "Pong",
+   "logo": "assets/game-logos/pong.svg",
+   "thumbnail": "assets/game-thumbnails/pong.svg",
+   "moment": "assets/game-moments/pong.svg",
+   "logoBytes": 1275,
+   "thumbnailBytes": 10093,
+   "momentBytes": 1237
+  },
+  "tetris": {
+   "name": "Tetris",
+   "logo": "assets/game-logos/tetris.svg",
+   "thumbnail": "assets/game-thumbnails/tetris.svg",
+   "moment": "assets/game-moments/tetris.svg",
+   "logoBytes": 1961,
+   "thumbnailBytes": 14220,
+   "momentBytes": 1261
+  },
+  "snake": {
+   "name": "Snake",
+   "logo": "assets/game-logos/snake.svg",
+   "thumbnail": "assets/game-thumbnails/snake.svg",
+   "moment": "assets/game-moments/snake.svg",
+   "logoBytes": 1251,
+   "thumbnailBytes": 10174,
+   "momentBytes": 1054
+  },
+  "pac-man": {
+   "name": "Pac-Man",
+   "logo": "assets/game-logos/pac-man.svg",
+   "thumbnail": "assets/game-thumbnails/pac-man.svg",
+   "moment": "assets/game-moments/pac-man.svg",
+   "logoBytes": 890,
+   "thumbnailBytes": 6703,
+   "momentBytes": 1451
+  },
+  "minesweeper": {
+   "name": "Minesweeper",
+   "logo": "assets/game-logos/minesweeper.svg",
+   "thumbnail": "assets/game-thumbnails/minesweeper.svg",
+   "moment": "assets/game-moments/minesweeper.svg",
+   "logoBytes": 1755,
+   "thumbnailBytes": 21561,
+   "momentBytes": 1931
+  },
+  "solitaire": {
+   "name": "Solitaire",
+   "logo": "assets/game-logos/solitaire.svg",
+   "thumbnail": "assets/game-thumbnails/solitaire.svg",
+   "moment": "assets/game-moments/solitaire.svg",
+   "logoBytes": 1238,
+   "thumbnailBytes": 19499,
+   "momentBytes": 1960
+  },
+  "wordle": {
+   "name": "Wordle",
+   "logo": "assets/game-logos/wordle.svg",
+   "thumbnail": "assets/game-thumbnails/wordle.svg",
+   "moment": "assets/game-moments/wordle.svg",
+   "logoBytes": 1564,
+   "thumbnailBytes": 11643,
+   "momentBytes": 2009
+  },
+  "sudoku": {
+   "name": "Sudoku",
+   "logo": "assets/game-logos/sudoku.svg",
+   "thumbnail": "assets/game-thumbnails/sudoku.svg",
+   "moment": "assets/game-moments/sudoku.svg",
+   "logoBytes": 1674,
+   "thumbnailBytes": 8325,
+   "momentBytes": 1200
+  },
+  "breakout": {
+   "name": "Breakout",
+   "logo": "assets/game-logos/breakout.svg",
+   "thumbnail": "assets/game-thumbnails/breakout.svg",
+   "moment": "assets/game-moments/breakout.svg",
+   "logoBytes": 1580,
+   "thumbnailBytes": 15674,
+   "momentBytes": 1275
+  },
+  "asteroids": {
+   "name": "Asteroids",
+   "logo": "assets/game-logos/asteroids.svg",
+   "thumbnail": "assets/game-thumbnails/asteroids.svg",
+   "moment": "assets/game-moments/asteroids.svg",
+   "logoBytes": 1188,
+   "thumbnailBytes": 15465,
+   "momentBytes": 1432
+  },
+  "dino-run": {
+   "name": "Dino Run",
+   "logo": "assets/game-logos/dino-run.svg",
+   "thumbnail": "assets/game-thumbnails/dino-run.svg",
+   "moment": "assets/game-moments/dino-run.svg",
+   "logoBytes": 1333,
+   "thumbnailBytes": 5312,
+   "momentBytes": 1123
+  },
+  "drift-boss": {
+   "name": "Drift Boss",
+   "logo": "assets/game-logos/drift-boss.svg",
+   "thumbnail": "assets/game-thumbnails/drift-boss.svg",
+   "moment": "assets/game-moments/drift-boss.svg",
+   "logoBytes": 2149,
+   "thumbnailBytes": 12355,
+   "momentBytes": 1175
+  },
+  "doodle-jump": {
+   "name": "Doodle Jump",
+   "logo": "assets/game-logos/doodle-jump.svg",
+   "thumbnail": "assets/game-thumbnails/doodle-jump.svg",
+   "moment": "assets/game-moments/doodle-jump.svg",
+   "logoBytes": 1382,
+   "thumbnailBytes": 7290,
+   "momentBytes": 1195
+  },
+  "crossy-road": {
+   "name": "Crossy Road",
+   "logo": "assets/game-logos/crossy-road.svg",
+   "thumbnail": "assets/game-thumbnails/crossy-road.svg",
+   "moment": "assets/game-moments/crossy-road.svg",
+   "logoBytes": 2355,
+   "thumbnailBytes": 16655,
+   "momentBytes": 1405
+  },
+  "stickman-hook": {
+   "name": "Stickman Hook",
+   "logo": "assets/game-logos/stickman-hook.svg",
+   "thumbnail": "assets/game-thumbnails/stickman-hook.svg",
+   "moment": "assets/game-moments/stickman-hook.svg",
+   "logoBytes": 1465,
+   "thumbnailBytes": 3049,
+   "momentBytes": 1063
+  },
+  "connect-4": {
+   "name": "Connect 4",
+   "logo": "assets/game-logos/connect-4.svg",
+   "thumbnail": "assets/game-thumbnails/connect-4.svg",
+   "moment": "assets/game-moments/connect-4.svg",
+   "logoBytes": 1564,
+   "thumbnailBytes": 8620,
+   "momentBytes": 1198
+  },
+  "candy-match": {
+   "name": "Candy Match",
+   "logo": "assets/game-logos/candy-match.svg",
+   "thumbnail": "assets/game-thumbnails/candy-match.svg",
+   "moment": "assets/game-moments/candy-match.svg",
+   "logoBytes": 982,
+   "thumbnailBytes": 7817,
+   "momentBytes": 1056
+  },
+  "boggle": {
+   "name": "Boggle",
+   "logo": "assets/game-logos/boggle.svg",
+   "thumbnail": "assets/game-thumbnails/boggle.svg",
+   "moment": "assets/game-moments/boggle.svg",
+   "logoBytes": 2096,
+   "thumbnailBytes": 7097,
+   "momentBytes": 1681
+  },
+  "tic-tac-toe": {
+   "name": "Tic Tac Toe",
+   "logo": "assets/game-logos/tic-tac-toe.svg",
+   "thumbnail": "assets/game-thumbnails/tic-tac-toe.svg",
+   "moment": "assets/game-moments/tic-tac-toe.svg",
+   "logoBytes": 1206,
+   "thumbnailBytes": 3453,
+   "momentBytes": 1079
+  },
+  "cookie-clicker": {
+   "name": "Cookie Clicker",
+   "logo": "assets/game-logos/cookie-clicker.svg",
+   "thumbnail": "assets/game-thumbnails/cookie-clicker.svg",
+   "moment": "assets/game-moments/cookie-clicker.svg",
+   "logoBytes": 1573,
+   "thumbnailBytes": 17950,
+   "momentBytes": 1254
+  },
+  "block-blast": {
+   "name": "Block Blast",
+   "logo": "assets/game-logos/block-blast.svg",
+   "thumbnail": "assets/game-thumbnails/block-blast.svg",
+   "moment": "assets/game-moments/block-blast.svg",
+   "logoBytes": 1679,
+   "thumbnailBytes": 13034,
+   "momentBytes": 1053
+  },
+  "chess": {
+   "name": "Chess",
+   "logo": "assets/game-logos/chess.svg",
+   "thumbnail": "assets/game-thumbnails/chess.svg",
+   "moment": "assets/game-moments/chess.svg",
+   "logoBytes": 1344,
+   "thumbnailBytes": 7804,
+   "momentBytes": 1658
+  },
+  "fruit-ninja": {
+   "name": "Fruit Ninja",
+   "logo": "assets/game-logos/fruit-ninja.svg",
+   "thumbnail": "assets/game-thumbnails/fruit-ninja.svg",
+   "moment": "assets/game-moments/fruit-ninja.svg",
+   "logoBytes": 1418,
+   "thumbnailBytes": 6496,
+   "momentBytes": 1342
+  },
+  "subway-surfers": {
+   "name": "Subway Surfers",
+   "logo": "assets/game-logos/subway-surfers.svg",
+   "thumbnail": "assets/game-thumbnails/subway-surfers.svg",
+   "moment": "assets/game-moments/subway-surfers.svg",
+   "logoBytes": 1450,
+   "thumbnailBytes": 14780,
+   "momentBytes": 1292
+  },
+  "wreck-run": {
+   "name": "Wreck Run",
+   "logo": "assets/game-logos/wreck-run.svg",
+   "thumbnail": "assets/game-thumbnails/wreck-run.svg",
+   "moment": "assets/game-moments/wreck-run.svg",
+   "logoBytes": 1669,
+   "thumbnailBytes": 9072,
+   "momentBytes": 1049
+  },
+  "nosy-neighbour": {
+   "name": "Nosy Neighbour",
+   "logo": "assets/game-logos/nosy-neighbour.svg",
+   "thumbnail": "assets/game-thumbnails/nosy-neighbour.svg",
+   "moment": "assets/game-moments/nosy-neighbour.svg",
+   "logoBytes": 1549,
+   "thumbnailBytes": 13228,
+   "momentBytes": 1346
+  },
+  "getting-over-it": {
+   "name": "Getting Over It",
+   "logo": "assets/game-logos/getting-over-it.svg",
+   "thumbnail": "assets/game-thumbnails/getting-over-it.svg",
+   "moment": "assets/game-moments/getting-over-it.svg",
+   "logoBytes": 1154,
+   "thumbnailBytes": 2336,
+   "momentBytes": 1056
+  },
+  "blockforge": {
+   "name": "BlockForge",
+   "logo": "assets/game-logos/blockforge.svg",
+   "thumbnail": "assets/game-thumbnails/blockforge.svg",
+   "moment": "assets/game-moments/blockforge.svg",
+   "logoBytes": 1070,
+   "thumbnailBytes": 75976,
+   "momentBytes": 1413
+  },
+  "apex-gp": {
+   "name": "Apex GP",
+   "logo": "assets/game-logos/apex-gp.svg",
+   "thumbnail": "assets/game-thumbnails/apex-gp.svg",
+   "moment": "assets/game-moments/apex-gp.svg",
+   "logoBytes": 1069,
+   "thumbnailBytes": 6240,
+   "momentBytes": 1127
+  },
+  "2-weeks": {
+   "name": "2 Weeks",
+   "logo": "assets/game-logos/2-weeks.svg",
+   "thumbnail": "assets/game-thumbnails/2-weeks.svg",
+   "moment": "assets/game-moments/2-weeks.svg",
+   "logoBytes": 1334,
+   "thumbnailBytes": 3864,
+   "momentBytes": 2091
+  },
+  "the-humanizer": {
+   "name": "The Humanizer",
+   "logo": "assets/game-logos/the-humanizer.svg",
+   "thumbnail": "assets/game-thumbnails/the-humanizer.svg",
+   "moment": "assets/game-moments/the-humanizer.svg",
+   "logoBytes": 1278,
+   "thumbnailBytes": 6452,
+   "momentBytes": 1263
+  }
+ },
+ "artVersion": "9555d1db84"
+}

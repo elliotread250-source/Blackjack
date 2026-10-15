@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="en" data-anim="full" data-bg="on" data-density="comfortable" data-crt="on" data-cursor="on" data-sound="off">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Open Arcade — free browser games, no downloads</title>
+<meta name="description" content="Push open the door of a neon arcade: 38 free browser games and tools. Racers, puzzles, card tables, stealth, sandbox worlds and arcade classics. No downloads, no sign-ups. Insert coin and press start.">
+<meta name="theme-color" content="#080b10">
+<link rel="icon" href="assets/branding/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/branding/apple-touch-icon.png">
+<link rel="canonical" href="https://open-arcade.up.railway.app/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Open Arcade — insert coin, press start">
+<meta property="og:description" content="A neon arcade of free browser games. No downloads. No sign-ups. Just play.">
+<meta property="og:image" content="https://open-arcade.up.railway.app/assets/branding/og-image.jpg">
+<meta name="twitter:card" content="summary">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<script>
+  // settings before first paint, so nothing flashes; plus which boot to play (cold per session, warm on return)
+  (function () {
+    var d = document.documentElement, s = {}, seenSession = false, seenEver = false;
+    try { s = JSON.parse(localStorage.getItem('oa.settings') || '{}') || {}; } catch (e) { s = {}; }
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    d.dataset.anim = s.anim || (reduce ? 'reduced' : 'full');
+    d.dataset.bg = s.bg || 'on';
+    d.dataset.density = s.density || 'comfortable';
+    d.dataset.crt = s.crt || 'on';
+    d.dataset.cursor = s.cursor || 'on';
+    d.dataset.sound = s.sound || 'off';
+    try { seenSession = !!sessionStorage.getItem('oa.intro'); } catch (e) {}
+    try { seenEver = !!localStorage.getItem('oa.visited'); } catch (e) {}
+    if (seenSession) d.classList.add('seen');
+    else if (d.dataset.anim === 'full') d.classList.add(seenEver ? 'boot-warm' : 'boot-cold');
+    else if (d.dataset.anim === 'reduced') d.classList.add('boot-fade');
+    if (location.hash.length > 1 && !/^#(top|discover)$/.test(location.hash)) { d.classList.remove('boot-cold', 'boot-warm'); }
+    d.classList.add('js');
+  })();
+</script>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/layout.css">
+<link rel="stylesheet" href="css/motion.css">
+<link rel="stylesheet" href="css/sections/boot.css">
+<link rel="stylesheet" href="css/sections/header.css">
+<link rel="stylesheet" href="css/sections/hero.css">
+<link rel="stylesheet" href="css/components/button.css">
+<link rel="stylesheet" href="css/components/chip.css">
+<link rel="stylesheet" href="css/components/card.css">
+<link rel="stylesheet" href="css/components/overlays.css">
+<link rel="stylesheet" href="css/components/misc.css">
+<link rel="stylesheet" href="css/sections/ticker.css">
+<link rel="stylesheet" href="css/sections/headliners.css">
+<link rel="stylesheet" href="css/sections/continue.css">
+<link rel="stylesheet" href="css/sections/charts.css">
+<link rel="stylesheet" href="css/sections/vibes.css">
+<link rel="stylesheet" href="css/sections/lobby.css">
+<link rel="stylesheet" href="css/sections/shelf.css">
+<link rel="stylesheet" href="css/sections/library.css">
+<link rel="stylesheet" href="css/sections/profile.css">
+<link rel="stylesheet" href="css/sections/idea.css">
+<link rel="stylesheet" href="css/sections/footer.css">
+<link rel="stylesheet" href="css/responsive.css">
+<script type="module" src="js/app.js"></script>
+</head>
+<body>
+<a class="skip" href="#library">Skip to the games</a>
+
+<svg class="sprite" aria-hidden="true" focusable="false">
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20.5C5 15.6 3 12 4.3 8.6 5.6 5.4 9.6 4.9 12 7.6c2.4-2.7 6.4-2.2 7.7 1 1.3 3.4-.7 7-7.7 11.9z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2.2"/><circle cx="8" cy="17" r="2.2"/></symbol>
+  <symbol id="i-shuffle" viewBox="0 0 24 24"><path d="M4 7h3.5c2.8 0 4.2 1.5 5.5 5s2.7 5 5.5 5H20M4 17h3.5c1.4 0 2.4-.4 3.2-1.2M13.3 8.2C14.1 7.4 15.1 7 16.5 7H20M17.5 4.5 20 7l-2.5 2.5M17.5 14.5 20 17l-2.5 2.5"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-arrow-l" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
+  <symbol id="i-crown" viewBox="0 0 24 24"><path d="M4 17.5 3 8l5 4 4-6.5 4 6.5 5-4-1 9.5zM5 20.5h14"/></symbol>
+  <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8.5 20.5h7M9.5 17h5v3.5h-5z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19.5c.6-3.3 2.8-5 5.5-5s4.9 1.7 5.5 5"/><circle cx="16.5" cy="9" r="2.6"/><path d="M15.5 14.6c2.4-.3 4.5 1.1 5 4.4"/></symbol>
+  <symbol id="i-bot" viewBox="0 0 24 24"><rect x="5" y="8" width="14" height="11" rx="3"/><path d="M12 4.5V8M9.5 13h0M14.5 13h0M9.5 16.2h5M3 13v2M21 13v2"/><circle cx="12" cy="4" r="1"/></symbol>
+  <symbol id="i-controller" viewBox="0 0 24 24"><path d="M7 7.5h10c2.6 0 4 2 4.4 5.5.4 3.3-.6 5.5-2.4 5.5-1.6 0-2.4-1.6-3.4-3h-7.2c-1 1.4-1.8 3-3.4 3-1.8 0-2.8-2.2-2.4-5.5C3 9.5 4.4 7.5 7 7.5z"/><path d="M8 10.5v3M6.5 12h3"/><circle cx="15.5" cy="11" r=".6"/><circle cx="17.3" cy="12.8" r=".6"/></symbol>
+  <symbol id="i-keyboard" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6 9.5h0M9 9.5h0M12 9.5h0M15 9.5h0M18 9.5h0M6.5 12.5h0M9.5 12.5h0M12.5 12.5h0M15.5 12.5h0M8 15.3h8"/></symbol>
+  <symbol id="i-touch" viewBox="0 0 24 24"><path d="M9.5 11V5.5a1.5 1.5 0 0 1 3 0V11l3.6.8c1.4.3 2.3 1.6 2.1 3l-.6 3.6a2.5 2.5 0 0 1-2.5 2.1h-3.6a3 3 0 0 1-2.4-1.2L5.8 15.5a1.4 1.4 0 0 1 2-2L9.5 15"/></symbol>
+  <symbol id="i-volume" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4.3 4.3 0 0 1 0 6M18 6.5a8 8 0 0 1 0 11"/></symbol>
+  <symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></symbol>
+  <symbol id="i-crt" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="13" rx="3"/><path d="M7 21h10M12 17.5V21M6 8.5h12M6 11.5h12M6 14.5h12" opacity=".6"/></symbol>
+  <symbol id="i-cursor" viewBox="0 0 24 24"><path d="M5.5 3.5 18 13l-5.5.9 3.2 5.8-2.6 1.4-3.2-5.8L6 19z"/></symbol>
+  <symbol id="i-rocket" viewBox="0 0 24 24"><path d="M12 2.8c3 2.3 4.5 5.6 4.5 9.4v4.3h-9v-4.3c0-3.8 1.5-7.1 4.5-9.4z"/><circle cx="12" cy="10" r="1.7"/><path d="M7.5 13.5 5 16.5v3l2.5-1.5M16.5 13.5l2.5 3v3l-2.5-1.5M10.5 19.5h3"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5.5" opacity=".55"/><path d="M12 9v6"/></symbol>
+  <symbol id="i-badge" viewBox="0 0 24 24"><path d="M12 3l2.4 1.8 3-.1.9 2.9 2.4 1.8-1 2.8 1 2.8-2.4 1.8-.9 2.9-3-.1L12 21l-2.4-1.8-3 .1-.9-2.9L3.3 14.6l1-2.8-1-2.8 2.4-1.8.9-2.9 3 .1z"/><path d="M9 12l2 2 4-4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+  <symbol id="i-fire" viewBox="0 0 24 24"><path d="M12 21c-3.9 0-6.5-2.7-6.5-6.3 0-3.3 2.3-5.4 3.9-7.6.6 1.9 1.6 2.8 2.6 3.3-.3-3.1 1-5.7 3.5-7.4.2 3.4 4.5 5.6 4.5 11.4 0 3.8-3 6.6-8 6.6z"/><path d="M12 21c-1.8 0-3-1.2-3-3 0-2 1.6-3 2.4-4.6.9 1.8 3.6 2.4 3.6 4.7 0 1.6-1.3 2.9-3 2.9z"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.8h0"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8.5 5.5v13M15.5 5.5v13"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/></symbol>
+  <symbol id="i-compact" viewBox="0 0 24 24"><rect x="3.5" y="4" width="4.5" height="4.5" rx="1"/><rect x="9.8" y="4" width="4.5" height="4.5" rx="1"/><rect x="16" y="4" width="4.5" height="4.5" rx="1"/><rect x="3.5" y="10" width="4.5" height="4.5" rx="1"/><rect x="9.8" y="10" width="4.5" height="4.5" rx="1"/><rect x="16" y="10" width="4.5" height="4.5" rx="1"/><rect x="3.5" y="16" width="4.5" height="4.5" rx="1"/><rect x="9.8" y="16" width="4.5" height="4.5" rx="1"/></symbol>
+  <symbol id="i-cabinet" viewBox="0 0 24 24"><path d="M6 21V4.5A1.5 1.5 0 0 1 7.5 3h9A1.5 1.5 0 0 1 18 4.5V21M6 13h12M8.5 6h7v5h-7zM9 16.5h1.5M13.5 16.5h1.5"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6.5h11M9 12h11M9 17.5h11M4.5 6.5h0M4.5 12h0M4.5 17.5h0"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M21 3 10 14M21 3l-6.5 18-4.5-7-7-4.5z"/></symbol>
+</svg>
+
+<!-- ============================================================ boot (drawn only on a first visit; content is underneath) -->
+<div class="boot" id="boot" aria-hidden="true">
+  <div class="boot-crt">
+    <div class="boot-line"></div>
+    <pre class="boot-bios" id="boot-bios"></pre>
+    <div class="boot-emblem">
+      <svg viewBox="0 0 64 64"><defs><linearGradient id="boot-g" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#ff7518"/><stop offset=".6" stop-color="#ffb347"/><stop offset="1" stop-color="#ffd08a"/></linearGradient></defs>
+        <rect class="be-bar" x="15" y="17" width="8" height="30" rx="2.2" fill="url(#boot-g)"/><path class="be-chev" d="M30.5 18.5 L47.5 32 L30.5 45.5"/></svg>
+      <p class="boot-coin">INSERT COIN</p>
+      <span class="boot-coin-drop" aria-hidden="true"></span>
+    </div>
+  </div>
+  <div class="boot-shutter top"></div><div class="boot-shutter bottom"></div>
+  <button class="boot-skip" type="button" id="boot-skip" tabindex="-1">SKIP ▶</button>
+</div>
+
+<canvas id="ambient" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
+<div class="vignette" aria-hidden="true"></div>
+
+<!-- ============================================================ header -->
+<header class="site-header" id="top">
+  <div class="wrap header-row">
+    <a class="brand" href="#top" id="brand" aria-label="Open Arcade, back to top">
+      <svg class="brand-mark" viewBox="0 0 64 64" aria-hidden="true">
+        <defs><linearGradient id="bm-o" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffb347"/><stop offset=".55" stop-color="#ff7518"/><stop offset="1" stop-color="#e2540a"/></linearGradient></defs>
+        <rect class="bm-tile" x="2" y="2" width="60" height="60" rx="15"/>
+        <rect class="bm-edge" x="2.5" y="2.5" width="59" height="59" rx="14.5"/>
+        <rect class="bm-bar" x="15" y="17" width="8" height="30" rx="2.2" fill="url(#bm-o)"/>
+        <path class="bm-chev" d="M30.5 18.5 L47.5 32 L30.5 45.5"/>
+      </svg>
+      <span class="brand-text"><span class="brand-name">OPEN ARCADE</span><span class="brand-sub" id="brand-sub" aria-hidden="true">//ready_to_play</span></span>
+    </a>
+    <nav class="main-nav" aria-label="Main">
+      <ul>
+        <li><a href="#discover" data-nav="discover">Discover</a></li>
+        <li><a href="#popular" data-nav="popular">Charts</a></li>
+        <li><a href="#categories" data-nav="categories">Vibes</a></li>
+        <li><a href="#lobby" data-nav="lobby">Multiplayer</a></li>
+        <li><a href="#library" data-nav="library">Games</a></li>
+        <li><a href="#favourites" data-nav="favourites">Favourites</a></li>
+      </ul>
+      <span class="nav-ink" aria-hidden="true"></span>
+    </nav>
+    <div class="header-tools">
+      <span class="coin-counter" id="coin-counter" hidden aria-live="polite"><svg aria-hidden="true"><use href="#i-coin"/></svg><b>0</b></span>
+      <button class="search-trigger" type="button" data-open-palette aria-label="Search games (Ctrl+K)">
+        <svg aria-hidden="true"><use href="#i-search"/></svg>
+        <span class="st-label">Search games</span><kbd class="st-kbd" aria-hidden="true">Ctrl K</kbd>
+      </button>
+      <button class="icon-btn" type="button" id="sound-btn" aria-pressed="false" aria-label="UI sounds"><svg aria-hidden="true"><use href="#i-mute"/></svg></button>
+      <button class="icon-btn" type="button" id="settings-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="settings" aria-label="Settings"><svg aria-hidden="true"><use href="#i-settings"/></svg></button>
+      <button class="icon-btn menu-btn" type="button" id="menu-btn" aria-expanded="false" aria-controls="drawer" aria-label="Open menu">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path class="mb-1" d="M4 7h16"/><path class="mb-2" d="M4 12h16"/><path class="mb-3" d="M4 17h16"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="scroll-progress" aria-hidden="true"><i id="scroll-bar"></i></div>
+</header>
+
+<!-- mobile drawer -->
+<div class="drawer-scrim" id="drawer-scrim" hidden></div>
+<nav class="drawer" id="drawer" aria-label="Menu" hidden>
+  <div class="drawer-head"><span class="overline">// menu</span><button class="icon-btn" type="button" id="drawer-close" aria-label="Close menu"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+  <ul>
+    <li><a href="#discover"><span class="dr-n" data-n="1">01</span>Discover</a></li>
+    <li><a href="#popular"><span class="dr-n" data-n="2">02</span>The charts</a></li>
+    <li><a href="#categories"><span class="dr-n" data-n="3">03</span>Pick your vibe</a></li>
+    <li><a href="#lobby"><span class="dr-n" data-n="4">04</span>Multiplayer</a></li>
+    <li><a href="#library"><span class="dr-n" data-n="5">05</span>Every game</a></li>
+    <li><a href="#favourites"><span class="dr-n" data-n="6">06</span>Favourites</a></li>
+    <li><a href="#profile"><span class="dr-n" data-n="7">07</span>Your arcade</a></li>
+  </ul>
+  <button class="btn btn-ghost drawer-search" type="button" data-open-palette><svg aria-hidden="true"><use href="#i-search"/></svg><span>Search games</span></button>
+</nav>
+
+<main id="main">
+<!-- ============================================================ hero -->
+<section class="hero" id="discover" aria-labelledby="hero-title">
+  <div class="hero-floor" aria-hidden="true"><div class="hf-sun"></div><div class="hf-grid"></div></div>
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow" id="eyebrow"><span class="eb-slash">//</span> OPEN ARCADE: READY TO PLAY<span class="cursor" aria-hidden="true"></span></p>
+      <h1 id="hero-title" class="hero-title" aria-label="Your next obsession starts here.">
+        <span class="w" aria-hidden="true">YOUR</span> <span class="w" aria-hidden="true">NEXT</span>
+        <span class="w star" aria-hidden="true"><span class="star-text" data-text="OBSESSION">OBSESSION</span></span>
+        <span class="w" aria-hidden="true">STARTS</span> <span class="w" aria-hidden="true">HERE.</span>
+      </h1>
+      <p class="hero-lead">Discover brilliant browser games. No downloads. No hassle. Just play.</p>
+      <div class="hero-ctas">
+        <a class="btn btn-primary btn-xl magnetic" href="#library" id="explore-btn" data-cab="left"><span class="btn-fill" aria-hidden="true"></span><span class="btn-label">Explore games</span><svg aria-hidden="true"><use href="#i-down"/></svg></a>
+        <button class="btn btn-ghost btn-xl magnetic" type="button" id="surprise-btn" aria-haspopup="dialog" data-cab="right"><svg aria-hidden="true"><use href="#i-shuffle"/></svg><span class="btn-label">Surprise me</span></button>
+      </div>
+      <dl class="hero-facts">
+        <div><dt>Games &amp; tools</dt><dd class="score-num" data-odometer id="fact-count">38</dd></div>
+        <div><dt>Downloads</dt><dd class="score-num">0</dd></div>
+        <div><dt>Sign-ups</dt><dd class="score-num">0</dd></div>
+        <div id="fact-plays-wrap" hidden><dt>Plays</dt><dd class="score-num" data-odometer id="fact-plays">0</dd></div>
+      </dl>
+    </div>
+    <div class="hero-scene" aria-hidden="true">
+      <div class="scene" id="scene">
+        <svg class="circuit" viewBox="0 0 600 560" preserveAspectRatio="none">
+          <g class="tr"><path d="M0 120 H150 L190 160 H262"/><path d="M600 80 H470 L430 120 H362"/><path d="M40 500 H210 L250 460 H272"/><path d="M600 440 H500 L460 400 H352"/><path d="M300 0 V60 L330 90 V128"/><path d="M0 300 H110 L140 270 H232"/><path d="M600 260 H520 L490 290 H382"/></g>
+          <g class="pulse"><path d="M0 120 H150 L190 160 H262"/><path d="M600 80 H470 L430 120 H362"/><path d="M40 500 H210 L250 460 H272"/><path d="M600 440 H500 L460 400 H352"/><path d="M300 0 V60 L330 90 V128"/><path d="M0 300 H110 L140 270 H232"/><path d="M600 260 H520 L490 290 H382"/></g>
+          <g class="pads"><circle cx="262" cy="160" r="4"/><circle cx="362" cy="120" r="4"/><circle cx="272" cy="460" r="4"/><circle cx="352" cy="400" r="4"/><circle cx="330" cy="128" r="4"/><circle cx="232" cy="270" r="4"/><circle cx="382" cy="290" r="4"/></g>
+        </svg>
+        <div class="orbit" id="orbit"></div>
+        <div class="cabinet" id="cabinet">
+          <div class="cab-marquee"><span>OPEN&nbsp;ARCADE</span></div>
+          <div class="cab-bezel">
+            <div class="cab-screen" id="cab-screen">
+              <img id="cab-img" src="assets/game-thumbnails/crossy-road.svg" alt="" width="640" height="360">
+              <div class="cab-static"></div><div class="cab-roll"></div><div class="cab-scan"></div>
+              <p class="cab-name" id="cab-name">CROSSY ROAD</p>
+            </div>
+          </div>
+          <div class="cab-panel">
+            <div class="cab-stick" id="cab-stick"><i></i></div>
+            <div class="cab-btns"><i class="b1"></i><i class="b2"></i><i class="b3"></i></div>
+          </div>
+          <div class="cab-body"><span class="cab-coin">25¢</span></div>
+          <div class="cab-side"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <a class="scroll-cue" href="#ticker" aria-label="Scroll to the games"><span class="sc-stick"></span><span class="sc-chev"></span></a>
+</section>
+
+<!-- ============================================================ marquee ticker -->
+<section class="ticker" id="ticker" aria-label="Every cabinet on the floor">
+  <div class="tk-row tk-logos" id="tk-logos"><div class="tk-track"></div></div>
+  <div class="tk-row tk-words" aria-hidden="true"><div class="tk-track"><span>INSERT COIN ✦ PRESS START ✦ NO DOWNLOADS ✦ NO SIGN-UPS ✦ JUST PLAY ✦&nbsp;</span><span>INSERT COIN ✦ PRESS START ✦ NO DOWNLOADS ✦ NO SIGN-UPS ✦ JUST PLAY ✦&nbsp;</span></div></div>
+</section>
+
+<!-- ============================================================ headliners -->
+<section class="section" id="featured" aria-labelledby="featured-title">
+  <div class="wrap">
+    <header class="section-head reveal">
+      <p class="overline"><span>01</span> // tonight</p>
+      <h2 id="featured-title" class="split">Tonight's headliners</h2>
+    </header>
+    <div class="headliners" id="headliners" aria-roledescription="carousel" aria-label="Featured games">
+      <div class="hl-stage" id="hl-stage"><div class="hl-skel skeleton"></div></div>
+      <div class="hl-controls">
+        <div class="hl-pips" id="hl-pips" role="tablist" aria-label="Choose a headliner"></div>
+        <button class="icon-btn" type="button" id="hl-prev" aria-label="Previous headliner"><svg aria-hidden="true"><use href="#i-arrow-l"/></svg></button>
+        <button class="icon-btn" type="button" id="hl-pause" aria-label="Pause the carousel" aria-pressed="false"><svg aria-hidden="true"><use href="#i-pause"/></svg></button>
+        <button class="icon-btn" type="button" id="hl-next" aria-label="Next headliner"><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
+      </div>
+      <p class="visually-hidden" id="hl-live" aria-live="polite"></p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ continue playing (only with history) -->
+<section class="section section-tight" id="recent" aria-labelledby="recent-title" hidden>
+  <div class="wrap">
+    <header class="section-head row reveal">
+      <div><p class="overline"><span>02</span> // continue?</p><h2 id="recent-title">Continue playing</h2></div>
+      <button class="btn btn-text" type="button" id="recent-clear">Clear history</button>
+    </header>
+    <ol class="continue-strip" id="recent-list"></ol>
+  </div>
+</section>
+
+<!-- ============================================================ charts -->
+<section class="section" id="popular" aria-labelledby="popular-title">
+  <div class="wrap">
+    <header class="section-head row reveal">
+      <div><p class="overline"><span>03</span> // high scores</p><h2 id="popular-title" class="split">The charts</h2></div>
+      <p class="section-note" id="popular-note">Counted from real launches on this site.</p>
+    </header>
+    <div class="charts" id="charts">
+      <div class="podium" id="podium" aria-label="Top three"></div>
+      <ol class="hiscores" id="popular-list" aria-label="Most played"><li class="skeleton hs-skel"></li><li class="skeleton hs-skel"></li><li class="skeleton hs-skel"></li></ol>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ vibes -->
+<section class="section" id="categories" aria-labelledby="vibes-title">
+  <div class="wrap">
+    <header class="section-head reveal">
+      <p class="overline"><span>04</span> // categories</p>
+      <h2 id="vibes-title" class="split">Pick your vibe</h2>
+    </header>
+    <ul class="vibes" id="vibes"></ul>
+  </div>
+</section>
+
+<!-- ============================================================ multiplayer lobby -->
+<section class="section" id="lobby" aria-labelledby="lobby-title">
+  <div class="wrap">
+    <header class="section-head reveal">
+      <p class="overline"><span>05</span> // versus</p>
+      <h2 id="lobby-title" class="split">Select your mode</h2>
+      <p class="section-sub">Only modes each game really has. No fake player counts.</p>
+    </header>
+    <div class="lobby" id="lobby-box">
+      <div class="lobby-tabs" role="tablist" aria-label="Multiplayer modes" id="lobby-tabs"><span class="lt-ink" aria-hidden="true"></span></div>
+      <div class="lobby-panel" id="lobby-panel" role="tabpanel" tabindex="0"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ the shelf -->
+<section class="shelf" id="shelf" aria-labelledby="shelf-title">
+  <div class="shelf-pin">
+    <div class="wrap shelf-head">
+      <p class="overline"><span>06</span> // the floor</p>
+      <h2 id="shelf-title">Walk the floor</h2>
+      <p class="shelf-count" aria-hidden="true"><b id="shelf-n">01</b> / <span id="shelf-total">38</span></p>
+    </div>
+    <p class="shelf-ghost" id="shelf-ghost" aria-hidden="true"></p>
+    <div class="shelf-track" id="shelf-track"></div>
+  </div>
+</section>
+
+<!-- ============================================================ library -->
+<section class="section" id="library" aria-labelledby="library-title">
+  <div class="wrap">
+    <header class="section-head row reveal">
+      <div><p class="overline"><span>07</span> // library</p><h2 id="library-title" class="split">Every game on the shelf</h2></div>
+      <p class="section-note" id="lib-count" aria-live="polite"></p>
+    </header>
+    <div class="toolbar" id="lib-toolbar">
+      <label class="search-field" id="search-field">
+        <span class="sf-prompt" aria-hidden="true">&gt;_</span>
+        <span class="visually-hidden">Search the library</span>
+        <input id="lib-search" type="search" placeholder="search: car, puzzle, online…" autocomplete="off" spellcheck="false">
+        <span class="sf-block" aria-hidden="true"></span><span class="sf-scan" aria-hidden="true"></span>
+      </label>
+      <div class="chips-scroll"><div class="chips" id="chips" role="toolbar" aria-label="Categories"><span class="chip-pill" aria-hidden="true"></span></div></div>
+      <div class="tb-right">
+        <label class="sort-field"><span>Sort</span>
+          <select id="lib-sort">
+            <option value="plays">Most played</option>
+            <option value="az">A–Z</option>
+            <option value="shelf">Shelf order</option>
+            <option value="recent">Recently played by you</option>
+          </select>
+        </label>
+        <div class="views" role="radiogroup" aria-label="View" id="views">
+          <button type="button" role="radio" data-view="grid" aria-label="Grid"><svg aria-hidden="true"><use href="#i-grid"/></svg></button>
+          <button type="button" role="radio" data-view="compact" aria-label="Compact"><svg aria-hidden="true"><use href="#i-compact"/></svg></button>
+          <button type="button" role="radio" data-view="cabinet" aria-label="Cabinet row"><svg aria-hidden="true"><use href="#i-cabinet"/></svg></button>
+          <button type="button" role="radio" data-view="list" aria-label="List"><svg aria-hidden="true"><use href="#i-list"/></svg></button>
+        </div>
+      </div>
+    </div>
+    <div class="lib-grid" id="lib-grid" data-view="grid"></div>
+    <!-- static fallback: every live game as a plain link, so the shelf works without JavaScript (tools/static-list.mjs) -->
+    <ol class="static-list" id="static-list">
+<!-- STATIC-LIST:START -->
+      <li><a href="https://blackjack-production-0312.up.railway.app"><b>Blackjack</b> <span>Cards · Casino</span></a></li>
+      <li><a href="https://pool-production-3a8d.up.railway.app"><b>Pool</b> <span>Sports · Billiards</span></a></li>
+      <li><a href="https://kart-production-8bb0.up.railway.app"><b>Kart Racer</b> <span>Racing · 3D</span></a></li>
+      <li><a href="https://game-production-8782.up.railway.app"><b>Geometry Dash Replica</b> <span>Rhythm · Platformer</span></a></li>
+      <li><a href="https://game-production-6f5d.up.railway.app"><b>Bloons TD 6 Replica</b> <span>Tower defence · Strategy</span></a></li>
+      <li><a href="https://game-production-2b7d2.up.railway.app"><b>Flappy Bird Replica</b> <span>Arcade · One button</span></a></li>
+      <li><a href="https://game-production-0b23.up.railway.app"><b>Space Invaders Extreme</b> <span>Shooter · Arcade</span></a></li>
+      <li><a href="https://game-production-3c6d.up.railway.app"><b>Pong</b> <span>Arcade · Sports</span></a></li>
+      <li><a href="https://tetris-production-9024.up.railway.app"><b>Tetris</b> <span>Puzzle · Falling blocks</span></a></li>
+      <li><a href="https://snake-production-7c68.up.railway.app"><b>Snake</b> <span>Arcade · Classic</span></a></li>
+      <li><a href="https://pac-man-production-74bc.up.railway.app"><b>Pac-Man</b> <span>Maze · Arcade</span></a></li>
+      <li><a href="https://2048-production-ed21.up.railway.app"><b>2048</b> <span>Puzzle · Numbers</span></a></li>
+      <li><a href="https://minesweeper-production-483e.up.railway.app"><b>Minesweeper</b> <span>Logic · Puzzle</span></a></li>
+      <li><a href="https://solitaire-production-826a.up.railway.app"><b>Solitaire</b> <span>Cards · Patience</span></a></li>
+      <li><a href="https://wordle-production-2926.up.railway.app"><b>Wordle</b> <span>Word · Daily puzzle</span></a></li>
+      <li><a href="https://sudoku-production-222b.up.railway.app"><b>Sudoku</b> <span>Logic · Numbers</span></a></li>
+      <li><a href="https://breakout-production-999f.up.railway.app"><b>Breakout</b> <span>Arcade · Bricks</span></a></li>
+      <li><a href="https://asteroids-production-8c7a.up.railway.app"><b>Asteroids</b> <span>Shooter · Vector</span></a></li>
+      <li><a href="https://dino-production-350d.up.railway.app"><b>Dino Run</b> <span>Endless runner · One button</span></a></li>
+      <li><a href="https://drift-boss-production.up.railway.app"><b>Drift Boss</b> <span>Driving · One button</span></a></li>
+      <li><a href="https://doodle-jump-production-9840.up.railway.app"><b>Doodle Jump</b> <span>Platformer · Endless</span></a></li>
+      <li><a href="https://crossy-road-production.up.railway.app"><b>Crossy Road</b> <span>Endless hopper · 3D</span></a></li>
+      <li><a href="https://stickman-hook-production-d257.up.railway.app"><b>Stickman Hook</b> <span>Physics · Swinging</span></a></li>
+      <li><a href="https://connect-4-production-12e1.up.railway.app"><b>Connect 4</b> <span>Board game · Strategy</span></a></li>
+      <li><a href="https://boggle-production.up.railway.app"><b>Boggle</b> <span>Word · Dice</span></a></li>
+      <li><a href="https://tic-tac-toe-production-4cd6.up.railway.app"><b>Tic Tac Toe</b> <span>Board game · Classic</span></a></li>
+      <li><a href="https://cookie-clicker-production-aef1.up.railway.app"><b>Cookie Clicker</b> <span>Idle · Clicker</span></a></li>
+      <li><a href="https://block-blast-production-8f44.up.railway.app"><b>Block Blast</b> <span>Puzzle · Blocks</span></a></li>
+      <li><a href="https://chess-production-34bd.up.railway.app"><b>Chess</b> <span>Board game · Strategy</span></a></li>
+      <li><a href="https://fruit-ninja-production.up.railway.app"><b>Fruit Ninja</b> <span>Arcade · Swipe</span></a></li>
+      <li><a href="https://subway-surfers-production-4827.up.railway.app"><b>Subway Surfers</b> <span>Endless runner · 3D</span></a></li>
+      <li><a href="https://wreck-run-production.up.railway.app"><b>Wreck Run</b> <span>Driving · Demolition</span></a></li>
+      <li><a href="https://neighbour-production-5073.up.railway.app"><b>Nosy Neighbour</b> <span>Stealth · Horror</span></a></li>
+      <li><a href="https://over-a-barrel-production.up.railway.app"><b>Getting Over It</b> <span>Rage climber · Physics</span></a></li>
+      <li><a href="https://blockforge-web-production.up.railway.app"><b>BlockForge</b> <span>Sandbox · Survival</span></a></li>
+      <li><a href="https://apex-gp-production.up.railway.app"><b>Apex GP</b> <span>Racing · Formula</span></a></li>
+      <li><a href="https://two-weeks-production.up.railway.app"><b>2 Weeks</b> <span>Battle royale · Building</span></a></li>
+      <li><a href="https://humanizer-production-e796.up.railway.app"><b>The Humanizer</b> <span>Writing tool · AI</span></a></li>
+<!-- STATIC-LIST:END -->
+    </ol>
+    <div class="empty no-signal" id="lib-empty" hidden>
+      <div class="ghost" aria-hidden="true"><i></i></div>
+      <p class="empty-title glitch" data-text="0 RESULTS — NO SIGNAL">0 RESULTS — NO SIGNAL</p>
+      <p>No games match <span id="lib-empty-q"></span>. Try another word, or clear the filters.</p>
+      <button class="btn btn-ghost" type="button" id="lib-reset"><svg aria-hidden="true"><use href="#i-undo"/></svg><span>Clear filters</span></button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ favourites -->
+<section class="section" id="favourites" aria-labelledby="fav-title">
+  <div class="wrap">
+    <header class="section-head row reveal">
+      <div><p class="overline"><span>08</span> // saved</p><h2 id="fav-title" class="split">Your favourites</h2></div>
+      <p class="section-note">Saved in this browser only. Drag to reorder, or focus one and press Space.</p>
+    </header>
+    <ol class="fav-grid" id="fav-grid" aria-label="Favourites, in your order"></ol>
+    <div class="empty fav-empty" id="fav-empty">
+      <div class="pixel-heart" aria-hidden="true"></div>
+      <p class="empty-title">No favourites yet</p>
+      <p>Tap ♥ on any game to keep it here.</p>
+      <a class="btn btn-ghost" href="#library"><span>Browse the library</span></a>
+    </div>
+    <p class="visually-hidden" id="fav-live" aria-live="assertive"></p>
+  </div>
+</section>
+
+<!-- ============================================================ your arcade -->
+<section class="section" id="profile" aria-labelledby="profile-title">
+  <div class="wrap">
+    <header class="section-head row reveal">
+      <div><p class="overline"><span>09</span> // player 1</p><h2 id="profile-title" class="split">Your arcade</h2></div>
+      <p class="section-note">Saved in this browser only. No accounts, nothing sent anywhere.</p>
+    </header>
+    <dl class="stats" id="stats"></dl>
+    <h3 class="badges-h">Badges <span id="badge-count"></span></h3>
+    <ul class="badges" id="badges"></ul>
+    <div class="profile-reset">
+      <button class="btn btn-text" type="button" id="reset-data">Reset my arcade data</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ suggestions -->
+<section class="section" id="idea" aria-labelledby="idea-title">
+  <div class="wrap">
+    <div class="idea">
+      <div class="idea-side reveal">
+        <p class="overline"><span>10</span> // feedback</p>
+        <h2 id="idea-title" class="split">Have an idea?</h2>
+        <p>Suggest a game to add next, or something that would make one better. Every suggestion is read.</p>
+        <button class="btn btn-text lock" type="button" id="sg-open"><svg aria-hidden="true"><use href="#i-lock"/></svg>View suggestions</button>
+      </div>
+      <form class="terminal-win" id="sg-form" novalidate>
+        <div class="tw-bar"><i></i><i></i><i></i><span id="tw-title">transmit.sh</span></div>
+        <div class="tw-body">
+          <div class="tw-log" id="sg-log" aria-hidden="true"></div>
+          <label class="tw-field"><span class="tf-label">&gt; message</span>
+            <textarea id="sg-text" maxlength="1000" rows="5" required placeholder="What game should be added next, or what would make one better?"></textarea>
+            <span class="tw-counter" aria-live="off"><b id="sg-count">0000</b>/1000</span></label>
+          <div class="tw-row">
+            <label class="tw-field small"><span class="tf-label">&gt; name <em>(optional)</em></span>
+              <input id="sg-name" maxlength="40" autocomplete="nickname" placeholder="Your name"></label>
+            <button class="btn btn-primary" id="sg-send" type="submit"><svg aria-hidden="true"><use href="#i-send"/></svg><span>Transmit</span></button>
+          </div>
+          <p class="sg-msg" id="sg-msg" role="status" aria-live="polite"></p>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+</main>
+
+<!-- ============================================================ footer -->
+<footer class="site-footer" id="footer">
+  <div class="foot-mark" id="foot-mark" aria-hidden="true">OPEN ARCADE</div>
+  <div class="wrap footer-grid">
+    <div class="foot-brand">
+      <img src="assets/branding/emblem.svg" alt="" width="44" height="44">
+      <p class="foot-name">OPEN ARCADE</p>
+      <p>Free browser games and tools, built in the open. No downloads, no accounts, no ads, no trackers.</p>
+      <p class="foot-status" id="foot-status"><i></i><span>Checking the cabinets…</span>
+        <span class="fs-pop" id="fs-pop" role="tooltip" hidden></span></p>
+    </div>
+    <nav aria-label="Footer: explore"><p class="foot-h">Explore</p><ul>
+      <li><a href="#featured">Headliners</a></li><li><a href="#popular">The charts</a></li><li><a href="#lobby">Multiplayer</a></li><li><a href="#library">All games</a></li><li><a href="#favourites">Favourites</a></li><li><a href="#profile">Your arcade</a></li></ul></nav>
+    <nav aria-label="Footer: categories"><p class="foot-h">Categories</p><ul id="foot-cats"></ul></nav>
+    <nav aria-label="Footer: project"><p class="foot-h">Project</p><ul>
+      <li><a href="#idea">Suggest a game</a></li>
+      <li><a href="https://github.com/elliotread250-source/Blackjack" rel="noopener" target="_blank">Source on GitHub</a></li>
+      <li><a href="styleguide.html">Style guide</a></li>
+      <li><button class="link-btn" type="button" data-open-keys>Keyboard shortcuts</button></li></ul></nav>
+  </div>
+  <div class="wrap foot-base"><span>© Open Arcade</span><span class="mono" id="build-tag">build: ember//arcade v2 · <span id="foot-count">38</span> titles</span></div>
+  <p class="thanks mono">THANK YOU FOR PLAYING<span class="cursor" aria-hidden="true"></span></p>
+  <div class="continue-q" id="continue-q" aria-live="polite" hidden><p class="cq-title">CONTINUE?</p><p class="cq-n" id="cq-n">10</p><button class="btn btn-ghost" type="button" id="cq-top">Press start to return to the top</button></div>
+</footer>
+
+<button class="rocket" type="button" id="rocket" aria-label="Back to top" hidden><svg aria-hidden="true"><use href="#i-rocket"/></svg><i class="rk-flame"></i></button>
+
+<!-- ============================================================ overlays -->
+<div class="flyout" id="settings" role="dialog" aria-modal="false" aria-labelledby="settings-title" hidden>
+  <div class="flyout-head"><h2 id="settings-title">Settings</h2><button class="icon-btn" type="button" id="settings-close" aria-label="Close settings"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+  <div class="flyout-body">
+    <fieldset class="seg-field"><legend>Animations</legend><div class="seg" data-setting="anim">
+      <button type="button" data-v="full">Full</button><button type="button" data-v="reduced">Reduced</button><button type="button" data-v="off">Off</button></div></fieldset>
+    <fieldset class="seg-field"><legend>Background effects</legend><div class="seg" data-setting="bg">
+      <button type="button" data-v="on">On</button><button type="button" data-v="off">Off</button></div></fieldset>
+    <fieldset class="seg-field"><legend>CRT overlay</legend><div class="seg" data-setting="crt">
+      <button type="button" data-v="on">On</button><button type="button" data-v="off">Off</button></div></fieldset>
+    <fieldset class="seg-field"><legend>Cursor effects</legend><div class="seg" data-setting="cursor">
+      <button type="button" data-v="on">On</button><button type="button" data-v="off">Off</button></div></fieldset>
+    <fieldset class="seg-field"><legend>UI sounds</legend><div class="seg" data-setting="sound">
+      <button type="button" data-v="on">On</button><button type="button" data-v="off">Off</button></div>
+      <label class="vol"><span>Volume</span><input type="range" id="vol" min="0" max="100" step="5" value="60"></label></fieldset>
+    <fieldset class="seg-field"><legend>Density</legend><div class="seg" data-setting="density">
+      <button type="button" data-v="comfortable">Comfortable</button><button type="button" data-v="compact">Compact</button></div></fieldset>
+    <fieldset class="seg-field"><legend>Default library view</legend><div class="seg" data-setting="view">
+      <button type="button" data-v="grid">Grid</button><button type="button" data-v="compact">Compact</button><button type="button" data-v="cabinet">Cabinet</button><button type="button" data-v="list">List</button></div></fieldset>
+    <button class="btn btn-ghost replay" type="button" id="replay-intro"><span>Replay the intro</span></button>
+    <p class="flyout-note">Saved in this browser. "Reduced" is the default when your device asks for less motion.</p>
+  </div>
+</div>
+
+<dialog class="palette" id="palette" aria-labelledby="palette-label">
+  <div class="pal-box">
+    <label class="pal-input"><span class="pal-prompt" aria-hidden="true">&gt;</span><span class="visually-hidden" id="palette-label">Search games and commands</span>
+      <input id="pal-q" type="text" role="combobox" aria-expanded="true" aria-controls="pal-list" aria-autocomplete="list" autocomplete="off" spellcheck="false" placeholder="Type a game, a genre, or a command…">
+      <kbd>Esc</kbd></label>
+    <div class="pal-list-wrap"><span class="pal-sel" aria-hidden="true"></span><ul class="pal-list" id="pal-list" role="listbox" aria-label="Results"></ul></div>
+    <div class="pal-foot"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Enter</kbd> play</span><span><kbd>?</kbd> shortcuts</span><span><kbd>Esc</kbd> close</span></div>
+  </div>
+</dialog>
+
+<dialog class="sg-dialog" id="sg-dialog" aria-labelledby="sg-dialog-title">
+  <div class="sgd-head"><h2 id="sg-dialog-title">Suggestions</h2><button class="icon-btn" type="button" id="sg-close" aria-label="Close"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+  <form id="sg-code-form" class="sgd-code"><label for="sg-code">Access code</label><input id="sg-code" type="password" autocomplete="off"><button class="btn btn-primary" type="submit"><span>Open</span></button></form>
+  <p class="sg-msg" id="sg-code-msg" role="status"></p>
+  <ul class="sg-list" id="sg-list"></ul>
+</dialog>
+
+<dialog class="sheet" id="sheet" aria-labelledby="sheet-title"><div class="sheet-box" id="sheet-box"></div></dialog>
+
+<dialog class="slot" id="slot" aria-labelledby="slot-title">
+  <div class="slot-box">
+    <p class="overline" id="slot-title">// surprise me</p>
+    <div class="slot-window"><div class="reel"><div class="strip"></div></div><div class="reel"><div class="strip"></div></div><div class="reel"><div class="strip"></div></div><span class="slot-line" aria-hidden="true"></span></div>
+    <div class="slot-result" id="slot-result" aria-live="polite"></div>
+    <div class="slot-actions" id="slot-actions" hidden>
+      <a class="btn btn-primary" id="slot-play" href="#"><svg aria-hidden="true"><use href="#i-play"/></svg><span>Play</span></a>
+      <button class="btn btn-ghost" type="button" id="slot-again"><svg aria-hidden="true"><use href="#i-shuffle"/></svg><span>Spin again</span></button>
+    </div>
+    <button class="icon-btn slot-x" type="button" id="slot-close" aria-label="Close"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+  </div>
+</dialog>
+
+<dialog class="keys-dlg" id="keys-dlg" aria-labelledby="keys-title">
+  <div class="keys-box">
+    <div class="sgd-head"><h2 id="keys-title">Control panel</h2><button class="icon-btn" type="button" id="keys-close" aria-label="Close"><svg aria-hidden="true"><use href="#i-close"/></svg></button></div>
+    <div class="keys-panel" id="keys-panel"></div>
+    <p class="flyout-note">Shortcuts never fire while you're typing in a field.</p>
+  </div>
+</dialog>
+
+<dialog class="confirm" id="confirm" aria-labelledby="confirm-title">
+  <form method="dialog" class="confirm-box"><h2 id="confirm-title">Are you sure?</h2><p id="confirm-text"></p>
+    <div class="confirm-row"><button class="btn btn-ghost" value="no"><span>Cancel</span></button><button class="btn btn-primary" value="yes" id="confirm-yes"><span>Yes, reset</span></button></div></form>
+</dialog>
+
+<div class="launch" id="launch" hidden aria-hidden="true">
+  <div class="launch-art"></div>
+  <div class="launch-crt"><p class="lc-title" id="launch-title">LOADING</p><p class="lc-bar" id="launch-bar">▯▯▯▯▯▯▯▯</p><p class="lc-tip" id="launch-tip"></p></div>
+</div>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<canvas class="fx-canvas" id="fx" aria-hidden="true"></canvas>
+<div class="cursor-dot" id="cursor-dot" aria-hidden="true"></div>
+<div class="cursor-ring" id="cursor-ring" aria-hidden="true"><span>PLAY</span></div>
+<noscript><p class="noscript">Open Arcade works best with JavaScript (search, favourites, effects). Every game is still listed above as a plain link. The source is on <a href="https://github.com/elliotread250-source/Blackjack">GitHub</a>.</p></noscript>
+</body>
+</html>

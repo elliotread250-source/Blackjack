@@ -1,0 +1,25 @@
+/* the shelf: a pinned scene where vertical scroll walks a row of tall cabinets past the camera (desktop);
+   a normal swipe carousel on phones / reduced motion */
+.shelf { position: relative; z-index: var(--z-content); height: var(--shelf-h, 300vh); margin-top: var(--section-gap); }
+.shelf-pin { position: sticky; top: 0; height: 100vh; overflow: hidden; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; align-content: start; padding-top: 110px; }
+.shelf-head { position: relative; z-index: 2; display: flex; align-items: end; gap: 24px; flex-wrap: wrap; }
+.shelf-head h2 { font-size: var(--fs-h2); text-transform: uppercase; }
+.shelf-head .overline { width: 100%; }
+.shelf-count { margin-left: auto; font: 700 clamp(1.4rem, 1rem + 2vw, 2.8rem)/1 var(--font-mono); color: var(--faint); font-variant-numeric: tabular-nums; }
+.shelf-count b { color: var(--gold); text-shadow: var(--glow-text); }
+.shelf-ghost { position: absolute; left: 0; right: 0; top: 52%; z-index: 0; transform: translateY(-50%); text-align: center; white-space: nowrap; pointer-events: none;
+  font: 700 clamp(4rem, 1rem + 14vw, 16rem)/1 var(--font-display); text-transform: uppercase; letter-spacing: -.03em; color: transparent; -webkit-text-stroke: 1.5px rgba(255, 117, 24, .22); transition: opacity var(--d-fast); }
+.shelf-track { position: relative; z-index: 1; width: max-content; display: flex; gap: 28px; align-items: center; padding: 0 max(var(--gutter), 6vw); will-change: transform; }
+.shelf-item { flex: 0 0 clamp(220px, 18vw, 280px); transform: translateY(var(--sy, 0)) scale(var(--ss, 1)); transition: transform var(--d-fast) linear; }
+.shelf-item .gcard { height: 100%; }
+@media (max-width: 860px), (hover: none) {
+  .shelf { height: auto; }
+  .shelf-pin { position: relative; height: auto; padding-top: 0; }
+  .shelf-track { width: auto; overflow-x: auto; scroll-snap-type: x mandatory; padding: 26px var(--gutter) 22px; transform: none !important; scrollbar-width: none; }
+  .shelf-item { scroll-snap-align: center; transform: none; flex-basis: 72vw; max-width: 300px; }
+  .shelf-ghost { display: none; }
+}
+:root:not([data-anim="full"]) .shelf { height: auto; }
+:root:not([data-anim="full"]) .shelf-pin { position: relative; height: auto; }
+:root:not([data-anim="full"]) .shelf-track { width: auto; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 20px; transform: none !important; }
+:root:not([data-anim="full"]) .shelf-item { transform: none; scroll-snap-align: start; }
