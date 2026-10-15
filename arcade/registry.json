@@ -601,7 +601,7 @@
    "name": "Block Blast",
    "kind": "game",
    "url": "https://block-blast-production-8f44.up.railway.app",
-   "blurb": "Drag blocks onto an 8\u00d78 board, fill rows and columns to blast them and chain combos for a high score.",
+   "blurb": "Drag blocks onto an 8×8 board, fill rows and columns to blast them and chain combos for a high score.",
    "genres": [
     "Puzzle",
     "Blocks"
@@ -831,5 +831,5 @@
    "shelf": 38
   }
  ],
- "artVersion": "6ce92a9118"
+ "artVersion": "9555d1db84"
 }

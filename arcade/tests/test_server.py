@@ -61,6 +61,14 @@ try:
     st, body, _ = req("/api/suggestions/view", {"code": "test-code-123"})
     ok(st == 200 and json.loads(body)["suggestions"][0]["text"] == "Add a rhythm game", "right code lists suggestions")
     ok(req("/api/nope", {})[0] == 404, "unknown POST route is 404")
+
+    # 20x rebuild: themed 404 for missing pages only; API and data 404s stay JSON; new pages and moments served
+    st, body, h = req("/no/such/page"); ok(st == 404 and b"GAME OVER" in body and h.get("content-type", "").startswith("text/html"), "missing page gets the themed 404 (still a 404)")
+    st, body, h = req("/data/plays.json"); ok(st == 404 and h.get("content-type") == "application/json", "data folder 404 is unchanged JSON")
+    st, body, h = req("/api/nope", {}); ok(st == 404 and json.loads(body)["error"] == "Not found", "API 404 is unchanged JSON")
+    st, body, _ = req("/styleguide.html"); ok(st == 200 and b"Style guide" in body, "style guide served")
+    st, _, h = req("/assets/game-moments/tetris.svg"); ok(st == 200 and h.get("content-type") == "image/svg+xml" and "max-age" in h.get("cache-control", ""), "hover moment served as SVG and cached")
+    st, body, _ = req("/"); ok(b"STATIC-LIST:START" in body and body.count(b'href="https://') >= len(live), "home page carries the no-JS game list")
 finally:
     proc.terminate(); proc.wait()
 
