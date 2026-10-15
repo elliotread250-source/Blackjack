@@ -67,7 +67,7 @@
       L.labels = { x: x0, y: L.stats.y + L.stats.h + Math.round(u * 0.4), w: P, h: 0 };
       L.labels.h = L.board.y + L.board.h - L.labels.y;
       L.next = { x: L.board.x + L.board.w + fp + G, y: L.board.y, w: P, h: Math.round(u * 12.9) };
-      const size = Math.round(Math.min(46, Math.max(34, u / dpr)));
+      const size = Math.max(ins.minIcon || 0, Math.round(Math.min(46, Math.max(34, u / dpr))));
       L.icons = { x: (L.next.x) / dpr, y: (L.board.y + L.board.h) / dpr - size, size, gap: 10, align: 'left' };
       L.nextScale = [0.78, 0.62];
     } else {
@@ -86,6 +86,13 @@
       const gap = 6;
       const size = Math.round(Math.min(40, Math.max(26, Math.min(hudH / dpr - 6, (K / dpr - gap) / 2))));
       L.icons = { x: colX / dpr + (K / dpr - size * 2 - gap) / 2, y: y0 / dpr + (hudH / dpr - size) / 2, size, gap, align: 'right' };
+      if (ins.minIcon && size < ins.minIcon) {
+        // Touch: two thumb-sized icons don't fit side by side in the slim column. Mute stays in the top
+        // row (it is the only one shown over the menus); pause, shown only in play, drops under NEXT.
+        const big = ins.minIcon, top = y0 / dpr + (hudH / dpr - big) / 2;
+        const pauseY = (L.next.y + L.next.h) / dpr + 12;
+        L.icons = { x: colX / dpr + (K / dpr - big) / 2, y: top, size: big, gap: Math.round(pauseY - top - big), align: 'right', vertical: true };
+      }
       L.nextScale = [0.5, 0.4];
     }
     L.cellCss = u / dpr;

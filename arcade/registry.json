@@ -229,7 +229,9 @@
     "classic",
     "action"
    ],
-   "features": [],
+   "features": [
+    "touch"
+   ],
    "keywords": "maze ghosts pellets chomp",
    "accent": "#23238f",
    "shelf": 10
@@ -249,7 +251,8 @@
     "casual"
    ],
    "features": [
-    "touch"
+    "touch",
+    "saves"
    ],
    "keywords": "tiles numbers merge slide",
    "accent": "#f3e3b0",
@@ -270,7 +273,9 @@
     "classic",
     "strategy"
    ],
-   "features": [],
+   "features": [
+    "touch"
+   ],
    "keywords": "mines flags logic grid",
    "accent": "#1f8a8a",
    "shelf": 12

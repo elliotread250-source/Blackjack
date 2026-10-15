@@ -10,9 +10,12 @@
   };
 
   PM.Input = function (h) {
-    // h: { dir(d), start(), pause(), mute(), tap(), gesture(), touchSeen() }
+    // h: { dir(d), start(), pause(), mute(), help(), tap(), gesture(), touchSeen(), blocked() }
     window.addEventListener('keydown', function (e) {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      var tg = e.target;
+      if (tg && (tg.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName))) return;
+      if (h.blocked()) return; // the help dialog has the keyboard
       h.gesture();
       var code = e.code || '';
       var k = e.key;
@@ -29,6 +32,8 @@
         e.preventDefault();
       } else if (code === 'KeyM') {
         if (!e.repeat) h.mute();
+      } else if (code === 'KeyH' || k === '?') {
+        if (!e.repeat) { e.preventDefault(); h.help(); }
       }
     });
 
@@ -41,6 +46,7 @@
       return el && el.closest && el.closest('button, a, #dpad');
     }
     window.addEventListener('pointerdown', function (e) {
+      if (h.blocked()) return;
       h.gesture();
       if (e.pointerType === 'touch') h.touchSeen();
       if (isControl(e.target)) return;

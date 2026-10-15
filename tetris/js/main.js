@@ -89,6 +89,8 @@
       for (const ev of ['pointerdown', 'keydown', 'touchend', 'click']) window.addEventListener(ev, unlock, true);
       document.addEventListener('visibilitychange', () => { if (document.hidden) this.pause(true); });
       window.addEventListener('pagehide', () => this.pause(true));
+      // Losing focus (another window, a system dialog) pauses too: pieces would otherwise keep falling unseen.
+      window.addEventListener('blur', () => this.pause(true));
       let pending = false;
       const onResize = () => { if (pending) return; pending = true; requestAnimationFrame(() => { pending = false; this.resize(); }); };
       window.addEventListener('resize', onResize);
@@ -118,6 +120,8 @@
       const land = W > H * 1.05;
       document.body.classList.toggle('land', land);
       const ins = this.safeArea();
+      const safe = { ...ins };
+      ins.minIcon = this.touch ? 44 : 0;
       const root = document.documentElement.style;
       if (this.touch) {
         if (land) {
@@ -131,11 +135,20 @@
           ins.bottom += bh + 12;
         }
       }
-      const L = this.renderer.resize(W, H, dpr, ins);
+      let L = this.renderer.resize(W, H, dpr, ins);
+      // The "← Arcade" link sits top-left on the menu screens. If the HOLD panel would land under it,
+      // lay the field out again with that strip reserved (costs a few pixels of cell size, only then).
+      const link = { x: Math.max(12, safe.left), y: Math.max(10, safe.top), w: 100, h: this.touch ? 46 : 34 };
+      const hold = { x: L.hold.x / dpr, y: L.hold.y / dpr, w: L.hold.w / dpr, h: L.hold.h / dpr };
+      if (hold.x < link.x + link.w + 6 && hold.y < link.y + link.h + 6 && hold.x + hold.w > link.x) {
+        ins.top = Math.max(ins.top, link.y + link.h + 6 - 10); // computeLayout adds its own 10px margin
+        L = this.renderer.resize(W, H, dpr, ins);
+      }
       const hud = $('hud');
       hud.style.left = Math.round(L.icons.x) + 'px';
       hud.style.top = Math.round(L.icons.y) + 'px';
       hud.style.gap = L.icons.gap + 'px';
+      hud.style.flexDirection = L.icons.vertical ? 'column-reverse' : 'row'; // DOM order: pause, mute
       root.setProperty('--icon', L.icons.size + 'px');
       this.renderer.drawLogo($('logo'), Math.min(300, W - 96));
     }

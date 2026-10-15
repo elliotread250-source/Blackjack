@@ -11,7 +11,7 @@ dependencies, nothing to download.
 
 - Beginner 9×9/10, Intermediate 16×16/40, Expert 30×16/99, and Custom fields
   with Windows' limits (width 9–30, height 9–24, mines 10 to (w−1)×(h−1)),
-  clamped silently like the original dialog.
+  checked as you submit: an out-of-range value is explained next to the field instead of being changed.
 - Mines are placed after the first click, keeping the clicked square and its
   neighbours clear, so the first click always opens an area.
 - Windows number colours, raised and sunken 3D bevels, the red-on-black LCD
@@ -38,6 +38,14 @@ chord; the Dig/Flag switch under the board makes taps plant flags, and − / +
 zoom big boards (Expert turns 16 wide on a portrait phone). Keys: F2 or N new
 game, 1/2/3 Beginner/Intermediate/Expert, M sound, + − 0 zoom.
 
+Keyboard play: Tab to the field, then arrow keys move a yellow cursor (Home/End, Page Up/Down jump to
+the edges), Enter or Space opens a square or chords a number, F flags (and cycles `?` when marks are on).
+A screen reader hears the square under the cursor: hidden, flagged, or its number. Mines are only
+announced after the game is lost.
+
 ```bash
 python server.py    # http://localhost:8080
+node tools/test.cjs # board tests: safe first click, counts, flood fill, chording, win/lose
 ```
+
+The "← Arcade" link goes to the live hub; served from localhost it points at `http://localhost:8084`, and `?hub=<url>` (localhost or `*.up.railway.app` only) overrides it for the tab.

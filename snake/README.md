@@ -31,10 +31,13 @@ screen. Space or Enter starts and restarts, P or Esc pauses, M mutes. On a
 phone, swipe anywhere: the turn happens as soon as your finger has moved a
 short way, without waiting for it to lift, and one gesture can make two
 turns. An optional on-screen d-pad (the cross button in the top bar) can be
-switched on instead. The game pauses itself when the tab is hidden.
+switched on instead. The game pauses itself when the tab is hidden or the window loses focus.
 
 ## Running it locally
 
 ```bash
 python server.py    # http://localhost:8080
+node tools/test.cjs # rules tests: growth, walls, wrap, tail rule, turn queue, 3 Apples, full-board win
 ```
+
+The "← Arcade" link goes to the live hub; served from localhost it points at `http://localhost:8084`, and `?hub=<url>` (localhost or `*.up.railway.app` only) overrides it for the tab.

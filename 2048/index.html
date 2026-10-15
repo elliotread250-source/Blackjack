@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#faf8ef" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#262320" media="(prefers-color-scheme: dark)">
   <meta name="color-scheme" content="light dark">
@@ -18,7 +18,7 @@
 <body>
   <div class="app" id="app">
     <nav class="topbar">
-      <a class="arcade-link" href="https://open-arcade.up.railway.app">&larr; Arcade</a>
+      <a class="arcade-link" href="https://open-arcade.up.railway.app" data-hub>&larr; Arcade</a>
       <button class="icon-btn" id="mute" type="button" aria-label="Mute sound" aria-pressed="false" title="Sound (M)">
         <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.2L12 5.6v12.8l-4.8-3.9H4z" fill="currentColor"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.2L12 5.6v12.8l-4.8-3.9H4z" fill="currentColor"/><path d="M15.5 9.5l5 5M20.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -61,7 +61,8 @@
     </header>
 
     <main class="board-area" id="board-area">
-      <div class="board" id="board" role="application" aria-label="2048 board. Use the arrow keys or swipe to move the tiles.">
+      <div class="board" id="board" role="application" tabindex="0" aria-label="2048 board. Use the arrow keys, WASD or swipe to move the tiles." aria-describedby="sr-board-caption">
+        <table class="sr-only" id="sr-board"><caption id="sr-board-caption">Board</caption><tbody></tbody></table>
         <div class="grid" id="grid" aria-hidden="true"></div>
         <div class="tiles" id="tiles" aria-hidden="true"></div>
 
@@ -80,9 +81,11 @@
   </div>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="sr-only" id="sr-status" role="status" aria-live="polite"></div>
 
   <script src="js/logic.js"></script>
   <script src="js/audio.js"></script>
   <script src="js/game.js"></script>
+<script src="js/hub-link.js"></script>
 </body>
 </html>

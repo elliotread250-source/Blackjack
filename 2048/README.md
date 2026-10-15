@@ -31,12 +31,15 @@ undo, more board sizes, and a game that is still there when you come back.
   fits, and landscape phones put the controls in a column beside it. Follows
   the system's dark mode.
 
-**Controls.** Arrow keys, WASD or HJKL move the tiles. On a phone, swipe on the
-board. With a mouse, you can also drag on the board. `U` or `Ctrl+Z` undoes,
+**Controls.** Arrow keys, WASD or HJKL move the tiles (with the board or page focused; typing in a field
+never moves tiles). On a phone, swipe on the board; the rest of the page scrolls and zooms normally. With a mouse, you can also drag on the board. `U` or `Ctrl+Z` undoes,
 `N` starts a new game (it asks first if you're well into the current one),
 `M` toggles sound, and `Enter` picks the highlighted option on the win and
-game over screens.
+game over screens. Screen readers get the board as a table of tile values and hear each move's result.
 
 ```bash
 python server.py    # http://localhost:8080
+node tools/test.cjs # move/merge rules, spawns, win/lose, other sizes
 ```
+
+The "← Arcade" link goes to the live hub; served from localhost it points at `http://localhost:8084`, and `?hub=<url>` (localhost or `*.up.railway.app` only) overrides it for the tab.

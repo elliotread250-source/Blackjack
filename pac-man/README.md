@@ -14,8 +14,11 @@ Faithful bits:
 - Extra life at 10,000, the death animation, the white/blue maze flash between levels, the coffee-break intermission after levels 2, 5, 9, 13 and 17, and the attract-mode roll call and energizer chase.
 - High score saved in your browser; sound mute remembered.
 
-Controls: arrow keys or WASD to steer (a turn pressed early is held until the next opening), Enter or Space to start, P or Esc to pause, M to mute. On a phone, swipe anywhere to steer (the turn registers mid-swipe) or use the d-pad under the maze; tap to start. The game pauses itself when you switch tabs. Gamepads work too.
+Controls: arrow keys or WASD to steer (a turn pressed early is held until the next opening), Enter or Space to start, P or Esc to pause, M to mute. On a phone, swipe anywhere to steer (the turn registers mid-swipe) or use the d-pad under the maze; tap to start. H or the ? button opens How to play (objective, controls, scoring) as an ordinary HTML dialog, and a screen reader hears state changes (ready, paused, level cleared, game over). The game pauses itself when you switch tabs or the window loses focus. Gamepads work too.
 
 ```
 python server.py    # http://localhost:8080
+node tools/test.cjs # simulation tests, including seeded 60,000-tick runs checked every tick
 ```
+
+The "← Arcade" link goes to the live hub; served from localhost it points at `http://localhost:8084`, and `?hub=<url>` (localhost or `*.up.railway.app` only) overrides it for the tab.

@@ -6,3 +6,4 @@ subway-surfers/data/
 wreck-run/data/
 __pycache__/
 *.pyc
+node_modules/

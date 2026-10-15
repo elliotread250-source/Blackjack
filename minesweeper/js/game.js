@@ -102,6 +102,7 @@
     levelKey = settings.level;
     dims = dimsFor(levelKey);
     board = new MS.Board(dims.w, dims.h, dims.mines);
+    kbd.i = Math.floor(dims.h / 2) * dims.w + Math.floor(dims.w / 2);
     pressed = new Uint8Array(board.size);
     pressSig = '';
     resetPointers();
@@ -257,8 +258,94 @@
         ctx.drawImage(sprites[spriteFor(i)], c * cellDev, r * cellDev);
       }
     }
+    // keyboard cursor: a two-tone frame so it shows on raised, sunken and red cells alike
+    if (kbd.shown && document.activeElement === cv && kbd.i < board.size) {
+      var d = dispOf(kbd.i), lw = Math.max(2, Math.round(cellDev * 0.12));
+      ctx.lineWidth = lw;
+      ctx.strokeStyle = '#000';
+      ctx.strokeRect(d[0] * cellDev + lw / 2, d[1] * cellDev + lw / 2, cellDev - lw, cellDev - lw);
+      ctx.lineWidth = Math.max(1, Math.round(lw / 2));
+      ctx.strokeStyle = '#ffd400';
+      ctx.strokeRect(d[0] * cellDev + lw * 1.5, d[1] * cellDev + lw * 1.5, cellDev - lw * 3, cellDev - lw * 3);
+    }
     drawFace();
   }
+
+  // ---------- keyboard play: arrows move a cursor over the canvas, a live region speaks the cell.
+  // Hidden squares are only ever described as hidden, flagged or question-marked.
+  var kbd = { i: 0, shown: false };
+  var srCell = $('sr-cell');
+  function dispOf(i) { var x = i % board.w, y = (i / board.w) | 0; return transposed ? [y, x] : [x, y]; }
+  function idxOfDisp(c, r) { return transposed ? c * board.w + r : r * board.w + c; }
+  function describe(i) {
+    var x = i % board.w, y = (i / board.w) | 0, st = board.state[i], what;
+    if (board.status === 'lost' && board.exploded[i]) what = 'the mine you hit';
+    else if (board.status === 'lost' && board.mine[i] && st !== FLAGGED) what = 'mine';
+    else if (board.status === 'lost' && st === FLAGGED && !board.mine[i]) what = 'wrong flag';
+    else if (st === REVEALED) what = board.count[i] ? board.count[i] + (board.count[i] === 1 ? ' mine' : ' mines') + ' around' : 'empty';
+    else if (st === FLAGGED) what = 'flagged';
+    else if (st === QUESTION) what = 'question mark';
+    else what = 'hidden';
+    return 'Row ' + (y + 1) + ', column ' + (x + 1) + ': ' + what;
+  }
+  var sayTimer = 0;
+  function say(msg) {
+    clearTimeout(sayTimer);
+    srCell.textContent = '';
+    sayTimer = setTimeout(function () { srCell.textContent = msg; }, 40);
+  }
+  function keepInView(i) {
+    if (!field.classList.contains('scroll')) return;
+    var d = dispOf(i), css = cellDev / dpr, x = d[0] * css, y = d[1] * css;
+    if (x < field.scrollLeft) field.scrollLeft = x;
+    else if (x + css > field.scrollLeft + field.clientWidth) field.scrollLeft = x + css - field.clientWidth;
+    if (y < field.scrollTop) field.scrollTop = y;
+    else if (y + css > field.scrollTop + field.clientHeight) field.scrollTop = y + css - field.clientHeight;
+  }
+  function keyAct(kind) {
+    var i = kbd.i;
+    if (board.isOver()) { say((board.status === 'won' ? 'Cleared. ' : 'Game over. ') + 'Press F2 or N for a new game.'); return; }
+    var before = board.revealed, st = board.state[i];
+    if (kind === 'flag') {
+      if (doFlag(i)) say(describe(i) + '. ' + (board.mines - board.flags) + ' mines left to flag.');
+      else say(describe(i) + '. Open squares cannot be flagged.');
+      return;
+    }
+    if (st === FLAGGED) { say(describe(i) + '. Press F to remove the flag first.'); return; }
+    if (st === REVEALED) {
+      if (!board.canChord(i)) { say(describe(i) + '. Flag ' + board.count[i] + ' around it first to open the rest.'); return; }
+      doChord(i);
+    } else doReveal(i);
+    if (board.status === 'lost') say('Boom! You hit a mine. Press F2 or N for a new game.');
+    else if (board.status === 'won') say('Cleared! Every safe square is open.');
+    else { var n = board.revealed - before; say((n > 1 ? 'Opened ' + n + ' squares. ' : '') + describe(i)); }
+  }
+  cv.addEventListener('keydown', function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey || !board) return;
+    var d = dispOf(kbd.i), c = d[0], r = d[1];
+    switch (e.key) {
+      case 'ArrowLeft': c--; break;
+      case 'ArrowRight': c++; break;
+      case 'ArrowUp': r--; break;
+      case 'ArrowDown': r++; break;
+      case 'Home': c = 0; break;
+      case 'End': c = dispCols - 1; break;
+      case 'PageUp': r = 0; break;
+      case 'PageDown': r = dispRows - 1; break;
+      case 'Enter': case ' ': e.preventDefault(); if (!e.repeat) { kbd.shown = true; keyAct('open'); } return;
+      case 'f': case 'F': e.preventDefault(); if (!e.repeat) { kbd.shown = true; keyAct('flag'); } return;
+      default: return;
+    }
+    e.preventDefault();
+    kbd.i = idxOfDisp(clamp(c, 0, dispCols - 1), clamp(r, 0, dispRows - 1));
+    kbd.shown = true;
+    keepInView(kbd.i);
+    draw();
+    say(describe(kbd.i));
+  });
+  cv.addEventListener('focus', function () { if (kbd.shown) { draw(); say(describe(kbd.i)); } });
+  cv.addEventListener('blur', function () { draw(); });
+  cv.addEventListener('pointerdown', function (e) { kbd.shown = false; var i = cellAt(e.clientX, e.clientY); if (i >= 0) kbd.i = i; });
 
   function mood() {
     if (board.status === 'won') return 'cool';
@@ -815,9 +902,27 @@
     $('cf-hint').textContent = 'Width 9–30, height 9–24, mines 10–' + MS.maxMines(w, h) + ' for ' + w + '×' + h + '.';
   }
   ['cf-w', 'cf-h'].forEach(function (id) { $(id).addEventListener('input', updateCustomHint); });
+  ['cf-w', 'cf-h', 'cf-m'].forEach(function (id) { $(id).addEventListener('input', function () { $('cf-err').textContent = ''; $(id).removeAttribute('aria-invalid'); }); });
   $('custom-form').addEventListener('submit', function (e) {
     e.preventDefault();
-    var c = MS.clampCustom($('cf-w').value, $('cf-h').value, $('cf-m').value);
+    // Validate instead of silently clamping: say exactly what is wrong, keep the dialog open.
+    var L = MS.LIMITS, problems = [], bad = null;
+    var num = function (id) { var v = $(id).value.trim(); return /^\d+$/.test(v) ? parseInt(v, 10) : NaN; };
+    var w = num('cf-w'), h = num('cf-h'), m = num('cf-m');
+    ['cf-w', 'cf-h', 'cf-m'].forEach(function (id) { $(id).removeAttribute('aria-invalid'); });
+    if (!(w >= L.minW && w <= L.maxW)) { problems.push('Width must be a whole number from ' + L.minW + ' to ' + L.maxW + '.'); bad = bad || 'cf-w'; }
+    if (!(h >= L.minH && h <= L.maxH)) { problems.push('Height must be a whole number from ' + L.minH + ' to ' + L.maxH + '.'); bad = bad || 'cf-h'; }
+    if (!problems.length && !(m >= L.minMines && m <= MS.maxMines(w, h))) {
+      problems.push('Mines must be from ' + L.minMines + ' to ' + MS.maxMines(w, h) + ' on a ' + w + '×' + h + ' field.'); bad = 'cf-m';
+    }
+    if (problems.length) {
+      $(bad).setAttribute('aria-invalid', 'true');
+      $('cf-err').textContent = problems.join(' ');
+      $(bad).focus();
+      return;
+    }
+    $('cf-err').textContent = '';
+    var c = { w: w, h: h, mines: m };
     settings.custom = c;
     saveSettings();
     closeDialog();

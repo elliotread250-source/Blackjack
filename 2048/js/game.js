@@ -58,6 +58,8 @@
     scoreBox: $('score-box'),
     bestBox: $('best-box'),
     moves: $('moves'),
+    srBoard: $('sr-board'),
+    srStatus: $('sr-status'),
     undo: $('undo'),
     newGame: $('new-game'),
     mute: $('mute'),
@@ -320,7 +322,31 @@
     el.classList.toggle('longer', s.length >= 8);
   }
 
+  // Screen readers: a hidden table mirrors the board after every move, and a polite live region says what
+  // a move did (not every animation frame).
+  function updateSrBoard() {
+    var rows = L.toRows(game.cells, size), body = dom.srBoard.tBodies[0];
+    body.textContent = '';
+    for (var r = 0; r < rows.length; r++) {
+      var tr = document.createElement('tr');
+      for (var c = 0; c < rows[r].length; c++) {
+        var td = document.createElement('td');
+        td.textContent = rows[r][c] ? String(rows[r][c]) : 'empty';
+        tr.appendChild(td);
+      }
+      body.appendChild(tr);
+    }
+    dom.srBoard.caption.textContent = size + ' by ' + size + ' board, score ' + game.score + ', highest tile ' + L.maxTile(game.cells);
+  }
+  var announceTimer = 0;
+  function announce(msg) {
+    clearTimeout(announceTimer);
+    dom.srStatus.textContent = '';
+    announceTimer = setTimeout(function () { dom.srStatus.textContent = msg; }, 60);
+  }
+
   function updateHUD() {
+    updateSrBoard();
     setScoreText(dom.score, game.score);
     setScoreText(dom.best, best);
     dom.moves.textContent = game.moves;
@@ -483,6 +509,8 @@
       soundTimer = setTimeout(Sound.newBest, 140);
     }
 
+    announce('Moved ' + dir + (res.gained ? ', +' + res.gained : '') + '. Score ' + game.score + '.' +
+      (res.justWon && !game.keepPlaying ? ' You made 2048!' : game.over ? ' No moves left: game over.' : ''));
     if (res.justWon && !game.keepPlaying) {
       showOverlay('win', 450);
       clearTimeout(soundTimer);
@@ -516,6 +544,7 @@
     hideOverlay();
     renderAll('undo');
     updateHUD();
+    announce('Undone. Score ' + game.score + '.');
     Sound.undo();
     persist();
     return true;
@@ -590,6 +619,8 @@
 
   function onKey(e) {
     var key = e.key || '';
+    var tgt = e.target;
+    if (tgt && (tgt.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tgt.tagName))) return;
     if (!MODIFIERS[key]) Sound.unlock();
     var lower = key.length === 1 ? key.toLowerCase() : key;
     if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && lower === 'z') {
@@ -632,18 +663,18 @@
   function bindInput() {
     document.addEventListener('keydown', onKey);
 
-    // Touch: a swipe on the board (or anywhere else on the page that isn't
-    // a button or link) moves the tiles. Nothing on this page scrolls, so
-    // every touchmove is cancelled: no scrolling, rubber-banding or pinch.
+    // Touch: a swipe on the board moves the tiles. Gestures are captured only on the board
+    // (it has touch-action: none); the rest of the page scrolls and zooms normally.
+    var area = dom.boardArea;
     var start = null;
-    document.addEventListener('touchstart', function (e) {
+    area.addEventListener('touchstart', function (e) {
       if (e.touches.length !== 1 || (e.target.closest && e.target.closest('button, a'))) { start = null; return; }
       start = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     }, { passive: true });
-    document.addEventListener('touchmove', function (e) {
-      if (e.cancelable) e.preventDefault();
+    area.addEventListener('touchmove', function (e) {
+      if (start && e.cancelable) e.preventDefault();
     }, { passive: false });
-    document.addEventListener('touchend', function (e) {
+    area.addEventListener('touchend', function (e) {
       if (!start || e.touches.length) return;
       var t = e.changedTouches[0];
       var dir = swipeDir(t.clientX - start.x, t.clientY - start.y, SWIPE_MIN);
@@ -651,10 +682,8 @@
       Sound.unlock();
       if (dir) doMove(dir);
     });
-    document.addEventListener('touchcancel', function () { start = null; });
-    var area = dom.boardArea;
-    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
-    document.addEventListener('dblclick', function (e) { e.preventDefault(); });
+    area.addEventListener('touchcancel', function () { start = null; });
+    window.addEventListener('blur', function () { start = null; mstart = null; });
 
     // Mouse drag on the board works as a swipe too.
     var mstart = null;

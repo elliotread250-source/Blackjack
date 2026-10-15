@@ -38,10 +38,10 @@
 
       for (const btn of touchRoot.querySelectorAll('[data-act]')) this.bindButton(btn);
       touchRoot.addEventListener('contextmenu', (e) => e.preventDefault());
-      // iOS pinch-zoom and double-tap zoom guards.
-      document.addEventListener('gesturestart', (e) => e.preventDefault());
-      document.addEventListener('dblclick', (e) => e.preventDefault());
-      document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 || e.target === canvas) e.preventDefault(); }, { passive: false });
+      // Gestures on the play surface drive the game (iOS ignores touch-action for some of them);
+      // everywhere else (menus, overlays) pinch-zoom stays available.
+      canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+      canvas.addEventListener('gesturestart', (e) => e.preventDefault());
     }
 
     actionFor(e) {
@@ -50,6 +50,8 @@
     }
 
     onKeyDown(e) {
+      const tg = e.target;
+      if (tg && (tg.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName))) return;
       const a = this.actionFor(e);
       if (!a) return;
       // Ctrl+key browser shortcuts (Ctrl+R etc.) are left alone; plain Ctrl rotates.

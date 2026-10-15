@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#008080">
 <meta name="description" content="Classic Windows-style Minesweeper in the browser: Beginner, Intermediate, Expert and Custom fields, chording, best times, sound and touch controls.">
 <meta name="mobile-web-app-capable" content="yes">
@@ -16,7 +16,7 @@
 <body>
 <div id="desk">
   <div id="wrap">
-    <a class="arcade" href="https://open-arcade.up.railway.app">&larr; Arcade</a>
+    <a class="arcade" href="https://open-arcade.up.railway.app" data-hub>&larr; Arcade</a>
     <div class="row" id="row">
       <div class="window" id="win">
         <div class="titlebar">
@@ -58,9 +58,10 @@
             <canvas class="lcd" id="lcd-time" role="img" aria-label="Time"></canvas>
           </div>
           <div class="field" id="field">
-            <canvas id="board" role="img" aria-label="Minefield"></canvas>
+            <canvas id="board" tabindex="0" role="application" aria-roledescription="minefield" aria-label="Minefield. Arrow keys move, Enter or Space opens a square or chords a number, F flags." aria-describedby="sr-cell"></canvas>
           </div>
         </div>
+        <p class="sr-only" id="sr-cell" aria-live="polite"></p>
         <div class="statusbar">
           <span id="st-left" aria-live="polite"></span>
           <span id="st-right"></span>
@@ -92,9 +93,9 @@
     <form class="dbody" id="custom-form" autocomplete="off" novalidate>
       <div class="cf">
         <div class="cf-fields">
-          <label for="cf-h"><u>H</u>eight:</label><input id="cf-h" type="number" inputmode="numeric" min="9" max="24" step="1">
-          <label for="cf-w"><u>W</u>idth:</label><input id="cf-w" type="number" inputmode="numeric" min="9" max="30" step="1">
-          <label for="cf-m"><u>M</u>ines:</label><input id="cf-m" type="number" inputmode="numeric" min="10" step="1">
+          <label for="cf-h"><u>H</u>eight:</label><input id="cf-h" aria-describedby="cf-hint cf-err" type="number" inputmode="numeric" min="9" max="24" step="1">
+          <label for="cf-w"><u>W</u>idth:</label><input id="cf-w" aria-describedby="cf-hint cf-err" type="number" inputmode="numeric" min="9" max="30" step="1">
+          <label for="cf-m"><u>M</u>ines:</label><input id="cf-m" aria-describedby="cf-hint cf-err" type="number" inputmode="numeric" min="10" step="1">
         </div>
         <div class="cf-buttons">
           <button class="btn98" type="submit">OK</button>
@@ -102,6 +103,7 @@
         </div>
       </div>
       <p class="hint" id="cf-hint">Width 9&ndash;30, height 9&ndash;24, mines 10 to (width&minus;1)&times;(height&minus;1).</p>
+      <p class="hint err" id="cf-err" role="alert"></p>
     </form>
   </div>
 
@@ -162,7 +164,7 @@
         <div>
           <p><b>Minesweeper</b></p>
           <p>A remake of the Windows 3.1 / XP game for Open Arcade. Every sprite is hand-placed pixel art and every sound is synthesised live. Free, no ads, nothing to install.</p>
-          <p><a href="https://open-arcade.up.railway.app">More games at Open Arcade</a></p>
+          <p><a href="https://open-arcade.up.railway.app" data-hub>More games at Open Arcade</a></p>
         </div>
       </div>
       <div class="dbuttons"><button class="btn98" type="button" data-close>OK</button></div>
@@ -174,5 +176,6 @@
 <script src="js/sprites.js"></script>
 <script src="js/sound.js"></script>
 <script src="js/game.js"></script>
+<script src="js/hub-link.js"></script>
 </body>
 </html>

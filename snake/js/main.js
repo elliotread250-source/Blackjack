@@ -52,7 +52,12 @@
   function applyBodyClasses() {
     body.classList.toggle('touch', isTouch);
     body.classList.toggle('dpad-on', isTouch && settings.dpad === 'on');
-    body.classList.toggle('muted', Sound.isMuted());
+    syncMute(Sound.isMuted());
+  }
+  // two sound buttons: #menuMute only shows on menu screens (the HUD one is covered there)
+  function syncMute(m) {
+    body.classList.toggle('muted', m);
+    ['btnMute', 'menuMute'].forEach(function (id) { var b = document.getElementById(id); if (b) b.setAttribute('aria-pressed', m ? 'true' : 'false'); });
   }
 
   /* ---------- state ---------- */
@@ -468,6 +473,8 @@
   };
   window.addEventListener('keydown', function (e) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
+    var tg = e.target;
+    if (tg && (tg.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName))) return;
     lastInputTouch = false;
     var dir = KEYS[e.key] || KEYS[e.code];
     if (dir) {
@@ -599,7 +606,7 @@
     updateTitleUI();
     layout();
   });
-  Sound.onChange(function (m) { body.classList.toggle('muted', m); });
+  Sound.onChange(syncMute);
 
   var segs = document.querySelectorAll('[data-setting]');
   Array.prototype.forEach.call(segs, function (seg) {

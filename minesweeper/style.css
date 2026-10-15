@@ -412,3 +412,23 @@ html.side .modebar .zoom { flex: 1; width: auto; }
 .about { display: flex; gap: 12px; align-items: flex-start; }
 .about img { flex: none; }
 .dbody a { color: #0000ee; }
+
+/* keyboard play: the board canvas takes focus; the cursor is drawn on the canvas */
+#board:focus { outline: none; }
+#board:focus-visible { outline: 2px dotted #000; outline-offset: 2px; }
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+#cf-err { color: #a00000; font-weight: bold; min-height: 0; }
+#cf-err:empty { display: none; }
+#custom-form input[aria-invalid="true"] { outline: 2px solid #a00000; }
+
+/* ---- touch: the Windows-sized chrome grows to thumb size (44px); the field itself keeps its look ---- */
+html.touch .arcade { height: 44px; line-height: 44px; padding: 0 12px; margin-bottom: 0; }
+html.touch .menubar { height: 44px; }
+html.touch .menu-btn { height: 44px; padding: 0 14px; }
+html.touch .dropdown { top: 44px; }
+html.touch .dropdown button, html.touch .dropdown .ck { height: 44px; }
+html.touch .mute { width: 44px; height: 44px; }
+html.touch .btn98 { min-height: 44px; }
+html.touch .dialog .titlebar { height: 44px; }
+html.touch .xbtn { width: 44px; height: 40px; }
+html.touch .xbtn::before, html.touch .xbtn::after { left: 18px; top: 19px; }

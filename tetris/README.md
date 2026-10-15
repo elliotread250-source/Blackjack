@@ -13,8 +13,11 @@ Faithful bits:
 - Line clears flash, then collapse; block-out and lock-out top-outs
 - Marathon (endless) and 40 Lines sprint, with best score and best time saved
 
-Controls: Left/Right move, Down soft drop, Space hard drop, Up or X rotate clockwise, Z or Ctrl rotate counter-clockwise, A rotate 180°, C or Shift hold, P or Esc pause, M mute, N music on/off, Enter start or restart. On a phone, tap to rotate, drag sideways to move one cell per cell dragged, drag down to soft drop, flick down to hard drop and swipe up to hold. A row of buttons (◀ ▶ ⟲ ⟳ ▼ HOLD DROP) does the same. The game pauses itself when the tab is hidden.
+Controls: Left/Right move, Down soft drop, Space hard drop, Up or X rotate clockwise, Z or Ctrl rotate counter-clockwise, A rotate 180°, C or Shift hold, P or Esc pause, M mute, N music on/off, Enter start or restart. On a phone, tap to rotate, drag sideways to move one cell per cell dragged, drag down to soft drop, flick down to hard drop and swipe up to hold. A row of buttons (◀ ▶ ⟲ ⟳ ▼ HOLD DROP) does the same. The game pauses itself when the tab is hidden or the window loses focus, and releases any held keys.
 
 ```
 python server.py    # http://localhost:8080
+node tools/test.cjs # rules engine tests (bag, SRS kicks, hold, lock delay, scoring, sprint)
 ```
+
+The "← Arcade" link goes to the live hub; served from localhost it points at `http://localhost:8084`, and `?hub=<url>` (localhost or `*.up.railway.app` only) overrides it for the tab.

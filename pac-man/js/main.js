@@ -6,6 +6,9 @@
   var ctx = canvas.getContext('2d', { alpha: false });
   var btnPause = document.getElementById('btn-pause');
   var btnMute = document.getElementById('btn-mute');
+  var btnHelp = document.getElementById('btn-help');
+  var helpDlg = document.getElementById('help');
+  var srStatus = document.getElementById('sr-status');
   var link = document.getElementById('arcade');
   var pad = document.getElementById('dpad');
   var safeEl = document.getElementById('safe');
@@ -82,6 +85,8 @@
       if (game.paused) setPaused(false);
       else if (inGame()) setPaused(true);
     },
+    help: function () { openHelp(); },
+    blocked: function () { return !!(helpDlg && helpDlg.open); },
     mute: function () {
       A.setMuted(!A.isMuted());
       store.set('pacman.muted', A.isMuted() ? '1' : '0');
@@ -103,6 +108,18 @@
     btnMute.setAttribute('aria-label', m ? 'Unmute' : 'Mute');
   }
   syncMute();
+
+  // How to play: pauses a running game; closing it leaves the game paused (Enter/Space resumes).
+  function openHelp() {
+    if (!helpDlg || helpDlg.open) return;
+    if (inGame()) setPaused(true);
+    if (helpDlg.showModal) helpDlg.showModal(); else helpDlg.setAttribute('open', '');
+  }
+  btnHelp.addEventListener('click', function () { openHelp(); });
+  // (closing the native dialog hands focus back to whatever had it before; nothing to do here)
+
+  // Focus loss (another window, a system dialog) pauses play the same way a hidden tab does.
+  window.addEventListener('blur', function () { if (inGame() && !game.paused) setPaused(true); });
 
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) {
@@ -168,6 +185,7 @@
       var by = areaTop + Math.min(areaH / 2 - bs / 2, 18);
       place(btnPause, sal + 16, by);
       place(btnMute, vw - sar - 16 - bs, by);
+      place(btnHelp, vw - sar - 16 - bs * 2 - 10, by);
       link.style.left = (sal + 6) + 'px'; link.style.top = 'auto';
       link.style.bottom = (sab + 6) + 'px'; link.style.right = 'auto';
     } else if (mode === 'landscape') {
@@ -176,13 +194,15 @@
       var rx = left + cw + (side - size2) / 2;
       place(pad, rx, sat + (ah - size2) / 2 + ah * 0.08, size2, size2);
       var lx = sal + (side - bs) / 2;
-      place(btnPause, lx, sat + ah / 2 - bs - 8);
-      place(btnMute, lx, sat + ah / 2 + 8);
+      place(btnPause, lx, sat + ah / 2 - bs * 1.5 - 12);
+      place(btnMute, lx, sat + ah / 2 - bs / 2);
+      place(btnHelp, lx, sat + ah / 2 + bs / 2 + 12);
       link.style.left = (sal + 6) + 'px'; link.style.top = (sat + 6) + 'px';
       link.style.bottom = 'auto'; link.style.right = 'auto';
     } else {
       place(btnMute, vw - sar - m - bs, sat + m);
       place(btnPause, vw - sar - m * 2 - bs * 2, sat + m);
+      place(btnHelp, vw - sar - m * 3 - bs * 3, sat + m);
       link.style.left = (sal + 6) + 'px'; link.style.right = 'auto';
       if (left - sal >= 110 || top - sat >= 34) {
         // In the letterbox, clear of the screen.
@@ -224,6 +244,7 @@
   var last = performance.now(), acc = 0;
   var lastUi = '';
 
+  var lastSay = '';
   function syncUi() {
     var playing = inGame() && !game.paused;
     var key = (playing ? 'p' : 'n');
@@ -231,6 +252,14 @@
       lastUi = key;
       document.body.classList.toggle('playing', playing);
     }
+    // Screen-reader status: only on changes of state, never per frame.
+    var st = game.paused ? 'paused' : game.state;
+    var msg = st === 'paused' ? 'Paused. Press Enter to resume.'
+      : st === 'ready' ? 'Level ' + game.level + '. Get ready. Score ' + game.score + ', lives ' + game.lives + '.'
+      : st === 'levelComplete' ? 'Level ' + game.level + ' cleared. Score ' + game.score + '.'
+      : st === 'gameOver' ? 'Game over. Score ' + game.score + (game.newHi ? ', a new high score.' : '.') + ' Press Enter to play again.'
+      : st === 'attract' ? 'Press Enter or tap to start.' : lastSay;
+    if (msg !== lastSay) { lastSay = msg; srStatus.textContent = msg; }
   }
 
   function step(n) {

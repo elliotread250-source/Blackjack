@@ -100,7 +100,7 @@ button { font: inherit; color: inherit; touch-action: manipulation; }
   height: 100dvh;
   max-height: 960px;
   padding: max(10px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
-  touch-action: none;
+  touch-action: manipulation;   /* swipes are captured on the board only (.board-area) */
 }
 
 /* ---------- header ---------- */
@@ -593,4 +593,16 @@ kbd {
   .tile-merged { animation-name: tile-restore; }
   .score-addition { animation-duration: 400ms; }
   .score-box.flash { animation: none; }
+}
+
+/* screen-reader-only board and announcements */
+.sr-only { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* Touch screens: every control is at least 44px tall and wide, so a thumb hits it reliably. */
+@media (pointer: coarse) {
+  .topbar { height: 44px; }
+  .arcade-link { display: inline-flex; align-items: center; min-height: 44px; padding-right: 14px; }
+  .icon-btn { width: 44px; height: 44px; margin-right: -10px; }
+  .btn, .btn-undo { min-height: 44px; }
+  .sizes button { min-height: 44px; min-width: 44px; }
 }
