@@ -202,6 +202,10 @@ door; Act 3 TV unit vs party-room door. Each was shifted clear of its doorway; a
 - Tests: `node tools/mp-reconnect-test.mjs pool|kart <url> 3` (servers with `SEAT_GRACE=3`) 10 / 9 ✓;
   browser checks: Pool drop + reload keep identical tables; Kart drop mid-race resumes and keeps streaming.
 - Phase 3 is complete once these are deployed.
+- **Deployed 2026-10-15 18:47 UTC**: Railway had skipped crossy-road, pool and kart when these commits reached
+  `claude/modest-tesla-7rfcgo`, so the services were redeployed at `1d49697` (all SUCCESS). Re-ran first:
+  `test_race.py` 38 ✓, crossy `test.mjs` 339 ✓, `test_server.py` 61 ✓, `test_wsnet.py` 22 ✓,
+  `mp-reconnect-test.mjs` pool 10 ✓ / kart 9 ✓. Apex GP's relay (separate repo) is still unpushed.
 
 ## Arcade hub 20× rebuild (branch `upgrade/arcade-20x`, not deployed)
 Plan in `docs/arcade-20x/PLAN.md`; full build log in `docs/arcade-20x/LOG.md`; before and after screenshots and clips are in `docs/arcade-20x/`.
