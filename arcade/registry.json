@@ -813,20 +813,20 @@
    "shelf": 37
   },
   {
-   "id": "act-3-house-study",
-   "name": "Act 3 House Study",
+   "id": "nosy-neighbor-v2",
+   "name": "Nosy Neighbor V2",
    "kind": "game",
-   "url": "https://nosy-neighbor-production.up.railway.app/act3/",
-   "blurb": "Walk a scale-accurate survey of Mr. Grimsby's house at child height. Every wall, door and stair carries its source, with a ruler, a height gauge and a live audit of how much is measured.",
+   "url": "https://nosy-neighbor-v2-production.up.railway.app",
+   "blurb": "The rebuilt Nosy Neighbor. Sneak into Mr. Grimsby's house, dodge him room by room and find out what he is hiding. Work in progress, updated as each milestone lands.",
    "genres": [
-    "Exploration",
-    "3D study"
+    "Stealth",
+    "3D"
    ],
    "categories": [
     "3d"
    ],
    "features": [],
-   "keywords": "neighbor neighbour house grimsby survey scale ruler explore 3d study",
+   "keywords": "neighbor neighbour nosy house grimsby stealth sneak explore 3d v2",
    "accent": "#5ab0e8",
    "shelf": 39
   },

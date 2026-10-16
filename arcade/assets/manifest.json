@@ -344,11 +344,11 @@
    "thumbnailBytes": 3864,
    "momentBytes": 2091
   },
-  "act-3-house-study": {
-   "name": "Act 3 House Study",
-   "logo": "assets/game-logos/act-3-house-study.svg",
-   "thumbnail": "assets/game-thumbnails/act-3-house-study.svg",
-   "moment": "assets/game-moments/act-3-house-study.svg",
+  "nosy-neighbor-v2": {
+   "name": "Nosy Neighbor V2",
+   "logo": "assets/game-logos/nosy-neighbor-v2.svg",
+   "thumbnail": "assets/game-thumbnails/nosy-neighbor-v2.svg",
+   "moment": "assets/game-moments/nosy-neighbor-v2.svg",
    "logoBytes": 1480,
    "thumbnailBytes": 6526,
    "momentBytes": 1373

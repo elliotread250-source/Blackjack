@@ -204,7 +204,7 @@ THUMBS['the-humanizer'] = () => {
   return T(defs, b, finish('v', .5));
 };
 
-THUMBS['act-3-house-study'] = () => {
+THUMBS['nosy-neighbor-v2'] = () => {
   const defs = lg('sky', 0, 0, 0, 1, [[0, '#9fb4c8'], [1, '#dde4ea']]);
   let b = rect(0, 0, W, H, 'url(#sky)');
   const I = iso(330, 215, 13);
