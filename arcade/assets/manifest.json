@@ -323,7 +323,7 @@
    "thumbnail": "assets/game-thumbnails/blockforge.svg",
    "moment": "assets/game-moments/blockforge.svg",
    "logoBytes": 1070,
-   "thumbnailBytes": 75976,
+   "thumbnailBytes": 75975,
    "momentBytes": 1413
   },
   "apex-gp": {
@@ -344,6 +344,15 @@
    "thumbnailBytes": 3864,
    "momentBytes": 2091
   },
+  "act-3-house-study": {
+   "name": "Act 3 House Study",
+   "logo": "assets/game-logos/act-3-house-study.svg",
+   "thumbnail": "assets/game-thumbnails/act-3-house-study.svg",
+   "moment": "assets/game-moments/act-3-house-study.svg",
+   "logoBytes": 1480,
+   "thumbnailBytes": 6526,
+   "momentBytes": 1373
+  },
   "the-humanizer": {
    "name": "The Humanizer",
    "logo": "assets/game-logos/the-humanizer.svg",
@@ -354,5 +363,5 @@
    "momentBytes": 1263
   }
  },
- "artVersion": "9555d1db84"
+ "artVersion": "ccc24cbb69"
 }

@@ -813,6 +813,24 @@
    "shelf": 37
   },
   {
+   "id": "act-3-house-study",
+   "name": "Act 3 House Study",
+   "kind": "game",
+   "url": "https://nosy-neighbor-production.up.railway.app",
+   "blurb": "Walk a scale-accurate survey of Mr. Grimsby's house at child height. Every wall, door and stair carries its source, with a ruler, a height gauge and a live audit of how much is measured.",
+   "genres": [
+    "Exploration",
+    "3D study"
+   ],
+   "categories": [
+    "3d"
+   ],
+   "features": [],
+   "keywords": "neighbor neighbour house grimsby survey scale ruler explore 3d study",
+   "accent": "#5ab0e8",
+   "shelf": 39
+  },
+  {
    "id": "the-humanizer",
    "name": "The Humanizer",
    "kind": "tool",
@@ -831,5 +849,5 @@
    "shelf": 38
   }
  ],
- "artVersion": "9555d1db84"
+ "artVersion": "ccc24cbb69"
 }

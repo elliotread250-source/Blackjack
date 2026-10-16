@@ -203,3 +203,31 @@ THUMBS['the-humanizer'] = () => {
   b += rect(372, 278, 120, 20, '#48d6a1', 'opacity=".12" rx="10"') + text(384, 292, '● reads human', 11, '#48d6a1', MONO);
   return T(defs, b, finish('v', .5));
 };
+
+THUMBS['act-3-house-study'] = () => {
+  const defs = lg('sky', 0, 0, 0, 1, [[0, '#9fb4c8'], [1, '#dde4ea']]);
+  let b = rect(0, 0, W, H, 'url(#sky)');
+  const I = iso(330, 215, 13);
+  // survey ground with a 1 m grid
+  b += path(poly([I.P(-9, -8, 0), I.P(9, -8, 0), I.P(9, 8, 0), I.P(-9, 8, 0)]), '#a7b19a');
+  for (let i = -9; i <= 9; i++) b += line(...I.P(i, -8, 0), ...I.P(i, 8, 0), '#8a947e', 1) + (i >= -8 && i <= 8 ? line(...I.P(-9, i, 0), ...I.P(9, i, 0), '#8a947e', 1) : '');
+  // the grey survey house: three floors stacked, a box on top
+  const wall = ['#e6e6e2', '#cfcfca', '#a9a9a4'];
+  b += I.box(-4, -3, 0, 8, 6, 3.4, ...wall) + I.box(-4, -3, 3.4, 8, 6, .3, '#b4b4ae', '#9a9a94', '#84847e');
+  b += I.box(-4, -3, 3.7, 8, 6, 3.4, ...wall) + I.box(-4, -3, 7.1, 8, 6, .3, '#b4b4ae', '#9a9a94', '#84847e');
+  b += I.box(-2, -1.5, 7.4, 4, 2.5, 3, ...wall);
+  const win = (x0, x1, z0, z1, y = 3) => path(poly([I.P(x0, y, z0), I.P(x1, y, z0), I.P(x1, y, z1), I.P(x0, y, z1)]), '#9fb2c4', 'stroke="#7f93a6" stroke-width="1.5"');
+  for (const x of [-3.2, -1.2, 1.8]) b += win(x, x + 1, .9, 2.4) + win(x, x + 1, 4.6, 6.1);
+  b += path(poly([I.P(.2, 3, 0), I.P(1.15, 3, 0), I.P(1.15, 3, 2.6), I.P(.2, 3, 2.6)]), '#5a6a7a');
+  // ruler across the front wall with its readout
+  const a = I.P(-4, 3.6, 0), c = I.P(4, 3.6, 0);
+  b += line(...a, ...c, '#ff3366', 4) + circ(...a, 5, '#ff3366') + circ(...c, 5, '#ff3366');
+  const m = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2 + 40];
+  b += rect(m[0] - 56, m[1] - 15, 112, 28, '#1c2430', 'rx="6"') + text(m[0], m[1] + 5, '8.000 m', 15, '#fff', `${MONO} text-anchor="middle"`);
+  // the child-height gauge by the door
+  const gp = I.P(2.2, 4.2, 0);
+  b += rect(gp[0] - 4, gp[1] - 15.6, 8, 15.6, '#33aaff', 'opacity=".6"') + line(gp[0] - 6, gp[1] - 14.3, gp[0] + 6, gp[1] - 14.3, '#ffcc00', 2);
+  // the HUD badge
+  b += rect(24, 22, 268, 34, '#ffffff', 'opacity=".9" rx="7"') + text(38, 44, 'ACT 3 HOUSE STUDY', 13, '#1c2430', `${MONO} font-weight="700"`) + text(196, 44, '0% measured', 12, '#c0182b', `${MONO} font-weight="700"`);
+  return T(defs, b, finish('v', .35));
+};
