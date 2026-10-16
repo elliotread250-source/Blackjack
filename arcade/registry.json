@@ -816,7 +816,7 @@
    "id": "act-3-house-study",
    "name": "Act 3 House Study",
    "kind": "game",
-   "url": "https://nosy-neighbor-production.up.railway.app",
+   "url": "https://nosy-neighbor-production.up.railway.app/act3/",
    "blurb": "Walk a scale-accurate survey of Mr. Grimsby's house at child height. Every wall, door and stair carries its source, with a ruler, a height gauge and a live audit of how much is measured.",
    "genres": [
     "Exploration",
