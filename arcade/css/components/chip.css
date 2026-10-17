@@ -1,0 +1,16 @@
+/* chips with a sliding ember pill (js moves .chip-pill to the pressed chip) + segmented controls */
+.chips { position: relative; display: flex; gap: 6px; width: max-content; padding: 4px; border-radius: var(--r-pill); background: rgba(16, 21, 29, .7); border: 1px solid var(--line); }
+.chip { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 7px; min-height: 40px; padding: 0 14px; border-radius: var(--r-pill); border: 0; background: none;
+  color: var(--muted); font: 600 .78rem/1 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; white-space: nowrap; transition: color var(--d-fast); }
+.chip:hover { color: var(--text); }
+.chip[aria-pressed="true"] { color: #140a02; }
+.chip .n { font-size: .68rem; opacity: .7; font-variant-numeric: tabular-nums; display: inline-block; }
+.chip .n.tick { animation: pop .35s var(--ease-overshoot) 1; }
+.chip-pill { position: absolute; z-index: 0; top: 4px; bottom: 4px; left: 0; width: 60px; border-radius: var(--r-pill); background: var(--grad-ember); box-shadow: 0 0 18px rgba(255, 117, 24, .45);
+  transition: transform var(--d-slow) var(--ease-overshoot), width var(--d-slow) var(--ease-overshoot); pointer-events: none; }
+.seg { display: flex; gap: 4px; padding: 4px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
+.seg button { flex: 1; min-height: 38px; padding: 0 10px; border-radius: 9px; border: 0; background: none; color: var(--muted); font: 600 .78rem/1 var(--font-mono); letter-spacing: .04em;
+  transition: background var(--d-fast), color var(--d-fast), transform var(--d-fast) var(--ease-spring); }
+.seg button:hover { color: var(--text); }
+.seg button:active { transform: scale(.94); }
+.seg button[aria-pressed="true"] { background: var(--grad-ember); color: #140a02; box-shadow: 0 0 14px rgba(255, 117, 24, .35); }

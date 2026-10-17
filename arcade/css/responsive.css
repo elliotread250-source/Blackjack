@@ -1,0 +1,84 @@
+/* breakpoints */
+@media (max-width: 1180px) {
+  .main-nav { display: none; }
+  .icon-btn.menu-btn { display: grid; }
+  .header-tools { margin-left: auto; }
+  .toolbar { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'search right' 'chips chips'; }
+  .footer-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 960px) {
+  .hero { padding-top: 100px; align-items: start; }
+  .hero-grid { grid-template-columns: 1fr; }
+  .hero-title { margin-right: 0; }
+  .hero-scene { position: absolute; right: -12%; top: 6%; width: 78%; max-width: 520px; opacity: .32; z-index: 0; pointer-events: none; }
+  .hero-copy { z-index: 3; }
+  .charts { grid-template-columns: 1fr; }
+  .idea { grid-template-columns: 1fr; }
+  .hl-stage { aspect-ratio: auto; min-height: 560px; }
+  .hl-slide::before { background: linear-gradient(0deg, rgba(8, 11, 16, .96) 25%, rgba(8, 11, 16, .55) 60%, rgba(8, 11, 16, .2)); }
+}
+@media (max-width: 640px) {
+  .search-trigger .st-label, .search-trigger .st-kbd { display: none; }
+  .search-trigger { width: 44px; padding: 0; justify-content: center; }
+  .brand-sub { display: none; }
+  .brand-name { font-size: .9rem; }
+  #sound-btn { display: none; }
+  .section-head.row { grid-template-columns: 1fr; }
+  .section-head.row .section-note { text-align: left; }
+  .hero-facts { gap: 18px 26px; }
+  .hero-ctas .btn { flex: 1 1 200px; }
+  .toolbar { position: static; grid-template-columns: minmax(0, 1fr); grid-template-areas: 'search' 'chips' 'right'; }
+  .tb-right { justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .sort-field { flex: 1 1 auto; } .sort-field select { flex: 1; min-width: 0; }
+  .podium { min-height: 330px; }
+  .pod.p1 .pod-block { height: 140px; } .pod.p2 .pod-block { height: 104px; } .pod.p3 .pod-block { height: 78px; }
+  .hs a { grid-template-columns: 50px 34px minmax(0, 1fr) auto; gap: 8px; }
+  .tw-row { grid-template-columns: 1fr; }
+  .footer-grid { grid-template-columns: 1fr; }
+  .lobby-tabs { width: 100%; }
+  .lt { flex: 1 1 40%; justify-content: center; padding: 0 10px; font-size: .74rem; }
+  .v-list .gc-head { min-width: 0; flex: 1; }
+  .v-list .gc-blurb { display: none; }
+  .v-list .gc-media { width: 110px; }
+  .sheet { inset: auto 0 0 0; width: 100vw; height: auto; max-height: 92vh; }
+  .sheet-box { max-height: 92vh; border-left: 0; border-top: 1px solid var(--orange-30); border-radius: 24px 24px 0 0; }
+  .sheet[open] .sheet-box { animation-name: sheet-up; }
+  .sheet.closing .sheet-box { animation-name: sheet-down; }
+  .sh-body { padding: 0 18px 28px; }
+  .hl-stage { min-height: 600px; }
+  .hl-content { gap: 12px; }
+}
+@keyframes sheet-up { from { transform: translateY(100%); } }
+@keyframes sheet-down { to { transform: translateY(100%); } }
+@media (max-width: 560px) {
+  .vibes { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .lib-grid[data-view="compact"] { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .v-compact .gc-body { padding: 10px; } .v-compact .gc-head h3 { font-size: .9rem; } .v-compact .gc-logo { width: 28px; height: 28px; }
+  .v-compact .gc-actions { top: 6px; right: 6px; gap: 4px; } .v-compact .status span { display: none; }
+  .vibe button { aspect-ratio: 1; padding: 14px; }
+  .vibe .v-name { font-size: 1.05rem; }
+  .rocket { width: 46px; height: 46px; border-radius: 14px; }
+}
+@media (max-width: 380px) {
+  .brand-text { display: none; }
+  .header-tools { gap: 6px; }
+  .chip { padding: 0 11px; }
+  .hero-facts dd { font-size: 1.4rem; }
+}
+@media (min-width: 1800px) { :root { --maxw: 1600px; } }
+/* touch screens: every control at least 44 × 44 */
+@media (pointer: coarse) {
+  .gc-actions button, .v-compact .gc-actions button { width: 44px; height: 44px; }
+  .chip { min-height: 44px; }
+  .views button { width: 44px; height: 44px; }
+  .seg button { min-height: 44px; }
+  .hl-pip { height: 44px; }
+  .cont .x { width: 44px; height: 44px; }
+  .footer-grid li a, .footer-grid li button { min-height: 44px; }
+  .btn-text { min-height: 44px; }
+  .t-act { min-height: 44px; }
+  .tk-logo { min-height: 44px; }
+  .brand { min-height: 44px; }
+  .scroll-cue { padding: 0 12px; }
+  .foot-status { min-height: 44px; }
+}

@@ -1,0 +1,9 @@
+arcade/data/
+cookie-clicker/data/
+crossy-road/data/
+neighbour/data/
+subway-surfers/data/
+wreck-run/data/
+__pycache__/
+*.pyc
+node_modules/

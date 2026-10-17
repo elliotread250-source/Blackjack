@@ -1,0 +1,81 @@
+/* Boot sequence (js/sections/boot.js drives the phases p1…p5). The page is in the DOM underneath from the
+   start; a CSS safety timer removes the overlay even if the script never runs. */
+.boot { display: none; position: fixed; inset: 0; z-index: var(--z-boot); pointer-events: auto; }
+.boot-cold .boot, .boot-warm .boot { display: block; animation: boot-safety 0s 2.9s forwards; }
+.boot-warm .boot { animation-delay: .9s; }
+.boot.done { display: none !important; }
+@keyframes boot-safety { to { visibility: hidden; opacity: 0; pointer-events: none; } }
+
+.boot-shutter { position: absolute; left: 0; right: 0; height: 50.5%; background: var(--ink); z-index: 0; transition: transform var(--d-slow) var(--ease-in-out); }
+.boot-shutter.top { top: 0; box-shadow: 0 1px 0 rgba(255, 117, 24, 0); }
+.boot-shutter.bottom { bottom: 0; }
+.boot.p5 .boot-shutter.top { transform: translateY(-101%); box-shadow: 0 2px 30px rgba(255, 117, 24, .6); }
+.boot.p5 .boot-shutter.bottom { transform: translateY(101%); box-shadow: 0 -2px 30px rgba(255, 117, 24, .6); }
+
+.boot-crt { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; overflow: hidden;
+  background: radial-gradient(90% 80% at 50% 50%, #0c1118, var(--ink)); clip-path: inset(50% 0 50% 0); }
+.boot-crt::before { /* scanlines */ content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 3;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .28) 0 1px, transparent 1px 3px); }
+.boot-crt::after { /* bloom flash */ content: ''; position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: 0;
+  background: radial-gradient(60% 40% at 50% 50%, rgba(255, 208, 138, .9), rgba(255, 117, 24, .35) 40%, transparent 70%); }
+
+/* p1: one flickering horizontal line */
+.boot-line { position: absolute; left: 10%; right: 10%; top: 50%; height: 2px; margin-top: -1px; z-index: 5; transform: scaleX(0);
+  background: linear-gradient(90deg, transparent, var(--amber) 15%, #fff 50%, var(--amber) 85%, transparent);
+  box-shadow: 0 0 18px var(--orange), 0 0 60px rgba(255, 117, 24, .6); }
+.boot.p1 .boot-line { animation: line-on .2s var(--ease-crt) forwards; }
+.boot.p1 .boot-crt { clip-path: inset(49.6% 0 49.6% 0); }
+@keyframes line-on { 0% { transform: scaleX(0); opacity: 0; } 30% { opacity: 1; } 45% { opacity: .3; } 60% { opacity: 1; } 100% { transform: scaleX(1); opacity: 1; } }
+
+/* p2: the line opens into a full screen with a bloom and a barrel settle */
+.boot.p2 .boot-crt { clip-path: inset(0 0 0 0); transform: scale(1); transition: clip-path .25s var(--ease-crt); animation: barrel .4s var(--ease-overshoot) both; }
+.boot.p2 .boot-crt::after { animation: bloom .45s var(--ease-out) forwards; }
+.boot.p2 .boot-line, .boot.p3 .boot-line, .boot.p4 .boot-line { opacity: 0; transition: opacity .1s; }
+@keyframes barrel { 0% { transform: scale(1.06, .98); filter: brightness(2.2) contrast(1.3); } 100% { transform: none; filter: none; } }
+@keyframes bloom { 0% { opacity: 1; } 100% { opacity: 0; } }
+.boot.p3 .boot-crt, .boot.p4 .boot-crt { clip-path: inset(0 0 0 0); }
+
+/* p3: BIOS readout */
+.boot-bios { position: absolute; left: 50%; top: 50%; width: min(560px, 88vw); transform: translate(-50%, -50%); z-index: 2; margin: 0;
+  font: 500 clamp(.74rem, .6rem + .5vw, .95rem)/1.75 var(--font-mono); color: var(--amber); text-shadow: 0 0 10px rgba(255, 179, 71, .55); white-space: pre-wrap; }
+.boot-bios .ok { color: var(--gold); }
+.boot-bios .rdy { color: var(--ink); background: var(--orange); padding: 0 .4em; text-shadow: none; }
+.boot.p4 .boot-bios { opacity: 0; transform: translate(-50%, -54%); transition: opacity .2s, transform .3s var(--ease-out); }
+
+/* p4: the emblem draws itself, the bar fills, INSERT COIN blinks */
+.boot-emblem { position: relative; z-index: 2; display: grid; justify-items: center; gap: 22px; opacity: 0; }
+.boot-emblem svg { width: clamp(90px, 14vw, 150px); overflow: visible; filter: drop-shadow(0 0 22px rgba(255, 117, 24, .7)); }
+.be-chev { fill: none; stroke: var(--amber); stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 60; stroke-dashoffset: 60; }
+.be-bar { transform-box: fill-box; transform-origin: bottom; transform: scaleY(0); }
+.boot.p4 .boot-emblem, .boot.p5 .boot-emblem { opacity: 1; }
+.boot.p4 .be-chev, .boot.p5 .be-chev { animation: stroke-draw .3s .05s var(--ease-out) forwards; }
+.boot.p4 .be-bar, .boot.p5 .be-bar { animation: bar-fill .3s var(--ease-overshoot) forwards; }
+@keyframes stroke-draw { to { stroke-dashoffset: 0; } }
+@keyframes bar-fill { to { transform: none; } }
+.boot-coin { font: 700 clamp(1rem, .8rem + 1vw, 1.5rem)/1 var(--font-mono); letter-spacing: .3em; color: var(--gold); text-shadow: var(--glow-text); animation: blink .5s steps(1) infinite; }
+.boot-coin-drop { position: absolute; top: -40vh; left: 50%; width: 22px; height: 22px; margin-left: -11px; border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle at 35% 35%, var(--gold), var(--amber) 45%, var(--orange) 80%); box-shadow: 0 0 16px var(--amber); }
+.boot.p5 .boot-coin-drop { animation: coin-drop .32s var(--ease-in-out) forwards; }
+@keyframes coin-drop { 0% { opacity: 1; transform: translateY(0) scaleX(1); } 70% { transform: translateY(40vh) scaleX(.3); opacity: 1; } 100% { transform: translateY(46vh) scaleX(.1); opacity: 0; } }
+.boot.p5 .boot-crt { opacity: 0; transition: opacity .22s .08s; }
+
+.boot-skip { position: absolute; right: max(18px, env(safe-area-inset-right)); bottom: max(18px, env(safe-area-inset-bottom)); z-index: 6;
+  padding: 10px 16px; border: 1px solid var(--orange-50); border-radius: var(--r-pill); background: var(--ink-80); color: var(--amber);
+  font: 600 .8rem/1 var(--font-mono); letter-spacing: .16em; }
+.boot-skip:hover { background: var(--orange-15); }
+.boot.p5 .boot-skip { opacity: 0; transition: opacity .15s; }
+
+/* warm boot (repeat visitor): emblem flick + one scanline wipe, 350 ms */
+.boot-warm .boot .boot-shutter, .boot-warm .boot .boot-bios, .boot-warm .boot .boot-coin, .boot-warm .boot .boot-skip { display: none; }
+.boot-warm .boot .boot-crt { clip-path: none; animation: warm-out .35s var(--ease-in-out) forwards; }
+.boot-warm .boot .boot-emblem { opacity: 1; animation: neon .25s steps(2) 1; }
+.boot-warm .boot .be-chev { stroke-dashoffset: 0; } .boot-warm .boot .be-bar { transform: none; }
+.boot-warm .boot .boot-crt::after { opacity: 1; height: 30%; inset: auto 0 auto 0; top: -30%; background: linear-gradient(180deg, transparent, rgba(255, 179, 71, .5), transparent); animation: wipe .35s linear forwards; }
+@keyframes wipe { to { transform: translateY(460%); } }
+@keyframes warm-out { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }
+
+/* reduced: no boot, just a short fade of the page */
+.boot-fade .hero { animation: fade-in .15s both !important; }
+
+/* the hero holds its entrance until the curtains open (boot.js removes .boot-hold) */
+.boot-hold .hero-copy > *, .boot-hold .hero-scene { opacity: 0; }

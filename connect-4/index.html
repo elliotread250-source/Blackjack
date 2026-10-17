@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#081028">
+<meta name="description" content="Connect 4 in the browser: drop red and yellow discs, get four in a row. Bots from Easy to Impossible, pass-and-play on one device and online rooms with share links and quick match.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Connect 4</title>
+<link rel="icon" href="icon.svg">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <header id="hud">
+    <button class="icon" id="btn-menu" type="button" aria-label="Menu" title="Menu (Esc)"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+    <div id="status" aria-live="polite"><span class="sdisc" id="status-disc"></span><span id="status-text"></span></div>
+    <button class="icon" id="btn-mute" type="button" aria-label="Sound" title="Sound (M)"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z"/><path class="wave" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/><path class="x" d="M17 9l5 6M22 9l-5 6"/></svg></button>
+  </header>
+  <div id="players">
+    <div class="pcard" id="p0"><span class="disc red"></span><div class="pinfo"><span class="pname">You</span><span class="pmeta"></span></div><span class="pscore">0</span><span class="bubble"></span></div>
+    <div id="mid"><span id="draws"></span><span class="net" id="net" hidden><i></i><span id="net-label"></span></span></div>
+    <div class="pcard" id="p1"><span class="disc yellow"></span><div class="pinfo"><span class="pname">Bot</span><span class="pmeta"></span></div><span class="pscore">0</span><span class="bubble"></span></div>
+  </div>
+  <main id="stage"><canvas id="board" aria-label="Connect 4 board. Press 1 to 7 to drop a disc."></canvas></main>
+  <footer id="foot">
+    <div id="tools">
+      <button class="tool" id="btn-undo" type="button" title="Undo (U)"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg><span>Undo</span></button>
+      <button class="tool" id="btn-new" type="button" title="New game (N)"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v5h-5"/></svg><span>New game</span></button>
+      <button class="tool" id="btn-emote" type="button" title="Reactions" hidden><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5a4.5 4.5 0 0 0 7 0"/><path d="M9 9.5h.01M15 9.5h.01"/></svg><span>React</span></button>
+    </div>
+    <div id="emotes" hidden></div>
+    <div id="result" hidden>
+      <div id="result-text"><div id="result-title"></div><div id="result-sub"></div></div>
+      <div id="result-buttons">
+        <button class="btn primary" id="btn-again" type="button">Play again</button>
+        <button class="btn" id="btn-result-undo" type="button">Undo</button>
+        <button class="btn" id="btn-result-menu" type="button">Menu</button>
+      </div>
+    </div>
+  </footer>
+</div>
+<canvas id="fx" aria-hidden="true"></canvas>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<a class="arcade" id="arcade" href="https://open-arcade.up.railway.app">&larr; Arcade</a>
+
+<!-- main menu -->
+<div class="screen" id="menu">
+  <div class="card">
+    <div class="logo">
+      <div class="logo-discs"><span class="disc red"></span><span class="disc yellow"></span><span class="disc red"></span><span class="disc yellow"></span></div>
+      <h1>Connect 4</h1>
+    </div>
+    <div class="sub">Four in a row wins</div>
+    <label class="field">Your name<input id="name" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Player"></label>
+    <div class="group-title">Vs bot</div>
+    <div class="seg" id="level-seg" role="group" aria-label="Difficulty">
+      <button type="button" data-level="easy">Easy</button><button type="button" data-level="medium" aria-pressed="true">Medium</button><button type="button" data-level="hard">Hard</button><button type="button" data-level="impossible">Impossible</button>
+    </div>
+    <div class="seg small" id="first-seg" role="group" aria-label="First move">
+      <span class="seg-label">First move</span><button type="button" data-first="you" aria-pressed="true">You</button><button type="button" data-first="bot">Bot</button><button type="button" data-first="alt">Take turns</button>
+    </div>
+    <button class="btn primary" id="btn-bot" type="button">Play vs Bot</button>
+    <div class="stats" id="bot-stats"></div>
+    <div class="row">
+      <button class="btn" id="btn-local" type="button">Pass &amp; Play<small>2 players, 1 device</small></button>
+      <button class="btn gold" id="btn-online" type="button">Online<small>vs a friend</small></button>
+    </div>
+    <div class="opts">
+      <label><input type="checkbox" id="opt-sound" checked> Sound</label>
+      <button class="link" id="btn-help" type="button">How to play</button>
+    </div>
+  </div>
+</div>
+
+<!-- online -->
+<div class="screen" id="online" hidden>
+  <div class="card">
+    <div class="logo"><h1 class="h-small">Play online</h1></div>
+    <label class="field">Your name<input id="name2" maxlength="14" autocomplete="off" spellcheck="false" placeholder="Player"></label>
+    <button class="btn primary" id="btn-quick" type="button">Quick match<small>play the next person waiting</small></button>
+    <button class="btn" id="btn-create" type="button">Create a room<small>share a code or link</small></button>
+    <div class="row join">
+      <input id="join-code" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="CODE" aria-label="Room code">
+      <button class="btn" id="btn-join" type="button">Join</button>
+    </div>
+    <div class="err" id="online-err"></div>
+    <button class="btn" id="btn-online-back" type="button">Back</button>
+  </div>
+</div>
+
+<!-- waiting room -->
+<div class="screen" id="lobby" hidden>
+  <div class="card">
+    <div id="lobby-room">
+      <div class="group-title center">Room code</div>
+      <div class="code" id="room-code">----</div>
+      <div class="sharelink" id="room-link"></div>
+      <div class="row">
+        <button class="btn" id="btn-copy" type="button">Copy link</button>
+        <button class="btn" id="btn-share" type="button">Share</button>
+      </div>
+    </div>
+    <div class="wait" id="lobby-wait"><span class="thinking">Waiting for an opponent</span></div>
+    <div class="err" id="lobby-err"></div>
+    <button class="btn" id="btn-lobby-cancel" type="button">Cancel</button>
+  </div>
+</div>
+
+<!-- how to play -->
+<div class="screen" id="help" hidden>
+  <div class="card wide">
+    <div class="help">
+      <h2>How to play</h2>
+      <p>Take turns dropping a disc into one of the seven columns. It falls to the lowest empty space. The first player to line up <b>four of their discs in a row</b>, across, up and down or diagonally, wins. If the board fills up with no four in a row, it's a draw.</p>
+      <h2>Controls</h2>
+      <ul>
+        <li><b>Mouse:</b> point at a column to preview your disc, click to drop it.</li>
+        <li><b>Touch:</b> tap a column to drop. Touch and slide to preview first, then let go.</li>
+        <li><b>Keyboard:</b> <kbd>1</kbd>&ndash;<kbd>7</kbd> drop straight into a column, or <kbd>&larr;</kbd> <kbd>&rarr;</kbd> to choose and <kbd>Enter</kbd> / <kbd>Space</kbd> / <kbd>&darr;</kbd> to drop.</li>
+        <li><kbd>U</kbd> undo, <kbd>N</kbd> new game, <kbd>M</kbd> sound, <kbd>Esc</kbd> menu.</li>
+      </ul>
+      <h2>Modes</h2>
+      <ul>
+        <li><b>Vs Bot:</b> Easy plays mostly at random. Medium looks a few moves ahead. Hard searches 8 moves deep and knows about threats. Impossible uses a time-limited deep search. It solves positions exactly when the remaining moves fit within its search budget; it is not guaranteed unbeatable. Choose who moves first; the player who starts has the advantage.</li>
+        <li><b>Pass &amp; Play:</b> two players on one device. Red and Yellow take turns starting.</li>
+        <li><b>Online:</b> create a room and send the code or link to a friend, join with a code, or use quick match. The server referees every move. If your connection drops you have a few seconds to come back.</li>
+      </ul>
+      <p>Undo works against the bot and in pass &amp; play. Scores are kept for the session.</p>
+      <h2>Tips</h2>
+      <ul>
+        <li>The middle column is part of the most fours. Start there.</li>
+        <li>Make two threats at once: your opponent can only block one.</li>
+        <li>Watch the spaces just above your opponent's discs: never fill the space below their winning spot.</li>
+      </ul>
+    </div>
+    <button class="btn" id="btn-help-close" type="button">Got it</button>
+  </div>
+</div>
+
+<!-- pause -->
+<div class="screen clear" id="pause" hidden>
+  <div class="card">
+    <div class="logo"><h1 class="h-small">Paused</h1></div>
+    <button class="btn primary" id="btn-resume" type="button">Resume</button>
+    <button class="btn" id="btn-restart" type="button">New game</button>
+    <button class="btn" id="btn-pause-help" type="button">How to play</button>
+    <button class="btn" id="btn-quit" type="button">Quit to menu</button>
+  </div>
+</div>
+
+<!-- generic dialog -->
+<div class="screen clear" id="dialog" hidden>
+  <div class="card">
+    <div class="over-title" id="dialog-title"></div>
+    <div class="over-sub" id="dialog-text"></div>
+    <div id="dialog-buttons"></div>
+  </div>
+</div>
+
+<script src="js/logic.js"></script>
+<script src="js/bot.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/net.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

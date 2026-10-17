@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Open Arcade">
+  <rect x="2.5" y="2.5" width="59" height="59" rx="14.5" fill="none" stroke="#080b10" stroke-width="3"/>
+  <rect x="15" y="17" width="8" height="30" rx="2.2" fill="#080b10"/>
+  <path d="M30.5 18.5 L47.5 32 L30.5 45.5" fill="none" stroke="#080b10" stroke-width="7.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
