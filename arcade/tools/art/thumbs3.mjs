@@ -231,3 +231,27 @@ THUMBS['nosy-neighbor-v2'] = () => {
   b += rect(24, 22, 268, 34, '#ffffff', 'opacity=".9" rx="7"') + text(38, 44, 'ACT 3 HOUSE STUDY', 13, '#1c2430', `${MONO} font-weight="700"`) + text(196, 44, '0% measured', 12, '#c0182b', `${MONO} font-weight="700"`);
   return T(defs, b, finish('v', .35));
 };
+THUMBS['retro-bowl'] = () => {
+  // pixel-art gridiron: striped turf, end zone, a quarterback lofting the ball to a receiver, and a scoreboard
+  const defs = '';
+  let b = rect(0, 0, W, H, '#1d1f2b');
+  for (let x = 0; x < W; x += 8) for (let y = 4; y < 54; y += 8) b += rect(x + (y % 16 ? 4 : 0), y, 4, 4, ['#c94f4f', '#e0c060', '#5c8fd6', '#e8e8e8', '#6fbf73'][(x / 8 + y) % 5]);
+  for (let i = 0; i < 16; i++) b += rect(i * 40, 64, 40, 272, i % 2 ? '#3f9b45' : '#47a84d');
+  b += rect(0, 64, 80, 272, '#0b162a') + text(52, 210, 'RETRO', 26, '#c83803', `font-family="monospace" font-weight="700" transform="rotate(-90 52 210)"`);
+  for (let x = 80; x <= 640; x += 40) b += rect(x, 64, x % 80 ? 1 : 3, 272, '#ffffff', 'opacity=".9"');
+  for (let x = 90; x < 640; x += 10) b += rect(x, 150, 1, 6, '#fff', 'opacity=".8"') + rect(x, 240, 1, 6, '#fff', 'opacity=".8"');
+  b += rect(0, 62, W, 3, '#fff') + rect(0, 334, W, 3, '#fff') + rect(286, 64, 3, 272, '#4f8cff') + rect(406, 64, 3, 272, '#ffe14d');
+  const guy = (x, y, jersey, helmet, pants) => rect(x - 9, y - 3, 18, 5, '#000', 'opacity=".3"') + rect(x - 6, y - 14, 4, 12, pants) + rect(x + 2, y - 14, 4, 12, pants) +
+    rect(x - 8, y - 26, 16, 13, jersey) + rect(x - 6, y - 37, 12, 11, helmet) + rect(x + 3, y - 33, 3, 5, '#c9c9c9') + rect(x - 10, y - 24, 2, 7, '#e0ac69') + rect(x + 8, y - 24, 2, 7, '#e0ac69');
+  for (const [x, y] of [[300, 170], [300, 200], [300, 230], [300, 260], [300, 290]]) b += guy(x, y, '#0b162a', '#0b162a', '#c83803');
+  for (const [x, y] of [[320, 180], [320, 215], [320, 250], [320, 280], [370, 150], [380, 250], [470, 120], [540, 300]]) b += guy(x, y, '#f4f4f4', '#0b6e4f', '#0b6e4f');
+  b += guy(250, 236, '#0b162a', '#0b162a', '#c83803') + guy(500, 130, '#0b162a', '#0b162a', '#c83803');
+  // the throw: dotted arc to a target ring
+  for (let i = 1; i < 14; i++) { const k = i / 14, x = 258 + (520 - 258) * k, y = 214 + (136 - 214) * k - 120 * k * (1 - k); b += rect(x - 2, y - 2, 4, 4, '#fff'); }
+  b += ell(522, 140, 16, 8, 'none', 'stroke="#fff" stroke-width="3"') + rect(519, 137, 6, 6, '#ffe14d');
+  b += rect(380, 80, 14, 9, '#7a3e12') + rect(386, 82, 2, 5, '#fff');
+  // scoreboard
+  b += rect(0, 0, W, 0, '#000') + rect(150, 284, 340, 44, '#0d0e14', 'opacity=".92"') + rect(150, 284, 340, 4, '#ffe14d') +
+    text(320, 315, 'RETRO BOWL', 26, '#ffe14d', `font-family="monospace" font-weight="700" text-anchor="middle" letter-spacing="3"`);
+  return svg(W, H, defs + finish('v', .35).defs, b + finish('v', .35).body, { pixel: true });
+};

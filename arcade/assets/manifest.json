@@ -361,7 +361,16 @@
    "logoBytes": 1278,
    "thumbnailBytes": 6452,
    "momentBytes": 1263
+  },
+  "retro-bowl": {
+   "name": "Retro Bowl",
+   "logo": "assets/game-logos/retro-bowl.svg",
+   "thumbnail": "assets/game-thumbnails/retro-bowl.svg",
+   "moment": "assets/game-moments/retro-bowl.svg",
+   "logoBytes": 1504,
+   "thumbnailBytes": 51605,
+   "momentBytes": 2025
   }
  },
- "artVersion": "ccc24cbb69"
+ "artVersion": "b3f4cb13aa"
 }

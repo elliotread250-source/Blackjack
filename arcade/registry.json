@@ -847,7 +847,32 @@
    "keywords": "text writing ai rewrite humanize",
    "accent": "#8b7bff",
    "shelf": 38
+  },
+  {
+   "id": "retro-bowl",
+   "name": "Retro Bowl",
+   "kind": "game",
+   "url": "https://retro-bowl-production-84d0.up.railway.app",
+   "blurb": "Coach a pixel-art football team: sling passes, juke tacklers, kick field goals, then manage the roster all the way to the Retro Bowl.",
+   "genres": [
+    "Sports",
+    "Management"
+   ],
+   "categories": [
+    "arcade",
+    "strategy",
+    "casual"
+   ],
+   "features": [
+    "touch",
+    "saves",
+    "leaderboard"
+   ],
+   "keywords": "american football nfl quarterback touchdown coach season franchise sports",
+   "accent": "#ffe14d",
+   "shelf": 40,
+   "featured": 5
   }
  ],
- "artVersion": "ccc24cbb69"
+ "artVersion": "b3f4cb13aa"
 }
