@@ -1,9 +1,13 @@
 // Pixel-art canvas renderer: the field, players, ball, aiming arc, HUD, banners and the kicking view.
+// Two layers, the way GameMaker draws it: the world is pixel art on a W x H buffer that gets scaled up with
+// hard edges, and the HUD, labels and text are drawn on top at the screen's own resolution so they stay sharp.
 import { FIELD_W, fmtClock, downText, yardText, maxThrow, flightTime } from './match.js';
 
-export const W = 640, H = 360;
+export const H = 432;                // art pixels top to bottom: a wider look at the field than the old 360
+export let W = 768;                  // 16:9 by default; widens to fill wide phone screens (see setAspect)
+export const UI_SCALE = H / 360;     // gestures were tuned at 360 tall
 const SX = 10;                     // pixels per yard along the field
-const TOP = 64, BOT = 336;         // field sidelines on screen
+const TOP = 72, BOT = 404;         // field sidelines on screen
 const SY = (BOT - TOP) / FIELD_W;  // pixels per yard across the field
 const FONT = '"Press Start 2P", ui-monospace, monospace';
 
@@ -16,9 +20,15 @@ function shade(h, f) { const [r, g, b] = hexToRgb(h); const c = v => Math.max(0,
 export class Renderer {
   constructor(canvas) {
     this.c = canvas;
-    this.g = canvas.getContext('2d');
-    canvas.width = W; canvas.height = H;
-    this.g.imageSmoothingEnabled = false;
+    this.out = canvas.getContext('2d');
+    this.world = document.createElement('canvas');
+    this.world.width = W; this.world.height = H;
+    this.wg = this.world.getContext('2d');
+    this.wg.imageSmoothingEnabled = false;
+    this.g = this.wg;
+    this.k = 1;
+    this.labels = [];
+    this.resize(W, H);
     this.camX = 30;
     this.shake = 0;
     this.crowd = makeCrowd();
@@ -33,13 +43,37 @@ export class Renderer {
     return { o: us, d: them };
   }
 
+  // fill the screen's shape instead of letterboxing: 16:9 up to about 21:9
+  setAspect(a) {
+    const w = Math.round(H * Math.max(16 / 9, Math.min(2.25, a)) / 2) * 2;
+    if (w !== W) { W = w; this.world.width = W; this.wg.imageSmoothingEnabled = false; }
+  }
+
+  // size of the canvas in real device pixels
+  resize(pw, ph) {
+    if (this.c.width !== pw || this.c.height !== ph) { this.c.width = pw; this.c.height = ph; }
+    this.k = pw / W;
+  }
+
+  // world buffer -> screen with hard pixel edges, then switch drawing to the sharp screen layer
+  present() {
+    const o = this.out;
+    o.setTransform(1, 0, 0, 1, 0, 0);
+    o.imageSmoothingEnabled = false;
+    o.drawImage(this.world, 0, 0, this.c.width, this.c.height);
+    o.setTransform(this.k, 0, 0, this.k, 0, 0);
+    this.g = o;
+    for (const L of this.labels) this.label(...L);
+    this.labels.length = 0;
+  }
+
   sx(x) { return Math.round((x - this.camX) * SX + W / 2); }
   sy(y) { return Math.round(TOP + y * SY); }
 
   draw(m, dt, ui = {}) {
     this.t += dt;
-    const g = this.g;
-    if (m.stage === 'kick' && m.kick) { this.drawKick(m, ui); this.drawHud(m); return; }
+    const g = this.g = this.wg;
+    if (m.stage === 'kick' && m.kick) { this.drawKick(m, ui); this.present(); this.drawKickGui(m, ui); this.drawHud(m); return; }
     const P = m.play;
     // camera follows the ball, a little ahead of it
     let focus = m.los + 8;
@@ -56,20 +90,21 @@ export class Renderer {
     this.drawField(m);
     if (P) this.drawPlay(m, P, ui);
     g.restore();
+    this.drawConfetti(dt);
+    this.present();
     this.drawHud(m);
     this.drawBanner(m);
     if (m.stage === 'opp' || m.stage === 'opp-wait') this.drawOpp(m);
-    this.drawConfetti(dt);
   }
 
   drawStands() {
     const g = this.g;
-    g.fillStyle = '#1d1f2b'; g.fillRect(0, 26, W, TOP - 26);
+    g.fillStyle = '#1d1f2b'; g.fillRect(0, 0, W, TOP);
     g.fillRect(0, BOT, W, H - BOT);
     const off = Math.floor(((this.camX * SX * 0.6) % 160 + 160) % 160);
     for (let x = -off; x < W; x += 160) {
-      g.drawImage(this.crowd, x, 28);
-      g.drawImage(this.crowd, x, BOT + 8, 160, 20);
+      g.drawImage(this.crowd, x, TOP - 8 - CROWD_H);
+      g.drawImage(this.crowd, x, BOT + 7);
     }
     // sideline strip
     g.fillStyle = '#2e6b2e'; g.fillRect(0, TOP - 8, W, 8); g.fillRect(0, BOT, W, 7);
@@ -231,6 +266,7 @@ export class Renderer {
   }
 
   label(text, x, y, color) {
+    if (this.g === this.wg) { this.labels.push([text, x, y, color]); return; }   // drawn sharp after present()
     const g = this.g;
     g.font = `8px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
     const w = g.measureText(text).width + 8;
@@ -271,7 +307,7 @@ export class Renderer {
     if (!m.msg || !(m.stage === 'result' || m.stage === 'banner')) return;
     const g = this.g;
     const { big, small } = m.msg;
-    const y = 150;
+    const y = Math.round(H * 0.42);
     if (big) {
       g.font = `22px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
       const w = Math.min(W - 20, g.measureText(big).width + 40);
@@ -287,11 +323,12 @@ export class Renderer {
 
   drawOpp(m) {
     const g = this.g;
-    g.fillStyle = 'rgba(8,10,20,0.82)'; g.fillRect(70, 70, W - 140, 220);
-    g.strokeStyle = m.them.c1; g.lineWidth = 3; g.strokeRect(71.5, 71.5, W - 143, 217);
+    const px = W / 2 - 250, py = Math.round(H / 2 - 110);
+    g.fillStyle = 'rgba(8,10,20,0.82)'; g.fillRect(px, py, 500, 220);
+    g.strokeStyle = m.them.c1; g.lineWidth = 3; g.strokeRect(px + 1.5, py + 1.5, 497, 217);
     g.font = `12px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
-    g.fillStyle = '#ffffff'; g.fillText(`${m.them.city.toUpperCase()} ON OFFENSE`, W / 2, 96);
-    let y = 130;
+    g.fillStyle = '#ffffff'; g.fillText(`${m.them.city.toUpperCase()} ON OFFENSE`, W / 2, py + 26);
+    let y = py + 60;
     for (let i = 0; i < m.oppShown; i++) {
       const L = m.oppLines[i];
       g.font = `${L.big ? 14 : 9}px ${FONT}`;
@@ -300,19 +337,19 @@ export class Renderer {
       y += L.big ? 30 : 22;
     }
     if (m.stage === 'opp-wait' && Math.floor(this.t * 2) % 2 === 0) {
-      g.font = `9px ${FONT}`; g.fillStyle = '#ffe14d'; g.fillText('TAP TO CONTINUE', W / 2, 272);
+      g.font = `9px ${FONT}`; g.fillStyle = '#ffe14d'; g.fillText('TAP TO CONTINUE', W / 2, py + 202);
     }
   }
 
   // ------------------------------------------------------------ kicking view (behind the kicker)
   drawKick(m, ui) {
     const g = this.g, k = m.kick;
-    const hor = 150, F = 700, camH = 2.2, Z0 = 14;
+    const hor = Math.round(H * 0.42), F = 700 * UI_SCALE, camH = 2.2, Z0 = 14;
     // sky + stands
     const grad = g.createLinearGradient(0, 26, 0, hor);
     grad.addColorStop(0, '#1b2440'); grad.addColorStop(1, '#3a4a7a');
     g.fillStyle = grad; g.fillRect(0, 26, W, hor - 26);
-    for (let x = 0; x < W; x += 160) g.drawImage(this.crowd, x, hor - 46, 160, 46);
+    for (let x = 0; x < W; x += 160) g.drawImage(this.crowd, x, hor - CROWD_H);
     g.fillStyle = '#3f9b45'; g.fillRect(0, hor, W, H - hor);
     const proj = (x, z, h) => ({ x: W / 2 + x / (z + Z0) * F, y: hor + (camH - h) / (z + Z0) * F });
     // yard lines every 5 yards
@@ -342,8 +379,7 @@ export class Renderer {
     g.fillStyle = 'rgba(0,0,0,0.3)'; g.fillRect(Math.round(sh.x - size / 2), Math.round(sh.y), size, Math.max(1, size / 3));
     g.fillStyle = '#7a3e12'; g.fillRect(Math.round(pb.x - size / 2), Math.round(pb.y - size / 2), size, Math.round(size * 0.7));
     g.fillStyle = '#fff'; g.fillRect(Math.round(pb.x), Math.round(pb.y - size / 4), 1, 1);
-    // aiming
-    g.font = `9px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    // aiming line (the meter and text go on the sharp layer)
     if (k.phase === 'aim') {
       const a = ui.kickAim || { aim: 0, power: 0 };
       if (a.active) {
@@ -351,14 +387,25 @@ export class Renderer {
         g.strokeStyle = '#ffe14d'; g.lineWidth = 2;
         g.beginPath(); g.moveTo(pb.x, pb.y); g.lineTo(tip.x, tip.y); g.stroke();
       }
+    }
+    this.kickBallScreen = proj(0, 0, 0.2);
+  }
+
+  // kicking view, sharp layer: the meter, the hint and the wind
+  drawKickGui(m, ui) {
+    const g = this.g, k = m.kick, D = k.distance;
+    const top = Math.round(H * 0.42), len = H - top - 50, bot = top + len;
+    g.font = `9px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    if (k.phase === 'aim') {
+      const a = ui.kickAim || { aim: 0, power: 0 };
       // power meter
-      g.fillStyle = '#000'; g.fillRect(W - 40, 150, 18, 160);
+      g.fillStyle = '#000'; g.fillRect(W - 40, top, 18, len + 6);
       const pw = Math.min(1.05, a.power || 0);
       g.fillStyle = pw > 1 ? '#ff5a3c' : '#ffe14d';
-      g.fillRect(W - 37, 307 - Math.round(154 * Math.min(1, pw)), 12, Math.round(154 * Math.min(1, pw)));
+      g.fillRect(W - 37, bot + 3 - Math.round(len * Math.min(1, pw)), 12, Math.round(len * Math.min(1, pw)));
       // the distance this kicker needs at full power
       const need = Math.min(1, D / k.maxRange);
-      g.fillStyle = '#fff'; g.fillRect(W - 44, 307 - Math.round(154 * need), 26, 2);
+      g.fillStyle = '#fff'; g.fillRect(W - 44, bot + 3 - Math.round(len * need), 26, 2);
       this.label(ui.touch ? 'SWIPE UP FROM THE BALL TO KICK' : 'DRAG UP FROM THE BALL (OR HOLD SPACE, ←/→ TO AIM)', W / 2, H - 14, '#ffffff');
     }
     // wind + info
@@ -369,10 +416,9 @@ export class Renderer {
     if (k.phase === 'done') {
       g.textAlign = 'center'; g.font = `22px ${FONT}`;
       g.fillStyle = k.result === 'good' ? '#ffe14d' : '#ff6b4a';
-      g.fillText(k.result === 'good' ? "IT'S GOOD!" : 'NO GOOD', W / 2, 200);
-      if (k.why) { g.font = `10px ${FONT}`; g.fillStyle = '#fff'; g.fillText(k.why.toUpperCase(), W / 2, 228); }
+      g.fillText(k.result === 'good' ? "IT'S GOOD!" : 'NO GOOD', W / 2, top + 50);
+      if (k.why) { g.font = `10px ${FONT}`; g.fillStyle = '#fff'; g.fillText(k.why.toUpperCase(), W / 2, top + 78); }
     }
-    this.kickBallScreen = proj(0, 0, 0.2);
   }
 
   burst() {
@@ -389,15 +435,16 @@ export class Renderer {
   toField(px, py) { return { x: (px - W / 2) / SX + this.camX, y: (py - TOP) / SY }; }
 }
 const MIDY = FIELD_W / 2;
+const CROWD_H = 40;
 export const PX_PER_YARD = { x: SX, y: SY };
 
 function makeCrowd() {
   const c = document.createElement('canvas');
-  c.width = 160; c.height = 28;
+  c.width = 160; c.height = CROWD_H;
   const g = c.getContext('2d');
-  g.fillStyle = '#20232f'; g.fillRect(0, 0, 160, 28);
+  g.fillStyle = '#20232f'; g.fillRect(0, 0, 160, CROWD_H);
   const cols = ['#c94f4f', '#e0c060', '#5c8fd6', '#e8e8e8', '#6fbf73', '#b06fd0', '#f08a3c', '#333a4f'];
-  for (let y = 1; y < 28; y += 4) for (let x = (y % 8 === 1 ? 0 : 2); x < 160; x += 4) {
+  for (let y = 1; y < CROWD_H; y += 4) for (let x = (y % 8 === 1 ? 0 : 2); x < 160; x += 4) {
     g.fillStyle = cols[(x * 7 + y * 13) % cols.length];
     g.fillRect(x, y, 2, 2);
     g.fillStyle = '#f1c27d'; g.fillRect(x, y - 1, 2, 1);

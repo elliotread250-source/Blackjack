@@ -6,7 +6,7 @@ import {
   startNextSeason, ROUNDS, SEASON_WEEKS,
 } from './career.js';
 import { Match, handoff, setAim, throwBall, dive, flightTime, fmtClock } from './match.js';
-import { Renderer, W, H, PX_PER_YARD } from './render.js';
+import { Renderer, W, H, PX_PER_YARD, UI_SCALE } from './render.js';
 import { sfx, setSound } from './audio.js';
 
 const $ = s => document.querySelector(s);
@@ -426,12 +426,17 @@ const R = new Renderer(cv);
 let M = null, matchMeta = null, raf = 0, last = 0, paused = false;
 const ui = { hints: true, touch, kickAim: null };
 
+// The canvas fills the screen (16:9) and its backing store is the real device pixels, so nothing gets
+// stretched by the browser: the renderer scales the pixel art itself and draws text at full resolution.
 function layout() {
-  const vw = window.innerWidth, vh = window.innerHeight;
-  const scale = Math.min(vw / W, vh / H);
-  const s = scale >= 1 ? Math.floor(scale * 4) / 4 : scale;
-  cv.style.width = `${W * s}px`; cv.style.height = `${H * s}px`;
+  const vw = window.innerWidth, vh = window.innerHeight, dpr = Math.min(window.devicePixelRatio || 1, 3);
+  R.setAspect(vw / vh);
+  const s = Math.min(vw / W, vh / H);
+  const pw = Math.round(W * s * dpr), ph = Math.round(H * s * dpr);
+  cv.style.width = `${pw / dpr}px`; cv.style.height = `${ph / dpr}px`;
   cv.style.left = `${(vw - W * s) / 2}px`; cv.style.top = `${(vh - H * s) / 2}px`;
+  R.resize(pw, ph);
+  if (M) R.draw(M, 0, ui);
   const g = $('#gbtns');
   g.style.right = `${Math.max(6, (vw - W * s) / 2 + 6)}px`; g.style.bottom = `${Math.max(6, (vh - H * s) / 2 + 6)}px`;
 }
@@ -458,24 +463,28 @@ async function startMatch() {
   $$('.choice').forEach(x => x.classList.remove('on'));
   show('game');
   layout();
-  last = performance.now();
+  last = performance.now(); acc = 0;
   cancelAnimationFrame(raf);
   raf = requestAnimationFrame(frame);
 }
 
-let lastStage = '';
+// Locked to 60 steps a second like the original (a GameMaker room speed of 60): the game moves in fixed
+// 1/60 s steps and a frame is drawn only after a step, so 120/144 Hz screens don't run it any faster or smoother.
+const STEP = 1 / 60;
+let acc = 0, lastStage = '';
 function frame(now) {
   raf = requestAnimationFrame(frame);
-  const dt = Math.min(0.05, (now - last) / 1000);
+  acc = Math.min(acc + (now - last) / 1000, 0.1);
   last = now;
   if (!M) return;
-  if (!paused) {
-    // fixed-ish sub-steps keep collisions stable
-    let left = dt;
-    while (left > 0) { const s = Math.min(left, 1 / 60); stepKeys(s); M.update(s); left -= s; }
-    drainEvents();
+  let steps = 0;
+  while (acc >= STEP - 0.0005) {
+    acc -= STEP; steps++;
+    if (!paused) { stepKeys(STEP); M.update(STEP); }
   }
-  R.draw(M, paused ? 0 : dt, ui);
+  if (!steps) return;
+  if (!paused) drainEvents();
+  R.draw(M, paused ? 0 : STEP * steps, ui);
   if (M.stage !== lastStage) onStage(M.stage, lastStage);
   lastStage = M.stage;
 }
@@ -563,7 +572,13 @@ async function endMatch() {
     ${report && report.injuries.length ? `<div style="color:var(--red)">INJURED: ${esc(report.injuries.join(', '))}</div>` : ''}`;
   $('#ch-final').classList.add('on');
   // keep drawing (confetti) under the panel
-  const loop = now => { if (!$('#ch-final').classList.contains('on')) return; R.draw(M, 1 / 60, ui); raf = requestAnimationFrame(loop); };
+  let t0 = performance.now();
+  const loop = now => {
+    if (!$('#ch-final').classList.contains('on')) return;
+    raf = requestAnimationFrame(loop);
+    if (now - t0 < 1000 / 60 - 0.5) return;
+    t0 = now; R.draw(M, 1 / 60, ui);
+  };
   raf = requestAnimationFrame(loop);
 }
 $('#btn-final').onclick = async () => {
@@ -585,6 +600,10 @@ $('#btn-final').onclick = async () => {
 function canvasPoint(e) {
   const r = cv.getBoundingClientRect();
   return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
+}
+// drag distances in the units the controls were tuned in (640 px wide)
+function dragOf(pt, gesture) {
+  return { dx: (pt.x - gesture.sx) / UI_SCALE, dy: (pt.y - gesture.sy) / UI_SCALE };
 }
 let gesture = null;
 cv.addEventListener('pointerdown', e => {
@@ -616,9 +635,9 @@ cv.addEventListener('pointermove', e => {
   if (!gesture || !M) return;
   const pt = canvasPoint(e);
   const P = M.play;
-  const dx = pt.x - gesture.sx, dy = pt.y - gesture.sy;
+  const { dx, dy } = dragOf(pt, gesture);
   if (gesture.mode === 'kick') {
-    const up = Math.max(0, gesture.sy - pt.y);
+    const up = Math.max(0, -dy);
     ui.kickAim = { active: true, power: up / 190, aim: up > 4 ? dx / up * 0.3 : 0 };
     return;
   }
@@ -633,11 +652,11 @@ cv.addEventListener('pointermove', e => {
   if (gesture.mode === 'aim') {
     // slingshot: pull back, the ball goes the other way
     const k = 2.3;
-    setAim(M, P.qb.x - dx / PX_PER_YARD.x * k, P.qb.y - dy / PX_PER_YARD.y * k);
+    setAim(M, P.qb.x - dx / PX_PER_YARD.x * k, P.qb.y - dy / (PX_PER_YARD.y / UI_SCALE) * k);
   } else if (gesture.mode === 'scramble') {
     P.scramble = true;
     P.intent.tx = P.qb.x + dx / PX_PER_YARD.x * 0.4 + 1;
-    P.intent.ty = P.qb.y + dy / PX_PER_YARD.y * 0.6;
+    P.intent.ty = P.qb.y + dy / (PX_PER_YARD.y / UI_SCALE) * 0.6;
   }
 });
 function pointerEnd(e) {
