@@ -608,6 +608,26 @@
   });
   Sound.onChange(syncMute);
 
+  /* ---------- music (off by default, switched on in settings) ---------- */
+  var Music = window.GameMusic.create({ storageKey: 'snake.music', src: 'music/butterflies.mp3', volume: 0.5 });
+  function syncMusic() {
+    var seg = $('musicSeg');
+    if (!seg) return;
+    Array.prototype.forEach.call(seg.querySelectorAll('button'), function (b) {
+      var sel = (b.getAttribute('data-music') === 'on') === Music.isOn();
+      b.classList.toggle('sel', sel);
+      b.setAttribute('aria-pressed', sel ? 'true' : 'false');
+    });
+  }
+  $('musicSeg').addEventListener('click', function (e) {
+    var btn = e.target.closest('button');
+    if (!btn) return;
+    if (e.detail > 0) btn.blur();
+    Music.set(btn.getAttribute('data-music') === 'on');
+  });
+  Music.onChange(syncMusic);
+  syncMusic();
+
   var segs = document.querySelectorAll('[data-setting]');
   Array.prototype.forEach.call(segs, function (seg) {
     var key = seg.getAttribute('data-setting');

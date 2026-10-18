@@ -83,6 +83,19 @@
   }
   function toggleMute() { setMuted(!S.isMuted()); }
 
+  // music: off by default, switched on from the title screen
+  const Music = window.GameMusic.create({ storageKey: 'breakout.music', src: 'music/bonkers.mp3', volume: 0.5 });
+  function syncMusic() {
+    document.querySelectorAll('#music-seg button').forEach(function (b) {
+      b.setAttribute('aria-pressed', (b.dataset.music === 'on') === Music.isOn() ? 'true' : 'false');
+    });
+  }
+  Music.onChange(syncMusic);
+  document.querySelectorAll('#music-seg button').forEach(function (b) {
+    b.addEventListener('click', function () { Music.set(b.dataset.music === 'on'); });
+  });
+  syncMusic();
+
   function setTouch(v) {
     if (v === touchMode) return;
     touchMode = v;

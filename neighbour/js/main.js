@@ -30,6 +30,7 @@ try {
   throw e;
 }
 const sound = new Sound(settings.volume);
+const music = window.GameMusic.create({ storageKey: 'nosy.music', src: 'music/disguise.mp3', volume: 0.5 * settings.volume });
 const input = new Input($('game'), isTouch ? $('touch') : null);
 input.sens = settings.sens; input.invertY = settings.invertY;
 $('loading').hidden = true;
@@ -146,10 +147,11 @@ $('w-menu').onclick = () => setMode('title');
 function syncSettings() {
   $('o-sens').value = settings.sens; $('o-vol').value = settings.volume;
   const seg = (id, v) => { for (const b of $(id).children) b.classList.toggle('on', b.dataset.v === String(v)); };
-  seg('o-inv', settings.invertY ? 1 : 0); seg('o-q', settings.quality); seg('o-diff', world && mode !== 'title' ? world.diffKey : settings.difficulty);
+  seg('o-music', music.isOn() ? 1 : 0); seg('o-inv', settings.invertY ? 1 : 0); seg('o-q', settings.quality); seg('o-diff', world && mode !== 'title' ? world.diffKey : settings.difficulty);
 }
 $('o-sens').oninput = e => { settings.sens = +e.target.value; input.sens = settings.sens; saveSettings(); };
-$('o-vol').oninput = e => { settings.volume = +e.target.value; sound.setVolume(settings.volume); saveSettings(); };
+$('o-vol').oninput = e => { settings.volume = +e.target.value; sound.setVolume(settings.volume); music.setVolume(0.5 * settings.volume); saveSettings(); };
+for (const b of $('o-music').children) b.onclick = () => { music.set(b.dataset.v === '1'); syncSettings(); };
 for (const b of $('o-inv').children) b.onclick = () => { settings.invertY = b.dataset.v === '1'; input.invertY = settings.invertY; saveSettings(); syncSettings(); };
 for (const b of $('o-q').children) b.onclick = () => { if (settings.quality === b.dataset.v) return; settings.quality = b.dataset.v; saveSettings(); rebuildRenderer(); syncSettings(); };
 for (const b of $('o-diff').children) b.onclick = () => {
