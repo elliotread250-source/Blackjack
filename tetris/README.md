@@ -21,3 +21,25 @@ node tools/test.cjs # rules engine tests (bag, SRS kicks, hold, lock delay, scor
 ```
 
 The "← Arcade" link goes to the live hub; served from localhost it points at `http://localhost:8084`, and `?hub=<url>` (localhost or `*.up.railway.app` only) overrides it for the tab.
+
+## Shared leaderboard
+
+The menu and results screen include a top-10 leaderboard: Marathon ranks by score
+(highest first, then fastest time); 40 Lines ranks completed runs by time (fastest
+first). Players can enter a public nickname and save once per finished run.
+Repeated requests for the same game ID are idempotent. Network failures allow retry.
+Names are rendered as text and validated on the server, along with result values.
+This is a casual, client-reported leaderboard, not a cheat-proof competition.
+
+Scores use Python's built-in SQLite. In Railway, mount a persistent volume at
+`/data`; `RAILWAY_VOLUME_MOUNT_PATH` selects it automatically. Locally, set
+`TETRIS_DATA_DIR` to a directory outside this public app folder (default:
+`/tmp/tetris-data`). Never put the database under the static document root.
+One service replica is required for this SQLite setup. No extra database service
+or Python dependencies are needed.
+
+API: `GET /api/leaderboard?mode=marathon|sprint`, and `POST /api/leaderboard`
+with JSON containing `id` (UUID), `mode`, `name`, `score`, `time_ms`, and `lines`.
+
+Run storage/validation checks from the repository root:
+`python -m unittest discover -s tetris/tools -p 'test_*.py'`.

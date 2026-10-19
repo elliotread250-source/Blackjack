@@ -50,8 +50,9 @@
     }
 
     onKeyDown(e) {
+      if (document.querySelector('dialog[open]')) return;
       const tg = e.target;
-      if (tg && (tg.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(tg.tagName))) return;
+      if (tg && (tg.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(tg.tagName))) return;
       const a = this.actionFor(e);
       if (!a) return;
       // Ctrl+key browser shortcuts (Ctrl+R etc.) are left alone; plain Ctrl rotates.
