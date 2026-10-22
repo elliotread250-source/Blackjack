@@ -181,6 +181,21 @@
     #logo { margin-bottom: 10px; }
     .keys { display: none; }
   }
+  #leaderboard-dialog { color: var(--text); background: #10152b; max-height: calc(100dvh - 32px); }
+  #leaderboard-dialog::backdrop { background: rgba(4, 6, 14, .8); }
+  #leaderboard-dialog h2 { font-size: 21px; }
+  .leaderboard-table { width: 100%; border-collapse: collapse; margin: 14px 0; text-align: left; font-size: 14px; font-variant-numeric: tabular-nums; }
+  .leaderboard-table th { color: var(--muted); font-size: 11px; text-transform: uppercase; }
+  .leaderboard-table th, .leaderboard-table td { padding: 9px 5px; border-bottom: 1px solid var(--line); }
+  .leaderboard-table td:nth-child(2) { overflow-wrap: anywhere; }
+  .leaderboard-table th:last-child, .leaderboard-table td:last-child { text-align: right; white-space: nowrap; }
+  .leaderboard-table tr.mine { color: var(--gold); background: rgba(255, 215, 106, .07); }
+  #score-form { margin: 0 0 16px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; text-align: left; }
+  #score-form label { display: block; font-size: 13px; margin-bottom: 8px; }
+  #player-name { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: #070912; color: var(--text); font: inherit; font-size: 16px; user-select: text; }
+  #player-name:focus-visible { outline: 2px solid var(--accent2); }
+  button:disabled { opacity: .6; cursor: default; }
+  .leaderboard-status { color: var(--muted); font-size: 13px; line-height: 1.5; }
 </style>
 </head>
 <body data-screen="title">
@@ -231,6 +246,7 @@
     </div>
     <div class="best" id="title-best">Best 0</div>
     <button class="primary" type="button" id="btn-start">Start</button>
+    <button class="secondary" type="button" id="btn-leaderboard">Leaderboard</button>
     <button class="chip music-chip" type="button" aria-pressed="true">Music: On</button>
     <p class="hint kb">Enter to start &middot; &larr; &rarr; level &middot; &uarr; &darr; mode</p>
     <div class="keys kb">
@@ -262,12 +278,34 @@
     <h2 id="over-title">Game Over</h2>
     <div class="newbest" id="over-newbest" hidden>New best!</div>
     <div class="stats" id="over-stats"></div>
+    <form id="score-form" hidden>
+      <label for="player-name">Add your result to the leaderboard</label>
+      <input id="player-name" name="player" maxlength="20" placeholder="Player name" autocomplete="nickname" required>
+      <button class="secondary" type="submit" id="btn-save-score">Save score</button>
+      <p class="leaderboard-status" id="score-status" role="status" aria-live="polite">Names and results are public.</p>
+    </form>
     <button class="primary" type="button" id="btn-again">Play again</button>
     <button class="secondary" type="button" id="btn-over-menu">Menu</button>
+    <button class="secondary" type="button" id="btn-over-leaderboard">Leaderboard</button>
     <p class="hint kb">Enter to play again &middot; Esc for menu</p>
   </section>
 </div>
 
+<dialog class="card" id="leaderboard-dialog" aria-labelledby="leaderboard-heading">
+  <h2 id="leaderboard-heading">Leaderboard</h2>
+  <div class="seg" role="group" aria-label="Leaderboard mode">
+    <button type="button" data-leaderboard-mode="marathon" aria-pressed="true">Marathon</button>
+    <button type="button" data-leaderboard-mode="sprint" aria-pressed="false">40 Lines</button>
+  </div>
+  <p class="leaderboard-status" id="leaderboard-status" role="status" aria-live="polite"></p>
+  <table class="leaderboard-table" aria-label="Top 10 results">
+    <thead><tr><th scope="col">Rank</th><th scope="col">Player</th><th scope="col" id="leaderboard-value">Score</th></tr></thead>
+    <tbody id="leaderboard-rows"></tbody>
+  </table>
+  <button class="secondary" type="button" id="btn-refresh-leaderboard">Refresh</button>
+  <button class="secondary" type="button" id="btn-close-leaderboard">Close</button>
+</dialog>
+<script src="js/leaderboard.js"></script>
 <script src="js/engine.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/render.js"></script>

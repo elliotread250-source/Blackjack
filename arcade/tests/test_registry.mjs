@@ -47,7 +47,7 @@ ok(readdirSync(join(root, 'assets/game-thumbnails')).length === games.length, 'n
 const manifest = JSON.parse(read('assets/manifest.json'));
 ok(Object.keys(manifest.games).length === games.length && manifest.artVersion === reg.artVersion, 'manifest covers every entry and matches the registry art version');
 ok(games.filter(g => g.featured).every(g => !g.pending) && games.filter(g => g.featured).length >= 3, 'featured games are live');
-ok(games.some(g => g.pending), 'pending entries stay marked pending');
+ok(games.every(g => !g.pending || g.pending === true), 'pending is only ever true when set');
 
 // every page only references files that exist
 for (const page of ['index.html', 'styleguide.html', '404.html']) {

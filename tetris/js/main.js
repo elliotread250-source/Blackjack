@@ -78,6 +78,7 @@
       this.last = performance.now();
       this.demo = new Demo(this);
       this.input = new window.TetrisInput(this, this.canvas, $('touch'));
+      this.leaderboard = new window.TetrisLeaderboard(this);
       this.bindUI();
       this.applyTouchClass();
       this.resize();
@@ -240,6 +241,7 @@
 
     // ------------------------------------------------------------- flow
     start() {
+      this.leaderboard.reset();
       this.sound.unlock();
       store.set('mode', this.mode);
       store.set('level', this.startLevel);
@@ -321,6 +323,7 @@
     showOverCard() {
       const g = this.game;
       this.overShown = true;
+      this.leaderboard.prepare(g, this.complete);
       const sprint = this.mode === 'sprint';
       $('over-title').textContent = this.complete ? '40 Lines Clear!' : 'Game Over';
       $('over-newbest').hidden = !this.newBest;
@@ -405,6 +408,7 @@
 
     // ------------------------------------------------------------- input
     onAction(a, down, repeat) {
+      if (this.leaderboard.dialog.open) return;
       if (a === 'mute') { if (down && !repeat) this.toggleMute(); return; }
       if (a === 'music') { if (down && !repeat) this.toggleMusic(); return; }
       const s = this.screen;
