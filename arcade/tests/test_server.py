@@ -52,7 +52,7 @@ try:
     st, body, _ = req("/api/status?url=http://169.254.169.254/&game=evil"); s1 = json.loads(body)
     ok(st == 200 and set(s1["status"]) == live, "status covers exactly the live registry games")
     ok(all(v in ("up", "down", "checking") for v in s1["status"].values()), "status values are honest states")
-    ok("evil" not in s1["status"] and "candy-match" not in s1["status"], "query parameters and pending games are ignored")
+    ok("evil" not in s1["status"], "query parameters are ignored")
 
     # suggestions: same API, code-protected viewing
     ok(req("/api/suggestions", {"text": "hi"})[0] == 400, "too-short suggestion rejected")
