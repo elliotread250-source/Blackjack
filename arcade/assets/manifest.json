@@ -370,7 +370,16 @@
    "logoBytes": 1504,
    "thumbnailBytes": 51605,
    "momentBytes": 2025
+  },
+  "trap-race": {
+   "name": "Trap Race",
+   "logo": "assets/game-logos/trap-race.svg",
+   "thumbnail": "assets/game-thumbnails/trap-race.svg",
+   "moment": "assets/game-moments/trap-race.svg",
+   "logoBytes": 1630,
+   "thumbnailBytes": 6667,
+   "momentBytes": 1855
   }
  },
- "artVersion": "b3f4cb13aa"
+ "artVersion": "6be8d4d36b"
 }

@@ -104,3 +104,9 @@ LOGOS['retro-bowl'] = () => {
     B(3, 3, 7, 1, '#6a3410') + B(2, 4, 9, 4, '#7a3e12') + B(3, 8, 7, 1, '#6a3410') + B(1, 5, 1, 2, '#7a3e12') + B(11, 5, 1, 2, '#7a3e12') +
     B(4, 5.6, 5, .5, '#fff') + B(5, 5, .5, 1.7, '#fff') + B(6.5, 5, .5, 1.7, '#fff') + B(8, 5, .5, 1.7, '#fff') + B(2.2, 4.3, 1, 1, '#a35a24'));
 };
+LOGOS['trap-race'] = () => tile('#3a2d8f', '#17123a',
+  rect(10, 70, 76, 14, '#a35a4a', 'rx="3"') + rect(10, 70, 76, 4, '#e0a16a', 'rx="2"') +
+  path('M18 70 L24 58 L30 70Z M30 70 L36 58 L42 70Z', '#dfe4ef', 'stroke="#5b6074" stroke-width="1.5"') +
+  line(70, 70, 70, 22, '#e8e8f0', 3) + path('M70 22 Q80 18 90 26 Q80 32 70 32Z', '#ff5e8a') +
+  g('transform="translate(52 44) rotate(-12)"', rect(-7, -6, 14, 14, '#f08a2c', 'rx="5" stroke="#1a0e2e" stroke-width="1.6"') + circ(0, -12, 7, '#f08a2c', 'stroke="#1a0e2e" stroke-width="1.6"') + path('M-6 -16 L-3 -24 L0 -17Z M2 -17 L5 -24 L7 -15Z', '#f08a2c', 'stroke="#1a0e2e" stroke-width="1.2"') + circ(3, -13, 1.4, '#1a0e2e')) +
+  text(48, 94, 'TRAP RACE', 10, '#ffd25e', `${SANS} text-anchor="middle" letter-spacing=".5"`));

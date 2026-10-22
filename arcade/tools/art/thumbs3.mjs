@@ -255,3 +255,38 @@ THUMBS['retro-bowl'] = () => {
     text(320, 315, 'RETRO BOWL', 26, '#ffe14d', `font-family="monospace" font-weight="700" text-anchor="middle" letter-spacing="3"`);
   return svg(W, H, defs + finish('v', .35).defs, b + finish('v', .35).body, { pixel: true });
 };
+
+THUMBS['trap-race'] = () => {
+  const defs = lg('sky', 0, 0, 0, 1, [[0, '#2b2d6e'], [1, '#f08a6c']]) + rg('bh', .5, .5, .5, [[0, '#7a3cdc', .55], [1, '#7a3cdc', 0]]) + blur('gl', 6);
+  let b = rect(0, 0, W, H, 'url(#sky)');
+  // far skyline
+  for (let i = 0; i < 12; i++) b += rect(i * 56 - 10, 150 + ((i * 37) % 5) * 18, 50, 260, '#3b3570');
+  for (let i = 0; i < 9; i++) b += rect(i * 76, 200 + ((i * 53) % 4) * 16, 66, 200, '#54487f');
+  // rooftops
+  const roof = (x, y, w) => rect(x, y, w, H - y, '#a35a4a') + rect(x, y, w, 9, '#e0a16a') + rect(x, y + 9, w, 4, '#5b2f33', 'opacity=".4"');
+  b += roof(0, 270, 170) + roof(230, 250, 160) + roof(450, 222, 190);
+  // player-built course: crates, a plank bridge, spikes, barbed wire
+  const crate = (x, y) => rect(x, y, 36, 36, '#8f6ad8', 'stroke="#2a1850" stroke-width="2"') + rect(x + 3, y + 3, 30, 5, '#fff', 'opacity=".2"');
+  b += crate(300, 214) + crate(336, 214) + crate(336, 178) + rect(170, 238, 60, 10, '#c98b4f', 'stroke="#6a3a1a" stroke-width="2"');
+  for (let i = 0; i < 5; i++) b += path(`M${236 + i * 12} 250 L${242 + i * 12} 234 L${248 + i * 12} 250Z`, '#dfe4ef', 'stroke="#5b6074" stroke-width="1.5"');
+  for (let i = 0; i < 6; i++) b += circ(456 + i * 10, 218, 5, 'none', 'stroke="#c9ced8" stroke-width="2"');
+  // tripod sniper with a warning sight
+  b += line(352, 178, 340, 160, '#3b3f52', 3) + line(352, 178, 364, 160, '#3b3f52', 3) + rect(338, 148, 30, 12, '#4b5068', 'rx="3"') + rect(366, 151, 26, 5, '#2b2f40') + line(392, 153, 640, 153, '#ff3030', 2, 'opacity=".6"');
+  // black hole
+  b += circ(560, 110, 70, 'url(#bh)') + path('M560 80 Q600 96 586 120 Q570 140 548 128', 'none', 'stroke="#d6b8ff" stroke-width="3" opacity=".7"') + circ(560, 110, 14, '#05010f', 'stroke="#ff3bd0" stroke-width="3"');
+  // flag
+  b += line(600, 222, 600, 160, '#e8e8f0', 4) + path('M600 160 Q620 152 640 166 Q620 176 600 172Z', '#ff5e8a');
+  // fox mid wall-jump with a coin
+  b += g('transform="translate(250 150) rotate(-14)"',
+    path('M-14 10 Q-34 16 -32 -4 Q-24 2 -12 2Z', '#f08a2c', 'stroke="#1a0e2e" stroke-width="2.5"') +
+    rect(-14, -14, 28, 30, '#f08a2c', 'rx="10" stroke="#1a0e2e" stroke-width="2.5"') + ell(2, 2, 8, 9, '#fff3e2') +
+    circ(0, -28, 15, '#f08a2c', 'stroke="#1a0e2e" stroke-width="2.5"') + path('M-10 -38 L-4 -54 L2 -40Z M4 -40 L12 -54 L14 -36Z', '#f08a2c', 'stroke="#1a0e2e" stroke-width="2"') +
+    ell(8, -24, 8, 6, '#fff3e2') + circ(4, -31, 2.4, '#1a0e2e') + circ(12, -31, 2.4, '#1a0e2e') +
+    line(-8, 16, -16, 34, '#7a3a12', 7, 'stroke-linecap="round"') + line(8, 16, 18, 28, '#7a3a12', 7, 'stroke-linecap="round"') +
+    line(12, -8, 30, -24, '#f08a2c', 6, 'stroke-linecap="round"') + line(-12, -8, -28, -20, '#f08a2c', 6, 'stroke-linecap="round"'));
+  b += circ(250, 96, 11, '#ffcf33', 'stroke="#a66a00" stroke-width="2.5"') + circ(246, 92, 3, '#fff1a8');
+  b += circ(200, 150, 26, '#ffd25e', 'opacity=".25" filter="url(#gl)"');
+  b += text(26, 54, 'TRAP RACE', 40, '#ffd25e', `${SANS} letter-spacing="2" stroke="#5b1f4a" stroke-width="2" paint-order="stroke"`) + text(28, 80, 'draft · build · race', 16, '#f2f5fa', `${SANS} opacity=".85"`);
+  return T(defs, b, finish('v', .38));
+};
+

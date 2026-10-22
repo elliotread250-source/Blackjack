@@ -14,8 +14,9 @@ const slug = s => s.toLowerCase().replace(/replica|extreme/g, '').replace(/[^a-z
 const KEY = /^[a-z0-9][a-z0-9-]{0,47}$/;
 const CATS = new Set(['arcade', 'action', 'racing', 'puzzle', 'strategy', 'platformer', 'multiplayer', 'classic', 'casual', 'board', '3d', 'tool']);
 const FEATS = new Set(['online', 'local2p', 'coop', 'bots', 'touch', 'daily', 'saves', 'leaderboard']);
-// online multiplayer only where networking was verified with two live clients (tools/mp-turn-test.mjs, tools/mp-probe.mjs) or Apex GP's live net.js
-const ONLINE_VERIFIED = new Set(['pool', 'kart-racer', 'pong', 'connect-4', 'apex-gp', 'chess', 'tic-tac-toe']);
+// online multiplayer only where networking was verified with two live clients (tools/mp-turn-test.mjs, tools/mp-probe.mjs) or Apex GP's live net.js;
+// Trap Race: verified by its own two-browser e2e run (Trap_race repo, tests/e2e/run.mjs)
+const ONLINE_VERIFIED = new Set(['pool', 'kart-racer', 'pong', 'connect-4', 'apex-gp', 'chess', 'tic-tac-toe', 'trap-race']);
 
 ok(games.length >= 39, `all ${games.length} entries present`);
 ok(new Set(games.map(g => g.id)).size === games.length, 'ids are unique');

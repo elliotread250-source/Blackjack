@@ -871,7 +871,31 @@
    "accent": "#ffe14d",
    "shelf": 40,
    "featured": 5
+  },
+  {
+   "id": "trap-race",
+   "name": "Trap Race",
+   "kind": "game",
+   "url": "https://trap-race-production.up.railway.app",
+   "blurb": "2–6 player party platformer. Draft one item each round, bolt it onto a shared course, then race to the flag through everyone's traps. Online rooms or bots.",
+   "genres": [
+    "Party platformer",
+    "Multiplayer"
+   ],
+   "categories": [
+    "platformer",
+    "multiplayer",
+    "action",
+    "casual"
+   ],
+   "features": [
+    "online",
+    "bots"
+   ],
+   "keywords": "trap race party platformer build obstacle course draft sniper cannon black hole wall jump multiplayer friends bots ultimate chicken horse",
+   "accent": "#ffd25e",
+   "shelf": 41
   }
  ],
- "artVersion": "b3f4cb13aa"
+ "artVersion": "6be8d4d36b"
 }
