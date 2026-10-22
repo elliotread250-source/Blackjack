@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#3b2414">
+<title>Cookie Clicker</title>
+<meta name="description" content="Click the big cookie. Hire grandmas, build farms, factories and portals, catch golden cookies and bake trillions.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <section class="bakery">
+    <div class="bakery-head">
+      <h1 id="bakery-name">Your bakery</h1>
+      <div class="count"><span id="cookies">0</span> <small>cookies</small></div>
+      <div class="rate">per second: <span id="cps">0</span><span id="buff" class="buff"></span></div>
+    </div>
+    <button id="cookie" class="cookie" aria-label="Click the big cookie">
+      <svg viewBox="0 0 200 200" aria-hidden="true">
+        <defs>
+          <radialGradient id="dough" cx="42%" cy="38%" r="70%"><stop offset="0" stop-color="#f1c27d"/><stop offset=".65" stop-color="#d89a52"/><stop offset="1" stop-color="#a8692e"/></radialGradient>
+          <radialGradient id="chip" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#6b3f22"/><stop offset="1" stop-color="#2e170a"/></radialGradient>
+        </defs>
+        <path d="M100 8c14 0 18 7 30 10s22 4 30 15 4 19 10 30 14 17 12 31-12 18-14 30-2 22-12 31-21 6-32 12-18 15-31 15-19-8-31-13-24-5-31-15-1-21-8-32-14-15-14-29 9-19 12-31 0-24 10-33 20-6 31-12S86 8 100 8z" fill="url(#dough)" stroke="#8c5424" stroke-width="3"/>
+        <g fill="url(#chip)">
+          <ellipse cx="62" cy="58" rx="13" ry="10" transform="rotate(-20 62 58)"/><ellipse cx="128" cy="48" rx="10" ry="8"/>
+          <ellipse cx="150" cy="96" rx="12" ry="9" transform="rotate(30 150 96)"/><ellipse cx="96" cy="100" rx="14" ry="11"/>
+          <ellipse cx="52" cy="122" rx="11" ry="9" transform="rotate(15 52 122)"/><ellipse cx="118" cy="148" rx="13" ry="9" transform="rotate(-25 118 148)"/>
+          <ellipse cx="76" cy="164" rx="8" ry="6"/><ellipse cx="160" cy="136" rx="8" ry="6"/><ellipse cx="100" cy="30" rx="7" ry="5"/>
+        </g>
+        <g fill="#fff" opacity=".18"><ellipse cx="66" cy="54" rx="4" ry="2.5"/><ellipse cx="130" cy="45" rx="3" ry="2"/><ellipse cx="92" cy="96" rx="4" ry="2.5"/></g>
+      </svg>
+    </button>
+    <div id="fx" class="fx" aria-hidden="true"></div>
+    <div class="news" aria-live="off"><span id="news">You feel like making cookies. But nobody wants to eat your cookies.</span></div>
+  </section>
+
+  <section class="store">
+    <div class="store-head">
+      <h2>Store</h2>
+      <div class="amounts" role="radiogroup" aria-label="Buy amount">
+        <button data-amt="1" role="radio">1</button><button data-amt="10" role="radio">10</button><button data-amt="100" role="radio">100</button>
+      </div>
+    </div>
+    <div id="upgrades" class="upgrades" aria-label="Upgrades"></div>
+    <p id="no-upgrades" class="empty">Upgrades appear here as your bakery grows.</p>
+    <div id="buildings" class="buildings"></div>
+    <div class="store-foot">
+      <button id="stats-btn">📊 Stats</button>
+      <button id="board-btn">🏆 Leaderboard</button>
+      <button id="mute" aria-label="Mute">🔊</button>
+    </div>
+  </section>
+</div>
+
+<button id="golden" class="golden" hidden aria-label="Golden cookie!">
+  <svg viewBox="0 0 100 100" aria-hidden="true"><defs><radialGradient id="gold" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#fff6b0"/><stop offset=".6" stop-color="#f5c542"/><stop offset="1" stop-color="#b8860b"/></radialGradient></defs>
+    <circle cx="50" cy="50" r="44" fill="url(#gold)" stroke="#a87700" stroke-width="3"/><g fill="#c28e0e"><circle cx="35" cy="34" r="6"/><circle cx="64" cy="40" r="5"/><circle cx="46" cy="62" r="7"/><circle cx="70" cy="66" r="4"/></g></svg>
+</button>
+
+<div id="tooltip" class="tooltip" hidden></div>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<dialog id="board" class="stats">
+  <form method="dialog">
+    <h2>🏆 Biggest bakeries</h2>
+    <p class="lb-me" id="lb-me"></p>
+    <ol id="lb-list" class="lb-list"></ol>
+    <p id="lb-msg" class="lb-msg"></p>
+    <div class="dialog-foot">
+      <button type="button" id="lb-name">Set your name</button>
+      <button value="close" class="primary">Close</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="stats" class="stats">
+  <form method="dialog">
+    <h2>Stats</h2>
+    <dl id="stat-list"></dl>
+    <h3>Achievements <span id="ach-count"></span></h3>
+    <div id="ach-grid" class="ach-grid"></div>
+    <div class="dialog-foot">
+      <button type="button" id="rename">Rename bakery</button>
+      <button type="button" id="wipe" class="danger">Wipe save</button>
+      <button value="close" class="primary">Close</button>
+    </div>
+  </form>
+</dialog>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

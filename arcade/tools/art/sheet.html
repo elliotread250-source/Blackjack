@@ -1,0 +1,9 @@
+<!doctype html><meta charset="utf-8"><title>Art contact sheet</title>
+<style>body{margin:0;background:#080b10;color:#ccc;font:12px system-ui;display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:10px}
+figure{margin:0;background:#141a22;border-radius:8px;overflow:hidden}img.t{width:100%;display:block}figcaption{display:flex;align-items:center;gap:8px;padding:6px}
+img.l{width:44px;height:44px}img.s{width:24px;height:24px}</style>
+<script type="module">
+const r = await (await fetch('/registry.json')).json();
+const v = '?v=' + Date.now();
+for (const g of r.games) document.body.insertAdjacentHTML('beforeend', `<figure><img class="t" src="/assets/game-thumbnails/${g.id}.svg${v}"><figcaption><img class="l" src="/assets/game-logos/${g.id}.svg${v}"><img class="s" src="/assets/game-logos/${g.id}.svg${v}">${g.name}</figcaption></figure>`);
+</script>

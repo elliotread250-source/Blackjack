@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#121213" media="(prefers-color-scheme: dark)">
+  <meta name="color-scheme" content="light dark">
+  <meta name="description" content="Wordle: guess the hidden five-letter word in six tries. A free daily puzzle plus unlimited practice, with hard mode, dark mode and saved statistics.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="format-detection" content="telephone=no">
+  <title>Wordle</title>
+  <link rel="icon" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    // Pick the theme before first paint so a dark-mode player never sees a white flash.
+    (function () {
+      var s = {};
+      try { s = JSON.parse(localStorage.getItem('oa-wordle:settings') || '{}') || {}; } catch (e) { s = {}; }
+      var dark = s.theme === 'dark' || (s.theme !== 'light' && window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      var el = document.documentElement;
+      el.setAttribute('data-theme', dark ? 'dark' : 'light');
+      if (s.contrast) el.setAttribute('data-contrast', 'high');
+    })();
+  </script>
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="header">
+      <div class="h-side h-left">
+        <a class="arcade-link" href="https://open-arcade.up.railway.app" title="More free games">&larr; Arcade</a>
+      </div>
+      <h1 class="title">Wordle</h1>
+      <div class="h-side h-right">
+        <button class="icon-btn" id="btn-help" type="button" aria-label="How to play" title="How to play">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="M9.4 9.3a2.7 2.7 0 0 1 5.2 1c0 1.8-2.6 2.2-2.6 4" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="17.3" r="1.15" fill="currentColor"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-stats" type="button" aria-label="Statistics" title="Statistics">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/><rect x="5.2" y="11" width="3.2" height="7" rx="0.6" fill="currentColor"/><rect x="10.4" y="5" width="3.2" height="13" rx="0.6" fill="currentColor"/><rect x="15.6" y="8.5" width="3.2" height="9.5" rx="0.6" fill="currentColor"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-sound" type="button" aria-label="Sound" aria-pressed="true" title="Sound (on/off)">
+          <svg class="ico-on" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.2L12 5.6v12.8l-4.8-3.9H4z" fill="currentColor"/><path d="M15.5 9a4.2 4.2 0 0 1 0 6M18 6.5a7.8 7.8 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <svg class="ico-off" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9.5h3.2L12 5.6v12.8l-4.8-3.9H4z" fill="currentColor"/><path d="M15.5 9.5l5 5M20.5 9.5l-5 5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-settings" type="button" aria-label="Settings" title="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M19.4 13c.04-.33.06-.66.06-1s-.02-.67-.06-1l2.1-1.65a.5.5 0 0 0 .12-.64l-2-3.46a.5.5 0 0 0-.6-.22l-2.5 1a7.3 7.3 0 0 0-1.72-1l-.38-2.65A.49.49 0 0 0 13.94 2h-4a.49.49 0 0 0-.49.42l-.38 2.65c-.62.25-1.2.59-1.72 1l-2.5-1a.5.5 0 0 0-.6.22l-2 3.46a.49.49 0 0 0 .12.64L4.5 11c-.04.33-.07.67-.07 1s.03.67.07 1l-2.1 1.65a.5.5 0 0 0-.12.64l2 3.46c.12.22.38.3.6.22l2.5-1c.52.4 1.1.74 1.72 1l.38 2.65c.04.24.25.42.49.42h4c.25 0 .45-.18.49-.42l.38-2.65c.62-.26 1.2-.6 1.72-1l2.5 1c.22.08.48 0 .6-.22l2-3.46a.5.5 0 0 0-.12-.64zM11.94 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="subbar">
+      <div class="sub-side sub-left">
+        <span class="badge" id="hard-badge" hidden title="Hard mode is on">Hard</span>
+      </div>
+      <div class="modes" id="modes" role="radiogroup" aria-label="Game mode">
+        <button type="button" role="radio" data-mode="daily" aria-checked="true">Daily <span class="puzzle-no" id="puzzle-no"></span></button>
+        <button type="button" role="radio" data-mode="unlimited" aria-checked="false">Unlimited</button>
+      </div>
+      <div class="sub-side sub-right">
+        <button class="pill-btn" id="btn-new" type="button" hidden title="New word (unlimited)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12a7 7 0 1 1-2.05-4.95" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M17.5 3.5v4h-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>New</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="play" id="play">
+      <main class="board-wrap" id="board-wrap">
+        <div class="toaster" id="toaster" role="status" aria-live="polite"></div>
+        <div class="board" id="board" role="group" aria-label="Guesses"></div>
+      </main>
+      <div class="keyboard" id="keyboard" role="group" aria-label="Keyboard"></div>
+    </div>
+  </div>
+
+  <!-- How to play -->
+  <div class="modal" id="modal-help" role="dialog" aria-modal="true" aria-labelledby="help-title" hidden>
+    <div class="modal-card" tabindex="-1">
+      <button class="modal-close" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+      <div class="modal-body help">
+        <h2 id="help-title" class="help-title">How To Play</h2>
+        <p class="help-sub">Guess the Wordle in 6 tries.</p>
+        <ul class="help-list">
+          <li>Each guess must be a valid 5-letter word.</li>
+          <li>The color of the tiles will change to show how close your guess was to the word.</li>
+        </ul>
+        <p class="help-ex-title"><strong>Examples</strong></p>
+        <div class="ex-row" aria-label="W in WORDY is in the word and in the correct spot">
+          <span class="tile small" data-state="correct">W</span><span class="tile small" data-filled>O</span><span class="tile small" data-filled>R</span><span class="tile small" data-filled>D</span><span class="tile small" data-filled>Y</span>
+        </div>
+        <p><strong>W</strong> is in the word and in the correct spot.</p>
+        <div class="ex-row" aria-label="I in LIGHT is in the word but in the wrong spot">
+          <span class="tile small" data-filled>L</span><span class="tile small" data-state="present">I</span><span class="tile small" data-filled>G</span><span class="tile small" data-filled>H</span><span class="tile small" data-filled>T</span>
+        </div>
+        <p><strong>I</strong> is in the word but in the wrong spot.</p>
+        <div class="ex-row" aria-label="U in ROGUE is not in the word in any spot">
+          <span class="tile small" data-filled>R</span><span class="tile small" data-filled>O</span><span class="tile small" data-filled>G</span><span class="tile small" data-state="absent">U</span><span class="tile small" data-filled>E</span>
+        </div>
+        <p><strong>U</strong> is not in the word in any spot.</p>
+        <p class="help-note">Letters can repeat. If you guess a letter twice and the word has it once, only one tile lights up (green first, then the leftmost).</p>
+        <hr>
+        <p><strong>Daily</strong>: one word a day, the same for everyone, new at midnight your time. <strong>Unlimited</strong>: a fresh random word whenever you like, with its own statistics.</p>
+        <p><strong>Hard Mode</strong> (in settings): any revealed hints must be used in later guesses.</p>
+        <p class="help-keys">Type on your keyboard or tap the keys. <kbd>Enter</kbd> submits, <kbd>Backspace</kbd> deletes, <kbd>Esc</kbd> closes this window.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Statistics -->
+  <div class="modal" id="modal-stats" role="dialog" aria-modal="true" aria-labelledby="stats-title" hidden>
+    <div class="modal-card" tabindex="-1">
+      <button class="modal-close" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+      <div class="modal-body stats">
+        <div class="stats-result" id="stats-result" hidden></div>
+        <h2 id="stats-title" class="stats-title">Statistics</h2>
+        <div class="stats-tabs" id="stats-tabs" role="radiogroup" aria-label="Which statistics">
+          <button type="button" role="radio" data-mode="daily" aria-checked="true">Daily</button>
+          <button type="button" role="radio" data-mode="unlimited" aria-checked="false">Unlimited</button>
+        </div>
+        <div class="stat-nums">
+          <div class="stat"><div class="stat-num" id="st-played">0</div><div class="stat-label">Played</div></div>
+          <div class="stat"><div class="stat-num" id="st-winpct">0</div><div class="stat-label">Win %</div></div>
+          <div class="stat"><div class="stat-num" id="st-streak">0</div><div class="stat-label">Current Streak</div></div>
+          <div class="stat"><div class="stat-num" id="st-max">0</div><div class="stat-label">Max Streak</div></div>
+        </div>
+        <h3 class="dist-title">Guess Distribution</h3>
+        <div class="dist" id="dist"></div>
+        <p class="dist-empty" id="dist-empty" hidden>No data yet. Play a game!</p>
+        <div class="stats-footer" id="stats-footer" hidden>
+          <div class="countdown" id="countdown-box">
+            <div class="countdown-label">Next Wordle</div>
+            <div class="countdown-time" id="countdown">--:--:--</div>
+          </div>
+          <button class="big-btn secondary" id="btn-again" type="button" hidden>Play again</button>
+          <div class="footer-divider"></div>
+          <button class="big-btn share" id="btn-share" type="button">
+            <span>Share</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11A2.99 2.99 0 0 0 21 5a3 3 0 1 0-5.91.7L8.04 9.81A2.99 2.99 0 0 0 3 12a3 3 0 0 0 5.04 2.19l7.12 4.16c-.05.21-.08.43-.08.65A2.92 2.92 0 1 0 18 16.08z"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="modal" id="modal-settings" role="dialog" aria-modal="true" aria-labelledby="settings-title" hidden>
+    <div class="modal-card" tabindex="-1">
+      <button class="modal-close" type="button" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+      <div class="modal-body settings">
+        <h2 id="settings-title" class="settings-title">Settings</h2>
+        <div class="setting">
+          <div class="setting-text">
+            <div class="setting-name" id="lbl-hard">Hard Mode</div>
+            <div class="setting-desc">Any revealed hints must be used in subsequent guesses</div>
+          </div>
+          <button class="switch" id="sw-hard" type="button" role="switch" aria-checked="false" aria-labelledby="lbl-hard"><span class="knob"></span></button>
+        </div>
+        <div class="setting">
+          <div class="setting-text">
+            <div class="setting-name" id="lbl-dark">Dark Theme</div>
+          </div>
+          <button class="switch" id="sw-dark" type="button" role="switch" aria-checked="false" aria-labelledby="lbl-dark"><span class="knob"></span></button>
+        </div>
+        <div class="setting">
+          <div class="setting-text">
+            <div class="setting-name" id="lbl-contrast">High Contrast Mode</div>
+            <div class="setting-desc">Orange and blue instead of green and yellow, for color vision deficiency</div>
+          </div>
+          <button class="switch" id="sw-contrast" type="button" role="switch" aria-checked="false" aria-labelledby="lbl-contrast"><span class="knob"></span></button>
+        </div>
+        <div class="setting">
+          <div class="setting-text">
+            <div class="setting-name" id="lbl-sound">Sound</div>
+            <div class="setting-desc">Quiet key taps, tile flips and a jingle when you win</div>
+          </div>
+          <button class="switch" id="sw-sound" type="button" role="switch" aria-checked="true" aria-labelledby="lbl-sound"><span class="knob"></span></button>
+        </div>
+        <div class="setting">
+          <div class="setting-text">
+            <div class="setting-name">More games</div>
+          </div>
+          <a class="setting-link" href="https://open-arcade.up.railway.app">Open Arcade &rarr;</a>
+        </div>
+        <p class="settings-foot">Word lists built from SCOWL and ENABLE. Not affiliated with The New York Times.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/words.js"></script>
+  <script src="js/logic.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>

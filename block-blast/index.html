@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#1d2a6b">
+<title>Block Blast</title>
+<meta name="description" content="Drag blocks onto an 8×8 board, fill rows and columns to blast them, chain combos and beat your best score.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="app">
+  <header class="top">
+    <div class="best">👑 <span id="best">0</span></div>
+    <div class="score" id="score" aria-live="polite">0</div>
+    <div class="buttons">
+      <button id="mute" class="icon-btn" aria-label="Mute">🔊</button>
+      <button id="restart" class="icon-btn" aria-label="New game">↻</button>
+    </div>
+  </header>
+  <div class="board-wrap">
+    <div id="board" class="board" aria-label="Board"></div>
+    <div id="pop" class="pop" aria-hidden="true"></div>
+  </div>
+  <div id="tray" class="tray" aria-label="Pieces"></div>
+  <p class="hint">Drag a piece onto the board. Fill a whole row or column to blast it.</p>
+</main>
+
+<div id="drag" class="drag" aria-hidden="true"></div>
+
+<div id="over" class="over" hidden>
+  <div class="card">
+    <h2>No more moves</h2>
+    <p class="final">Score <b id="final">0</b></p>
+    <p id="newbest" class="newbest" hidden>👑 New best score!</p>
+    <button id="again" class="primary">Play again</button>
+  </div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

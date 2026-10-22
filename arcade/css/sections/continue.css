@@ -1,0 +1,18 @@
+/* continue playing: a draggable strip of mini cabinets with momentum and snap */
+.continue-strip { display: flex; gap: 16px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; padding: 6px 4px 18px; scrollbar-width: thin; scrollbar-color: var(--orange-30) transparent; cursor: grab; }
+.continue-strip.drag { cursor: grabbing; scroll-snap-type: none; }
+.continue-strip.drag a { pointer-events: none; }
+.cont { position: relative; flex: 0 0 220px; scroll-snap-align: start; display: grid; gap: 10px; padding: 12px; border-radius: 18px 18px 10px 10px; background: linear-gradient(180deg, #1a212c, #10151d); box-shadow: var(--bezel);
+  animation: fade-up var(--d-slow) var(--ease-overshoot) both; animation-delay: calc(var(--i, 0) * 60ms); transition: box-shadow var(--d-base), translate var(--d-base) var(--ease-overshoot); }
+.cont:hover { box-shadow: var(--bezel-hot); translate: 0 -4px; }
+.cont-screen { aspect-ratio: 16 / 10; border-radius: 10px / 8px; overflow: hidden; box-shadow: inset 0 0 0 2px #06080b, 0 0 0 2px #2a3442; position: relative; }
+.cont-screen img { width: 100%; height: 100%; object-fit: cover; }
+.cont-screen::after { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .2) 0 1px, transparent 1px 3px); }
+.cont h3 { font-size: 1rem; }
+.cont .when { font: 500 .72rem/1 var(--font-mono); color: var(--faint); }
+.cont .resume { min-height: 40px; font-size: .74rem; }
+.cont .x { position: absolute; top: 4px; right: 4px; z-index: 2; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: var(--ink-80); color: var(--muted); display: grid; place-items: center; }
+.cont .x svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.cont .x:hover { color: var(--err); border-color: var(--err); }
+.cont.leaving { animation: cont-out var(--d-base) var(--ease-in-out) forwards; }
+@keyframes cont-out { to { opacity: 0; transform: scale(.8) translateY(10px); } }

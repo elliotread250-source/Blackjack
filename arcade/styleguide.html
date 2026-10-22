@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en" data-anim="full" data-bg="off" data-density="comfortable" data-crt="off" data-cursor="off" data-sound="off">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Style guide — Open Arcade</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#080b10">
+<link rel="icon" href="assets/branding/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<script>
+  (function () { var d = document.documentElement, s = {};
+    try { s = JSON.parse(localStorage.getItem('oa.settings') || '{}') || {}; } catch (e) {}
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    d.dataset.anim = s.anim || (reduce ? 'reduced' : 'full'); d.classList.add('js', 'seen'); })();
+</script>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/motion.css">
+<link rel="stylesheet" href="css/components/button.css">
+<link rel="stylesheet" href="css/components/chip.css">
+<link rel="stylesheet" href="css/components/card.css">
+<link rel="stylesheet" href="css/components/overlays.css">
+<link rel="stylesheet" href="css/components/misc.css">
+<link rel="stylesheet" href="css/sections/profile.css">
+<link rel="stylesheet" href="css/sections/charts.css">
+<style>
+  body { padding: 40px 0 120px; }
+  .sg h1 { font-size: clamp(2.6rem, 1rem + 5vw, 5rem); text-transform: uppercase; }
+  .sg h2 { font-size: 1.6rem; text-transform: uppercase; margin: 64px 0 18px; padding-top: 18px; border-top: 1px solid var(--line); }
+  .sg p.lead { color: var(--muted); max-width: 60ch; margin-top: 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
+  .sw { border-radius: var(--r-md); overflow: hidden; background: var(--panel); box-shadow: var(--bezel); }
+  .sw i { display: block; height: 72px; }
+  .sw p { padding: 10px 12px; font: 500 .74rem/1.4 var(--font-mono); color: var(--muted); }
+  .sw p b { display: block; color: var(--text); }
+  .glow-box { width: 140px; height: 80px; border-radius: var(--r-md); background: var(--panel); display: grid; place-items: center; font: 600 .75rem/1 var(--font-mono); color: var(--muted); }
+  .type-row { display: grid; grid-template-columns: 160px 1fr; gap: 16px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line-soft); }
+  .type-row code { font: 500 .74rem/1.4 var(--font-mono); color: var(--faint); }
+  .icons { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 10px; }
+  .icons div { display: grid; justify-items: center; gap: 8px; padding: 14px 6px; border-radius: var(--r-md); background: var(--panel); font: 500 .66rem/1 var(--font-mono); color: var(--faint); }
+  .icons svg { width: 26px; height: 26px; fill: none; stroke: var(--amber); stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; align-items: start; }
+  .demo { display: grid; gap: 10px; padding: 16px; border-radius: var(--r-lg); background: var(--panel); box-shadow: var(--bezel); position: relative; overflow: hidden; }
+  .demo .out { min-height: 2.2em; font: 700 1.3rem/1.2 var(--font-mono); color: var(--gold); }
+  .static-status { position: static !important; }
+</style>
+</head>
+<body>
+<main class="wrap sg" id="main">
+  <p class="overline"><span>//</span> ember//arcade v2</p>
+  <h1>Style guide</h1>
+  <p class="lead">Every token, type style, component and motion primitive of the Open Arcade hub, rendered from the real CSS and JS. The palette is fixed; only derived tokens of the same hues are allowed.</p>
+  <p class="row" style="margin-top:18px"><a class="btn btn-ghost" href="./"><svg aria-hidden="true"><use href="#i-arrow-l"/></svg><span>Back to the arcade</span></a></p>
+
+  <h2>Colour</h2><div class="grid" id="colours"></div>
+  <h2>Gradients</h2><div class="grid" id="gradients"></div>
+  <h2>Glow &amp; bezel</h2><div class="row" id="glows"></div>
+  <h2>Type</h2><div id="type"></div>
+  <h2>Buttons</h2>
+  <div class="row"><button class="btn btn-primary"><span>Primary</span></button><button class="btn btn-primary btn-xl"><span class="btn-fill"></span><span>Primary XL</span></button>
+    <button class="btn btn-ghost"><svg aria-hidden="true"><use href="#i-shuffle"/></svg><span>Ghost</span></button><button class="btn btn-text"><span>Text button</span></button>
+    <button class="icon-btn" aria-label="Icon button"><svg aria-hidden="true"><use href="#i-settings"/></svg></button><button class="btn btn-primary" disabled><span>Disabled</span></button></div>
+  <h2>Chips, segments, status, keys</h2>
+  <div class="row"><div class="chips" id="chips-demo"><span class="chip-pill" aria-hidden="true"></span></div></div>
+  <div class="row" style="margin-top:14px"><div class="seg" style="width:320px"><button aria-pressed="true">Full</button><button aria-pressed="false">Reduced</button><button aria-pressed="false">Off</button></div>
+    <span class="status static-status" data-state="up"><i></i><span>Online</span></span><span class="status static-status" data-state="checking"><i></i><span>Checking</span></span>
+    <span class="status static-status" data-state="down"><i></i><span>Not responding</span></span><span class="status static-status" data-state="soon"><i></i><span>Coming soon</span></span><kbd>Ctrl</kbd><kbd>K</kbd></div>
+  <h2>Scoreboard &amp; marquee</h2>
+  <div class="row"><span class="score-num">999,990</span><span class="marquee-text" style="font-size:4rem">INSERT COIN</span></div>
+  <h2>Icons</h2><div class="icons" id="icons"></div>
+  <h2>Game card — five variants</h2><div class="cards" id="cards"></div>
+  <h2>Badges</h2><ul class="badges" id="sg-badges"></ul>
+  <h2>Motion primitives</h2>
+  <p class="lead">Each runs through the shared motion engine and respects Settings → Animations (Reduced/Off make them instant).</p>
+  <div class="grid" id="motion" style="grid-template-columns:repeat(auto-fill,minmax(250px,1fr))"></div>
+</main>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<canvas class="fx-canvas" id="fx" aria-hidden="true"></canvas>
+<script type="module" src="js/styleguide.js"></script>
+</body>
+</html>

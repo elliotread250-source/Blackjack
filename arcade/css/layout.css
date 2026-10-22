@@ -1,0 +1,3 @@
+/* page-level layout: header spacing and stacking of the main column */
+main { display: block; }
+.app #static-list { display: none; }
