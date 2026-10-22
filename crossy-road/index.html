@@ -144,7 +144,7 @@
   .board-top h2 { margin: 0; font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; }
   .board-spacer { width: 54px; }
   .board-list { list-style: none; margin: 0; padding: 6px; overflow-y: auto; background: rgba(255, 255, 255, 0.94); border-radius: 18px;
-    box-shadow: 0 6px 0 rgba(20, 28, 48, 0.45); color: #2c3448; min-height: 120px; }
+    box-shadow: 0 6px 0 rgba(20, 28, 48, 0.45); color: #2c3448; min-height: 120px; flex: 0 1 auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
   .board-list li { display: grid; grid-template-columns: 40px 1fr auto; align-items: center; gap: 8px; padding: 9px 12px; border-radius: 12px; font-weight: 800; font-size: 17px; }
   .board-list li:nth-child(even) { background: rgba(44, 52, 72, 0.06); }
   .board-list li.me { background: #ffe27a; }
@@ -167,10 +167,12 @@
 .admin-list button { border: 0; border-radius: 9px; background: #e8463b; color: #fff; font-weight: 900; height: 34px; cursor: pointer; }
 .admin-msg { margin: 0; min-height: 1.2em; color: #ffd23f; }
 .admin-row { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
-.ch-box { width: min(560px, 100%); max-height: 90vh; display: flex; flex-direction: column; gap: 10px; background: #2c3448; border-radius: 20px; padding: 16px; color: #fff; font: 600 15px system-ui, sans-serif; box-shadow: 0 10px 0 rgba(0,0,0,.25); }
+.ch-box { width: min(560px, 100%); max-height: 90vh; display: flex; flex-direction: column; gap: 10px; background: #2c3448; border-radius: 20px; padding: 16px; color: #fff; font: 600 15px system-ui, sans-serif; box-shadow: 0 10px 0 rgba(0,0,0,.25); min-height: 0; }
+#ch-daily, #ch-heroes { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; touch-action: pan-y; padding-right: 4px; }
+#ch-heroes:not([hidden]) { display: flex; flex-direction: column; gap: 10px; }
 .ch-head { display: flex; align-items: center; gap: 10px; } .ch-head h2 { margin: 0; font-size: 24px; } .ch-head span { margin-left: auto; color: #ffd23f; font-weight: 900; }
 .ch-note { margin: 0; color: #c8d0e0; font-size: 13px; font-weight: 500; }
-.ch-list { overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 4px; }
+.ch-list { display: flex; flex-direction: column; gap: 8px; }
 .ch { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 10px 12px; border-radius: 14px; background: rgba(255,255,255,.07); border: 2px solid transparent; }
 .ch.done { border-color: #5cd83a; background: rgba(92,216,58,.12); }
 .ch b { font-size: 16px; } .ch .goal { grid-column: 1; color: #d8deea; font-size: 13px; font-weight: 500; }
