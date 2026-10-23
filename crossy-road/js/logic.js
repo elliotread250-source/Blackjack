@@ -13,6 +13,10 @@ export const TICK = 1 / TPS;
 export const COLS = 4;                 // playable columns are -4..4
 export const HOP_TICKS = 4;            // default hop length in ticks (Fast); Classic is 8
 export const HOP_CHOICES = [4, 8];     // the movement-speed setting: ticks per hop
+export const QUICK_HOP = 1;             // the secret 1-tick hop: only while wearing QUICK_SKIN
+export const QUICK_SKIN = 'quackers';
+// The hop length a run really uses: the 1-tick setting only counts while the Quackers skin is worn.
+export const hopFor = (setting, skin) => (setting === QUICK_HOP ? (skin === QUICK_SKIN ? QUICK_HOP : HOP_TICKS) : HOP_CHOICES.includes(setting) ? setting : HOP_TICKS);
 export const HALF = 18;                // lanes wrap at x = +-18 (well outside the view)
 export const WRAP = HALF * 2;
 export const EDGE_DEATH = 5.4;         // carried this far out on a log = gone
@@ -386,7 +390,7 @@ export class Game {
     this.taken = new Set();           // collected coins "row:col"
     this.coins = 0;
     this.invUntil = 0;                // tick when the "fast" invincibility wears off
-    this.hopTicks = HOP_CHOICES.includes(opts.hopTicks) ? opts.hopTicks : HOP_TICKS;
+    this.hopTicks = HOP_CHOICES.includes(opts.hopTicks) || opts.hopTicks === QUICK_HOP ? opts.hopTicks : HOP_TICKS;
     // everything the challenges measure, from real gameplay events
     this.stats = { roads: 0, rails: 0, rivers: 0, logs: 0, fwd: 0, side: 0, back: 0, ordCoins: 0, gems: 0, firstBackRow: null, sideAt: {} };
     this.logSet = new Set();          // distinct moving logs landed on ("row:idx")
@@ -762,6 +766,8 @@ export const PRIZE_MAX_PRICE = 300;
 // Secret and challenge skins: you can't buy these. `code` = redeem code, `challenge` = run goal.
 CHARACTERS.push(
   { id: 'golden', name: 'Golden Chicken', price: null, theme: 'desert', code: 'golden' },
+  { id: 'batcostume', name: 'Bat Costume', price: null, theme: 'night', code: 'parkour sam' },
+  { id: 'quackers', name: 'Quackers', price: null, theme: 'classic', code: 'quackers250' },
   { id: 'ironsuit', name: 'Iron Suit', price: null, theme: 'metro', challenge: { stat: 'score', goal: 75, text: 'Reach 75 rows in one run' } },
   { id: 'starshield', name: 'Star Shield', price: null, theme: 'classic', challenge: { stat: 'roads', goal: 40, text: 'Cross 40 roads in one run' } },
   { id: 'thunder', name: 'Thunder God', price: null, theme: 'snow', challenge: { stat: 'rails', goal: 15, text: 'Cross 15 train tracks in one run' } },
@@ -787,6 +793,7 @@ export const CHALLENGES = CHARACTERS.filter(c => c.challenge);
 export const INVINCIBLE_SECONDS = 20;
 export const SECRET_WORDS = ['fast', 'golden'];
 export const PRIZE_PRICE = 100;
+export const normCode = c => String(c || '').trim().toLowerCase().replace(/\s+/g, ' ');
 export const charById = id => CHARACTERS.find(c => c.id === id) || CHARACTERS[0];
 
 // Saved progress. `storage` is anything with get(key, default) / set(key, value) that never
@@ -816,7 +823,7 @@ export class Profile {
   }
   // Redeem codes. Returns the character unlocked, or null.
   redeem(code) {
-    const c = CHARACTERS.find(x => x.code && x.code === String(code || '').trim().toLowerCase());
+    const c = CHARACTERS.find(x => x.code && x.code === normCode(code));
     if (!c) return null;
     this.owned.add(c.id); this.selected = c.id; this.save();
     return c;

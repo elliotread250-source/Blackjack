@@ -1,5 +1,5 @@
 // Glue: accounts, screens, the fixed-timestep loop, input, sound and progress.
-import { Game, TICK, CHARACTERS, CHALLENGES, charById, entityX, trainState, zoneOf, PRIZE_PRICE, PRIZE_MAX_PRICE, SECRET_WORDS, NEW_2026, qualityOf, GEM_VALUE } from './logic.js';
+import { Game, TICK, CHARACTERS, CHALLENGES, charById, entityX, trainState, zoneOf, PRIZE_PRICE, PRIZE_MAX_PRICE, SECRET_WORDS, NEW_2026, qualityOf, GEM_VALUE, QUICK_SKIN } from './logic.js';
 import { dailyById, liveValue } from './dailies.js';
 import { BIOME_NAMES } from './models.js';
 import { Renderer } from './render.js';
@@ -74,7 +74,7 @@ function newGame() {
   if (game && ticket && !game.started && profile.giveBack) profile.giveBack(ticket);
   ticket = testRun ? null : profile.ticket();
   const seed = runSeed !== null ? runSeed++ : ticket ? ticket.seed : undefined;
-  const hopTicks = ticket ? ticket.hopTicks : profile.settings.hopTicks;
+  const hopTicks = ticket ? ticket.hopTicks : profile.hopTicks;
   game = new Game({ seed, hopTicks });
   game.practiceReason = autopilot ? 'autopilot' : (!profile.isGuest && !ticket) ? 'offline' : null;
   renderer.setTheme(charById(profile.selected).theme);
@@ -423,7 +423,9 @@ function closeSettings() {
 function renderSettings() {
   const s = profile.settings;
   const seg = (id, v) => { for (const b of $(id).querySelectorAll('button')) b.setAttribute('aria-checked', String(b.dataset.v === String(v))); };
-  seg('set-speed', s.hopTicks); seg('set-quality', s.quality || 'high'); seg('set-train', s.trainWarning || 'strong');
+  const quick = profile.owned.has(QUICK_SKIN) && profile.selected === QUICK_SKIN;   // the secret 1-tick option
+  $('set-speed-quick').hidden = !quick; $('set-speed-note').hidden = !quick;
+  seg('set-speed', quick ? s.hopTicks : profile.hopTicks); seg('set-quality', s.quality || 'high'); seg('set-train', s.trainWarning || 'strong');
   $('set-vol').value = s.volume ?? 0.8; $('set-sfx').value = s.sfx ?? 1;
   $('set-mute').checked = !!s.muted; $('set-motion').checked = !!s.reducedMotion; $('set-contrast').checked = !!s.highContrast; $('set-shake').checked = s.shake !== false;
   $('set-save').textContent = profile.isGuest ? 'Settings are saved on this device.' : 'Settings are saved to your account and follow you to other devices.';
@@ -894,7 +896,7 @@ function secret(word, src) {
       sound.buy(); banner(r.char.name + '!', 'Code redeemed');
       if (renderer.carousel.length) renderer.setCarouselOwned(profile.owned);
       if (state === 'chars') { sel = CHARACTERS.indexOf(r.char); updateChars(); }
-      else if (state === 'title') { renderer.setTheme(charById(profile.selected).theme); renderer.setCharacter(profile.selected); }
+      else if (state === 'title') { newGame(); }   // a fresh run, so the new skin's hop length applies
       updateHud();
     } else if (src === 'prompt') tryAdmin(word);
   });

@@ -57,9 +57,14 @@ sound is synthesised, and there is no build step: the folder is the game.
   10 Legendary). Every day at 00:00 UTC everyone gets one of each tier; Easy pays 10, Medium 25, Hard 50,
   plus a rarity bonus (Rare +5, Epic +15, Legendary +30). Each tier works through its whole pool before
   any mission repeats. A run counts for the UTC day it started. Rewards are claimed once, server-side.
-- **83 characters**, including the 2026 collection of 30 (Forest Hedgehog 25 … Royal Phoenix 1,000),
+- **85 characters**, including the 2026 collection of 30 (Forest Hedgehog 25 … Royal Phoenix 1,000),
   a searchable, sortable shop list with previews, and purchase confirmation. The prize machine
   (100 coins) gives a random ordinary character up to 300 coins, each equally likely.
+- **Secret skins** (redeem codes, never sold): `parkour sam` gives the **Bat Costume** (cowl, plated suit,
+  gauntlets and scalloped wings, built from boxes that never overlap) and `quackers250` gives **Quackers**,
+  the round yellow duck with a mug of coffee. While Quackers is the equipped skin, Settings shows a secret
+  **Quackers Blink** movement speed: every hop takes 1 tick. The server only issues 1-tick runs while Quackers
+  is equipped and owned (anything else plays at Fast), and replays them like any other run.
 - **The crown**: whoever is #1 on the world board wears a golden crown on any character.
 - **Settings** (saved to the account): movement speed (Fast = 4 ticks a hop, Classic = 8; from the next
   run), master and effects volume, mute, graphics quality, reduced motion, high contrast, screen shake,

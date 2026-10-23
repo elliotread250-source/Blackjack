@@ -1,6 +1,7 @@
 // node tools/test.mjs [seeds] [rows] — rules, characters, shop and a passability run with the autopilot.
 import assert from 'node:assert/strict';
-import { Game, Profile, CHARACTERS, memoryStorage, zoneOf, BIOME_ROWS, VEHICLES, PRIZE_PRICE, GEM_VALUE, CHALLENGES, TPS, replayRun, NEW_2026, PRIZE_MAX_PRICE, TRAIN_WARN, trainState, HOP_CHOICES } from '../js/logic.js';
+import { Game, Profile, CHARACTERS, memoryStorage, zoneOf, BIOME_ROWS, VEHICLES, PRIZE_PRICE, GEM_VALUE, CHALLENGES, TPS, replayRun, NEW_2026, PRIZE_MAX_PRICE, TRAIN_WARN, trainState, HOP_CHOICES, hopFor, QUICK_HOP, QUICK_SKIN } from '../js/logic.js';
+import { overlaps } from './overlap.mjs';
 import { DAILIES, dailiesForDay, progressOf, liveValue, BASE_REWARD, RARITY_BONUS, dayOf, nextResetMs } from '../js/dailies.js';
 import { MODELS } from '../js/characters.js';
 import { Autopilot } from '../js/autopilot.js';
@@ -17,6 +18,24 @@ for (const c of CHARACTERS) {
   ok(boxes.length >= 5 && boxes.every(b => b.length >= 7 && b.slice(0, 6).every(Number.isFinite) && b[3] > 0 && b[4] > 0 && b[5] > 0), 'valid boxes for ' + c.id);
   const top = Math.max(...boxes.map(b => b[1] + b[4])), wide = Math.max(...boxes.map(b => Math.abs(b[0]) + b[3] / 2));
   ok(top < 16 && wide < 8, `${c.id} fits on a tile`);
+}
+// secret skins: codes, solid models, and the 1-tick hop that belongs to Quackers alone
+{
+  const sp = new Profile(memoryStorage());
+  ok(sp.redeem('Parkour Sam')?.id === 'batcostume' && sp.selected === 'batcostume' && sp.owned.has('batcostume'), '"parkour sam" gives the Bat Costume');
+  ok(new Profile(memoryStorage()).redeem('  PARKOUR   sam ')?.id === 'batcostume', 'codes ignore capitals and extra spaces');
+  ok(sp.redeem('quackers250')?.id === 'quackers' && sp.selected === 'quackers', '"quackers250" gives Quackers');
+  ok(sp.redeem('quackers') === null && sp.redeem('parkoursam') === null, 'near misses give nothing');
+  ok(CHARACTERS.find(c => c.id === 'batcostume').price === null && CHARACTERS.find(c => c.id === 'quackers').price === null, 'neither skin can be bought');
+  for (const id of ['batcostume', 'quackers']) ok(overlaps(MODELS[id]()).length === 0, id + ': no boxes pass through each other');
+  ok(MODELS.batcostume().length > 60 && MODELS.quackers().length > 25, 'both secret models are detailed');
+  ok(hopFor(QUICK_HOP, QUICK_SKIN) === 1 && hopFor(QUICK_HOP, 'duck') === 4 && hopFor(QUICK_HOP, 'chicken') === 4 && hopFor(8, QUICK_SKIN) === 8 && hopFor(4, 'chicken') === 4, '1 tick only with Quackers on');
+  const q = new Game({ seed: 4242, hopTicks: QUICK_HOP }); const qa = new Autopilot(); let qn = 0;
+  while (!q.player.dead && q.score < 150 && qn++ < 100000) { qa.update(q); q.step(); q.events.length = 0; }
+  const qr = replayRun({ seed: 4242, hopTicks: QUICK_HOP, inputs: q.inputs, endTick: q.tick });
+  ok(q.score >= 150 && qr.score === q.score && qr.coins === q.coins && JSON.stringify(qr.stats) === JSON.stringify(q.runStats()), `1-tick run replays exactly (score ${q.score})`);
+  const qh = new Game({ seed: 1, hopTicks: QUICK_HOP }); qh.input('up'); qh.step(); let qt = 0; while (qh.player.hop && qt < 50) { qh.step(); qt++; }
+  ok(qt === 1 && qh.hopTicks === 1, 'a 1-tick hop takes exactly 1 tick');
 }
 // prize machine
 const prof = new Profile(memoryStorage({ coins: PRIZE_PRICE * 2 }));

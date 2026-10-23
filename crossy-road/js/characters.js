@@ -570,3 +570,76 @@ Object.assign(MODELS, {
     [-1.4, 1, 6.6, 0.8, 0.8, 2, 0xe8302a], [1.4, 1, 6.6, 0.8, 0.8, 2, 0xe8302a], [0, 1.6, 7.4, 0.9, 0.9, 1.4, 0xffe070],
   ],
 });
+
+// Secret skins. Every box here sits flush against its neighbours and never inside one, so nothing
+// z-fights or shows through (tools/test.mjs checks that for both).
+
+// Bat costume: cowl with tall ears and white slit eyes, plated chest with the bat emblem, utility
+// belt, gauntlet fins and a cape that opens into scalloped wings with finger bones.
+const BC = { cowl: 0x1b1b22, suit: 0x22222b, plate: 0x3a3a46, boot: 0x15151b, skin: 0xe0b99a, gold: 0xf2c94c, yellow: 0xffd23f,
+  cape: 0x14141a, bone: 0x2a2230, mem: [0x3b2f48, 0x44385a] };
+function batCostume() {
+  const B = [];
+  for (const s of [-1, 1]) {
+    B.push(
+      [s * 1.2, 0, 0, 1.6, 1.4, 2, BC.boot], [s * 1.2, 0, -1.15, 1.6, 0.8, 0.3, BC.plate], [s * 1.2, 1.4, 0, 1.8, 0.3, 2.2, BC.plate],
+      [s * 1.2, 1.7, 0, 1.6, 1.5, 1.8, BC.suit],                                   // boot, toe cap, cuff, leg
+      [s * 1.8, 3.2, -2.05, 1, 0.6, 0.7, 0xa07a22],                                  // belt pouch
+      [s * 3.2, 6.4, 0, 1.4, 1, 2.6, BC.plate], [s * 3.2, 3.6, 0, 1.4, 2.8, 1.8, BC.suit], [s * 3.2, 2.6, 0, 1.4, 1, 1.6, BC.boot],   // pauldron, arm, glove
+      [s * 4.15, 3.6, -0.5, 0.5, 1.4, 0.5, BC.plate], [s * 4.15, 3.6, 0.1, 0.5, 1.8, 0.5, BC.plate],                                // gauntlet fins
+      [s * 1.5, 11.5, 0, 1.2, 1.2, 0.8, BC.cowl], [s * 1.5, 12.7, 0, 0.8, 1.2, 0.8, BC.cowl], [s * 1.5, 13.9, 0, 0.4, 1, 0.8, BC.cowl], [s * 1.5, 11.6, -0.5, 0.6, 1, 0.2, 0x4a3c56], // ears
+      [s * 1.8, 7.9, -2.15, 1, 1.3, 0.3, BC.cowl],                                   // cheek guards
+      [s, 9.9, -2.1, 1.2, 0.5, 0.2, 0xffffff], [s, 10.4, -2.1, 1.4, 0.4, 0.2, 0x0c0c10],   // glowing eye slits and brow
+      [s * 0.4, 8.2, -2.35, 0.25, 0.3, 0.1, 0xffffff],                               // fangs
+      [s * 0.8, 6.3, -2.1, 0.4, 0.5, 0.2, 0x0c0c10],                                 // emblem ears
+      [s * 1.2, 1.4, 2, 1.4, 1.2, 0.6, BC.cape],                                     // cape tails
+    );
+  }
+  B.push(
+    [0, 3.2, 0, 5, 0.6, 3.4, 0x7a5a1c], [0, 3.25, -2.1, 1.2, 0.5, 0.4, BC.gold],  // belt and buckle
+    [0, 3.8, 0, 5, 3.6, 3.4, 0x2b2b35],                                              // torso
+    [0, 3.8, -1.85, 3.4, 0.7, 0.3, BC.plate], [0, 4.6, -1.85, 3.4, 0.6, 0.3, BC.plate],       // abdomen plates
+    [0, 5.2, -1.85, 2.8, 1.6, 0.3, BC.yellow], [0, 6.8, -1.85, 3.8, 0.6, 0.3, BC.plate],      // emblem oval, collar
+    [0, 5.8, -2.1, 2.2, 0.5, 0.2, 0x0c0c10], [0, 5.3, -2.1, 0.5, 0.5, 0.2, 0x0c0c10], [0, 6.3, -2.1, 0.5, 0.2, 0.2, 0x0c0c10],  // emblem bat
+    [0, 7.4, 0, 2, 0.5, 2, BC.suit],                                                 // neck
+    [0, 7.9, 0, 4.6, 3.6, 4, BC.cowl],                                               // cowl
+    [0, 7.9, -2.15, 2.6, 1.3, 0.3, BC.skin], [0, 9.2, -2.15, 2.6, 0.7, 0.3, BC.cowl],   // lower face, mask
+    [0, 8.5, -2.35, 1.2, 0.2, 0.1, 0x8a3a3a], [0, 8.8, -2.375, 0.6, 0.4, 0.15, 0xc9a07e],     // mouth, nose
+    [0, 2.6, 2, 5, 4.8, 0.6, BC.cape],                                               // cape
+  );
+  // wings: four membrane columns each with a finger bone on the outer edge and a bone along the top
+  const tops = [7.0, 7.9, 8.8, 9.6], bottoms = [2.8, 2.4, 3.6, 5.2], cw = 1.3;
+  for (const s of [-1, 1]) for (let i = 0; i < 4; i++) {
+    const x0 = 2.5 + i * cw, top = tops[i], bot = bottoms[i];
+    const cx = w => s * (x0 + w / 2);
+    B.push(
+      [s * (x0 + 0.5), bot, 2, 1, top - 0.5 - bot, 0.6, BC.mem[i % 2]],
+      [s * (x0 + 1.15), bot - 0.5, 2, 0.3, top - bot, 0.7, BC.bone],
+      [cx(cw), top - 0.5, 2, cw, 0.5, 0.6, BC.bone],
+    );
+  }
+  return B;
+}
+
+// Quackers: the round yellow duck with the little orange bill and its mug of coffee.
+const QY = 0xf7d35c, QY2 = 0xf0c13e, QO = 0xe8761a, QW = 0xf2f2ee;
+function quackers() {
+  const B = [
+    [-1.7, 0, -1.6, 1.8, 0.5, 3, QO], [1.7, 0, -1.6, 1.8, 0.5, 3, QO],              // feet
+    [0, 0.5, 0, 6.6, 1.5, 6, QY2], [0, 2, 0, 8.2, 3, 7.2, QY], [0, 5, -0.2, 8, 2.4, 6.8, QY],    // round body
+    [0, 7.4, -0.3, 6, 1.4, 5.4, QY], [0, 8.8, -0.3, 3.4, 0.7, 3.4, QY], [0.4, 9.5, -0.3, 0.6, 0.8, 0.6, QY2],
+    [0, 2.6, 3.9, 1.6, 1.2, 0.6, QY2],                                               // tail nub
+    [0, 2, -3.7, 2.4, 2.4, 0.2, 0xfbe38a],                                           // belly
+    [-2, 6, -3.7, 0.7, 0.9, 0.2, 0x1d1d22], [2, 6, -3.7, 0.7, 0.9, 0.2, 0x1d1d22],  // eyes
+    [0, 4.7, -4.1, 2.6, 0.9, 1, QO], [0, 5.6, -4, 1.8, 0.25, 0.8, 0xf08f2e],         // bill
+    [4.5, 2.4, 0.2, 0.7, 2.8, 3.2, QY2],                                             // resting wing
+    [-2, 2.4, -4.1, 1, 1.8, 1, QY2], [-2, 2.4, -5.6, 1, 1.8, 2, QY2],                // wing arm wrapped round the mug
+    [-3.5, 2, -5.6, 2, 1.8, 2, QW],                                                  // mug
+    [-3.5, 3.8, -6.45, 2, 0.3, 0.3, QW], [-3.5, 3.8, -4.75, 2, 0.3, 0.3, QW], [-4.35, 3.8, -5.6, 0.3, 0.3, 1.4, QW], [-2.65, 3.8, -5.6, 0.3, 0.3, 1.4, QW],
+    [-3.5, 3.8, -5.6, 1.4, 0.2, 1.4, 0x4a2c17],                                      // coffee
+    [-4.75, 3.2, -5.6, 0.5, 0.3, 0.6, 0xc9c9c4], [-4.75, 2.3, -5.6, 0.5, 0.3, 0.6, 0xc9c9c4], [-5.15, 2.3, -5.6, 0.3, 1.2, 0.6, 0xc9c9c4],   // handle
+    [-3.8, 4.4, -5.6, 0.25, 0.6, 0.25, 0xeef2f6], [-3.5, 5, -5.6, 0.25, 0.6, 0.25, 0xeef2f6], [-3.8, 5.6, -5.6, 0.25, 0.6, 0.25, 0xeef2f6], [-3.5, 6.2, -5.6, 0.25, 0.5, 0.25, 0xeef2f6],  // steam
+  ];
+  return B;
+}
+Object.assign(MODELS, { batcostume: batCostume, quackers });

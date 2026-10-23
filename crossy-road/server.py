@@ -72,6 +72,7 @@ TIME_SLACK = int(os.environ.get("RUN_TIME_SLACK", "600"))   # ticks of leeway on
 OPEN_RUNS = 30                   # unfinished run tokens one account may hold
 MIGRATE_COIN_CAP = 1000          # most coins a device's old local save can bring into an account
 PRIZE_MAX_PRICE = 300
+QUICK_HOP, QUICK_SKIN = 1, "quackers"   # the secret 1-tick hop belongs to this skin alone
 SCRYPT = dict(n=2 ** 14, r=8, p=1, dklen=32)
 NAME_RE = re.compile(r"^[A-Za-z0-9 _.\-]{3,14}$")
 BLOCKED = re.compile(r"fuck|shit|cunt|nigg|fag|bitch|whore|slut|rape|nazi|hitler|penis|cock|dick|pussy|wank", re.I)
@@ -326,7 +327,7 @@ def clean_settings(raw, base=None):
     out.update(base or {})
     if not isinstance(raw, dict):
         return out
-    if raw.get("hopTicks") in (4, 8):
+    if raw.get("hopTicks") in (1, 4, 8):
         out["hopTicks"] = raw["hopTicks"]
     for k in ("volume", "sfx"):
         if isinstance(raw.get(k), (int, float)):
@@ -605,7 +606,7 @@ def api_redeem(h, body):
     uid = current_user(h)
     if limited("redeem", uid, 20, 600):
         raise ApiError(429, "Slow down a little.")
-    code = str(body.get("code") or "").strip().lower()
+    code = " ".join(str(body.get("code") or "").lower().split())
     c = next((c for c in catalog()["characters"] if c.get("code") and c["code"] == code), None)
     if not c:
         raise ApiError(404, "Unknown code")
@@ -660,7 +661,13 @@ def api_run_start(h, body):
     uid = current_user(h)
     if limited("runstart", uid, 40, 60):
         raise ApiError(429, "Slow down a little.")
-    settings = clean_settings(jload(q1("SELECT settings FROM users WHERE id = ?", uid)["settings"], {}))
+    me = q1("SELECT settings, equipped FROM users WHERE id = ?", uid)
+    settings = clean_settings(jload(me["settings"], {}))
+    # the secret 1-tick hop only counts while the Quackers skin is on (and owned); anything else plays at Fast
+    hop = settings["hopTicks"]
+    if hop == QUICK_HOP and not (me["equipped"] == QUICK_SKIN and q1("SELECT 1 FROM owned WHERE user_id = ? AND char_id = ?", uid, QUICK_SKIN)):
+        hop = 4
+    settings["hopTicks"] = hop
     token = secrets.token_urlsafe(18)
     seed = secrets.randbits(31)
     t = now_ms()

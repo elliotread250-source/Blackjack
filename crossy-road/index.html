@@ -431,7 +431,9 @@ body.rm *, body.rm *::before, body.rm *::after { animation-duration: 0.001s !imp
       <div class="seg" id="set-speed" role="radiogroup">
         <button data-v="4" role="radio"><b>Fast</b><small>4 ticks a hop</small></button>
         <button data-v="8" role="radio"><b>Classic</b><small>8 ticks a hop</small></button>
+        <button data-v="1" role="radio" id="set-speed-quick" hidden><b>⚡ Quackers Blink</b><small>1 tick a hop · secret</small></button>
       </div>
+      <p class="small dimtext" id="set-speed-note" hidden>🦆 Secret unlocked: while Quackers is your skin, this makes every hop just 1 tick. Any other skin plays at Fast.</p>
       <p class="small dimtext">Takes effect from your next run.</p>
       <h3>Sound</h3>
       <label class="slider">Master volume <input type="range" id="set-vol" min="0" max="1" step="0.05"></label>

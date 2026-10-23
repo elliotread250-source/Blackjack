@@ -159,6 +159,21 @@ def run_tests():
     f4 = fixture(st["seed"], 4, 25)
     ok(f4["endTick"] != f8["endTick"] or f4["inputs"] != f8["inputs"], "4- and 8-tick runs really differ")
 
+    # ---- secret skins: codes, and the 1-tick hop that only works while Quackers is on
+    ok(desk.call("/api/redeem", {"code": "nope"})[0] == 404, "an unknown code is refused")
+    s, r = desk.call("/api/redeem", {"code": " Parkour  SAM "})
+    ok(s == 200 and r["char"] == "batcostume" and "batcostume" in r["user"]["owned"] and r["user"]["equipped"] == "batcostume", "'parkour sam' gives the Bat Costume")
+    ok(desk.call("/api/me/settings", {"settings": {"hopTicks": 1}})[1]["settings"]["hopTicks"] == 1, "the 1-tick setting can be saved")
+    ok(desk.call("/api/run/start", {})[1]["hopTicks"] == 4, "without Quackers the 1-tick setting plays at Fast")
+    s, r = desk.call("/api/redeem", {"code": "quackers250"})
+    ok(s == 200 and r["char"] == "quackers" and r["user"]["equipped"] == "quackers", "'quackers250' gives Quackers")
+    r, f, s2, res = play(desk, 25)
+    ok(r["hopTicks"] == 1 and s2 == 200 and res["result"]["score"] == f["score"] > 0, "wearing Quackers, runs are 1-tick and replay exactly")
+    desk.call("/api/me/equip", {"char": "batcostume"})
+    ok(desk.call("/api/run/start", {})[1]["hopTicks"] == 4, "switching skin takes the 1-tick hop away")
+    desk.call("/api/me/equip", {"char": "quackers"})
+    desk.call("/api/me/settings", {"settings": {"hopTicks": 8}})
+
     # ---- daily missions: force today's three to easy ones we can finish quickly
     day = int(time.time() * 1000) // DAY_MS
     db.execute("DELETE FROM daily_assign WHERE day = ?", (day,))

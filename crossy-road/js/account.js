@@ -4,7 +4,7 @@
 //                    played on server-issued seeds ("tickets") and sent back as hop inputs, which the
 //                    server replays to decide the score and coins. Finished runs that can't be sent
 //                    right away wait in a local queue and are retried, so nothing is lost offline.
-import { Profile, CHARACTERS, charById, PRIZE_PRICE, PRIZE_MAX_PRICE } from './logic.js';
+import { Profile, CHARACTERS, charById, PRIZE_PRICE, PRIZE_MAX_PRICE, hopFor } from './logic.js';
 import { store } from './store.js';
 
 export const DEFAULT_SETTINGS = { hopTicks: 4, volume: 0.8, sfx: 1, muted: false, quality: 'high', reducedMotion: false,
@@ -42,6 +42,7 @@ export class GuestProfile {
   get selected() { return this.local.selected; }
   get records() { return this.local.records; }
   get muted() { return !!this.settings.muted; }
+  get hopTicks() { return hopFor(this.settings.hopTicks, this.selected); }
   hasLocalProgress() { return false; }
   async saveSettings(part) {
     Object.assign(this.settings, part);
@@ -91,6 +92,8 @@ export class AccountProfile {
     this.migrated = !!u.migrated;
   }
   get muted() { return !!this.settings.muted; }
+  // ticks per hop for the next run (the secret 1-tick hop only while wearing its skin)
+  get hopTicks() { return hopFor(this.settings.hopTicks, this.selected); }
 
   async refreshMe() { const d = await api('/api/me'); this.apply(d.user); return this; }
   async saveSettings(part) {
@@ -104,6 +107,7 @@ export class AccountProfile {
     if (!this.owned.has(id)) return false;
     this.selected = id;
     try { this.apply((await api('/api/me/equip', { char: id })).user); } catch { /* shown as equipped locally; the server keeps its own */ }
+    this.refill();   // the hop length can depend on the skin
     return true;
   }
   async buy(id) {
@@ -122,7 +126,7 @@ export class AccountProfile {
     } catch (e) { return { ok: false, error: e.status === 402 ? 'Not enough coins.' : e.message }; }
   }
   async redeem(code) {
-    try { const d = await api('/api/redeem', { code }); this.apply(d.user); return { ok: true, char: charById(d.char) }; }
+    try { const d = await api('/api/redeem', { code }); this.apply(d.user); this.refill(); return { ok: true, char: charById(d.char) }; }
     catch (e) { return { ok: false, error: e.message, status: e.status }; }
   }
 
@@ -130,7 +134,7 @@ export class AccountProfile {
   saveQueues() { store.set('tickets.' + this.id, this.tickets); store.set('pending.' + this.id, this.pending); }
   refill() {
     const want = 3;
-    this.tickets = this.tickets.filter(t => t.hopTicks === this.settings.hopTicks);
+    this.tickets = this.tickets.filter(t => t.hopTicks === this.hopTicks);
     if (this.filling || this.tickets.length >= want) return;
     this.filling = true;
     const next = () => api('/api/run/start', {}).then(t => {
@@ -142,7 +146,7 @@ export class AccountProfile {
   }
   // The seed for the next run (null when offline with no tickets left: that run is practice).
   ticket() {
-    const i = this.tickets.findIndex(t => t.hopTicks === this.settings.hopTicks);
+    const i = this.tickets.findIndex(t => t.hopTicks === this.hopTicks);
     const t = i >= 0 ? this.tickets.splice(i, 1)[0] : null;
     this.saveQueues();
     this.refill();
