@@ -379,7 +379,16 @@
    "logoBytes": 1630,
    "thumbnailBytes": 6667,
    "momentBytes": 1855
+  },
+  "fnaf": {
+   "name": "FNAF Replica",
+   "logo": "assets/game-logos/fnaf.svg",
+   "thumbnail": "assets/game-thumbnails/fnaf.svg",
+   "moment": "assets/game-moments/fnaf.svg",
+   "logoBytes": 1552,
+   "thumbnailBytes": 9001,
+   "momentBytes": 1681
   }
  },
- "artVersion": "6be8d4d36b"
+ "artVersion": "478b147550"
 }

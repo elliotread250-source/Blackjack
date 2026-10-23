@@ -600,7 +600,7 @@
    "name": "Block Blast",
    "kind": "game",
    "url": "https://block-blast-production-8f44.up.railway.app",
-   "blurb": "Drag blocks onto an 8\u00d78 board, fill rows and columns to blast them and chain combos for a high score.",
+   "blurb": "Drag blocks onto an 8×8 board, fill rows and columns to blast them and chain combos for a high score.",
    "genres": [
     "Puzzle",
     "Blocks"
@@ -877,7 +877,7 @@
    "name": "Trap Race",
    "kind": "game",
    "url": "https://trap-race-production.up.railway.app",
-   "blurb": "2\u20136 player party platformer. Draft one item each round, bolt it onto a shared course, then race to the flag through everyone's traps. Online rooms or bots, desktop or phone.",
+   "blurb": "2–6 player party platformer. Draft one item each round, bolt it onto a shared course, then race to the flag through everyone's traps. Online rooms or bots, desktop or phone.",
    "genres": [
     "Party platformer",
     "Multiplayer"
@@ -896,7 +896,31 @@
    "keywords": "trap race party platformer build obstacle course draft sniper cannon black hole wall jump multiplayer friends bots ultimate chicken horse",
    "accent": "#ffd25e",
    "shelf": 41
+  },
+  {
+   "id": "fnaf",
+   "name": "FNAF Replica",
+   "kind": "game",
+   "url": "https://fnaf-replica-production.up.railway.app",
+   "blurb": "Co-op night-guard survival for up to four. Hold the office with doors, lights and cameras, or walk the whole pizzeria in free roam: restore the power, hide, and last until 6 AM.",
+   "genres": [
+    "Survival horror",
+    "Co-op"
+   ],
+   "categories": [
+    "action",
+    "multiplayer",
+    "3d"
+   ],
+   "features": [
+    "online",
+    "coop",
+    "touch"
+   ],
+   "keywords": "fnaf five nights freddy horror security guard office cameras doors animatronics pizzeria free roam co-op night shift",
+   "accent": "#c41e1e",
+   "shelf": 42
   }
  ],
- "artVersion": "6be8d4d36b"
+ "artVersion": "478b147550"
 }

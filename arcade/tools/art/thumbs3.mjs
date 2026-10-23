@@ -290,3 +290,25 @@ THUMBS['trap-race'] = () => {
   return T(defs, b, finish('v', .38));
 };
 
+THUMBS['fnaf'] = () => {
+  const defs = lg('wall', 0, 0, 0, 1, [[0, '#1a0c0c'], [1, '#050203']]) + rg('beam', .5, .5, .5, [[0, '#fff1c8', .55], [1, '#fff1c8', 0]]) + rg('scr', .5, .5, .5, [[0, '#5af07a', .35], [1, '#5af07a', 0]]) + blur('gl', 4);
+  let b = rect(0, 0, W, H, 'url(#wall)');
+  // checkered strip along the office wall
+  for (let i = 0; i < 32; i++) b += rect(i * 20, 196, 20, 10, i % 2 ? '#e8e2d2' : '#111', 'opacity=".55"') + rect(i * 20, 206, 20, 10, i % 2 ? '#111' : '#e8e2d2', 'opacity=".55"');
+  // left and right doorways: the left one dark with eyes, the right one lit by the hall light
+  b += rect(20, 60, 120, 230, '#000') + rect(20, 60, 120, 230, 'none', 'stroke="#4a2c1e" stroke-width="6"');
+  b += ell(62, 132, 9, 6, '#fff4d0', 'filter="url(#gl)"') + ell(98, 132, 9, 6, '#fff4d0', 'filter="url(#gl)"') + circ(62, 132, 3, '#c41e1e') + circ(98, 132, 3, '#c41e1e');
+  b += rect(500, 60, 120, 230, '#2a2216') + rect(500, 60, 120, 230, 'url(#beam)') + rect(500, 60, 120, 230, 'none', 'stroke="#4a2c1e" stroke-width="6"');
+  // desk, a CRT monitor showing a camera feed, a desk fan
+  b += rect(150, 262, 340, 98, '#2e2018') + rect(150, 262, 340, 8, '#4a3424');
+  b += rect(250, 170, 140, 96, '#1a1a1a', 'rx="8"') + rect(262, 180, 116, 72, '#0b2412') + rect(262, 180, 116, 72, 'url(#scr)');
+  for (let y = 182; y < 252; y += 4) b += rect(262, y, 116, 1, '#000', 'opacity=".35"');
+  b += circ(270, 190, 4, '#ff3a3a') + text(280, 194, 'CAM 1A', 11, '#cfe8d0', `font-family="monospace"`);
+  b += circ(200, 232, 26, 'none', 'stroke="#555" stroke-width="4"') + path('M200 232 L188 212 M200 232 L222 238 M200 232 L192 254', 'none', 'stroke="#777" stroke-width="7" stroke-linecap="round"') + rect(196, 256, 8, 10, '#444');
+  // flashlight beam across the floor
+  b += path('M430 360 L560 300 L640 340 L640 360Z', '#fff1c8', 'opacity=".12"');
+  // the clock and title
+  b += text(612, 44, '6 AM', 34, '#f2f5fa', `font-family="monospace" font-weight="700" text-anchor="end"`);
+  b += text(170, 54, 'FNAF REPLICA', 38, '#e8e4dc', `${SANS} letter-spacing="2" stroke="#c41e1e" stroke-width="2" paint-order="stroke"`) + text(172, 80, 'survive the night · up to 4 guards', 15, '#f2f5fa', `${SANS} opacity=".8"`);
+  return T(defs, b, finish('v', .5));
+};

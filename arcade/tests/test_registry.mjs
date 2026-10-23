@@ -16,7 +16,8 @@ const CATS = new Set(['arcade', 'action', 'racing', 'puzzle', 'strategy', 'platf
 const FEATS = new Set(['online', 'local2p', 'coop', 'bots', 'touch', 'daily', 'saves', 'leaderboard']);
 // online multiplayer only where networking was verified with two live clients (tools/mp-turn-test.mjs, tools/mp-probe.mjs) or Apex GP's live net.js;
 // Trap Race: verified by its own two-browser e2e run (Trap_race repo, tests/e2e/run.mjs)
-const ONLINE_VERIFIED = new Set(['pool', 'kart-racer', 'pong', 'connect-4', 'apex-gp', 'chess', 'tic-tac-toe', 'trap-race']);
+// FNAF Replica: verified by its four-browser e2e runs in CI (FNAF-Replica repo, e2e/fourPlayers.spec.ts and e2e/freeRoam.spec.ts)
+const ONLINE_VERIFIED = new Set(['pool', 'kart-racer', 'pong', 'connect-4', 'apex-gp', 'chess', 'tic-tac-toe', 'trap-race', 'fnaf']);
 
 ok(games.length >= 39, `all ${games.length} entries present`);
 ok(new Set(games.map(g => g.id)).size === games.length, 'ids are unique');

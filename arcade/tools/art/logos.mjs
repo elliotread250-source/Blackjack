@@ -110,3 +110,10 @@ LOGOS['trap-race'] = () => tile('#3a2d8f', '#17123a',
   line(70, 70, 70, 22, '#e8e8f0', 3) + path('M70 22 Q80 18 90 26 Q80 32 70 32Z', '#ff5e8a') +
   g('transform="translate(52 44) rotate(-12)"', rect(-7, -6, 14, 14, '#f08a2c', 'rx="5" stroke="#1a0e2e" stroke-width="1.6"') + circ(0, -12, 7, '#f08a2c', 'stroke="#1a0e2e" stroke-width="1.6"') + path('M-6 -16 L-3 -24 L0 -17Z M2 -17 L5 -24 L7 -15Z', '#f08a2c', 'stroke="#1a0e2e" stroke-width="1.2"') + circ(3, -13, 1.4, '#1a0e2e')) +
   text(48, 94, 'TRAP RACE', 10, '#ffd25e', `${SANS} text-anchor="middle" letter-spacing=".5"`));
+LOGOS['fnaf'] = () => tile('#2a0a0e', '#050203',
+  // a dark doorway with a pair of eyes in it, the office desk fan and a 6 AM clock
+  rect(26, 14, 44, 62, '#000', 'rx="4"') + rect(26, 14, 44, 62, 'none', 'rx="4" stroke="#5a3a2a" stroke-width="3"') +
+  ell(40, 40, 5, 3.4, '#fff4d0', 'filter="url(#gl)"') + ell(56, 40, 5, 3.4, '#fff4d0', 'filter="url(#gl)"') + circ(40, 40, 1.8, '#c41e1e') + circ(56, 40, 1.8, '#c41e1e') +
+  path('M34 30 L40 24 M62 30 L56 24', 'none', 'stroke="#3a2418" stroke-width="3" stroke-linecap="round"') +
+  rect(8, 76, 80, 6, '#3a2418', 'rx="2"') +
+  text(48, 94, '12 AM', 12, '#ff3a3a', `${SANS} text-anchor="middle" letter-spacing="1"`), GL);
