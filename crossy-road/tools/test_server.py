@@ -163,6 +163,8 @@ def run_tests():
     ok(desk.call("/api/redeem", {"code": "nope"})[0] == 404, "an unknown code is refused")
     s, r = desk.call("/api/redeem", {"code": " Parkour  SAM "})
     ok(s == 200 and r["char"] == "batcostume" and "batcostume" in r["user"]["owned"] and r["user"]["equipped"] == "batcostume", "'parkour sam' gives the Bat Costume")
+    ok(desk.call("/api/me/settings", {"settings": {"batWings": "tucked"}})[1]["settings"]["batWings"] == "tucked", "bat wings can be tucked in")
+    ok(desk.call("/api/me/settings", {"settings": {"batWings": "sideways"}})[1]["settings"]["batWings"] == "tucked", "only spread or tucked are allowed")
     ok(desk.call("/api/me/settings", {"settings": {"hopTicks": 1}})[1]["settings"]["hopTicks"] == 1, "the 1-tick setting can be saved")
     ok(desk.call("/api/run/start", {})[1]["hopTicks"] == 4, "without Quackers the 1-tick setting plays at Fast")
     s, r = desk.call("/api/redeem", {"code": "quackers250"})

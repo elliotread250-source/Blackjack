@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { TICK, COLS, TRAIN_WARN, entityX, trainState, CHARACTERS, lerp, clamp } from './logic.js';
 import * as M from './models.js';
+import { batPose } from './characters.js';
 
 function nameTexture(name) {
   const c = document.createElement('canvas'); c.width = 256; c.height = 64;
@@ -276,6 +277,18 @@ export class Renderer {
     this.weatherOff = q === 'low';
     this.phoenixLight.intensity = this.charId === 'royalphoenix' && q !== 'low' ? 1.6 : 0;
     this.resize();
+  }
+
+  // The Bat's wings can be stretched out or tucked in (a setting): rebuild every copy of its model.
+  setBatWings(tucked) {
+    tucked = !!tucked;
+    if (batPose.tucked === tucked) return;
+    batPose.tucked = tucked;
+    const old = this.geo.get('char:batcostume');
+    if (old) { this.geo.delete('char:batcostume'); old.dispose(); }
+    if (this.thumbs) { this.thumbs.delete('batcostume'); this.thumbs.delete('batcostume:locked'); }
+    for (const c of this.carousel) if (c.id === 'batcostume') c.m.geometry = this.charGeo('batcostume');
+    if (this.charId === 'batcostume') { this.charId = null; this.setCharacter('batcostume'); }
   }
 
   // A small picture of a character for the shop list (cached).

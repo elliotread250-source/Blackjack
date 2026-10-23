@@ -77,7 +77,7 @@ SCRYPT = dict(n=2 ** 14, r=8, p=1, dklen=32)
 NAME_RE = re.compile(r"^[A-Za-z0-9 _.\-]{3,14}$")
 BLOCKED = re.compile(r"fuck|shit|cunt|nigg|fag|bitch|whore|slut|rape|nazi|hitler|penis|cock|dick|pussy|wank", re.I)
 DEFAULT_SETTINGS = {"hopTicks": 4, "volume": 0.8, "sfx": 1.0, "muted": False, "quality": "high", "reducedMotion": False,
-                    "highContrast": False, "trainWarning": "strong", "shake": True}
+                    "highContrast": False, "trainWarning": "strong", "shake": True, "batWings": "spread"}
 
 _lock = threading.RLock()        # serialises every database transaction (low traffic, keeps SQLite simple)
 _db = None
@@ -337,6 +337,8 @@ def clean_settings(raw, base=None):
             out[k] = raw[k]
     if raw.get("quality") in ("low", "medium", "high"):
         out["quality"] = raw["quality"]
+    if raw.get("batWings") in ("spread", "tucked"):
+        out["batWings"] = raw["batWings"]
     if raw.get("trainWarning") in ("strong", "steady"):
         out["trainWarning"] = raw["trainWarning"]
     return out

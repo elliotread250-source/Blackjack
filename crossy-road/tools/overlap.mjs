@@ -1,5 +1,5 @@
 // node tools/overlap.mjs — lists every pair of boxes in the secret skins that share volume.
-import { MODELS } from '../js/characters.js';
+import { MODELS, batPose } from '../js/characters.js';
 
 export function overlaps(boxes) {
   const lo = (b, k) => (k === 1 ? b[1] : b[k] - b[k + 3] / 2), hi = (b, k) => (k === 1 ? b[1] + b[4] : b[k] + b[k + 3] / 2);
@@ -10,5 +10,9 @@ export function overlaps(boxes) {
   return bad;
 }
 if (process.argv[1] && process.argv[1].endsWith('overlap.mjs')) {
-  for (const id of ['batcostume', 'quackers']) console.log(id, MODELS[id]().length, 'boxes,', overlaps(MODELS[id]()).length, 'overlaps');
+  for (const [id, tucked] of [['batcostume', false], ['batcostume', true], ['quackers', false]]) {
+    batPose.tucked = tucked;
+    const b = MODELS[id](), bad = overlaps(b);
+    console.log(id, tucked ? '(tucked)' : '', b.length, 'boxes,', bad.length, 'overlaps', bad.slice(0, 6).map(([i, j]) => JSON.stringify([b[i], b[j]])).join('\n  '));
+  }
 }

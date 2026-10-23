@@ -574,50 +574,55 @@ Object.assign(MODELS, {
 // Secret skins. Every box here sits flush against its neighbours and never inside one, so nothing
 // z-fights or shows through (tools/test.mjs checks that for both).
 
-// Bat costume: cowl with tall ears and white slit eyes, plated chest with the bat emblem, utility
-// belt, gauntlet fins and a cape that opens into scalloped wings with finger bones.
-const BC = { cowl: 0x1b1b22, suit: 0x22222b, plate: 0x3a3a46, boot: 0x15151b, skin: 0xe0b99a, gold: 0xf2c94c, yellow: 0xffd23f,
-  cape: 0x14141a, bone: 0x2a2230, mem: [0x3b2f48, 0x44385a] };
-function batCostume() {
-  const B = [];
-  for (const s of [-1, 1]) {
-    B.push(
-      [s * 1.2, 0, 0, 1.6, 1.4, 2, BC.boot], [s * 1.2, 0, -1.15, 1.6, 0.8, 0.3, BC.plate], [s * 1.2, 1.4, 0, 1.8, 0.3, 2.2, BC.plate],
-      [s * 1.2, 1.7, 0, 1.6, 1.5, 1.8, BC.suit],                                   // boot, toe cap, cuff, leg
-      [s * 1.8, 3.2, -2.05, 1, 0.6, 0.7, 0xa07a22],                                  // belt pouch
-      [s * 3.2, 6.4, 0, 1.4, 1, 2.6, BC.plate], [s * 3.2, 3.6, 0, 1.4, 2.8, 1.8, BC.suit], [s * 3.2, 2.6, 0, 1.4, 1, 1.6, BC.boot],   // pauldron, arm, glove
-      [s * 4.15, 3.6, -0.5, 0.5, 1.4, 0.5, BC.plate], [s * 4.15, 3.6, 0.1, 0.5, 1.8, 0.5, BC.plate],                                // gauntlet fins
-      [s * 1.5, 11.5, 0, 1.2, 1.2, 0.8, BC.cowl], [s * 1.5, 12.7, 0, 0.8, 1.2, 0.8, BC.cowl], [s * 1.5, 13.9, 0, 0.4, 1, 0.8, BC.cowl], [s * 1.5, 11.6, -0.5, 0.6, 1, 0.2, 0x4a3c56], // ears
-      [s * 1.8, 7.9, -2.15, 1, 1.3, 0.3, BC.cowl],                                   // cheek guards
-      [s, 9.9, -2.1, 1.2, 0.5, 0.2, 0xffffff], [s, 10.4, -2.1, 1.4, 0.4, 0.2, 0x0c0c10],   // glowing eye slits and brow
-      [s * 0.4, 8.2, -2.35, 0.25, 0.3, 0.1, 0xffffff],                               // fangs
-      [s * 0.8, 6.3, -2.1, 0.4, 0.5, 0.2, 0x0c0c10],                                 // emblem ears
-      [s * 1.2, 1.4, 2, 1.4, 1.2, 0.6, BC.cape],                                     // cape tails
-    );
-  }
-  B.push(
-    [0, 3.2, 0, 5, 0.6, 3.4, 0x7a5a1c], [0, 3.25, -2.1, 1.2, 0.5, 0.4, BC.gold],  // belt and buckle
-    [0, 3.8, 0, 5, 3.6, 3.4, 0x2b2b35],                                              // torso
-    [0, 3.8, -1.85, 3.4, 0.7, 0.3, BC.plate], [0, 4.6, -1.85, 3.4, 0.6, 0.3, BC.plate],       // abdomen plates
-    [0, 5.2, -1.85, 2.8, 1.6, 0.3, BC.yellow], [0, 6.8, -1.85, 3.8, 0.6, 0.3, BC.plate],      // emblem oval, collar
-    [0, 5.8, -2.1, 2.2, 0.5, 0.2, 0x0c0c10], [0, 5.3, -2.1, 0.5, 0.5, 0.2, 0x0c0c10], [0, 6.3, -2.1, 0.5, 0.2, 0.2, 0x0c0c10],  // emblem bat
-    [0, 7.4, 0, 2, 0.5, 2, BC.suit],                                                 // neck
-    [0, 7.9, 0, 4.6, 3.6, 4, BC.cowl],                                               // cowl
-    [0, 7.9, -2.15, 2.6, 1.3, 0.3, BC.skin], [0, 9.2, -2.15, 2.6, 0.7, 0.3, BC.cowl],   // lower face, mask
-    [0, 8.5, -2.35, 1.2, 0.2, 0.1, 0x8a3a3a], [0, 8.8, -2.375, 0.6, 0.4, 0.15, 0xc9a07e],     // mouth, nose
-    [0, 2.6, 2, 5, 4.8, 0.6, BC.cape],                                               // cape
+// Bat: a furry bat rather than a person in a suit. Big pointed ears, bead eyes, nose leaf, fangs, clawed
+// feet, a tail membrane and wings with a bone along the front edge, finger bones and scalloped skin.
+// Settings picks the pose: wings stretched out, or folded in against the body (batPose.tucked).
+export const batPose = { tucked: false };
+const BF = { fur: 0x3b2f2a, dark: 0x2f2420, belly: 0x5a4a40, ruff: 0x6a5648, muzzle: 0x4a3328, nose: 0x6a3a3a, ear: 0x7a4a4a,
+  bone: 0x1c1512, claw: 0xd8cfc0, mem: [0x2e2420, 0x3a2c26], edge: 0x46362e, black: 0x0a0a0a };
+function batBody() {
+  const B = [
+    [0, 0.6, 0.6, 3, 2, 3.6, BF.belly], [0, 2.6, 0.4, 3.4, 2.6, 3.2, BF.fur], [0, 2.8, -1.4, 2.6, 1.8, 0.4, BF.ruff],   // belly, chest, chest ruff
+    [0, 5.2, -0.2, 3, 0.8, 2.6, BF.fur],                                                                                 // neck
+    [0, 6, -0.6, 3.6, 3, 3.2, BF.dark], [0, 6.2, -2.7, 2, 1.6, 1, BF.muzzle],                                           // head, muzzle
+    [0, 7.8, -2.95, 1, 0.8, 0.5, BF.nose], [0, 8.6, -2.95, 0.5, 0.5, 0.4, BF.nose],                                      // nose leaf
+    [0, 6.6, -3.25, 1.2, 0.15, 0.1, 0x120c0a],
+    [0, 0.8, 3.4, 3.6, 0.4, 2, BF.mem[0]], [0, 0.8, 4.8, 0.3, 0.4, 0.8, BF.bone],                                         // tail membrane and tail bone
+  ];
+  for (const s of [-1, 1]) B.push(
+    [s * 2.3, 0, 0.6, 0.8, 0.6, 1.2, BF.dark], [s * 2.3, 0, -0.2, 0.6, 0.3, 0.4, BF.claw], [s * 2.3, 0.6, 0.8, 1.6, 1.6, 2, BF.fur],     // clawed foot and haunch
+    [s * 0.45, 6.2, -3.25, 0.25, 0.4, 0.1, 0xf4efe4], [s * 0.35, 7.2, -3.25, 0.3, 0.3, 0.1, 0x120c0a],                                   // fangs, nostrils
+    [s, 7.9, -2.3, 0.6, 0.6, 0.2, BF.black], [s * 0.9, 8.2, -2.45, 0.2, 0.2, 0.1, 0xffffff], [s, 8.5, -2.3, 0.9, 0.3, 0.2, BF.bone],     // bead eyes, highlight, brow
+    [s * 2, 6.4, -1, 0.4, 1.4, 1.4, BF.belly],                                                                                           // cheek fur
+    [s * 1.2, 9, -0.3, 1.2, 1.4, 0.8, BF.dark], [s * 1.3, 10.4, -0.3, 1, 1.4, 0.7, BF.dark], [s * 1.4, 11.8, -0.3, 0.7, 1.2, 0.6, BF.dark], [s * 1.45, 13, -0.3, 0.4, 1, 0.5, BF.dark],   // tall ears
+    [s * 1.2, 9.2, -0.75, 0.6, 1, 0.1, BF.ear], [s * 1.3, 10.6, -0.7, 0.5, 1, 0.1, BF.ear],                                              // inner ears
   );
-  // wings: four membrane columns each with a finger bone on the outer edge and a bone along the top
-  const tops = [7.0, 7.9, 8.8, 9.6], bottoms = [2.8, 2.4, 3.6, 5.2], cw = 1.3;
-  for (const s of [-1, 1]) for (let i = 0; i < 4; i++) {
-    const x0 = 2.5 + i * cw, top = tops[i], bot = bottoms[i];
-    const cx = w => s * (x0 + w / 2);
-    B.push(
-      [s * (x0 + 0.5), bot, 2, 1, top - 0.5 - bot, 0.6, BC.mem[i % 2]],
-      [s * (x0 + 1.15), bot - 0.5, 2, 0.3, top - bot, 0.7, BC.bone],
-      [cx(cw), top - 0.5, 2, cw, 0.5, 0.6, BC.bone],
-    );
+  return B;
+}
+// wings stretched out: four membrane columns, each with a finger bone on its outer edge and a bone along the top
+function batSpread() {
+  const B = [], cw = 1.45, tops = [4.9, 5.6, 6.2, 5.8], bots = [2.4, 1.8, 2.2, 3.4];
+  for (const s of [-1, 1]) {
+    B.push([s * 1.9, 3.8, 0, 0.4, 1.6, 1.4, BF.belly]);   // shoulder fur
+    for (let i = 0; i < 4; i++) {
+      const x0 = 2.1 + i * cw, top = tops[i], bot = bots[i], h = top - 0.6 - bot, split = bot + h * 0.55;
+      B.push(
+        [s * (x0 + 0.575), bot, 0.2, 1.15, split - bot, 0.4, BF.mem[1]], [s * (x0 + 0.575), split, 0.2, 1.15, top - 0.6 - split, 0.4, BF.mem[0]],   // lighter skin at the edge, darker by the bone
+        [s * (x0 + 1.3), bot - 0.6, 0.2, 0.3, top - bot, 0.5, BF.bone],                                                                              // finger bone
+        [s * (x0 + cw / 2), top - 0.6, 0.2, cw, 0.6, 0.6, BF.bone],                                                                                  // front-edge bone
+      );
+    }
+    B.push([s * 5.7, 6.2, 0.2, 0.4, 0.6, 0.5, BF.claw]);   // thumb claw
   }
+  return B;
+}
+// wings folded: the skin wraps the sides, the arm bone folds along the top, thumb claws peek out the front
+function batTucked() {
+  const B = [];
+  for (const s of [-1, 1]) B.push(
+    [s * 2, 2.6, 0.5, 0.6, 3, 2.8, BF.mem[1]], [s * 2.45, 2.6, 0.5, 0.3, 2.6, 2.2, BF.mem[0]],
+    [s * 2, 5.6, 0.5, 0.6, 0.4, 2.8, BF.bone], [s * 2, 4.6, -1.15, 0.4, 0.8, 0.5, BF.claw],
+  );
   return B;
 }
 
@@ -642,4 +647,4 @@ function quackers() {
   ];
   return B;
 }
-Object.assign(MODELS, { batcostume: batCostume, quackers });
+Object.assign(MODELS, { batcostume: () => [...batBody(), ...(batPose.tucked ? batTucked() : batSpread())], quackers });

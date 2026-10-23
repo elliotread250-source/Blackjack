@@ -56,6 +56,7 @@ function applySettings() {
   sound.setVolume(s.volume ?? 0.8, s.sfx ?? 1);
   sound.setMuted(!!s.muted);
   renderer.applySettings({ quality: s.quality || 'high', reducedMotion: !!s.reducedMotion, shake: s.shake !== false, trainWarning: s.trainWarning || 'strong' });
+  renderer.setBatWings(s.batWings === 'tucked');
   document.body.classList.toggle('hc', !!s.highContrast);
   document.body.classList.toggle('rm', !!s.reducedMotion);
   updateMute();
@@ -425,6 +426,7 @@ function renderSettings() {
   const seg = (id, v) => { for (const b of $(id).querySelectorAll('button')) b.setAttribute('aria-checked', String(b.dataset.v === String(v))); };
   const quick = profile.owned.has(QUICK_SKIN) && profile.selected === QUICK_SKIN;   // the secret 1-tick option
   $('set-speed-quick').hidden = !quick; $('set-speed-note').hidden = !quick;
+  $('set-bat-wrap').hidden = !profile.owned.has('batcostume'); seg('set-bat', s.batWings === 'tucked' ? 'tucked' : 'spread');
   seg('set-speed', quick ? s.hopTicks : profile.hopTicks); seg('set-quality', s.quality || 'high'); seg('set-train', s.trainWarning || 'strong');
   $('set-vol').value = s.volume ?? 0.8; $('set-sfx').value = s.sfx ?? 1;
   $('set-mute').checked = !!s.muted; $('set-motion').checked = !!s.reducedMotion; $('set-contrast').checked = !!s.highContrast; $('set-shake').checked = s.shake !== false;
@@ -441,7 +443,7 @@ function renderSettings() {
   }
 }
 const segClick = (id, key, conv = v => v) => $(id).addEventListener('click', e => { const b = e.target.closest('button'); if (b) { saveSetting({ [key]: conv(b.dataset.v) }); renderSettings(); } });
-segClick('set-speed', 'hopTicks', Number); segClick('set-quality', 'quality'); segClick('set-train', 'trainWarning');
+segClick('set-speed', 'hopTicks', Number); segClick('set-bat', 'batWings'); segClick('set-quality', 'quality'); segClick('set-train', 'trainWarning');
 $('set-vol').addEventListener('change', e => saveSetting({ volume: +e.target.value }));
 $('set-sfx').addEventListener('change', e => saveSetting({ sfx: +e.target.value }));
 $('set-mute').addEventListener('change', e => saveSetting({ muted: e.target.checked }));

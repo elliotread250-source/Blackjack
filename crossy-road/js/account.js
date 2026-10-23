@@ -8,7 +8,7 @@ import { Profile, CHARACTERS, charById, PRIZE_PRICE, PRIZE_MAX_PRICE, hopFor } f
 import { store } from './store.js';
 
 export const DEFAULT_SETTINGS = { hopTicks: 4, volume: 0.8, sfx: 1, muted: false, quality: 'high', reducedMotion: false,
-  highContrast: false, trainWarning: 'strong', shake: true };
+  highContrast: false, trainWarning: 'strong', shake: true, batWings: 'spread' };
 
 export class ApiError extends Error {
   constructor(status, data) { super((data && data.error) || (status ? 'Request failed' : 'No connection')); this.status = status; this.data = data || {}; }
