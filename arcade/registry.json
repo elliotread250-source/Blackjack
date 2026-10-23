@@ -600,7 +600,7 @@
    "name": "Block Blast",
    "kind": "game",
    "url": "https://block-blast-production-8f44.up.railway.app",
-   "blurb": "Drag blocks onto an 8×8 board, fill rows and columns to blast them and chain combos for a high score.",
+   "blurb": "Drag blocks onto an 8\u00d78 board, fill rows and columns to blast them and chain combos for a high score.",
    "genres": [
     "Puzzle",
     "Blocks"
@@ -877,7 +877,7 @@
    "name": "Trap Race",
    "kind": "game",
    "url": "https://trap-race-production.up.railway.app",
-   "blurb": "2–6 player party platformer. Draft one item each round, bolt it onto a shared course, then race to the flag through everyone's traps. Online rooms or bots.",
+   "blurb": "2\u20136 player party platformer. Draft one item each round, bolt it onto a shared course, then race to the flag through everyone's traps. Online rooms or bots, desktop or phone.",
    "genres": [
     "Party platformer",
     "Multiplayer"
@@ -890,7 +890,8 @@
    ],
    "features": [
     "online",
-    "bots"
+    "bots",
+    "touch"
    ],
    "keywords": "trap race party platformer build obstacle course draft sniper cannon black hole wall jump multiplayer friends bots ultimate chicken horse",
    "accent": "#ffd25e",
