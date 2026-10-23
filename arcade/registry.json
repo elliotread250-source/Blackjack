@@ -920,7 +920,127 @@
    "keywords": "fnaf five nights freddy horror security guard office cameras doors animatronics pizzeria free roam co-op night shift",
    "accent": "#c41e1e",
    "shelf": 42
+  },
+  {
+   "id": "patchwork",
+   "name": "Patchwork",
+   "kind": "game",
+   "url": "https://open-arcade.up.railway.app/arenas/?game=paper",
+   "blurb": "Close loops around a circular island, claim territory and cut exposed trails. Play computer rivals or invite friends into the same arena.",
+   "genres": [
+    "IO",
+    "Arena"
+   ],
+   "categories": [
+    "multiplayer",
+    "arcade",
+    "action"
+   ],
+   "features": [
+    "online",
+    "bots",
+    "touch"
+   ],
+   "keywords": "paper io arena multiplayer friends",
+   "accent": "#64875e",
+   "shelf": 43
+  },
+  {
+   "id": "afterglow",
+   "name": "Afterglow",
+   "kind": "game",
+   "url": "https://open-arcade.up.railway.app/arenas/?game=snake",
+   "blurb": "A midnight snake arena. Collect sparks, grow a glowing ribbon and boost past rivals. Shared rooms with real players and bots.",
+   "genres": [
+    "IO",
+    "Arena"
+   ],
+   "categories": [
+    "multiplayer",
+    "arcade",
+    "action"
+   ],
+   "features": [
+    "online",
+    "bots",
+    "touch"
+   ],
+   "keywords": "snake io arena multiplayer friends",
+   "accent": "#7de0bd",
+   "shelf": 44
+  },
+  {
+   "id": "snip-club",
+   "name": "Snip Club",
+   "kind": "game",
+   "url": "https://open-arcade.up.railway.app/arenas/?game=scissor",
+   "blurb": "A scissors-and-fabric territory race. Dash across the sewing table, cut rival ribbons and close loops to stitch your own patch.",
+   "genres": [
+    "IO",
+    "Arena"
+   ],
+   "categories": [
+    "multiplayer",
+    "arcade",
+    "action"
+   ],
+   "features": [
+    "online",
+    "bots",
+    "touch"
+   ],
+   "keywords": "scissor io arena multiplayer friends",
+   "accent": "#b3483b",
+   "shelf": 45
+  },
+  {
+   "id": "little-sink",
+   "name": "Little Sink",
+   "kind": "game",
+   "url": "https://open-arcade.up.railway.app/arenas/?game=hole",
+   "blurb": "Swallow a miniature town, from tiny shrubs to whole buildings. Grow your hole and compete with bots or friends in a three-minute round.",
+   "genres": [
+    "IO",
+    "Arena"
+   ],
+   "categories": [
+    "multiplayer",
+    "arcade",
+    "action"
+   ],
+   "features": [
+    "online",
+    "bots",
+    "touch"
+   ],
+   "keywords": "hole io arena multiplayer friends",
+   "accent": "#445e71",
+   "shelf": 46
+  },
+  {
+   "id": "culture-club",
+   "name": "Culture Club",
+   "kind": "game",
+   "url": "https://open-arcade.up.railway.app/arenas/?game=blob",
+   "blurb": "Grow a colony under the microscope. Eat smaller cells, split with Space and reunite after a cooldown. Bots and friends share the same dish.",
+   "genres": [
+    "IO",
+    "Arena"
+   ],
+   "categories": [
+    "multiplayer",
+    "arcade",
+    "action"
+   ],
+   "features": [
+    "online",
+    "bots",
+    "touch"
+   ],
+   "keywords": "blob io arena multiplayer friends",
+   "accent": "#906699",
+   "shelf": 47
   }
  ],
- "artVersion": "478b147550"
+ "artVersion": "32bee0b4b2"
 }

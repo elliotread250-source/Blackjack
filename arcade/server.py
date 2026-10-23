@@ -20,6 +20,8 @@ the answers for STATUS_TTL seconds. Checks only run when someone loads the hub, 
 sleep. "up" means the game's server answered with a non-5xx status; it is not a claim about players.
 """
 
+from arenas import server as arenas
+
 import hmac
 import http.client
 import json
@@ -248,6 +250,8 @@ class Handler(SimpleHTTPRequestHandler):
         return fwd.split(",")[0].strip() or self.client_address[0]
 
     def do_GET(self):
+        if arenas.dispatch(self):
+            return
         if self.path.split("?")[0] == "/healthz":
             body = b"ok"
             self.send_response(200)
@@ -265,7 +269,14 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json(404, {"error": "Not found"})  # never serve a local data folder
         super().do_GET()
 
+    def do_HEAD(self):
+        if arenas.dispatch(self):
+            return
+        super().do_HEAD()
+
     def do_POST(self):
+        if arenas.dispatch(self):
+            return
         route = self.path.split("?")[0]
         if route not in ("/api/suggestions", "/api/suggestions/view", "/api/play"):
             return self._json(404, {"error": "Not found"})
@@ -303,6 +314,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def main():
+    arenas.start()
     _load()
     _load_plays()
     _load_targets()
