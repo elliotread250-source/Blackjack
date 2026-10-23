@@ -43,6 +43,10 @@ NODE_PATH=/path/to/node_modules node arenas/smoke.cjs
 `CHROMIUM_PATH` overrides `/usr/bin/chromium`. The browser test joins every game with two independent
 clients, checks shared rosters and changing canvas output, and checks touch controls at a phone viewport.
 
-Deployment has not been performed: this session has no Composio or Railway connection. Do not replace the
-existing hub with a standalone arena server. Deploy the updated hub from this branch through the existing
-Railway service, then verify `/healthz`, all five game links, and a two-browser live room before calling it live.
+Published to https://open-arcade.up.railway.app on 2026-10-23 through the existing Railway GitHub
+integration, by fast-forwarding `claude/awesome-heisenberg-qcknm3` to implementation commit `6a15572`.
+Production health, all five routes, exact client file contents, two-browser rooms for all five games,
+and mobile touch controls passed. Railway GitHub deployment ID: `7289607215`. Its status callback
+still reported `in_progress` when the production functional checks finished. No Composio connection
+was available in this chat; enabling network access allowed the existing GitHub integration to be used.
+Keep the existing hub service and its `arcade/` root; do not replace it with the standalone arena server.
