@@ -766,7 +766,7 @@ export const PRIZE_MAX_PRICE = 300;
 // Secret and challenge skins: you can't buy these. `code` = redeem code, `challenge` = run goal.
 CHARACTERS.push(
   { id: 'golden', name: 'Golden Chicken', price: null, theme: 'desert', code: 'golden' },
-  { id: 'batcostume', name: 'Bat Costume', price: null, theme: 'night', code: 'parkour sam' },
+  { id: 'batcostume', name: 'Gray Long-Eared Bat', price: null, theme: 'night', code: 'parkour sam' },
   { id: 'quackers', name: 'Quackers', price: null, theme: 'classic', code: 'quackers250' },
   { id: 'ironsuit', name: 'Iron Suit', price: null, theme: 'metro', challenge: { stat: 'score', goal: 75, text: 'Reach 75 rows in one run' } },
   { id: 'starshield', name: 'Star Shield', price: null, theme: 'classic', challenge: { stat: 'roads', goal: 40, text: 'Cross 40 roads in one run' } },

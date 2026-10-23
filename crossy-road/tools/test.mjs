@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Game, Profile, CHARACTERS, memoryStorage, zoneOf, BIOME_ROWS, VEHICLES, PRIZE_PRICE, GEM_VALUE, CHALLENGES, TPS, replayRun, NEW_2026, PRIZE_MAX_PRICE, TRAIN_WARN, trainState, HOP_CHOICES, hopFor, QUICK_HOP, QUICK_SKIN } from '../js/logic.js';
 import { overlaps } from './overlap.mjs';
 import { DAILIES, dailiesForDay, progressOf, liveValue, BASE_REWARD, RARITY_BONUS, dayOf, nextResetMs } from '../js/dailies.js';
-import { MODELS, batPose } from '../js/characters.js';
+import { MODELS, batPose, BAT_FLAPS, batFlapBoxes } from '../js/characters.js';
 import { Autopilot } from '../js/autopilot.js';
 
 let n = 0; const ok = (v, m) => { assert(v, m); n++; };
@@ -32,6 +32,7 @@ for (const c of CHARACTERS) {
     ok(overlaps(MODELS.batcostume()).length === 0, `batcostume (${tucked ? 'tucked in' : 'stretched out'}): no boxes pass through each other`);
   }
   ok(overlaps(MODELS.quackers()).length === 0, 'quackers: no boxes pass through each other');
+  for (let i = 0; i < BAT_FLAPS.length; i++) { const fb = batFlapBoxes(i); ok(overlaps(fb).length === 0 && Math.min(...fb.map(b => b[1])) >= 0 && Math.max(...fb.map(b => b[1] + b[4])) < 16, `bat flap frame ${i}: solid, above the ground, fits`); }
   batPose.tucked = false; const spreadW = Math.max(...MODELS.batcostume().map(b => Math.abs(b[0]) + b[3] / 2)); batPose.tucked = true; const tuckW = Math.max(...MODELS.batcostume().map(b => Math.abs(b[0]) + b[3] / 2)); batPose.tucked = false;
   ok(spreadW > 7 && tuckW < 4 && MODELS.batcostume().length > 60 && MODELS.quackers().length > 25, 'bat wings really stretch out or tuck in; both secret models are detailed');
   ok(hopFor(QUICK_HOP, QUICK_SKIN) === 1 && hopFor(QUICK_HOP, 'duck') === 4 && hopFor(QUICK_HOP, 'chicken') === 4 && hopFor(8, QUICK_SKIN) === 8 && hopFor(4, 'chicken') === 4, '1 tick only with Quackers on');

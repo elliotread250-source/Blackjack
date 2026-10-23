@@ -60,8 +60,8 @@ sound is synthesised, and there is no build step: the folder is the game.
 - **85 characters**, including the 2026 collection of 30 (Forest Hedgehog 25 … Royal Phoenix 1,000),
   a searchable, sortable shop list with previews, and purchase confirmation. The prize machine
   (100 coins) gives a random ordinary character up to 300 coins, each equally likely.
-- **Secret skins** (redeem codes, never sold): `parkour sam` gives the **Bat Costume** (cowl, plated suit,
-  gauntlets and scalloped wings, built from boxes that never overlap) and `quackers250` gives **Quackers**,
+- **Secret skins** (redeem codes, never sold): `parkour sam` gives the **Gray Long-Eared Bat** (gray fur, pale belly, very long ears,
+  bone-and-skin wings, built from boxes that never overlap; Settings lets you stretch its wings out or tuck them in) and `quackers250` gives **Quackers**,
   the round yellow duck with a mug of coffee. While Quackers is the equipped skin, Settings shows a secret
   **Quackers Blink** movement speed: every hop takes 1 tick. The server only issues 1-tick runs while Quackers
   is equipped and owned (anything else plays at Fast), and replays them like any other run.

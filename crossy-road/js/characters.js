@@ -574,48 +574,55 @@ Object.assign(MODELS, {
 // Secret skins. Every box here sits flush against its neighbours and never inside one, so nothing
 // z-fights or shows through (tools/test.mjs checks that for both).
 
-// Bat: a furry bat rather than a person in a suit. Big pointed ears, bead eyes, nose leaf, fangs, clawed
+// Gray long-eared bat (Plecotus): a furry bat rather than a person in a suit. Gray fur and pale belly, very long
+// ears, bead eyes, fangs, clawed
 // feet, a tail membrane and wings with a bone along the front edge, finger bones and scalloped skin.
 // Settings picks the pose: wings stretched out, or folded in against the body (batPose.tucked).
 export const batPose = { tucked: false };
-const BF = { fur: 0x3b2f2a, dark: 0x2f2420, belly: 0x5a4a40, ruff: 0x6a5648, muzzle: 0x4a3328, nose: 0x6a3a3a, ear: 0x7a4a4a,
-  bone: 0x1c1512, claw: 0xd8cfc0, mem: [0x2e2420, 0x3a2c26], edge: 0x46362e, black: 0x0a0a0a };
+const BF = { fur: 0x7c7f84, dark: 0x5a5d62, belly: 0xc9cbcd, ruff: 0xd9dadb, muzzle: 0x8a7f7c, nose: 0x8a6a68, ear: 0xa89a98, tragus: 0xc4b8b4,
+  bone: 0x35363a, claw: 0xcfcfcf, mem: [0x4e4f55, 0x5f6066], black: 0x0a0a0a, foot: 0x4a4b50 };
 function batBody() {
   const B = [
     [0, 0.6, 0.6, 3, 2, 3.6, BF.belly], [0, 2.6, 0.4, 3.4, 2.6, 3.2, BF.fur], [0, 2.8, -1.4, 2.6, 1.8, 0.4, BF.ruff],   // belly, chest, chest ruff
     [0, 5.2, -0.2, 3, 0.8, 2.6, BF.fur],                                                                                 // neck
     [0, 6, -0.6, 3.6, 3, 3.2, BF.dark], [0, 6.2, -2.7, 2, 1.6, 1, BF.muzzle],                                           // head, muzzle
-    [0, 7.8, -2.95, 1, 0.8, 0.5, BF.nose], [0, 8.6, -2.95, 0.5, 0.5, 0.4, BF.nose],                                      // nose leaf
+    [0, 7.6, -3.25, 0.7, 0.4, 0.1, BF.nose],                                                                              // nose pad
     [0, 6.6, -3.25, 1.2, 0.15, 0.1, 0x120c0a],
     [0, 0.8, 3.4, 3.6, 0.4, 2, BF.mem[0]], [0, 0.8, 4.8, 0.3, 0.4, 0.8, BF.bone],                                         // tail membrane and tail bone
   ];
   for (const s of [-1, 1]) B.push(
-    [s * 2.3, 0, 0.6, 0.8, 0.6, 1.2, BF.dark], [s * 2.3, 0, -0.2, 0.6, 0.3, 0.4, BF.claw], [s * 2.3, 0.6, 0.8, 1.6, 1.6, 2, BF.fur],     // clawed foot and haunch
+    [s * 2.3, 0, 0.6, 0.8, 0.6, 1.2, BF.foot], [s * 2.3, 0, -0.2, 0.6, 0.3, 0.4, BF.claw], [s * 2.3, 0.6, 0.8, 1.6, 1.6, 2, BF.fur],     // clawed foot and haunch
     [s * 0.45, 6.2, -3.25, 0.25, 0.4, 0.1, 0xf4efe4], [s * 0.35, 7.2, -3.25, 0.3, 0.3, 0.1, 0x120c0a],                                   // fangs, nostrils
     [s, 7.9, -2.3, 0.6, 0.6, 0.2, BF.black], [s * 0.9, 8.2, -2.45, 0.2, 0.2, 0.1, 0xffffff], [s, 8.5, -2.3, 0.9, 0.3, 0.2, BF.bone],     // bead eyes, highlight, brow
     [s * 2, 6.4, -1, 0.4, 1.4, 1.4, BF.belly],                                                                                           // cheek fur
-    [s * 1.2, 9, -0.3, 1.2, 1.4, 0.8, BF.dark], [s * 1.3, 10.4, -0.3, 1, 1.4, 0.7, BF.dark], [s * 1.4, 11.8, -0.3, 0.7, 1.2, 0.6, BF.dark], [s * 1.45, 13, -0.3, 0.4, 1, 0.5, BF.dark],   // tall ears
-    [s * 1.2, 9.2, -0.75, 0.6, 1, 0.1, BF.ear], [s * 1.3, 10.6, -0.7, 0.5, 1, 0.1, BF.ear],                                              // inner ears
+    [s * 1.2, 9, -0.3, 1.2, 1.2, 0.7, BF.dark], [s * 1.35, 10.2, -0.3, 1.2, 1.4, 0.7, BF.dark], [s * 1.5, 11.6, -0.3, 1.1, 1.4, 0.7, BF.dark],
+    [s * 1.65, 13, -0.3, 0.9, 1.3, 0.7, BF.dark], [s * 1.8, 14.3, -0.3, 0.7, 1, 0.7, BF.dark], [s * 1.9, 15.3, -0.3, 0.4, 0.6, 0.7, BF.dark],   // very long ears, leaning outward
+    [s * 1.2, 9.2, -0.7, 0.6, 1, 0.1, BF.ear], [s * 1.35, 10.4, -0.7, 0.6, 1.2, 0.1, BF.ear], [s * 1.5, 11.8, -0.7, 0.5, 1.2, 0.1, BF.ear], [s * 1.65, 13.2, -0.7, 0.4, 1.1, 0.1, BF.ear],   // inner ears
+    [s * 0.75, 9, -0.8, 0.3, 0.9, 0.2, BF.tragus],                                                                                               // tragus
   );
   return B;
 }
 // wings stretched out: four membrane columns, each with a finger bone on its outer edge and a bone along the top
-function batSpread() {
+// `flap` raises (+) or lowers (-) the outer wing in steps, so every flap frame is still plain boxes
+function batSpread(flap = 0) {
   const B = [], cw = 1.45, tops = [4.9, 5.6, 6.2, 5.8], bots = [2.4, 1.8, 2.2, 3.4];
   for (const s of [-1, 1]) {
     B.push([s * 1.9, 3.8, 0, 0.4, 1.6, 1.4, BF.belly]);   // shoulder fur
     for (let i = 0; i < 4; i++) {
       const x0 = 2.1 + i * cw, top = tops[i], bot = bots[i], h = top - 0.6 - bot, split = bot + h * 0.55;
+      const up = Math.max(0, x0 + cw / 2 - 3.2) * flap;   // the whole column moves together, further out moves more
       B.push(
-        [s * (x0 + 0.575), bot, 0.2, 1.15, split - bot, 0.4, BF.mem[1]], [s * (x0 + 0.575), split, 0.2, 1.15, top - 0.6 - split, 0.4, BF.mem[0]],   // lighter skin at the edge, darker by the bone
-        [s * (x0 + 1.3), bot - 0.6, 0.2, 0.3, top - bot, 0.5, BF.bone],                                                                              // finger bone
-        [s * (x0 + cw / 2), top - 0.6, 0.2, cw, 0.6, 0.6, BF.bone],                                                                                  // front-edge bone
+        [s * (x0 + 0.575), bot + up, 0.2, 1.15, split - bot, 0.4, BF.mem[1]], [s * (x0 + 0.575), split + up, 0.2, 1.15, top - 0.6 - split, 0.4, BF.mem[0]],   // lighter skin at the edge, darker by the bone
+        [s * (x0 + 1.3), bot - 0.6 + up, 0.2, 0.3, top - bot, 0.5, BF.bone],                                                                              // finger bone
+        [s * (x0 + cw / 2), top - 0.6 + up, 0.2, cw, 0.6, 0.6, BF.bone],                                                                                  // front-edge bone
       );
+      if (i === 2) B.push([s * 5.7, 6.2 + up, 0.2, 0.4, 0.6, 0.5, BF.claw]);   // thumb claw
     }
-    B.push([s * 5.7, 6.2, 0.2, 0.4, 0.6, 0.5, BF.claw]);   // thumb claw
   }
   return B;
 }
+export const BAT_FLAPS = [-0.5, -0.3, -0.1, 0.1, 0.35, 0.6, 0.85];   // wing angles the renderer steps through in flight
+export const batFlapBoxes = i => [...batBody(), ...batSpread(BAT_FLAPS[i])];
 // wings folded: the skin wraps the sides, the arm bone folds along the top, thumb claws peek out the front
 function batTucked() {
   const B = [];

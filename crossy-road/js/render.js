@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { TICK, COLS, TRAIN_WARN, entityX, trainState, CHARACTERS, lerp, clamp } from './logic.js';
 import * as M from './models.js';
-import { batPose } from './characters.js';
+import { batPose, BAT_FLAPS } from './characters.js';
 
 function nameTexture(name) {
   const c = document.createElement('canvas'); c.width = 256; c.height = 64;
@@ -253,6 +253,7 @@ export class Renderer {
     if (this.charId === id) return;
     this.charId = id;
     const g = this.playerMesh.geometry = this.charGeo(id);
+    this.batFrame = 'rest';
     if (!g.boundingBox) g.computeBoundingBox();
     const bb = g.boundingBox, w = Math.max(0.3, Math.min(bb.max.x - bb.min.x, bb.max.z - bb.min.z));
     this.crown.position.set((bb.max.x + bb.min.x) / 2 * 0.3, bb.max.y + 0.01, (bb.max.z + bb.min.z) / 2 * 0.2);
@@ -289,6 +290,17 @@ export class Renderer {
     if (this.thumbs) { this.thumbs.delete('batcostume'); this.thumbs.delete('batcostume:locked'); }
     for (const c of this.carousel) if (c.id === 'batcostume') c.m.geometry = this.charGeo('batcostume');
     if (this.charId === 'batcostume') { this.charId = null; this.setCharacter('batcostume'); }
+  }
+
+  // Which wing frame the Bat shows: -1 is its resting pose (stretched out or tucked), 0.. are flap angles.
+  setBatFrame(i) {
+    const key = i < 0 ? 'rest' : i;
+    if (this.batFrame === key) return;
+    this.batFrame = key;
+    if (i < 0) { this.playerMesh.geometry = this.charGeo('batcostume'); return; }
+    let g = this.geo.get('batflap:' + i);
+    if (!g) { g = M.batFlapGeo(i); this.geo.set('batflap:' + i, g); }
+    this.playerMesh.geometry = g;
   }
 
   // A small picture of a character for the shop list (cached).
@@ -655,6 +667,8 @@ export class Renderer {
     P.visible = true;
     mesh.rotation.set(0, 0, 0);
     if (!p.dead) { this.stars.visible = false; this.ripple.visible = false; }
+    const bat = this.charId === 'batcostume';
+    if (bat && p.dead) this.setBatFrame(-1);
     if (!p.dead) {
       // facing
       let d = p.face - this.face;
@@ -669,7 +683,7 @@ export class Renderer {
         const y1 = toLane.type === 'river'
           ? (h.float ? (toLane.speed === 0 ? -0.24 : 0.05) : -0.34)
           : baseY(toLane);
-        y = lerp(y0, y1, pose.u) + pose.y;
+        y = lerp(y0, y1, pose.u) + pose.y * (bat ? 1.7 : 1);   // the Bat flies a higher arc
       } else if (p.onLog) {
         const lane = g.lane(p.row);
         y = this.standY(p.row, pose.x, t, { pad: lane.speed === 0, idx: p.onLog.idx });
@@ -677,6 +691,23 @@ export class Renderer {
       P.position.set(pose.x, y, -pose.z);
       // squash and stretch
       let sy = 1;
+      if (bat) {
+        // flying, not hopping: one full wing beat per move (up, down, up), nose dipped into the glide, a little bank
+        if (p.hop) {
+          const u = pose.u, arc = Math.sin(Math.PI * u), a = 0.15 + 0.7 * Math.cos(2 * Math.PI * u);
+          if (this.hopRef !== p.hop) { this.hopRef = p.hop; this.waddle = -(this.waddle || 1); }
+          let best = 0;
+          for (let i = 1; i < BAT_FLAPS.length; i++) if (Math.abs(BAT_FLAPS[i] - a) < Math.abs(BAT_FLAPS[best] - a)) best = i;
+          this.setBatFrame(best);
+          mesh.rotation.x = -0.3 * arc;
+          mesh.rotation.z = this.waddle * 0.18 * arc;
+        } else {
+          this.setBatFrame(-1);
+          const bump = (g.tick - p.bumpTick) / 8;
+          if (bump < 1) mesh.rotation.x = -Math.sin(bump * Math.PI) * 0.25;
+        }
+        return;
+      }
       if (p.hop) {
         const u = pose.u, arc = Math.sin(Math.PI * u);
         if (this.hopRef !== p.hop) { this.hopRef = p.hop; this.waddle = -(this.waddle || 1); }

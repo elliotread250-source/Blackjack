@@ -1,7 +1,7 @@
 // Everything visible is built from boxes in code and merged into one BufferGeometry per object,
 // with flat per-face normals and per-vertex colours, so a whole lane or a car is one draw call.
 import * as THREE from 'three';
-import { characterBoxes } from './characters.js';
+import { characterBoxes, batFlapBoxes } from './characters.js';
 import { HALF, COLS, TRAIN_CAR } from './logic.js';
 
 const tmp = new THREE.Color();
@@ -511,6 +511,9 @@ export function eagleParts() {
   return { body, wing };
 }
 
+export function batFlapGeo(i) {
+  return mergeBoxes(batFlapBoxes(i), 0.085);
+}
 export function characterGeo(id) {
   return mergeBoxes(characterBoxes(id), 0.085);
 }
