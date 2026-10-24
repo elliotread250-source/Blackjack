@@ -1,0 +1,709 @@
+{
+  "/": {
+    "body": {
+      "background": "#ffffff",
+      "color": "#1c1c1c"
+    },
+    "backgroundsByArea": [
+      {
+        "colour": "#ffffff",
+        "weight": 4405140
+      },
+      {
+        "colour": "#000000",
+        "weight": 605764
+      },
+      {
+        "colour": "#000000 @0.5",
+        "weight": 580575
+      }
+    ],
+    "textColoursByAmount": [
+      {
+        "colour": "#000000",
+        "weight": 1319
+      },
+      {
+        "colour": "#fafafa",
+        "weight": 15
+      }
+    ],
+    "headings": [],
+    "buttons": [
+      {
+        "text": "Skip to Content",
+        "color": "#fafafa",
+        "background": "#000000",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      },
+      {
+        "text": "Open Menu\n    Close Menu",
+        "color": "#000000",
+        "background": "transparent",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      },
+      {
+        "text": "Open Menu\n    Close Menu",
+        "color": "#000000",
+        "background": "transparent",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "links": [
+      {
+        "text": "",
+        "color": "#000000",
+        "background": "transparent",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "header": [
+      {
+        "text": "Skip to Content\n      \n      \n\n\n\n    @su",
+        "color": "#1c1c1c",
+        "background": "transparent",
+        "border": "#1c1c1c",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "footer": [
+      {
+        "text": ".fe-66f9110854a978602b24a212 {\n  --grid-",
+        "color": "#1c1c1c",
+        "background": "transparent",
+        "border": "#1c1c1c",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "sections": [
+      {
+        "tag": "header",
+        "cls": "\n      \n        \n          light\n        \n      \n      heade",
+        "theme": "light",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "region",
+        "theme": "",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "page-section \n    \n      full-bleed-section\n      layout-eng",
+        "theme": "light",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "page-section \n    \n      full-bleed-section\n      layout-eng",
+        "theme": "light",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "page-section has-section-divider\n    \n      full-bleed-secti",
+        "theme": "black",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "footer",
+        "cls": "sections",
+        "theme": "",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "page-section \n    \n      full-bleed-section\n      layout-eng",
+        "theme": "light",
+        "background": "#ffffff"
+      }
+    ],
+    "themeVariables": {
+      "--tweak-text-block-padding": "initial",
+      "--tweak-text-block-radius": "0px 0px 0px 0px",
+      "--tweak-text-block-blend": "normal"
+    }
+  },
+  "/about": {
+    "body": {
+      "background": "#ffffff",
+      "color": "#1c1c1c"
+    },
+    "backgroundsByArea": [
+      {
+        "colour": "#ffffff",
+        "weight": 6405390
+      },
+      {
+        "colour": "#000000",
+        "weight": 513559
+      },
+      {
+        "colour": "#000000 @0.5",
+        "weight": 243723
+      }
+    ],
+    "textColoursByAmount": [
+      {
+        "colour": "#000000",
+        "weight": 3849
+      },
+      {
+        "colour": "#fafafa",
+        "weight": 15
+      },
+      {
+        "colour": "#1c1c1c",
+        "weight": 8
+      }
+    ],
+    "headings": [
+      {
+        "text": "about us",
+        "color": "#1c1c1c",
+        "background": "transparent",
+        "border": "#1c1c1c",
+        "font": "Syne"
+      }
+    ],
+    "buttons": [
+      {
+        "text": "Skip to Content",
+        "color": "#fafafa",
+        "background": "#000000",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      },
+      {
+        "text": "Open Menu\n    Close Menu",
+        "color": "#000000",
+        "background": "transparent",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      },
+      {
+        "text": "Open Menu\n    Close Menu",
+        "color": "#000000",
+        "background": "transparent",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "links": [
+      {
+        "text": "",
+        "color": "#000000",
+        "background": "transparent",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "header": [
+      {
+        "text": "Skip to Content\n      \n      \n\n\n\n    @su",
+        "color": "#1c1c1c",
+        "background": "transparent",
+        "border": "#1c1c1c",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "footer": [
+      {
+        "text": ".fe-66f9110854a978602b24a212 {\n  --grid-",
+        "color": "#1c1c1c",
+        "background": "transparent",
+        "border": "#1c1c1c",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "sections": [
+      {
+        "tag": "header",
+        "cls": "\n      \n        \n          light\n        \n      \n      heade",
+        "theme": "light",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "region",
+        "theme": "",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "page-section \n    \n      full-bleed-section\n      layout-eng",
+        "theme": "light",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "page-section has-section-divider\n    \n      full-bleed-secti",
+        "theme": "black",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "footer",
+        "cls": "sections",
+        "theme": "",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "page-section \n    \n      full-bleed-section\n      layout-eng",
+        "theme": "light",
+        "background": "#ffffff"
+      }
+    ],
+    "themeVariables": {
+      "--tweak-text-block-padding": "initial",
+      "--tweak-text-block-radius": "0px 0px 0px 0px",
+      "--tweak-text-block-blend": "normal"
+    }
+  },
+  "/cluboverview": {
+    "body": {
+      "background": "#ffffff",
+      "color": "#1c1c1c"
+    },
+    "backgroundsByArea": [
+      {
+        "colour": "#ffffff",
+        "weight": 7463128
+      },
+      {
+        "colour": "#000000 @0.5",
+        "weight": 1028681
+      },
+      {
+        "colour": "#000000",
+        "weight": 1015817
+      }
+    ],
+    "textColoursByAmount": [
+      {
+        "colour": "#000000",
+        "weight": 2505
+      },
+      {
+        "colour": "#ffffff",
+        "weight": 178
+      },
+      {
+        "colour": "#e7e7e7",
+        "weight": 40
+      },
+      {
+        "colour": "#ffffff @0.35",
+        "weight": 20
+      },
+      {
+        "colour": "#fafafa",
+        "weight": 15
+      },
+      {
+        "colour": "#1c1c1c",
+        "weight": 13
+      }
+    ],
+    "headings": [
+      {
+        "text": "club overview",
+        "color": "#1c1c1c",
+        "background": "transparent",
+        "border": "#1c1c1c",
+        "font": "Syne"
+      }
+    ],
+    "buttons": [
+      {
+        "text": "Skip to Content",
+        "color": "#fafafa",
+        "background": "#000000",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      },
+      {
+        "text": "Open Menu\n    Close Menu",
+        "color": "#000000",
+        "background": "transparent",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      },
+      {
+        "text": "Open Menu\n    Close Menu",
+        "color": "#000000",
+        "background": "transparent",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      },
+      {
+        "text": "UnmuteMute",
+        "color": "#e7e7e7",
+        "background": "transparent",
+        "border": "#e7e7e7",
+        "font": "Clarkson"
+      }
+    ],
+    "links": [
+      {
+        "text": "",
+        "color": "#000000",
+        "background": "transparent",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "header": [
+      {
+        "text": "Skip to Content\n      \n      \n\n\n\n    @su",
+        "color": "#1c1c1c",
+        "background": "transparent",
+        "border": "#1c1c1c",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "footer": [
+      {
+        "text": ".fe-66f9110854a978602b24a212 {\n  --grid-",
+        "color": "#1c1c1c",
+        "background": "transparent",
+        "border": "#1c1c1c",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "sections": [
+      {
+        "tag": "header",
+        "cls": "\n      \n        \n          light\n        \n      \n      heade",
+        "theme": "light",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "region",
+        "theme": "",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "page-section \n    \n      full-bleed-section\n      layout-eng",
+        "theme": "light",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "page-section \n    \n      full-bleed-section\n      layout-eng",
+        "theme": "light",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "page-section has-section-divider\n    \n      full-bleed-secti",
+        "theme": "black",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "footer",
+        "cls": "sections",
+        "theme": "",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "page-section \n    \n      full-bleed-section\n      layout-eng",
+        "theme": "light",
+        "background": "#ffffff"
+      }
+    ],
+    "themeVariables": {
+      "--tweak-text-block-padding": "initial",
+      "--tweak-text-block-radius": "0px 0px 0px 0px",
+      "--tweak-text-block-blend": "normal"
+    }
+  },
+  "/merch": {
+    "body": {
+      "background": "#ffffff",
+      "color": "#1c1c1c"
+    },
+    "backgroundsByArea": [
+      {
+        "colour": "#ffffff",
+        "weight": 16733295
+      },
+      {
+        "colour": "#000000 @0.5",
+        "weight": 1195697
+      },
+      {
+        "colour": "#000000",
+        "weight": 513559
+      },
+      {
+        "colour": "#1c1c1c",
+        "weight": 14106
+      },
+      {
+        "colour": "#fafafa",
+        "weight": 1091
+      }
+    ],
+    "textColoursByAmount": [
+      {
+        "colour": "#1c1c1c",
+        "weight": 1904
+      },
+      {
+        "colour": "#000000",
+        "weight": 545
+      },
+      {
+        "colour": "#fafafa",
+        "weight": 21
+      }
+    ],
+    "headings": [
+      {
+        "text": "CLUB MERch",
+        "color": "#1c1c1c",
+        "background": "transparent",
+        "border": "#1c1c1c",
+        "font": "Syne"
+      },
+      {
+        "text": "How to order",
+        "color": "#1c1c1c",
+        "background": "transparent",
+        "border": "#1c1c1c",
+        "font": "Syne"
+      }
+    ],
+    "buttons": [
+      {
+        "text": "Skip to Content",
+        "color": "#fafafa",
+        "background": "#000000",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      },
+      {
+        "text": "Open Menu\n    Close Menu",
+        "color": "#000000",
+        "background": "transparent",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      },
+      {
+        "text": "Open Menu\n    Close Menu",
+        "color": "#000000",
+        "background": "transparent",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      },
+      {
+        "text": "SubmitSubmit",
+        "color": "#fafafa",
+        "background": "#1c1c1c",
+        "border": "#fafafa",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "links": [
+      {
+        "text": "",
+        "color": "#000000",
+        "background": "transparent",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "header": [
+      {
+        "text": "Skip to Content\n      \n      \n\n\n\n    @su",
+        "color": "#1c1c1c",
+        "background": "transparent",
+        "border": "#1c1c1c",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "footer": [
+      {
+        "text": ".fe-66f9110854a978602b24a212 {\n  --grid-",
+        "color": "#1c1c1c",
+        "background": "transparent",
+        "border": "#1c1c1c",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "sections": [
+      {
+        "tag": "header",
+        "cls": "\n      \n        \n          \n        \n      \n      header the",
+        "theme": "",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "region",
+        "theme": "",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "page-section \n    \n      full-bleed-section\n      layout-eng",
+        "theme": "",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "page-section has-section-divider\n    \n      full-bleed-secti",
+        "theme": "black",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "footer",
+        "cls": "sections",
+        "theme": "",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "page-section \n    \n      full-bleed-section\n      layout-eng",
+        "theme": "light",
+        "background": "#ffffff"
+      }
+    ],
+    "themeVariables": {
+      "--tweak-text-block-padding": "initial",
+      "--tweak-text-block-radius": "0px 0px 0px 0px",
+      "--tweak-text-block-blend": "normal"
+    }
+  },
+  "/contact": {
+    "body": {
+      "background": "#ffffff",
+      "color": "#1c1c1c"
+    },
+    "backgroundsByArea": [
+      {
+        "colour": "#000000",
+        "weight": 1056645
+      },
+      {
+        "colour": "#ffffff",
+        "weight": 899145
+      },
+      {
+        "colour": "#000000 @0.5",
+        "weight": 48538
+      },
+      {
+        "colour": "#dcdcdc",
+        "weight": 17366
+      }
+    ],
+    "textColoursByAmount": [
+      {
+        "colour": "#000000",
+        "weight": 124
+      },
+      {
+        "colour": "#fafafa",
+        "weight": 34
+      }
+    ],
+    "headings": [],
+    "buttons": [
+      {
+        "text": "Skip to Content",
+        "color": "#000000",
+        "background": "#dcdcdc",
+        "border": "#dcdcdc",
+        "font": "\"Syne Mono\""
+      },
+      {
+        "text": "Open Menu\n    Close Menu",
+        "color": "#000000",
+        "background": "transparent",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      },
+      {
+        "text": "Open Menu\n    Close Menu",
+        "color": "#000000",
+        "background": "transparent",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "links": [
+      {
+        "text": "",
+        "color": "#000000",
+        "background": "transparent",
+        "border": "#000000",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "header": [
+      {
+        "text": "Skip to Content\n      \n      \n\n\n\n    @su",
+        "color": "#1c1c1c",
+        "background": "transparent",
+        "border": "#1c1c1c",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "footer": [
+      {
+        "text": ".fe-66f9110854a978602b24a212 {\n  --grid-",
+        "color": "#1c1c1c",
+        "background": "transparent",
+        "border": "#1c1c1c",
+        "font": "\"Syne Mono\""
+      }
+    ],
+    "sections": [
+      {
+        "tag": "header",
+        "cls": "\n      \n        \n          black\n        \n      \n      heade",
+        "theme": "black",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "region",
+        "theme": "",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "page-section has-section-divider\n    \n      full-bleed-secti",
+        "theme": "black",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "footer",
+        "cls": "sections",
+        "theme": "",
+        "background": "#ffffff"
+      },
+      {
+        "tag": "section",
+        "cls": "page-section \n    \n      full-bleed-section\n      layout-eng",
+        "theme": "light",
+        "background": "#ffffff"
+      }
+    ],
+    "themeVariables": {
+      "--tweak-text-block-padding": "initial",
+      "--tweak-text-block-radius": "0px 0px 0px 0px",
+      "--tweak-text-block-blend": "normal"
+    }
+  }
+}
