@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IO Games · Open Arcade</title>
+<meta name="theme-color" content="#080b10">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@600&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/io.css">
+<style>
+  body { overflow: auto; }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font: 700 clamp(34px, 6vw, 54px)/1 var(--font-display); margin: 18px 0 6px; }
+  .games { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-top: 22px; }
+  .game { display: block; text-decoration: none; color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 18px; }
+  .game:hover { border-color: var(--a); box-shadow: 0 0 0 1px var(--a); }
+  .game h2 { font: 700 26px var(--font-display); color: var(--a); margin: 0 0 6px; }
+  .game p { color: var(--muted); margin: 0 0 10px; font-size: 14px; }
+  .game .n { font: 600 12px var(--font-mono); color: var(--ok); min-height: 16px; }
+</style>
+</head>
+<body>
+<main>
+  <a class="back" data-hub href="https://open-arcade.up.railway.app">← Open Arcade</a>
+  <h1>IO Games</h1>
+  <p class="tagline">Three online arenas. Real players and bots in every room, one account for all three.</p>
+  <div class="games">
+    <a class="game" href="turf-wars/" style="--a:#ff9b3d" data-k="turf-wars"><h2>Turf Wars</h2><p>Draw loops to claim the map. Cut a rival's trail and they're gone.</p><div class="n"></div></a>
+    <a class="game" href="wormhole-run/" style="--a:#4ef0d6" data-k="wormhole-run"><h2>Wormhole Run</h2><p>Eat light, grow long, boost, and make the others crash into you.</p><div class="n"></div></a>
+    <a class="game" href="sinkhole/" style="--a:#8f7bff" data-k="sinkhole"><h2>Sinkhole</h2><p>Swallow the city in 2½ minutes. Grow big enough to eat buildings, and holes.</p><div class="n"></div></a>
+  </div>
+</main>
+<script src="js/hub-link.js"></script>
+<script>
+  fetch('/api/stats').then(r => r.json()).then(s => document.querySelectorAll('[data-k]').forEach(a => {
+    const n = s[a.dataset.k] && s[a.dataset.k].humans; if (n) a.querySelector('.n').textContent = n + ' online now';
+  })).catch(() => {});
+</script>
+</body>
+</html>

@@ -8,11 +8,14 @@ import { THUMBS as T2 } from './thumbs2.mjs';
 import { THUMBS as T3 } from './thumbs3.mjs';
 import { LOGOS } from './logos.mjs';
 import { MOMENTS } from './moments.mjs';
+import { IO_LOGOS, IO_THUMBS, IO_MOMENTS } from './io.mjs';
+Object.assign(LOGOS, IO_LOGOS);
+Object.assign(MOMENTS, IO_MOMENTS);
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const reg = JSON.parse(readFileSync(join(root, 'registry.json'), 'utf8')), games = reg.games;
 const hash = createHash('sha256');
-const THUMBS = { ...T1, ...T2, ...T3 };
+const THUMBS = { ...T1, ...T2, ...T3, ...IO_THUMBS };
 mkdirSync(join(root, 'assets/game-logos'), { recursive: true });
 mkdirSync(join(root, 'assets/game-thumbnails'), { recursive: true });
 mkdirSync(join(root, 'assets/game-moments'), { recursive: true });

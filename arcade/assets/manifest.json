@@ -388,7 +388,34 @@
    "logoBytes": 1552,
    "thumbnailBytes": 9001,
    "momentBytes": 1681
+  },
+  "turf-wars": {
+   "name": "Turf Wars",
+   "logo": "assets/game-logos/turf-wars.svg",
+   "thumbnail": "assets/game-thumbnails/turf-wars.svg",
+   "moment": "assets/game-moments/turf-wars.svg",
+   "logoBytes": 773,
+   "thumbnailBytes": 722,
+   "momentBytes": 1021
+  },
+  "wormhole-run": {
+   "name": "Wormhole Run",
+   "logo": "assets/game-logos/wormhole-run.svg",
+   "thumbnail": "assets/game-thumbnails/wormhole-run.svg",
+   "moment": "assets/game-moments/wormhole-run.svg",
+   "logoBytes": 1056,
+   "thumbnailBytes": 1005,
+   "momentBytes": 1178
+  },
+  "sinkhole": {
+   "name": "Sinkhole",
+   "logo": "assets/game-logos/sinkhole.svg",
+   "thumbnail": "assets/game-thumbnails/sinkhole.svg",
+   "moment": "assets/game-moments/sinkhole.svg",
+   "logoBytes": 960,
+   "thumbnailBytes": 909,
+   "momentBytes": 1256
   }
  },
- "artVersion": "478b147550"
+ "artVersion": "5fbb5ba486"
 }

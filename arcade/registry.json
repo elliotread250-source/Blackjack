@@ -923,7 +923,82 @@
    "keywords": "fnaf five nights freddy horror security guard office cameras doors animatronics pizzeria free roam co-op night shift",
    "accent": "#c41e1e",
    "shelf": 42
+  },
+  {
+   "id": "turf-wars",
+   "name": "Turf Wars",
+   "kind": "game",
+   "url": "https://io-games-production-4197.up.railway.app/turf-wars/",
+   "blurb": "Online territory grab for up to 24. Leave your turf, draw a loop and claim everything inside it, but cross a rival's trail and they're gone. Bots fill every room.",
+   "genres": [
+    "IO",
+    "Territory"
+   ],
+   "categories": [
+    "action",
+    "multiplayer",
+    "arcade"
+   ],
+   "features": [
+    "online",
+    "bots",
+    "touch",
+    "leaderboard"
+   ],
+   "keywords": "io territory paper grid loop capture trail multiplayer online bots leaderboard",
+   "accent": "#ff9b3d",
+   "shelf": 43
+  },
+  {
+   "id": "wormhole-run",
+   "name": "Wormhole Run",
+   "kind": "game",
+   "url": "https://io-games-production-4197.up.railway.app/wormhole-run/",
+   "blurb": "Online worm arena for up to 24. Eat glowing pellets to grow, boost to cut rivals off, and turn the ones that crash into you into a feast.",
+   "genres": [
+    "IO",
+    "Snake"
+   ],
+   "categories": [
+    "action",
+    "multiplayer",
+    "arcade"
+   ],
+   "features": [
+    "online",
+    "bots",
+    "touch",
+    "leaderboard"
+   ],
+   "keywords": "io snake worm slither pellets boost grow multiplayer online bots leaderboard",
+   "accent": "#4ef0d6",
+   "shelf": 44
+  },
+  {
+   "id": "sinkhole",
+   "name": "Sinkhole",
+   "kind": "game",
+   "url": "https://io-games-production-4197.up.railway.app/sinkhole/",
+   "blurb": "Online city-swallowing race for up to 24. You're a hole in the road: eat people, then cars, then whole buildings in 2½-minute rounds. Bigger holes can eat you.",
+   "genres": [
+    "IO",
+    "Arcade"
+   ],
+   "categories": [
+    "action",
+    "multiplayer",
+    "casual"
+   ],
+   "features": [
+    "online",
+    "bots",
+    "touch",
+    "leaderboard"
+   ],
+   "keywords": "io hole city swallow grow round timed multiplayer online bots leaderboard",
+   "accent": "#8f7bff",
+   "shelf": 45
   }
  ],
- "artVersion": "478b147550"
+ "artVersion": "5fbb5ba486"
 }
