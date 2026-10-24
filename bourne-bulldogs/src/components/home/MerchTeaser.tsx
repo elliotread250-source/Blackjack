@@ -11,7 +11,7 @@ export function MerchTeaser() {
   const from = (kind: "tee" | "hoody") =>
     Math.min(...merch.products.filter((p) => p.id.endsWith(kind)).map((p) => p.price));
   const items = [
-    { p: tee, title: "Player T-Shirt", price: from("tee") },
+    { p: tee, title: "Player T\u2011Shirt", price: from("tee") },
     { p: hoody, title: "Player Hoody", price: from("hoody") },
   ];
   return (

@@ -293,8 +293,8 @@ export const merch = {
   products: [
     {
       id: "kids-tee",
-      name: "Personalised T-Shirt (Kids)",
-      short: "Kids T-Shirt",
+      name: "Personalised T\u2011Shirt (Kids)",
+      short: "Kids T\u2011Shirt",
       price: 23,
       audience: "kids",
       details: ["100% Polyester", "140gsm", "Moisture-wicking Neoteric fabric"],
@@ -305,8 +305,8 @@ export const merch = {
     },
     {
       id: "adult-tee",
-      name: "Personalised T-Shirt (Adults)",
-      short: "Adult T-Shirt",
+      name: "Personalised T\u2011Shirt (Adults)",
+      short: "Adult T\u2011Shirt",
       price: 29,
       audience: "adults",
       details: ["100% Cotton", "180gsm", "TRS225"],

@@ -24,9 +24,9 @@ const nextConfig: NextConfig = {
   async redirects() {
     // Old Squarespace URLs, so Google results and shared links keep working.
     return [
-      { source: "/cluboverview", destination: "/club-overview", permanent: true },
-      { source: "/cart", destination: "/merch", permanent: true },
-      { source: "/home", destination: "/", permanent: true },
+      { source: "/cluboverview", destination: "/club-overview", statusCode: 301 },
+      { source: "/cart", destination: "/merch", statusCode: 301 },
+      { source: "/home", destination: "/", statusCode: 301 },
     ];
   },
   async headers() {

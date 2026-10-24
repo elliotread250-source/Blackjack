@@ -20,7 +20,7 @@ type AsButton = Common & { href?: undefined } & Omit<React.ButtonHTMLAttributes<
 export function Button(props: AsLink | AsButton) {
   const { variant = "primary", className, children, magnetic = variant === "primary", icon } = props;
   const cls = cn(
-    "group relative inline-flex min-h-12 items-center justify-center gap-3 rounded-[8px] px-6 py-3 font-sans text-[0.95rem] font-bold uppercase tracking-[0.12em] transition-colors duration-300 ease-[cubic-bezier(.16,1,.3,1)] disabled:cursor-not-allowed disabled:opacity-60",
+    "group relative inline-flex min-h-12 items-center whitespace-nowrap justify-center gap-3 rounded-[8px] px-6 py-3 font-sans text-[0.95rem] font-bold uppercase tracking-[0.12em] transition-colors duration-300 ease-[cubic-bezier(.16,1,.3,1)] disabled:cursor-not-allowed disabled:opacity-60",
     styles[variant],
     className
   );
