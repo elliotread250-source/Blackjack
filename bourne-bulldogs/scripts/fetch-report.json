@@ -1,0 +1,295 @@
+{
+  "startedAt": "2026-10-24T08:39:48.102Z",
+  "downloaded": [
+    {
+      "name": "logo-main.png",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/7f72d62b-49f2-4db5-bcf4-e53b118bc53b/Bulldog+logo.png",
+      "bytes": 814166
+    },
+    {
+      "name": "logo-alt.png",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/cfe1905b-8037-4dca-b1f8-24b897b366ca/Bulldog+logo.png",
+      "bytes": 814166
+    },
+    {
+      "name": "logo-white.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/fd3b0f16-a3ae-4279-9d20-eaccee0d4066/Bulldog+logowhite.jpg",
+      "bytes": 280530
+    },
+    {
+      "name": "logo-footer.png",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/195c09cb-f235-4413-9417-17f156f8b74e/Bulldog+logo.png",
+      "bytes": 814166
+    },
+    {
+      "name": "logo-merch.png",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/f6b8e2c8-69d5-488b-ba1e-54fbcb767178/Bulldog+logo.png",
+      "bytes": 814166
+    },
+    {
+      "name": "og-logo.png",
+      "url": "https://static1.squarespace.com/static/66f91049ef03385d7b026846/t/66fab629618ece71b4a31c6c/1727706665898/Bulldog+logo.png",
+      "bytes": 329548
+    },
+    {
+      "name": "training-gym-wide.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/bf1045b0-c2d9-46eb-b200-12be51f6747b/67DBD2DA-CA83-4A4E-ADCC-3230BFE87D10_1_201_a.jpeg",
+      "bytes": 138584
+    },
+    {
+      "name": "jump-ball.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/cd43b917-cd72-407d-b8a4-c5968b527764/7EC2BA00-FF94-4803-A377-DEDB439F8539_1_201_a.jpeg",
+      "bytes": 261370
+    },
+    {
+      "name": "game-action-1.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/51dece96-403a-45d0-bc4b-2d952fe95d28/B69888AE-3A5B-4F32-B303-945BA14D9FCB_1_201_a.jpg",
+      "bytes": 324536
+    },
+    {
+      "name": "game-action-2.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/7a76eaea-0dbd-4354-9691-f02a744dacee/B69888AE-3A5B-4F32-B303-945BA14D9FCB_1_201_a.jpeg",
+      "bytes": 321048
+    },
+    {
+      "name": "drill.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/d5f4e487-8f79-4582-ad56-ac800fd4ad93/C4D75676-781C-4FD5-8B41-428719C0EDEA_1_201_a.jpeg",
+      "bytes": 251702
+    },
+    {
+      "name": "coach-shooting-demo.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/050ee881-525e-40a7-8830-00336abe0631/8D79177A-3240-4F67-A695-908908156912_1_201_a.jpeg",
+      "bytes": 318150
+    },
+    {
+      "name": "timeout-huddle.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/140901fe-92ca-42a5-be9e-b41613d93d49/Bourne+Bulldogs+being+coached+picture.jpeg",
+      "bytes": 237014
+    },
+    {
+      "name": "player-shooting.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/e76f28ec-33c6-4371-9cd9-aa875fb2b729/PLayer+shooting+ball.jpeg",
+      "bytes": 115618
+    },
+    {
+      "name": "player-dribbling-2.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/900fb916-6c29-4d67-855c-1c83be6d38a6/Player+dribbling+ball+image+2.jpeg",
+      "bytes": 132730
+    },
+    {
+      "name": "player-dribbling-1.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/d3af1749-f867-41bd-b1c4-4edbc1baa3aa/Player+dribbling+ball+picture.jpeg",
+      "bytes": 82928
+    },
+    {
+      "name": "tournament-team.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/a75ee511-e9ec-4654-b642-a05ba68615aa/Bourne+Bulldogs+tournament+team+picture.jpeg",
+      "bytes": 205472
+    },
+    {
+      "name": "bg-court-texture.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443605995-MU5X6SIHU4QIGLFOZX5X/unsplash-image-ZDmbF9hxaFE.jpg",
+      "bytes": 609376
+    },
+    {
+      "name": "team-martin.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/f4d7c81d-2034-4afc-bf28-b2c2f607f47a/Martin+2.jpeg",
+      "bytes": 233322
+    },
+    {
+      "name": "team-elliot.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/aa58b202-73f6-493e-be54-eda7238d3d12/Elliot2.jpeg",
+      "bytes": 187684
+    },
+    {
+      "name": "team-willow.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/e9036028-8d6b-4d31-8a58-84dadc78bef7/willow.jpeg",
+      "bytes": 159922
+    },
+    {
+      "name": "merch-kids-tee-front.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/2590e2d9-f079-4500-8bfb-2bd9161db0a5/T+shirt+front.jpeg",
+      "bytes": 38334
+    },
+    {
+      "name": "merch-kids-tee-back.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/9ae5bc2c-3102-4d4e-aa0b-8641158eb845/T+shirt+back.jpeg",
+      "bytes": 32730
+    },
+    {
+      "name": "size-kids-tee.png",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/44929b2f-1d41-4506-bf9a-c4ceaa0f7359/Kids+sports+shirt+sizing+-+Charcol.png",
+      "bytes": 24538
+    },
+    {
+      "name": "merch-adult-tee-front.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/b1f67d1c-250b-49fe-901b-dfc5f8363934/Adult+t-shirt+front.jpeg",
+      "bytes": 39288
+    },
+    {
+      "name": "merch-adult-tee-back.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1db9cdb0-57e2-4afc-b772-4671647010e9/Adult+t-shirt+back.jpeg",
+      "bytes": 26962
+    },
+    {
+      "name": "size-adult-tee.png",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/73bdb480-42b6-4f4e-925e-af293fb8a104/Adult+t-shirt+sizing.png",
+      "bytes": 97074
+    },
+    {
+      "name": "merch-kids-hoody-front.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/36212f66-6336-4565-ac3c-aca58408dbde/Kids+hoody+front.jpeg",
+      "bytes": 42894
+    },
+    {
+      "name": "merch-kids-hoody-back.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/c2c0ed02-b6cd-44de-b39f-4d0603ad8853/Kids+hoody+back.jpeg",
+      "bytes": 30386
+    },
+    {
+      "name": "size-kids-hoody.png",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/81fff584-dd66-4b49-8d5d-54a79acadd57/Kids+hoody+-+sizing.png",
+      "bytes": 42682
+    },
+    {
+      "name": "merch-adult-hoody-front.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/18d77820-66c0-4d6d-85de-f107523ddbc2/Adult+hoody+front+%28ash%29.jpeg",
+      "bytes": 46388
+    },
+    {
+      "name": "merch-adult-hoody-back.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/572f4b8f-e4aa-48e0-b48c-9567557dccac/Adult+hoody+back+-+ash.jpeg",
+      "bytes": 29104
+    },
+    {
+      "name": "size-adult-hoody.png",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/9cb0734b-a01c-4b99-b6bd-7043f0de6225/Adult+hoody+-+sizing.png",
+      "bytes": 27542
+    },
+    {
+      "name": "extra-23ba8c01-9da3-4797-a775-0dc0fa170c88-4-5005-c-ce3610.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/ce361099-84be-4ab7-bd1a-2e01cc37b05e/23BA8C01-9DA3-4797-A775-0DC0FA170C88_4_5005_c.jpeg",
+      "bytes": 14056
+    },
+    {
+      "name": "extra-unsplash-image-zdmbf9hxafe-172944.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443244601-1PU4CM4AFPF0FB9TKM06/unsplash-image-ZDmbF9hxaFE.jpg",
+      "bytes": 609376
+    },
+    {
+      "name": "extra-unsplash-image-zdmbf9hxafe-172944.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443939216-4JXKM0PH2GTZ9KXLLKBF/unsplash-image-ZDmbF9hxaFE.jpg",
+      "bytes": 609376
+    },
+    {
+      "name": "extra-unsplash-image-zdmbf9hxafe-172944.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443430572-9MRR9BX6VRPBPWQ4W9RZ/unsplash-image-ZDmbF9hxaFE.jpg",
+      "bytes": 609376
+    },
+    {
+      "name": "extra-unsplash-image-zdmbf9hxafe-172944.jpg",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443515511-UYCX02A12U16SILEGF4J/unsplash-image-ZDmbF9hxaFE.jpg",
+      "bytes": 609376
+    }
+  ],
+  "failed": [],
+  "extras": [
+    {
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/ce361099-84be-4ab7-bd1a-2e01cc37b05e/23BA8C01-9DA3-4797-A775-0DC0FA170C88_4_5005_c.jpeg",
+      "page": "/",
+      "name": "extra-23ba8c01-9da3-4797-a775-0dc0fa170c88-4-5005-c-ce3610.jpg",
+      "ok": true
+    },
+    {
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443244601-1PU4CM4AFPF0FB9TKM06/unsplash-image-ZDmbF9hxaFE.jpg",
+      "page": "/about",
+      "name": "extra-unsplash-image-zdmbf9hxafe-172944.jpg",
+      "ok": true
+    },
+    {
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443939216-4JXKM0PH2GTZ9KXLLKBF/unsplash-image-ZDmbF9hxaFE.jpg",
+      "page": "/cluboverview",
+      "name": "extra-unsplash-image-zdmbf9hxafe-172944.jpg",
+      "ok": true
+    },
+    {
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443430572-9MRR9BX6VRPBPWQ4W9RZ/unsplash-image-ZDmbF9hxaFE.jpg",
+      "page": "/merch",
+      "name": "extra-unsplash-image-zdmbf9hxafe-172944.jpg",
+      "ok": true
+    },
+    {
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443515511-UYCX02A12U16SILEGF4J/unsplash-image-ZDmbF9hxaFE.jpg",
+      "page": "/contact",
+      "name": "extra-unsplash-image-zdmbf9hxafe-172944.jpg",
+      "ok": true
+    }
+  ],
+  "logos": {
+    "logo-main.png": {
+      "border": "#b44146",
+      "transparentBorder": 0.99,
+      "whiteBackground": false
+    },
+    "logo-alt.png": {
+      "border": "#b44146",
+      "transparentBorder": 0.99,
+      "whiteBackground": false
+    },
+    "logo-white.jpg": {
+      "border": "#fefefe",
+      "transparentBorder": 0,
+      "whiteBackground": true,
+      "transparentVersion": "logo-white-transparent.png",
+      "removedRatio": 0.414
+    },
+    "logo-footer.png": {
+      "border": "#b44146",
+      "transparentBorder": 0.99,
+      "whiteBackground": false
+    },
+    "logo-merch.png": {
+      "border": "#b44146",
+      "transparentBorder": 0.99,
+      "whiteBackground": false
+    },
+    "og-logo.png": {
+      "border": "#bf6165",
+      "transparentBorder": 0.98,
+      "whiteBackground": false
+    }
+  },
+  "pages": {
+    "/": {
+      "ok": true,
+      "title": "Bourne Bulldogs Basketball Club | Join the Action &mdash; Enroll Today",
+      "description": "Join Bourne Bulldogs Basketball Club in Lincolnshire for youth training, skill development, and community fun. Perfect for ages 8-16, all skill levels welcome.",
+      "images": 12
+    },
+    "/about": {
+      "ok": true,
+      "title": "About | Join the Team Now &mdash; Bourne Bulldogs Basketball Club",
+      "description": "Discover Bourne Bulldogs Basketball Club, a community-focused youth basketball organization in Bourne dedicated to developing skills, teamwork, and confidence in children.",
+      "images": 8
+    },
+    "/cluboverview": {
+      "ok": true,
+      "title": "Club overview | Get Started Today &mdash; Build Skills & Have Fun &mdash; Bourne Bulldogs Basketball Club",
+      "description": "Join Bourne Bulldogs Basketball Club for engaging training, skill development, and fun competitive play in a safe, team-focused environment for young athletes.",
+      "images": 13
+    },
+    "/merch": {
+      "ok": true,
+      "title": "Merch | Shop Now - Support Your Team &mdash; Bourne Bulldogs Basketball Club",
+      "description": "Shop personalized basketball gear and apparel at Bourne Bulldogs. Elevate your supporter game with custom T-shirts and hoodies for all ages.",
+      "images": 18
+    },
+    "/contact": {
+      "ok": true,
+      "title": "Contact | Get in Touch Today &mdash; Bourne Bulldogs Basketball Club",
+      "description": "Contact Bourne Bulldogs Basketball Club for information on memberships, events, or inquiries at Bourne Leisure Centre, Queen's Rd, Bourne.",
+      "images": 5
+    }
+  },
+  "finishedAt": "2026-10-24T08:40:31.953Z"
+}
