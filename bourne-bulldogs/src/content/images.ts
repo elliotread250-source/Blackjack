@@ -66,6 +66,10 @@ const entries = {
     file: "team-elliot.jpg",
     alt: "Elliot Read in a Bourne Bulldogs T-shirt holding two basketballs in the sports hall",
   },
+  teamNicola: {
+    file: "team-nicola.jpg",
+    alt: "Nicola Read, safeguarding officer and club manager, smiling in the evening sun",
+  },
   teamWillow: {
     file: "team-willow.jpg",
     alt: "Willow the English Bulldog, the club mascot, sitting on the grass and looking up at the camera",

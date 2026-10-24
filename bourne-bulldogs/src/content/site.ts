@@ -186,10 +186,8 @@ export const team: { heading: string; intro: string; members: TeamMember[] } = {
       name: "Nicola Read",
       role: "Safeguarding Officer & Club Manager",
       bio: "Keeps the club running smoothly and makes the wellbeing of every child a priority. Nicola is integral to keeping the environment safe, inclusive and fun for everyone involved.",
+      image: "teamNicola",
       initials: "NR",
-      // TODO(photo): no photo of Nicola on the old site. Upload public/images/team-nicola.jpg,
-      // add teamNicola to src/content/images.ts, then add image: "teamNicola" here.
-      photoTodo: "Photo coming soon",
     },
     {
       name: "Elliot Read",
