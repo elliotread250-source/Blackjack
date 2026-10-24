@@ -17,8 +17,9 @@ const FEATS = new Set(['online', 'local2p', 'coop', 'bots', 'touch', 'daily', 's
 // online multiplayer only where networking was verified with two live clients (tools/mp-turn-test.mjs, tools/mp-probe.mjs) or Apex GP's live net.js;
 // Trap Race: verified by its own two-browser e2e run (Trap_race repo, tests/e2e/run.mjs)
 // IO arenas: verified by arenas/smoke.cjs with two Chromium clients in every game.
+// 2 Weeks: verified by tools/smoke-online.mjs (two Chromium clients in one room) and tests/netclient.test.js in the 2-weeks repo.
 // FNAF Replica: verified by its four-browser e2e runs in CI (FNAF-Replica repo, e2e/fourPlayers.spec.ts and e2e/freeRoam.spec.ts)
-const ONLINE_VERIFIED = new Set(['pool', 'kart-racer', 'pong', 'connect-4', 'apex-gp', 'chess', 'tic-tac-toe', 'trap-race', 'fnaf', 'patchwork', 'afterglow', 'snip-club', 'little-sink', 'culture-club']);
+const ONLINE_VERIFIED = new Set(['pool', 'kart-racer', 'pong', 'connect-4', 'apex-gp', 'chess', 'tic-tac-toe', 'trap-race', 'fnaf', 'patchwork', 'afterglow', 'snip-club', 'little-sink', 'culture-club', '2-weeks']);
 
 const arenaUrls = Object.fromEntries(Object.entries({patchwork:'paper',afterglow:'snake','snip-club':'scissor','little-sink':'hole','culture-club':'blob'}).map(([id,game]) => [id,`https://open-arcade.up.railway.app/arenas/?game=${game}`]));
 
