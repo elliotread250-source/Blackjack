@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+<defs>
+<radialGradient id="felt" cx="50%" cy="45%" r="70%"><stop offset="0" stop-color="#2fa35f"/><stop offset="0.65" stop-color="#1c7a44"/><stop offset="1" stop-color="#0f4d2a"/></radialGradient>
+<radialGradient id="black" cx="38%" cy="32%" r="70%"><stop offset="0" stop-color="#6b6b6b"/><stop offset="0.35" stop-color="#1c1c1c"/><stop offset="1" stop-color="#000"/></radialGradient>
+<radialGradient id="red" cx="36%" cy="30%" r="70%"><stop offset="0" stop-color="#ff8f92"/><stop offset="0.45" stop-color="#d6202e"/><stop offset="1" stop-color="#6e0a11"/></radialGradient>
+<radialGradient id="yel" cx="36%" cy="30%" r="70%"><stop offset="0" stop-color="#fff4b8"/><stop offset="0.45" stop-color="#f6c21a"/><stop offset="1" stop-color="#8a6400"/></radialGradient>
+<radialGradient id="shadow" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#000" stop-opacity=".45"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+</defs>
+<rect width="64" height="64" rx="12" fill="url(#felt)"/>
+<rect x="1.5" y="1.5" width="61" height="61" rx="10.5" fill="none" stroke="#5a2d17" stroke-width="3"/>
+<circle cx="9" cy="9" r="5" fill="#0a0a0a"/><circle cx="55" cy="55" r="5" fill="#0a0a0a"/>
+<ellipse cx="17" cy="47" rx="8" ry="6" fill="url(#shadow)"/>
+<circle cx="15" cy="44" r="7" fill="url(#red)"/>
+<ellipse cx="48" cy="21" rx="8" ry="6" fill="url(#shadow)"/>
+<circle cx="46" cy="18" r="7" fill="url(#yel)"/>
+<ellipse cx="34.5" cy="36.5" rx="15" ry="12" fill="url(#shadow)"/>
+<circle cx="31" cy="32" r="14" fill="url(#black)"/>
+<circle cx="31" cy="32" r="6.6" fill="#f6f3ea"/>
+<text x="31" y="35.6" font-family="Arial, Helvetica, sans-serif" font-size="10.5" font-weight="700" text-anchor="middle" fill="#111">8</text>
+<ellipse cx="25.5" cy="24.5" rx="4.2" ry="2.6" fill="#fff" fill-opacity=".35" transform="rotate(-30 25.5 24.5)"/>
+</svg>

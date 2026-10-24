@@ -1,0 +1,44 @@
+/* the library: terminal search, chips with a sliding pill, sort, four views (FLIP between them), favourites grid */
+.toolbar { position: sticky; top: 70px; z-index: 5; display: grid; grid-template-columns: minmax(240px, 420px) 1fr auto; grid-template-areas: 'search . right' 'chips chips chips'; align-items: center; gap: 10px 14px; margin-bottom: 26px; padding: 10px;
+  border-radius: var(--r-xl); background: rgba(10, 14, 20, .82); backdrop-filter: blur(14px); box-shadow: var(--bezel); }
+.search-field { grid-area: search; position: relative; display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; border-radius: var(--r-md); background: #05070a; box-shadow: inset 0 0 0 1px var(--line); overflow: hidden; }
+.search-field:focus-within { box-shadow: inset 0 0 0 1px var(--orange-50), 0 0 18px rgba(255, 117, 24, .2); }
+.sf-prompt { font: 700 .95rem/1 var(--font-mono); color: var(--orange); }
+.search-field input { flex: 1; min-width: 0; border: 0; background: none; outline: none; font: 500 .95rem/1 var(--font-mono); caret-color: transparent; }
+.search-field input::placeholder { color: var(--faint); }
+.search-field input::-webkit-search-cancel-button { filter: grayscale(1) brightness(1.4); }
+.sf-block { position: absolute; top: 50%; left: var(--caret, 40px); width: 9px; height: 18px; margin-top: -9px; background: var(--orange); animation: blink 1s steps(1) infinite; pointer-events: none; }
+.search-field:not(:focus-within) .sf-block { opacity: .45; animation: none; }
+.sf-scan { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: linear-gradient(90deg, transparent, rgba(255, 179, 71, .22), transparent); background-size: 40% 100%; background-repeat: no-repeat; }
+.search-field.scanning .sf-scan { opacity: 1; animation: scan-x .6s linear infinite; }
+@keyframes scan-x { from { background-position: -40% 0; } to { background-position: 140% 0; } }
+.chips-scroll { grid-area: chips; overflow-x: auto; scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg, #000 92%, transparent); mask-image: linear-gradient(90deg, #000 92%, transparent); padding: 2px; }
+.chips-scroll::-webkit-scrollbar { display: none; }
+.tb-right { grid-area: right; display: flex; align-items: center; gap: 10px; }
+.sort-field { display: flex; align-items: center; gap: 8px; font: 600 .7rem/1 var(--font-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+.sort-field select { min-height: 44px; padding: 0 12px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface); font: 500 .85rem/1 var(--font-body); color: var(--text); }
+.views { display: flex; gap: 2px; padding: 3px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--line); }
+.views button { display: grid; place-items: center; width: 40px; height: 38px; border-radius: 9px; border: 0; background: none; color: var(--faint); transition: color var(--d-fast), background var(--d-fast); }
+.views button svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+.views button[aria-checked="true"] { background: var(--orange-15); color: var(--amber); box-shadow: inset 0 0 0 1px var(--orange-50); }
+
+.lib-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--card-min)), 1fr)); }
+.lib-grid[data-view="compact"] { grid-template-columns: repeat(auto-fill, minmax(min(100%, 190px), 1fr)); gap: 12px; }
+.lib-grid[data-view="cabinet"] { grid-auto-flow: column; grid-auto-columns: clamp(200px, 17vw, 250px); grid-template-columns: none; overflow-x: auto; scroll-snap-type: x proximity; padding: 8px 4px 22px; scrollbar-color: var(--orange-30) transparent; }
+.lib-grid[data-view="cabinet"] > * { scroll-snap-align: start; }
+.lib-grid[data-view="list"] { grid-template-columns: 1fr; gap: 8px; }
+.lib-grid .gcard.leaving { animation: card-leave var(--d-base) var(--ease-in-out) forwards; }
+.lib-grid .gcard.entering { animation: card-enter var(--d-slow) var(--ease-overshoot) both; animation-delay: calc(var(--i, 0) * 30ms); }
+@keyframes card-leave { to { opacity: 0; transform: scale(.85); } }
+@keyframes card-enter { from { opacity: 0; transform: translateY(20px) scale(.9); } }
+.empty.rewind { animation: shake .45s var(--ease-out) 1; }
+
+/* favourites: an ordered grid with lift-and-drop */
+.fav-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fill, minmax(min(100%, var(--card-min)), 1fr)); }
+.fav-grid > li { position: relative; touch-action: auto; transition: transform var(--d-base) var(--ease-out); }
+.fav-grid > li.lifted { z-index: 10; transition: none; }
+.fav-grid > li.lifted .gc-tilt { box-shadow: var(--bezel-hot), 0 30px 60px rgba(0, 0, 0, .6); transform: scale(1.04) rotate(-1.5deg); }
+.fav-grid > li.picked .gc-tilt { box-shadow: var(--bezel-hot), 0 0 0 3px var(--gold); transform: translateY(-6px) scale(1.02); }
+.fav-grid .grip { position: absolute; left: 50%; top: -10px; z-index: 6; transform: translateX(-50%); width: 48px; height: 22px; border-radius: 0 0 10px 10px; border: 1px solid var(--line); border-top: 0;
+  background: var(--panel); cursor: grab; display: grid; place-items: center; touch-action: none; color: var(--faint); font: 700 .7rem/1 var(--font-mono); letter-spacing: -.1em; }
+.fav-grid .grip:hover { color: var(--amber); }

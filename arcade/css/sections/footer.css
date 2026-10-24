@@ -1,0 +1,19 @@
+/* footer: giant rippling wordmark, columns, live cabinet status, build tag, a last joke */
+.site-footer { margin-top: var(--section-gap); padding-bottom: 60px; border-top: 1px solid var(--line); background: linear-gradient(180deg, rgba(16, 21, 29, .5), var(--ink)); overflow: hidden; }
+.foot-mark { display: flex; justify-content: center; padding: 40px var(--gutter) 10px; font: 700 clamp(2.6rem, 1rem + 10.4vw, 13rem)/.85 var(--font-display); letter-spacing: -.035em; text-transform: uppercase; white-space: nowrap; user-select: none;
+  background: var(--grad-heat); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.foot-mark .fm-c { display: inline-block; background: inherit; -webkit-background-clip: text; background-clip: text; transform: translateY(var(--lift, 0)) scale(var(--sc, 1)); transition: transform var(--d-slow) var(--ease-overshoot); }
+.footer-grid { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); gap: 32px; padding-top: 30px; }
+.foot-brand { display: grid; gap: 12px; align-content: start; }
+.foot-name { font: 700 1rem/1 var(--font-display); letter-spacing: .16em; }
+.foot-brand p { color: var(--muted); font-size: .9rem; }
+.foot-status { position: relative; display: inline-flex; align-items: center; gap: 10px; width: max-content; padding: 8px 14px; border-radius: var(--r-pill); border: 1px solid var(--line); font: 600 .78rem/1 var(--font-mono); color: var(--muted); cursor: default; }
+.foot-status i { width: 9px; height: 9px; border-radius: 50%; background: var(--warn); }
+.foot-status.ok i { background: var(--ok); box-shadow: 0 0 10px var(--ok); animation: pulse 2s infinite; }
+.fs-pop { position: absolute; left: 0; bottom: calc(100% + 10px); width: max-content; max-width: 280px; padding: 12px 14px; border-radius: var(--r-md); background: var(--panel); box-shadow: var(--bezel-hot); color: var(--text); font: 500 .8rem/1.5 var(--font-body); }
+.foot-h { font: 600 .72rem/1 var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--orange-hover); margin-bottom: 14px; }
+.footer-grid ul { display: grid; gap: 4px; }
+.footer-grid li a, .footer-grid li button { display: inline-flex; align-items: center; min-height: 34px; color: var(--muted); text-decoration: none; font-size: .9rem; }
+.footer-grid li a:hover, .footer-grid li button:hover { color: var(--orange-hover); }
+.foot-base { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line-soft); color: var(--faint); font-size: .8rem; }
+.thanks { margin-top: 60px; text-align: center; font-size: .82rem; letter-spacing: .3em; color: var(--faint); }

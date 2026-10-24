@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0d0e14">
+<title>Retro Bowl</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap">
+<style>
+:root {
+  --bg: #0d0e14; --panel: #171a26; --panel2: #20253a; --line: #2f3654; --ink: #f4f4f4; --dim: #9aa3c7;
+  --gold: #ffe14d; --red: #ff6b4a; --green: #7dff8a; --blue: #4f8cff; --team: #4f8cff; --team2: #ffe14d;
+  --font: "Press Start 2P", ui-monospace, monospace;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 11px; line-height: 1.6;
+  -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+button, input, select { font-family: var(--font); font-size: 11px; }
+.screen { position: fixed; inset: 0; display: none; overflow: auto; }
+.screen.on { display: block; }
+.wrap { max-width: 760px; margin: 0 auto; padding: 18px 16px 40px; }
+h1, h2, h3 { font-weight: normal; margin: 0 0 12px; }
+h1 { font-size: 26px; line-height: 1.3; }
+h2 { font-size: 15px; }
+h3 { font-size: 12px; color: var(--gold); }
+.logo { text-align: center; margin: 26px 0 18px; }
+.logo .t1 { font-size: 34px; color: var(--gold); text-shadow: 4px 4px 0 #b3410e, 8px 8px 0 #000; letter-spacing: 2px; }
+.logo .t2 { font-size: 34px; color: #fff; text-shadow: 4px 4px 0 var(--blue), 8px 8px 0 #000; letter-spacing: 2px; }
+.logo .sub { color: var(--dim); margin-top: 14px; font-size: 9px; }
+.card { background: var(--panel); border: 3px solid var(--line); padding: 14px; margin: 12px 0; box-shadow: 4px 4px 0 #000; }
+.btn { display: inline-block; border: 0; background: var(--gold); color: #111; padding: 12px 16px; cursor: pointer; box-shadow: 0 4px 0 #a07f00, 4px 8px 0 #000;
+  text-transform: uppercase; margin: 4px 4px 10px 0; position: relative; top: 0; touch-action: manipulation; }
+.btn:active { top: 3px; box-shadow: 0 1px 0 #a07f00, 2px 4px 0 #000; }
+.btn.alt { background: #e8e8e8; box-shadow: 0 4px 0 #8a8a8a, 4px 8px 0 #000; }
+.btn.red { background: var(--red); box-shadow: 0 4px 0 #9c2e17, 4px 8px 0 #000; }
+.btn.green { background: var(--green); box-shadow: 0 4px 0 #2d9a3a, 4px 8px 0 #000; }
+.btn.big { font-size: 14px; padding: 16px 20px; width: 100%; }
+.btn.small { font-size: 9px; padding: 8px 10px; margin: 2px; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+input[type=text], input[type=password], input[type=tel] { width: 100%; background: #0a0b10; color: #fff; border: 3px solid var(--line); padding: 12px; font-size: 14px; outline: none; }
+input:focus { border-color: var(--gold); }
+.pin { letter-spacing: 10px; text-align: center; font-size: 22px !important; }
+label { display: block; color: var(--dim); margin: 10px 0 6px; font-size: 9px; }
+.err { color: var(--red); min-height: 18px; margin: 8px 0; font-size: 9px; }
+.ok { color: var(--green); }
+.dim { color: var(--dim); }
+.gold { color: var(--gold); }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.row > * { flex: 1 1 auto; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { background: var(--panel2); border: 2px solid var(--line); color: #fff; padding: 8px 10px; cursor: pointer; }
+.recovery { font-size: 18px; color: var(--gold); background: #000; padding: 14px; text-align: center; letter-spacing: 2px; margin: 10px 0; user-select: all; }
+.teams { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.team { border: 3px solid #000; padding: 10px 8px; cursor: pointer; text-align: left; color: #fff; position: relative; min-height: 64px; box-shadow: 3px 3px 0 #000; }
+.team .ab { font-size: 16px; display: block; text-shadow: 2px 2px 0 #000; }
+.team .nm { font-size: 8px; text-shadow: 1px 1px 0 #000; }
+.team.sel { outline: 4px solid var(--gold); }
+.team .stripe { position: absolute; right: 0; top: 0; bottom: 0; width: 10px; }
+/* hub */
+.hubtop { display: flex; align-items: stretch; gap: 10px; margin-bottom: 8px; }
+.badge { width: 64px; min-width: 64px; display: grid; place-items: center; font-size: 15px; border: 3px solid #000; box-shadow: 3px 3px 0 #000; text-shadow: 2px 2px 0 #000; }
+.hubtop .info { flex: 1; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 8px 0; }
+.stat { background: var(--panel2); padding: 8px 6px; text-align: center; border: 2px solid var(--line); }
+.stat b { display: block; font-weight: normal; font-size: 14px; color: var(--gold); }
+.stat span { font-size: 7px; color: var(--dim); }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; margin: 14px 0 0; }
+.tab { background: var(--panel2); color: var(--dim); border: 2px solid var(--line); border-bottom: 0; padding: 9px 8px; cursor: pointer; font-size: 8px; }
+.tab.on { background: var(--panel); color: var(--gold); }
+.pane { background: var(--panel); border: 3px solid var(--line); padding: 12px; box-shadow: 4px 4px 0 #000; min-height: 200px; }
+table { width: 100%; border-collapse: collapse; font-size: 9px; }
+th { color: var(--dim); text-align: left; font-weight: normal; padding: 6px 4px; border-bottom: 2px solid var(--line); }
+td { padding: 7px 4px; border-bottom: 1px solid #262b40; }
+tr.me td { color: var(--gold); }
+.num { text-align: right; }
+.player { display: flex; gap: 10px; align-items: center; padding: 9px 4px; border-bottom: 1px solid #262b40; cursor: pointer; }
+.player:hover { background: #1c2032; }
+.player .pos { width: 34px; color: var(--gold); }
+.player .nm { flex: 1; }
+.player .nm small { display: block; color: var(--dim); font-size: 8px; margin-top: 3px; }
+.stars { color: var(--gold); letter-spacing: 1px; white-space: nowrap; }
+.stars .off { color: #3b4160; }
+.bar { height: 8px; background: #0a0b10; border: 1px solid var(--line); margin-top: 4px; }
+.bar i { display: block; height: 100%; background: var(--green); }
+.tag { display: inline-block; padding: 2px 5px; font-size: 7px; background: var(--red); color: #000; margin-left: 4px; vertical-align: middle; }
+.tag.g { background: var(--green); }
+.tag.y { background: var(--gold); }
+.news p { margin: 0 0 10px; padding-bottom: 10px; border-bottom: 1px dashed #2a3048; font-size: 9px; }
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.72); display: none; place-items: center; z-index: 30; padding: 16px; }
+.modal.on { display: grid; }
+.modal .box { background: var(--panel); border: 4px solid var(--gold); padding: 18px; max-width: 520px; width: 100%; box-shadow: 6px 6px 0 #000; max-height: 90vh; overflow: auto; }
+/* game */
+#game { background: #000; overflow: hidden; touch-action: none; }
+#game canvas { position: absolute; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; }
+.gbtns { position: absolute; z-index: 5; display: flex; gap: 6px; }
+.gbtn { background: rgba(0,0,0,0.6); color: #fff; border: 2px solid #fff6; padding: 8px 10px; font-size: 8px; cursor: pointer; }
+.choice { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: rgba(10,12,22,0.94); border: 4px solid var(--gold); padding: 16px;
+  z-index: 8; display: none; width: min(92vw, 440px); text-align: center; box-shadow: 6px 6px 0 #000; }
+.choice.on { display: block; }
+.choice .btn { width: 100%; }
+.rotate { display: none; position: absolute; inset: 0; z-index: 50; background: #000d; place-items: center; text-align: center; padding: 30px; }
+@media (orientation: portrait) and (max-width: 700px) { #game.on .rotate.maybe { display: grid; } }
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: #000; color: #fff; border: 2px solid var(--gold); padding: 10px 14px; z-index: 60; display: none; font-size: 9px; max-width: 90vw; }
+.toast.on { display: block; }
+.final-score { font-size: 28px; text-align: center; margin: 16px 0; }
+.small { font-size: 8px; }
+a { color: var(--gold); }
+@media (max-width: 520px) { .stats { grid-template-columns: repeat(2, 1fr); } h1 { font-size: 20px; } .logo .t1, .logo .t2 { font-size: 26px; } }
+</style>
+</head>
+<body>
+
+<!-- sign in / sign up -->
+<section id="auth" class="screen">
+  <div class="wrap" style="max-width:460px">
+    <div class="logo"><div class="t1">RETRO</div><div class="t2">BOWL</div><div class="sub">AN OPEN ARCADE TRIBUTE</div></div>
+    <div class="card" id="auth-name">
+      <h2>Coach sign in</h2>
+      <p class="dim small">Pick a username. New here? You'll make a PIN next. Back again? Enter your PIN.</p>
+      <label for="in-name">USERNAME</label>
+      <input id="in-name" type="text" maxlength="14" autocomplete="username" autocapitalize="off" spellcheck="false">
+      <div class="err" id="name-err"></div>
+      <button class="btn big" id="btn-name">Continue</button>
+      <div id="remembered"></div>
+    </div>
+    <div class="card" id="auth-pin" hidden>
+      <h2 id="pin-title">Enter PIN</h2>
+      <p class="dim small" id="pin-help"></p>
+      <label for="in-pin">PIN (4-8 NUMBERS)</label>
+      <input id="in-pin" class="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="current-password">
+      <div id="pin2-wrap" hidden>
+        <label for="in-pin2">CONFIRM PIN</label>
+        <input id="in-pin2" class="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="new-password">
+      </div>
+      <div class="err" id="pin-err"></div>
+      <button class="btn big" id="btn-pin">Sign in</button>
+      <div class="row"><button class="btn alt small" id="btn-back">Back</button><button class="btn alt small" id="btn-forgot">Forgot PIN?</button></div>
+    </div>
+    <div class="card" id="auth-recover" hidden>
+      <h2>Reset your PIN</h2>
+      <p class="dim small">Type the recovery code you were shown when you signed up.</p>
+      <label for="in-rec">RECOVERY CODE</label>
+      <input id="in-rec" type="text" maxlength="16" autocapitalize="characters" spellcheck="false">
+      <label for="in-newpin">NEW PIN</label>
+      <input id="in-newpin" class="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="8">
+      <div class="err" id="rec-err"></div>
+      <button class="btn big" id="btn-recover">Reset PIN</button>
+      <button class="btn alt small" id="btn-rec-back">Back</button>
+    </div>
+    <div class="card" id="auth-code" hidden>
+      <h2 class="gold">Save this code!</h2>
+      <p class="small">If you ever forget your PIN, this is the only way back into your account. Write it down or screenshot it. You won't see it again.</p>
+      <div class="recovery" id="rec-code"></div>
+      <button class="btn big" id="btn-code-ok">I've saved it</button>
+    </div>
+  </div>
+</section>
+
+<!-- choose a team -->
+<section id="pick" class="screen">
+  <div class="wrap">
+    <h1>Pick your team</h1>
+    <p class="dim small">Every franchise starts out average. Turning them into champions is your job, Coach.</p>
+    <div class="teams" id="teams"></div>
+    <div style="position:sticky;bottom:0;background:var(--bg);padding:12px 0">
+      <button class="btn big" id="btn-pick" disabled>Choose a team</button>
+    </div>
+  </div>
+</section>
+
+<!-- franchise hub -->
+<section id="hub" class="screen">
+  <div class="wrap">
+    <div class="hubtop">
+      <div class="badge" id="hub-badge"></div>
+      <div class="info">
+        <h1 id="hub-team" style="margin:0 0 4px"></h1>
+        <div class="dim small" id="hub-sub"></div>
+      </div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="st-rec">0-0</b><span>RECORD</span></div>
+      <div class="stat"><b id="st-cc">0</b><span>COACH CREDITS</span></div>
+      <div class="stat"><b id="st-fans">0%</b><span>FAN RATING</span></div>
+      <div class="stat"><b id="st-cap">$0M</b><span>CAP SPACE</span></div>
+    </div>
+    <div id="hub-next"></div>
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-tab="team">TEAM</button>
+      <button class="tab" data-tab="fac">FACILITIES</button>
+      <button class="tab" data-tab="table">STANDINGS</button>
+      <button class="tab" data-tab="sched">SCHEDULE</button>
+      <button class="tab" data-tab="news">NEWS</button>
+      <button class="tab" data-tab="lb">LEADERBOARD</button>
+      <button class="tab" data-tab="more">MORE</button>
+    </div>
+    <div class="pane" id="pane"></div>
+  </div>
+</section>
+
+<!-- the match -->
+<section id="game" class="screen">
+  <canvas id="cv"></canvas>
+  <div class="gbtns" id="gbtns">
+    <button class="gbtn" id="btn-to">TIMEOUT</button>
+    <button class="gbtn" id="btn-pause">II</button>
+  </div>
+  <div class="choice" id="ch-fourth">
+    <h3>4TH DOWN</h3>
+    <p class="small dim" id="fourth-info"></p>
+    <button class="btn green" data-c="go">GO FOR IT</button>
+    <button class="btn alt" data-c="punt">PUNT</button>
+    <button class="btn" data-c="fg" id="btn-fg">FIELD GOAL</button>
+  </div>
+  <div class="choice" id="ch-pat">
+    <h3>CONVERSION</h3>
+    <button class="btn" data-c="kick">KICK EXTRA POINT (1)</button>
+    <button class="btn green" data-c="two">GO FOR TWO (2)</button>
+  </div>
+  <div class="choice" id="ch-pause">
+    <h3>PAUSED</h3>
+    <p class="small dim">Pass: drag back from anywhere and let go, like a slingshot. Run: tap the RB as he passes the QB. Steer the ball carrier by holding your finger where you want him; tap to dive. Keys: Space snap/dive, arrows move, 1-4 throw to WR1/WR2/TE/RB, H hand off.</p>
+    <button class="btn green" id="btn-resume">RESUME</button>
+    <button class="btn alt" id="btn-sound">SOUND: ON</button>
+    <button class="btn red" id="btn-quit">FORFEIT MATCH</button>
+  </div>
+  <div class="choice" id="ch-final">
+    <h3 id="final-title">FINAL</h3>
+    <div class="final-score" id="final-score"></div>
+    <div class="small" id="final-body"></div>
+    <button class="btn big" id="btn-final">CONTINUE</button>
+  </div>
+  <div class="rotate maybe"><div><h2>Turn your phone sideways</h2><p class="dim small">Retro Bowl plays in landscape.</p></div></div>
+</section>
+
+<div class="modal" id="modal"><div class="box" id="modal-box"></div></div>
+<div class="toast" id="toast"></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

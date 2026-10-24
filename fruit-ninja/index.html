@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#3a2414">
+<title>Fruit Ninja</title>
+<meta name="description" content="Swipe to slice flying fruit, chain combos and dodge the bombs. Classic, Arcade and Zen modes.">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<canvas id="game" aria-label="Fruit Ninja: swipe to slice fruit"></canvas>
+
+<div id="hud" class="hud" hidden>
+  <div class="score"><span class="ic">🍉</span><b id="score">0</b><small id="best">Best 0</small></div>
+  <div class="right">
+    <div id="lives" class="lives" aria-label="Lives"></div>
+    <div id="timer" class="timer"></div>
+    <button id="pause" class="icon" aria-label="Pause">❚❚</button>
+  </div>
+  <div id="power" class="power"></div>
+</div>
+
+<div id="menu" class="menu">
+  <h1><span>FRUIT</span><span>NINJA</span></h1>
+  <p class="tag">Slice a fruit to choose a mode</p>
+  <div id="labels" class="labels" aria-hidden="true"></div>
+  <div class="mode-buttons">
+    <button data-mode="classic">Classic</button><button data-mode="arcade">Arcade</button><button data-mode="zen">Zen</button>
+  </div>
+  <button id="mute" class="icon mute" aria-label="Mute">🔊</button>
+</div>
+
+<div id="over" class="over" hidden>
+  <div class="card">
+    <h2 id="over-title">Game Over</h2>
+    <p id="over-why"></p>
+    <p class="final"><b id="final">0</b><span id="final-best"></span></p>
+    <div class="buttons"><button id="again" class="primary">Play again</button><button id="to-menu">Menu</button></div>
+  </div>
+</div>
+
+<div id="paused" class="over" hidden>
+  <div class="card"><h2>Paused</h2><div class="buttons"><button id="resume" class="primary">Resume</button><button id="quit">Quit</button></div></div>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

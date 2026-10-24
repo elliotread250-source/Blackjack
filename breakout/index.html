@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b0e24">
+<meta name="description" content="Breakout in the browser: the 1976 Atari rules in Classic mode, plus 12 hand-built Arcade levels with multi-hit and steel bricks, lasers, multi-ball and more.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Breakout</title>
+<link rel="icon" href="icon.svg">
+<style>
+  :root {
+    --bg: #070912;
+    --card: rgba(13, 17, 40, 0.88);
+    --line: rgba(255, 255, 255, 0.09);
+    --text: #eef1ff;
+    --muted: #8d96bf;
+    --accent: #39d5ff;
+    --accent2: #d65cff;
+    --gold: #ffd76a;
+    --icon: 40px;
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: var(--bg); color: var(--text); font-family: var(--font);
+    overscroll-behavior: none; touch-action: none;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+    -webkit-text-size-adjust: 100%;
+  }
+  body { position: fixed; inset: 0; }
+  button { font: inherit; color: inherit; }
+  [hidden] { display: none !important; }
+  #safe-probe {
+    position: fixed; left: 0; top: 0; width: 0; height: 0; visibility: hidden; pointer-events: none;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  body[data-screen="play"] #game { cursor: none; }
+
+  /* ---------- pause / mute (positioned over the HUD strip by main.js) ---------- */
+  #hud { position: fixed; top: 8px; right: 8px; display: flex; gap: 8px; z-index: 30; }
+  .icon {
+    width: var(--icon); height: var(--icon); padding: 0; border-radius: 12px; cursor: pointer;
+    border: 1px solid var(--line); background: rgba(255, 255, 255, 0.06); color: #aab3dc;
+    display: grid; place-items: center; transition: background .15s, color .15s; touch-action: manipulation;
+  }
+  .icon:hover { background: rgba(255, 255, 255, 0.12); color: var(--text); }
+  .icon:focus-visible, .card button:focus-visible, .arcade:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .icon svg { width: 52%; height: 52%; }
+  body:not([data-screen="play"]):not([data-screen="paused"]) #btn-pause { display: none; }
+  #btn-pause .i-play { display: none; }
+  body[data-screen="paused"] #btn-pause .i-play { display: block; }
+  body[data-screen="paused"] #btn-pause .i-pause { display: none; }
+  #btn-mute .i-off { display: none; }
+  body.muted #btn-mute .i-on { display: none; }
+  body.muted #btn-mute .i-off { display: block; }
+
+  /* ---------- touch fire button (only while the laser is active) ---------- */
+  #btn-fire {
+    position: fixed; right: 16px; top: 60%; z-index: 25; display: none;
+    width: 70px; height: 70px; border-radius: 50%; padding: 0; cursor: pointer;
+    border: 2px solid rgba(255, 140, 190, 0.7);
+    background: radial-gradient(circle at 35% 30%, rgba(255, 150, 200, 0.55), rgba(200, 30, 100, 0.45));
+    color: #fff; font-weight: 900; font-size: 13px; letter-spacing: .12em;
+    box-shadow: 0 0 22px rgba(255, 79, 158, 0.45); touch-action: none;
+  }
+  #btn-fire.on { transform: scale(0.94); background: radial-gradient(circle at 35% 30%, rgba(255, 190, 220, 0.8), rgba(230, 40, 120, 0.7)); }
+  body.touch.laser-on[data-screen="play"] #btn-fire { display: grid; place-items: center; }
+
+  /* ---------- overlay screens ---------- */
+  #overlay {
+    position: fixed; inset: 0; z-index: 20; display: flex; align-items: center; justify-content: center;
+    padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+    background: rgba(4, 6, 14, 0.6);
+  }
+  #overlay.is-title { background: radial-gradient(120% 80% at 50% 45%, rgba(4, 6, 14, 0.2), rgba(4, 6, 14, 0.7)); }
+  #overlay.hidden { display: none; }
+  .arcade {
+    position: absolute; top: max(10px, env(safe-area-inset-top)); left: max(12px, env(safe-area-inset-left));
+    color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 600;
+    padding: 6px 11px; border-radius: 999px; background: rgba(8, 10, 26, 0.7); border: 1px solid var(--line);
+    z-index: 2;
+  }
+  .arcade:hover { color: var(--text); }
+  .card {
+    position: relative; width: min(372px, 100%); max-height: 100%; overflow: auto;
+    touch-action: pan-y; overscroll-behavior: contain;
+    background: var(--card); border: 1px solid var(--line); border-radius: 20px;
+    padding: 22px 20px 18px; text-align: center;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    animation: pop .22s ease-out;
+  }
+  @keyframes pop { from { transform: translateY(8px) scale(.98); opacity: 0; } to { transform: none; opacity: 1; } }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+  /* logo */
+  .logo { margin: 2px 0 16px; }
+  .logo-bricks { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; width: 212px; margin: 0 auto 10px; }
+  .logo-bricks i { display: block; height: 9px; border-radius: 2px; box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 0 rgba(0, 0, 0, 0.25); }
+  .logo-bricks i:nth-child(-n+8) { background: #f4473d; }
+  .logo-bricks i:nth-child(n+9):nth-child(-n+16) { background: #ff9a2e; }
+  .logo-bricks i:nth-child(n+17):nth-child(-n+24) { background: #37cb5b; }
+  .logo-bricks i:nth-child(n+25) { background: #f4d83c; }
+  .logo-bricks i.gone { visibility: hidden; }
+  .logo-word {
+    font-size: 46px; line-height: 1; font-weight: 900; letter-spacing: .05em;
+    background: linear-gradient(90deg, #ff5a6e, #ff9a2e 30%, #ffd23f 50%, #3fe07c 70%, #2ee2f2);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 14px rgba(120, 160, 255, 0.35));
+  }
+  .logo-pad { position: relative; width: 212px; height: 16px; margin: 8px auto 0; }
+  .logo-pad::before { content: ""; position: absolute; left: 50%; bottom: 0; width: 64px; height: 8px; margin-left: -32px; border-radius: 4px;
+    background: linear-gradient(180deg, #effcff, #6ee0ff 35%, #1d5fd6); box-shadow: 0 0 14px rgba(63, 215, 255, 0.6); }
+  .logo-pad::after { content: ""; position: absolute; left: 50%; bottom: 10px; width: 7px; height: 7px; margin-left: 10px; border-radius: 50%;
+    background: #fff; box-shadow: 0 0 10px #7fe8ff; animation: bob 1.1s ease-in-out infinite alternate; }
+  @keyframes bob { from { transform: translate(0, 0); } to { transform: translate(-4px, -6px); } }
+
+  h2 { margin: 2px 0 14px; font-size: 26px; letter-spacing: .06em; text-transform: uppercase; font-weight: 900; }
+  .seg { display: flex; padding: 4px; gap: 4px; border-radius: 14px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--line); }
+  .seg button {
+    flex: 1; padding: 10px 6px; border: 0; border-radius: 10px; background: transparent; cursor: pointer;
+    color: var(--muted); font-weight: 800; letter-spacing: .08em; text-transform: uppercase; font-size: 13px;
+  }
+  .seg button[aria-pressed="true"] { background: linear-gradient(135deg, #2bb8f0, #8b5cf6); color: #fff; box-shadow: 0 4px 14px rgba(80, 120, 255, 0.35); }
+  .mode-desc { margin: 10px 0 12px; color: var(--muted); font-size: 13px; line-height: 1.45; min-height: 2.9em; }
+  .stepper { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 0 0 12px; }
+  .stepper span { color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; margin-right: 4px; }
+  .stepper button {
+    width: 38px; height: 38px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.06);
+    font-size: 20px; font-weight: 700; cursor: pointer; line-height: 1;
+  }
+  .stepper button:hover { background: rgba(255, 255, 255, 0.12); }
+  .stepper button:disabled { opacity: .35; cursor: default; }
+  .stepper output { min-width: 40px; font-size: 24px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .best { color: var(--gold); font-weight: 800; letter-spacing: .06em; margin: 4px 0 14px; font-variant-numeric: tabular-nums; }
+  .primary {
+    display: block; width: 100%; padding: 15px; border: 0; border-radius: 14px; cursor: pointer;
+    background: linear-gradient(135deg, #22d3ee, #8b5cf6 60%, #d65cff); color: #fff;
+    font-size: 18px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase;
+    box-shadow: 0 8px 24px rgba(80, 120, 255, 0.35);
+  }
+  .primary:hover { filter: brightness(1.08); }
+  .primary:active { transform: translateY(1px); }
+  .secondary {
+    display: block; width: 100%; margin-top: 10px; padding: 12px; border-radius: 14px; cursor: pointer;
+    border: 1px solid var(--line); background: rgba(255, 255, 255, 0.05);
+    font-size: 15px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  }
+  .secondary:hover { background: rgba(255, 255, 255, 0.1); }
+  .hint { margin: 12px 0 0; color: #6c7499; font-size: 12px; line-height: 1.5; }
+  .keys { margin: 14px 0 0; padding: 12px 4px 0; border-top: 1px solid var(--line); display: grid; grid-template-columns: auto 1fr; gap: 5px 12px; text-align: left; font-size: 12px; color: var(--muted); }
+  .keys b { color: #c8cdf0; font-weight: 700; white-space: nowrap; text-align: right; }
+  body.touch .kb { display: none !important; }
+  body:not(.touch) .tc { display: none !important; }
+
+  /* power-up legend */
+  details.legend { margin: 14px 0 0; border-top: 1px solid var(--line); padding-top: 10px; text-align: left; }
+  details.legend summary {
+    cursor: pointer; list-style: none; color: #c8cdf0; font-size: 12px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase;
+    text-align: center; padding: 4px; border-radius: 8px;
+  }
+  details.legend summary::-webkit-details-marker { display: none; }
+  details.legend summary::after { content: " \25BE"; color: var(--muted); }
+  details.legend[open] summary::after { content: " \25B4"; }
+  .pu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; margin-top: 10px; }
+  .pu { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); line-height: 1.25; }
+  .pu b { display: block; color: #e3e7ff; font-size: 12px; }
+  .cap {
+    flex: none; width: 34px; height: 15px; border-radius: 8px; display: grid; place-items: center;
+    color: #fff; font-size: 11px; font-weight: 900; text-shadow: 0 1px 1px rgba(0, 0, 0, 0.6);
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.35), inset 0 -3px 0 rgba(0, 0, 0, 0.3), 0 0 10px rgba(255, 255, 255, 0.12);
+  }
+  .cap svg { width: 14px; height: 10px; }
+  .cap.bad { background-image: repeating-linear-gradient(-55deg, rgba(0, 0, 0, 0.22) 0 3px, transparent 3px 7px); }
+
+  .newbest {
+    display: inline-block; margin: -4px 0 12px; padding: 5px 12px; border-radius: 999px;
+    background: rgba(255, 215, 106, 0.14); color: var(--gold); border: 1px solid rgba(255, 215, 106, 0.4);
+    font-weight: 900; letter-spacing: .14em; font-size: 12px; text-transform: uppercase;
+    animation: glow 1.2s ease-in-out infinite alternate;
+  }
+  @keyframes glow { to { box-shadow: 0 0 18px rgba(255, 215, 106, 0.45); } }
+  .sub { margin: -8px 0 14px; color: var(--muted); font-size: 13px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 16px; }
+  .stat { padding: 9px 10px; border-radius: 12px; background: rgba(255, 255, 255, 0.04); border: 1px solid var(--line); text-align: left; }
+  .stat span { display: block; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+  .stat strong { font-size: 18px; font-weight: 900; font-variant-numeric: tabular-nums; }
+  .stat.big { grid-column: span 2; text-align: center; }
+  .stat.big strong { font-size: 32px; }
+  @media (max-height: 640px) {
+    .card { padding: 14px 16px 12px; }
+    .logo { margin-bottom: 10px; }
+    .logo-word { font-size: 38px; }
+    .keys { display: none; }
+  }
+  @media (max-height: 480px) {
+    .logo-bricks, .logo-pad { display: none; }
+    details.legend { display: none; }
+  }
+</style>
+</head>
+<body data-screen="title">
+<div id="safe-probe"></div>
+<canvas id="game" aria-label="Breakout playfield"></canvas>
+
+<div id="hud">
+  <button id="btn-pause" class="icon" type="button" aria-label="Pause" title="Pause (P)">
+    <svg class="i-pause" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="4.5" width="4" height="15" rx="1.2"/><rect x="14" y="4.5" width="4" height="15" rx="1.2"/></svg>
+    <svg class="i-play" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 4.5v15l12.5-7.5z"/></svg>
+  </button>
+  <button id="btn-mute" class="icon" type="button" aria-label="Mute" title="Mute (M)">
+    <svg class="i-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/></svg>
+    <svg class="i-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg>
+  </button>
+</div>
+
+<button id="btn-fire" type="button" aria-label="Fire lasers">FIRE</button>
+
+<div id="overlay" class="is-title">
+  <a class="arcade" href="https://open-arcade.up.railway.app">&larr; Arcade</a>
+
+  <section class="card" id="scr-title" aria-labelledby="title-h">
+    <h1 class="sr" id="title-h">Breakout</h1>
+    <div class="logo" aria-hidden="true">
+      <div class="logo-bricks">
+        <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i></i><i class="gone"></i><i></i><i></i><i></i><i></i>
+        <i></i><i></i><i class="gone"></i><i class="gone"></i><i></i><i></i><i></i><i></i>
+        <i></i><i class="gone"></i><i class="gone"></i><i class="gone"></i><i></i><i></i><i class="gone"></i><i></i>
+      </div>
+      <div class="logo-word">BREAKOUT</div>
+      <div class="logo-pad"></div>
+    </div>
+    <div class="seg" role="group" aria-label="Mode">
+      <button type="button" data-mode="arcade" aria-pressed="true">Arcade</button>
+      <button type="button" data-mode="classic" aria-pressed="false">Classic</button>
+    </div>
+    <p class="mode-desc" id="mode-desc">12 hand-built levels with multi-hit and steel bricks and falling power-ups.</p>
+    <div class="stepper" id="level-row" hidden>
+      <span>Start level</span>
+      <button type="button" id="lvl-dn" aria-label="Lower start level">&minus;</button>
+      <output id="lvl" aria-live="polite">1</output>
+      <button type="button" id="lvl-up" aria-label="Higher start level">+</button>
+    </div>
+    <div class="best" id="title-best">Best 0</div>
+    <button class="primary" type="button" id="btn-start">Play</button>
+    <p class="hint kb">Enter to start &middot; &larr; &rarr; mode &middot; &uarr; &darr; level</p>
+    <div class="keys kb">
+      <b>Mouse / &larr; &rarr; A D</b><span>Move the paddle</span>
+      <b>Click / Space</b><span>Launch, release, fire lasers</span>
+      <b>P / Esc</b><span>Pause</span>
+      <b>M</b><span>Mute</span>
+    </div>
+    <div class="keys tc">
+      <b>Drag anywhere</b><span>Move the paddle</span>
+      <b>Tap</b><span>Launch / release the ball</span>
+      <b>2nd finger / FIRE</b><span>Fire lasers</span>
+    </div>
+    <details class="legend" id="legend">
+      <summary>Power-ups</summary>
+      <div class="pu-grid">
+        <div class="pu"><span class="cap" style="background-color:#3f7dff">E</span><span><b>Expand</b>Wider paddle</span></div>
+        <div class="pu"><span class="cap bad" style="background-color:#e8253f"><svg viewBox="0 0 16 8" fill="#fff"><path d="M0 0l6 4-6 4zM16 0l-6 4 6 4z"/></svg></span><span><b>Shrink</b>Avoid it!</span></div>
+        <div class="pu"><span class="cap" style="background-color:#1ec8e6">M</span><span><b>Multi-ball</b>Splits into three</span></div>
+        <div class="pu"><span class="cap" style="background-color:#f4b81f">S</span><span><b>Slow</b>Calms the ball</span></div>
+        <div class="pu"><span class="cap" style="background-color:#ff4f9e">L</span><span><b>Laser</b>Shoot bricks</span></div>
+        <div class="pu"><span class="cap" style="background-color:#2fd36b">C</span><span><b>Catch</b>Sticky paddle</span></div>
+        <div class="pu"><span class="cap" style="background-color:#bcc4d8"><svg viewBox="0 0 16 14"><path d="M8 13C-2 6 3-2 8 3c5-5 10 3 0 10z" fill="#ff3b6b" stroke="rgba(0,0,0,.5)"/></svg></span><span><b>Extra life</b>One more ball</span></div>
+        <div class="pu"><span class="cap" style="background-color:#ff7a1a">F</span><span><b>Fireball</b>Smashes through</span></div>
+      </div>
+    </details>
+  </section>
+
+  <section class="card" id="scr-pause" hidden aria-labelledby="pause-h">
+    <h2 id="pause-h">Paused</h2>
+    <button class="primary" type="button" id="btn-resume">Resume</button>
+    <button class="secondary" type="button" id="btn-restart">Restart</button>
+    <button class="secondary" type="button" id="btn-menu">Quit to menu</button>
+    <p class="hint kb">P / Esc to resume &middot; M to mute</p>
+  </section>
+
+  <section class="card" id="scr-over" hidden aria-labelledby="over-title">
+    <h2 id="over-title">Game Over</h2>
+    <p class="sub" id="over-sub"></p>
+    <div class="newbest" id="over-newbest" hidden>New best!</div>
+    <div class="stats" id="over-stats"></div>
+    <button class="primary" type="button" id="btn-again">Play again</button>
+    <button class="secondary" type="button" id="btn-over-menu">Menu</button>
+    <p class="hint kb">Enter to play again &middot; Esc for menu</p>
+  </section>
+</div>
+
+<script src="js/levels.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <pattern id="grid" width="8" height="8" patternUnits="userSpaceOnUse">
+      <path d="M8 0H0V8" fill="none" stroke="#7fa4d8" stroke-opacity=".35" stroke-width=".8"/>
+    </pattern>
+    <clipPath id="body"><path d="M18 49 C16 42 15 34 18 27 C21 19 27 15 33 15 C40 15 45 19 47 26 C49 33 48 42 46 49 Z"/></clipPath>
+  </defs>
+  <rect width="64" height="64" rx="12" fill="#f7f2e2"/>
+  <rect width="64" height="64" rx="12" fill="url(#grid)"/>
+  <rect x="12" y="55" width="40" height="6" rx="3" fill="#77c443" stroke="#2b2620" stroke-width="1.6"/>
+  <g stroke="#2b2620" stroke-width="2" stroke-linecap="round" fill="none">
+    <path d="M21 49v5h3M27 49v5h3M34 49v5h3M40 49v5h3"/>
+  </g>
+  <path d="M18 49 C16 42 15 34 18 27 C21 19 27 15 33 15 C40 15 45 19 47 26 C49 33 48 42 46 49 Z" fill="#cbdc3d"/>
+  <g clip-path="url(#body)">
+    <rect x="10" y="41" width="44" height="9" fill="#5f9a2a"/>
+    <path d="M10 44.5h44M10 47.5h44" stroke="#3c6a16" stroke-width="1.4"/>
+  </g>
+  <path d="M18 49 C16 42 15 34 18 27 C21 19 27 15 33 15 C40 15 45 19 47 26 C49 33 48 42 46 49 Z" fill="none" stroke="#2b2620" stroke-width="2.2" stroke-linejoin="round"/>
+  <path d="M45 24 L56 23 L56 31 L45 30 Z" fill="#cbdc3d" stroke="#2b2620" stroke-width="2" stroke-linejoin="round"/>
+  <ellipse cx="57" cy="27" rx="2.6" ry="5.6" fill="#cbdc3d" stroke="#2b2620" stroke-width="2"/>
+  <circle cx="57.4" cy="27" r="1.4" fill="#2b2620"/>
+  <circle cx="36" cy="25" r="2" fill="#2b2620"/>
+  <circle cx="42" cy="24" r="2" fill="#2b2620"/>
+</svg>

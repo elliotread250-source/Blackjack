@@ -1,0 +1,8 @@
+{
+  "name": "open-arcade-e2e",
+  "private": true,
+  "description": "Browser tests for the Open Arcade games. Test-only: no game imports anything from here.",
+  "type": "module",
+  "scripts": { "test": "node run.mjs" },
+  "devDependencies": { "playwright": "1.62.0" }
+}

@@ -1,0 +1,70 @@
+// Open Arcade hub bootstrap. Each part starts on its own: if one throws, the rest still render (and it is logged).
+import { loadRegistry } from './registry.js';
+import { loadPlays } from './plays.js';
+import { loadStatus } from './status.js';
+import { initSettings } from './settings.js';
+import { initReveals } from './motion/reveal.js';
+import { onLevel } from './motion/engine.js';
+import { initAmbient } from './ambient.js';
+import { initRouter } from './router.js';
+import { initPalette, setSettingsOpener } from './palette.js';
+import { initBoot, replayBoot } from './sections/boot.js';
+import { initHeader } from './sections/header.js';
+import { initHero } from './sections/hero.js';
+import { initTicker } from './sections/ticker.js';
+import { initHeadliners } from './sections/headliners.js';
+import { initContinue } from './sections/continue.js';
+import { initCharts } from './sections/charts.js';
+import { initVibes } from './sections/vibes.js';
+import { initLobby } from './sections/lobby.js';
+import { initShelf } from './sections/shelf.js';
+import { initLibrary } from './sections/library.js';
+import { initFavourites } from './sections/favourites.js';
+import { initProfileSection } from './sections/profile.js';
+import { initIdea } from './sections/idea.js';
+import { initFooter } from './sections/footer.js';
+import { initEggs } from './sections/eggs.js';
+import { initCursor } from './components/cursor.js';
+import { initRocket } from './components/rocket.js';
+import { initSlot } from './components/slot.js';
+import { initSheet } from './components/sheet.js';
+import { initKeys } from './components/keys.js';
+
+const safe = (name, fn) => { try { return fn(); } catch (e) { console.error(`[arcade] ${name} failed`, e); } };
+
+safe('boot', initBoot);
+safe('reveals', initReveals);
+const showSettings = safe('settings', () => initSettings(replayBoot));
+setSettingsOpener(on => showSettings && showSettings(on));
+safe('header', initHeader);
+safe('ambient', initAmbient);
+safe('cursor', initCursor);
+safe('rocket', initRocket);
+safe('idea', initIdea);
+safe('keys', initKeys);
+safe('eggs', initEggs);
+safe('slot', initSlot);
+onLevel(() => location.hash === '' && safe('shelf-size', () => dispatchEvent(new Event('resize'))));
+
+loadRegistry().then(() => {
+  safe('hero', initHero);
+  safe('ticker', initTicker);
+  safe('headliners', initHeadliners);
+  safe('continue', initContinue);
+  safe('charts', initCharts);
+  safe('vibes', initVibes);
+  safe('lobby', initLobby);
+  safe('shelf', initShelf);
+  safe('library', initLibrary);
+  safe('favourites', initFavourites);
+  safe('profile', initProfileSection);
+  safe('footer', initFooter);
+  safe('palette', initPalette);
+  safe('sheet', initSheet);
+  safe('router', initRouter);
+  loadPlays(); loadStatus();
+}).catch(err => {
+  console.error(err);
+  const grid = document.getElementById('lib-grid');
+  grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><p class="empty-title">The game list did not load</p><p>Every game is still listed below as a plain link. Check your connection and try again.</p><button class="btn btn-ghost" type="button" onclick="location.reload()"><span>Retry</span></button></div>';
+});

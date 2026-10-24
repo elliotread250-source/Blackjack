@@ -1,0 +1,6 @@
+{
+  "name": "candy-match",
+  "private": true,
+  "type": "module",
+  "description": "Candy Match: static match-3 game, no build step."
+}
