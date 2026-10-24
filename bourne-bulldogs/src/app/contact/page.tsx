@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { PageHero } from "@/components/ui/PageHero";
 import { Button } from "@/components/ui/Button";
 import { ContactForm } from "@/components/forms/ContactForm";
+import { AvailabilityNotice } from "@/components/ui/AvailabilityNotice";
 import { club, contact, seo, sessions } from "@/content/site";
 import { img } from "@/content/images";
 
@@ -34,6 +35,7 @@ export default function ContactPage() {
                 Email us
               </Button>
             </div>
+            <AvailabilityNotice variant="compact" />
             <dl className="grid gap-6 rounded-[12px] border border-bone/10 bg-coal p-6 sm:grid-cols-2">
               <div>
                 <dt className="eyebrow text-[0.72rem] text-orange">Training</dt>

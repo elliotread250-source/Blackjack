@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { TLink } from "@/components/fx/Transition";
-import { club, nav, sessions } from "@/content/site";
+import { availability, club, nav, sessions } from "@/content/site";
 import { img } from "@/content/images";
 
 export function Footer() {
@@ -37,6 +37,7 @@ export function Footer() {
               </li>
             ))}
           </ul>
+          <p className="mt-4 max-w-xs text-sm font-semibold text-orange">{availability.short}</p>
           <address className="mt-5 not-italic text-muted">
             {club.venue.name}
             <br />

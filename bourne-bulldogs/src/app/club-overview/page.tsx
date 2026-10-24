@@ -10,6 +10,7 @@ import { SessionFlow } from "@/components/overview/SessionFlow";
 import { SkillCards } from "@/components/overview/SkillCards";
 import { MasonryGallery } from "@/components/overview/MasonryGallery";
 import { FinalCta } from "@/components/home/FinalCta";
+import { AvailabilityNotice } from "@/components/ui/AvailabilityNotice";
 import { home, overview, safety, seo, sessions, training } from "@/content/site";
 import { galleryKeys, img } from "@/content/images";
 
@@ -49,6 +50,7 @@ export default function ClubOverviewPage() {
           <div className="mt-14">
             <SessionFlow steps={training.steps} />
           </div>
+          <AvailabilityNotice className="mt-10" />
         </div>
       </section>
 

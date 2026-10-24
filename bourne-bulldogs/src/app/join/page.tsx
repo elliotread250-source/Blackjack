@@ -3,6 +3,7 @@ import { PageHero } from "@/components/ui/PageHero";
 import { ContactForm } from "@/components/forms/ContactForm";
 import { RevealImage } from "@/components/fx/RevealImage";
 import { DrawIcon } from "@/components/fx/DrawIcon";
+import { AvailabilityNotice } from "@/components/ui/AvailabilityNotice";
 import { club, join, seo, sessions } from "@/content/site";
 import { img } from "@/content/images";
 
@@ -21,7 +22,8 @@ export default function JoinPage() {
         <div className="container-x grid gap-14 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-7">
             <h2 className="display mb-3 text-5xl md:text-6xl">Tell us about your child</h2>
-            <p className="mb-8 text-muted">We&apos;ll reply with everything you need to get started.</p>
+            <p className="mb-6 text-muted">We&apos;ll reply with everything you need to get started.</p>
+            <AvailabilityNotice variant="compact" className="mb-8" />
             {join.tasterNote && <p className="mb-8 rounded-[8px] bg-orange px-4 py-3 font-bold text-ink">{join.tasterNote}</p>}
             <ContactForm defaultEnquiry="join" lockEnquiry submitLabel={join.button} />
           </div>

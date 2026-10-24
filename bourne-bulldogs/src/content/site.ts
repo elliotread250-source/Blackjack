@@ -34,7 +34,7 @@ export const club = {
 export type Session = {
   id: "session-1" | "session-2";
   label: string;
-  start: string; // 24h, used for the calendar file
+  start: string; // 24h, used for the opening hours in structured data
   end: string;
   startDisplay: string;
   endDisplay: string;
@@ -55,6 +55,14 @@ export const training = {
     { title: "In-game scenarios", body: "Game-led drills that put those skills under real pressure." },
     { title: "Friendly game", body: "Every session finishes with a game. Learning, competition and fun in one." },
   ],
+};
+
+/** Shown wherever session times appear: people must check first, not just turn up. */
+export const availability = {
+  heading: "Check availability first",
+  body: "Please get in touch before your child comes along. Contact us to check availability for a session, as we can't accept players who just turn up on the day.",
+  short: "Contact us to check availability before coming along. Please don't just turn up.",
+  cta: "Check availability",
 };
 
 export const nav = [

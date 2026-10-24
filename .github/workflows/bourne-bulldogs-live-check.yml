@@ -24,7 +24,7 @@ jobs:
       - name: Routes and redirects
         run: |
           fail=0
-          for p in / /about /club-overview /merch /contact /join /api/health /sitemap.xml /robots.txt /opengraph-image /calendar/session-1.ics /manifest.webmanifest; do
+          for p in / /about /club-overview /merch /contact /join /api/health /sitemap.xml /robots.txt /opengraph-image /manifest.webmanifest; do
             code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE$p"); echo "$code $p"; [ "$code" = 200 ] || fail=1
           done
           for p in /cluboverview /cart; do
