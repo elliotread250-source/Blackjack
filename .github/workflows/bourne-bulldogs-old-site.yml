@@ -1,0 +1,51 @@
+name: Bourne Bulldogs old site colours
+
+# Screenshots the old Squarespace site and records its exact colours into
+# bourne-bulldogs/scripts/scraped/old-site so the new site can match them.
+# Needs open internet (Actions has it); safe to re-run any time while the
+# old site is still up.
+
+on:
+  push:
+    branches: ['claude/**']
+    paths: ['bourne-bulldogs/scripts/old-site-colours.mjs', '.github/workflows/bourne-bulldogs-old-site.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright
+        run: |
+          mkdir -p "$RUNNER_TEMP/pw" && cd "$RUNNER_TEMP/pw" && npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Capture
+        working-directory: bourne-bulldogs
+        run: |
+          ln -sfn "$RUNNER_TEMP/pw/node_modules" node_modules
+          node scripts/old-site-colours.mjs
+          rm node_modules
+      - name: Commit
+        working-directory: bourne-bulldogs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add scripts/scraped/old-site
+          if git diff --cached --quiet; then echo "Nothing changed"; exit 0; fi
+          git commit -m "Bourne Bulldogs: record the old site's colours and screenshots"
+          for i in 1 2 3 4; do
+            git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && exit 0
+            sleep $((2 ** i))
+          done
+          exit 1
