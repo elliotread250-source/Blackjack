@@ -16,20 +16,19 @@ const CATS = new Set(['arcade', 'action', 'racing', 'puzzle', 'strategy', 'platf
 const FEATS = new Set(['online', 'local2p', 'coop', 'bots', 'touch', 'daily', 'saves', 'leaderboard']);
 // online multiplayer only where networking was verified with two live clients (tools/mp-turn-test.mjs, tools/mp-probe.mjs) or Apex GP's live net.js;
 // Trap Race: verified by its own two-browser e2e run (Trap_race repo, tests/e2e/run.mjs)
-// IO arenas: verified by arenas/smoke.cjs with two Chromium clients in every game.
 // 2 Weeks: verified by tools/smoke-online.mjs (two Chromium clients in one room) and tests/netclient.test.js in the 2-weeks repo.
+// IO games (Turf Wars, Wormhole Run, Sinkhole): verified by io-games/tests/e2e.cjs (two Chromium clients in one room per game) and io-games/tests/test_server.py.
 // FNAF Replica: verified by its four-browser e2e runs in CI (FNAF-Replica repo, e2e/fourPlayers.spec.ts and e2e/freeRoam.spec.ts)
-const ONLINE_VERIFIED = new Set(['pool', 'kart-racer', 'pong', 'connect-4', 'apex-gp', 'chess', 'tic-tac-toe', 'trap-race', 'fnaf', 'patchwork', 'afterglow', 'snip-club', 'little-sink', 'culture-club', '2-weeks']);
-
-const arenaUrls = Object.fromEntries(Object.entries({patchwork:'paper',afterglow:'snake','snip-club':'scissor','little-sink':'hole','culture-club':'blob'}).map(([id,game]) => [id,`https://open-arcade.up.railway.app/arenas/?game=${game}`]));
+const ONLINE_VERIFIED = new Set(['pool', 'kart-racer', 'pong', 'connect-4', 'apex-gp', 'chess', 'tic-tac-toe', 'trap-race', 'fnaf', '2-weeks', 'turf-wars', 'wormhole-run', 'sinkhole']);
 
 ok(games.length >= 39, `all ${games.length} entries present`);
 ok(new Set(games.map(g => g.id)).size === games.length, 'ids are unique');
 for (const g of games) {
   ok(KEY.test(g.id), `${g.id}: valid id`);
   ok(g.id === slug(g.name), `${g.id}: id equals the legacy slug, so its play history is kept`);
-  ok((legacyUrls[g.id] || arenaUrls[g.id]) === g.url, `${g.id}: existing URL preserved or explicit arena URL`);
-  ok(/^https:\/\/[a-z0-9-]+\.up\.railway\.app(?:\/arenas\/\?game=(?:paper|snake|scissor|hole|blob))?$/.test(g.url), `${g.id}: Railway https URL`);
+  ok(legacyUrls[g.id] === g.url, `${g.id}: URL unchanged (${g.url})`);
+  // the three IO games share one service, each at its own path
+  ok(/^https:\/\/[a-z0-9-]+\.up\.railway\.app$/.test(g.url) || /^https:\/\/io-games-production-4197\.up\.railway\.app\/(turf-wars|wormhole-run|sinkhole)\/$/.test(g.url), `${g.id}: Railway https URL`);
   ok(g.categories.length && g.categories.every(c => CATS.has(c)), `${g.id}: known categories`);
   ok(g.features.every(f => FEATS.has(f)), `${g.id}: known features`);
   ok(!g.features.includes('online') || ONLINE_VERIFIED.has(g.id), `${g.id}: online multiplayer only if verified`);

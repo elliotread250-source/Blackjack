@@ -389,51 +389,33 @@
    "thumbnailBytes": 9001,
    "momentBytes": 1681
   },
-  "patchwork": {
-   "name": "Patchwork",
-   "logo": "assets/game-logos/patchwork.svg",
-   "thumbnail": "assets/game-thumbnails/patchwork.svg",
-   "moment": "assets/game-moments/patchwork.svg",
-   "logoBytes": 544,
-   "thumbnailBytes": 587,
-   "momentBytes": 711
+  "turf-wars": {
+   "name": "Turf Wars",
+   "logo": "assets/game-logos/turf-wars.svg",
+   "thumbnail": "assets/game-thumbnails/turf-wars.svg",
+   "moment": "assets/game-moments/turf-wars.svg",
+   "logoBytes": 773,
+   "thumbnailBytes": 722,
+   "momentBytes": 1021
   },
-  "afterglow": {
-   "name": "Afterglow",
-   "logo": "assets/game-logos/afterglow.svg",
-   "thumbnail": "assets/game-thumbnails/afterglow.svg",
-   "moment": "assets/game-moments/afterglow.svg",
-   "logoBytes": 527,
-   "thumbnailBytes": 570,
-   "momentBytes": 694
+  "wormhole-run": {
+   "name": "Wormhole Run",
+   "logo": "assets/game-logos/wormhole-run.svg",
+   "thumbnail": "assets/game-thumbnails/wormhole-run.svg",
+   "moment": "assets/game-moments/wormhole-run.svg",
+   "logoBytes": 1056,
+   "thumbnailBytes": 1005,
+   "momentBytes": 1178
   },
-  "snip-club": {
-   "name": "Snip Club",
-   "logo": "assets/game-logos/snip-club.svg",
-   "thumbnail": "assets/game-thumbnails/snip-club.svg",
-   "moment": "assets/game-moments/snip-club.svg",
-   "logoBytes": 580,
-   "thumbnailBytes": 623,
-   "momentBytes": 747
-  },
-  "little-sink": {
-   "name": "Little Sink",
-   "logo": "assets/game-logos/little-sink.svg",
-   "thumbnail": "assets/game-thumbnails/little-sink.svg",
-   "moment": "assets/game-moments/little-sink.svg",
-   "logoBytes": 626,
-   "thumbnailBytes": 669,
-   "momentBytes": 793
-  },
-  "culture-club": {
-   "name": "Culture Club",
-   "logo": "assets/game-logos/culture-club.svg",
-   "thumbnail": "assets/game-thumbnails/culture-club.svg",
-   "moment": "assets/game-moments/culture-club.svg",
-   "logoBytes": 670,
-   "thumbnailBytes": 713,
-   "momentBytes": 837
+  "sinkhole": {
+   "name": "Sinkhole",
+   "logo": "assets/game-logos/sinkhole.svg",
+   "thumbnail": "assets/game-thumbnails/sinkhole.svg",
+   "moment": "assets/game-moments/sinkhole.svg",
+   "logoBytes": 960,
+   "thumbnailBytes": 909,
+   "momentBytes": 1256
   }
  },
- "artVersion": "32bee0b4b2"
+ "artVersion": "5fbb5ba486"
 }
