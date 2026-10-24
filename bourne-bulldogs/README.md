@@ -2,7 +2,7 @@
 
 Next.js 15 (App Router) with Tailwind v4, Framer Motion, GSAP ScrollTrigger and Lenis. Every image is self-hosted in `public/images`; nothing points at Squarespace.
 
-Railway project: **Bourne Bulldogs Website**, service `bourne-bulldogs-web`, root directory `/bourne-bulldogs`. A push that touches this folder redeploys.
+Railway project: **Bourne Bulldogs Website**, service `bourne-bulldogs-web`. It builds `bourne-bulldogs/Dockerfile` from the repo root (the repo holds other projects too), and only pushes that touch `bourne-bulldogs/` redeploy it.
 
 ## Editing text
 
