@@ -1,0 +1,49 @@
+name: Bourne Bulldogs live check
+
+# Hits the deployed site from a GitHub runner: every route's status code,
+# the old-URL redirects, then Lighthouse (mobile and desktop) on each page.
+# Run it from the Actions tab; pass a different URL to check another deploy.
+
+on:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Base URL to check
+        default: https://bourne-bulldogs-web-production.up.railway.app
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      BASE: ${{ inputs.url }}
+    steps:
+      - name: Routes and redirects
+        run: |
+          fail=0
+          for p in / /about /club-overview /merch /contact /join /api/health /sitemap.xml /robots.txt /opengraph-image /calendar/session-1.ics /manifest.webmanifest; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE$p"); echo "$code $p"; [ "$code" = 200 ] || fail=1
+          done
+          for p in /cluboverview /cart; do
+            out=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$BASE$p"); echo "$out  <- $p"; case "$out" in 301*) ;; *) fail=1;; esac
+          done
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$BASE/definitely-not-a-page"); echo "$code /definitely-not-a-page"; [ "$code" = 404 ] || fail=1
+          exit $fail
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Lighthouse
+        run: |
+          npm install -g lighthouse@13.5.0 >/dev/null
+          # Warm the image optimiser cache first, like a real second visitor.
+          for p in / /about /club-overview /merch /contact /join; do curl -s -o /dev/null "$BASE$p"; done
+          for p in / /about /club-overview /merch /contact /join; do
+            for preset in mobile desktop; do
+              extra=""; [ $preset = desktop ] && extra="--preset=desktop"
+              lighthouse "$BASE$p" $extra --quiet --chrome-flags="--headless=new --no-sandbox" --output=json --output-path=lh.json --only-categories=performance,accessibility,best-practices,seo >/dev/null 2>&1 || true
+              node -e 'const r=require("./lh.json");console.log(process.argv[1].padEnd(16),process.argv[2].padEnd(8),Object.values(r.categories).map(c=>c.id.slice(0,4)+":"+Math.round(c.score*100)).join(" "),"LCP",r.audits["largest-contentful-paint"].displayValue,"CLS",r.audits["cumulative-layout-shift"].displayValue)' "$p" "$preset" | tee -a "$GITHUB_STEP_SUMMARY"
+            done
+          done
