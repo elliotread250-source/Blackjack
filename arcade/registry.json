@@ -795,19 +795,22 @@
    "name": "2 Weeks",
    "kind": "game",
    "url": "https://two-weeks-production.up.railway.app",
-   "blurb": "Build-and-shoot battle royale on an island. Drop from the bus, farm, build, loot and outlast 24 bots and the storm.",
+   "blurb": "Build-and-shoot battle royale on an 840 m island with four biomes. Online rooms of up to 32 (bots fill the gaps), a locker of 250 items, a daily item shop and challenges.",
    "genres": [
     "Battle royale",
     "Building"
    ],
    "categories": [
     "action",
-    "3d"
+    "3d",
+    "multiplayer"
    ],
    "features": [
-    "bots"
+    "online",
+    "bots",
+    "saves"
    ],
-   "keywords": "battle royale build shoot island storm",
+   "keywords": "battle royale build shoot island storm online multiplayer locker shop challenges",
    "accent": "#3cc3ff",
    "shelf": 37
   },
