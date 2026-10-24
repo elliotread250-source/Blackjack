@@ -8,7 +8,7 @@
  *   2. scrapes the live pages for any image we didn't know about
  *   3. writes optimised copies to public/images (max 2400px, q82)
  *   4. keys white backgrounds out of the logos into transparent PNGs
- *   5. builds the favicon set from the logo
+ *   5. builds the on-dark logo and favicon set (scripts/brand-logos.mjs)
  *   6. extracts the brand palette from the logo
  *   7. writes src/content/image-manifest.json (sizes + blur placeholders)
  *
@@ -21,7 +21,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import crypto from "node:crypto";
 import sharp from "sharp";
+import { buildBrandLogos } from "./brand-logos.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ORIGINALS = path.join(ROOT, "assets-original");
@@ -78,9 +80,16 @@ const IMAGES = [
   [`${CDN}/9cb0734b-a01c-4b99-b6bd-7043f0de6225/Adult+hoody+-+sizing.png`, "size-adult-hoody.png"],
 ];
 
+/** Images found on the live site that deserve a real name. Keyed by Squarespace asset id. */
+const EXTRA_NAMES = {
+  "ce361099-84be-4ab7-bd1a-2e01cc37b05e": "basketball-england-badge.jpg",
+};
+
 const LOGOS = ["logo-main.png", "logo-alt.png", "logo-white.jpg", "logo-footer.png", "logo-merch.png", "og-logo.png"];
 
-const report = { startedAt: new Date().toISOString(), downloaded: [], failed: [], extras: [], logos: {}, pages: {} };
+const report = { startedAt: new Date().toISOString(), downloaded: [], failed: [], duplicates: [], extras: [], logos: {}, pages: {} };
+/** sha1 -> first filename with those bytes, so identical files are only kept once. */
+const hashes = new Map();
 
 /** Squarespace serves the original when there's no ?format= query. */
 function clean(url) {
@@ -123,6 +132,13 @@ async function download(url, name) {
   try {
     const res = await get(src);
     const buf = Buffer.from(await res.arrayBuffer());
+    const sha = crypto.createHash("sha1").update(buf).digest("hex");
+    if (hashes.has(sha)) {
+      report.duplicates.push({ name, url: src, duplicateOf: hashes.get(sha) });
+      console.log(`  dup  ${name} is byte-identical to ${hashes.get(sha)}, not stored twice`);
+      return null;
+    }
+    hashes.set(sha, name);
     await fs.writeFile(path.join(ORIGINALS, name), buf);
     report.downloaded.push({ name, url: src, bytes: buf.length });
     console.log(`  ok   ${name} (${(buf.length / 1024).toFixed(0)} KB)`);
@@ -284,43 +300,12 @@ async function keyOutWhite(file, outFile) {
       if (lightness > 180) data[i + 3] = Math.round(data[i + 3] * (1 - (lightness - 180) / 75));
     }
   }
-  await sharp(data, { raw: { width: w, height: h, channels: 4 } }).trim({ threshold: 1 }).png({ compressionLevel: 9 }).toFile(outFile);
+  await sharp(data, { raw: { width: w, height: h, channels: 4 } })
+    .trim({ threshold: 1 })
+    .resize(1200, 1200, { fit: "inside", withoutEnlargement: true })
+    .png({ compressionLevel: 9 })
+    .toFile(outFile);
   return removed / (w * h);
-}
-
-/** Crop to content and square it up on a transparent canvas. */
-async function squareLogo(file, size, background = { r: 0, g: 0, b: 0, alpha: 0 }, padding = 0.06) {
-  const trimmed = await sharp(file).trim({ threshold: 10 }).png().toBuffer();
-  const inner = Math.round(size * (1 - padding * 2));
-  const fitted = await sharp(trimmed).resize(inner, inner, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toBuffer();
-  return sharp({ create: { width: size, height: size, channels: 4, background } })
-    .composite([{ input: fitted, gravity: "center" }])
-    .png()
-    .toBuffer();
-}
-
-/** ICO that embeds PNGs (supported by every browser that matters). */
-function buildIco(pngs) {
-  const header = Buffer.alloc(6);
-  header.writeUInt16LE(0, 0);
-  header.writeUInt16LE(1, 2);
-  header.writeUInt16LE(pngs.length, 4);
-  const entries = [];
-  let offset = 6 + 16 * pngs.length;
-  for (const { size, buf } of pngs) {
-    const e = Buffer.alloc(16);
-    e.writeUInt8(size >= 256 ? 0 : size, 0);
-    e.writeUInt8(size >= 256 ? 0 : size, 1);
-    e.writeUInt8(0, 2);
-    e.writeUInt8(0, 3);
-    e.writeUInt16LE(1, 4);
-    e.writeUInt16LE(32, 6);
-    e.writeUInt32LE(buf.length, 8);
-    e.writeUInt32LE(offset, 12);
-    offset += buf.length;
-    entries.push(e);
-  }
-  return Buffer.concat([header, ...entries, ...pngs.map((p) => p.buf)]);
 }
 
 const hex = (r, g, b) => "#" + [r, g, b].map((v) => Math.round(v).toString(16).padStart(2, "0")).join("");
@@ -376,9 +361,9 @@ async function main() {
       report.extras.push({ ...e, skipped: "svg/gif not optimised, check by hand" });
       continue;
     }
-    const name = `extra-${kebab(decodeURIComponent(file))}-${assetKey(e.url).slice(0, 6)}${ext}`;
+    const name = EXTRA_NAMES[assetKey(e.url)] ?? `extra-${kebab(decodeURIComponent(file))}-${assetKey(e.url).slice(0, 6)}${ext}`;
     const ok = await download(e.url, name);
-    report.extras.push({ ...e, name, ok: !!ok });
+    report.extras.push({ ...e, name, ok: !!ok, duplicate: !ok && report.duplicates.some((d) => d.name === name) });
     if (ok) IMAGES.push([e.url, name]);
   }
 
@@ -425,47 +410,16 @@ async function main() {
     report.logos[name] = entry;
   }
 
-  // Pick the cleanest logo source for icons and palette: a real transparent PNG beats a keyed one.
-  const pick = async (...names) => {
-    for (const n of names) {
-      try {
-        await fs.access(path.join(OUT, n));
-        return path.join(OUT, n);
-      } catch {}
-    }
-    return null;
-  };
-  const logo = await pick(
-    report.logos["logo-main.png"]?.whiteBackground ? "logo-main-transparent.png" : "logo-main.png",
-    "logo-alt.png",
-    "logo-footer.png",
-    "logo-white-transparent.png",
-    "logo-white.jpg"
-  );
+  await fs.writeFile(MANIFEST, JSON.stringify(manifest, null, 2) + "\n");
 
-  if (logo) {
-    console.log(`\nBuilding favicons from ${path.basename(logo)}...`);
-    const sizes = { "favicon-16x16.png": 16, "favicon-32x32.png": 32, "icon-192.png": 192, "icon-512.png": 512 };
-    for (const [file, size] of Object.entries(sizes)) {
-      await fs.writeFile(path.join(PUBLIC, file), await squareLogo(logo, size, undefined, size <= 32 ? 0.02 : 0.08));
-    }
-    // iOS paints transparent areas black, so the touch icon gets the brand charcoal behind it.
-    await fs.writeFile(path.join(PUBLIC, "apple-touch-icon.png"), await squareLogo(logo, 180, { r: 20, g: 20, b: 22, alpha: 1 }, 0.1));
-    // Maskable icon for Android needs ~20% safe zone.
-    await fs.writeFile(path.join(PUBLIC, "icon-maskable-512.png"), await squareLogo(logo, 512, { r: 20, g: 20, b: 22, alpha: 1 }, 0.2));
-    const ico = buildIco([
-      { size: 16, buf: await squareLogo(logo, 16, undefined, 0.02) },
-      { size: 32, buf: await squareLogo(logo, 32, undefined, 0.02) },
-      { size: 48, buf: await squareLogo(logo, 48, undefined, 0.04) },
-    ]);
-    await fs.writeFile(path.join(APP, "favicon.ico"), ico);
-    await fs.writeFile(path.join(OUT, "logo-mark.png"), await squareLogo(logo, 800, undefined, 0.02));
-    const meta = await sharp(path.join(OUT, "logo-mark.png")).metadata();
-    manifest["logo-mark.png"] = { width: meta.width, height: meta.height, blurDataURL: await blurFor(path.join(OUT, "logo-mark.png")) };
+  try {
+    await fs.access(path.join(OUT, "logo-main.png"));
+    console.log("\nBuilding on-dark logo and favicons...");
+    await buildBrandLogos();
 
     console.log("\nExtracting brand palette...");
     const colours = {};
-    for (const n of ["logo-main.png", "logo-alt.png", "logo-footer.png", "logo-mark.png", "merch-adult-tee-front.jpg", "merch-kids-hoody-front.jpg"]) {
+    for (const n of ["logo-main.png", "merch-adult-tee-front.jpg", "merch-kids-hoody-front.jpg"]) {
       try {
         await fs.access(path.join(OUT, n));
         colours[n] = await palette(path.join(OUT, n));
@@ -473,15 +427,14 @@ async function main() {
       } catch {}
     }
     await fs.writeFile(PALETTE, JSON.stringify(colours, null, 2) + "\n");
-  } else {
-    report.failed.push({ name: "favicons", error: "no logo downloaded, favicon set not generated" });
+  } catch {
+    report.failed.push({ name: "favicons", error: "logo-main.png missing, favicon set and palette not generated" });
   }
 
-  await fs.writeFile(MANIFEST, JSON.stringify(manifest, null, 2) + "\n");
   report.finishedAt = new Date().toISOString();
   await fs.writeFile(REPORT, JSON.stringify(report, null, 2) + "\n");
 
-  console.log(`\nDone: ${report.downloaded.length} downloaded, ${report.failed.length} failed, ${report.extras.length} extra found.`);
+  console.log(`\nDone: ${report.downloaded.length} downloaded, ${report.duplicates.length} duplicates skipped, ${report.failed.length} failed, ${report.extras.length} extra found.`);
   if (report.failed.length) {
     console.error("\nFAILED:");
     for (const f of report.failed) console.error(`  - ${f.name}: ${f.error}${f.url ? "  <- " + f.url : ""}`);
