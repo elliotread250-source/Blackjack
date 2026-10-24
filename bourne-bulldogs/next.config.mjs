@@ -1,4 +1,5 @@
-import type { NextConfig } from "next";
+// Plain JS on purpose: the runtime image has no TypeScript, and a .ts config
+// would make `next start` install it on every boot.
 
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -8,7 +9,8 @@ const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
 ];
 
-const nextConfig: NextConfig = {
+/** @type {import("next").NextConfig} */
+const nextConfig = {
   poweredByHeader: false,
   reactStrictMode: true,
   images: {
