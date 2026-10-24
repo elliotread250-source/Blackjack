@@ -1,0 +1,5 @@
+node_modules
+.next
+assets-original
+.env
+.env*.local

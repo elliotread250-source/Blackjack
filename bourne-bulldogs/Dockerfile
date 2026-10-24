@@ -1,10 +1,8 @@
-# Built from the REPO ROOT as context (the repo holds several projects), so
-# every path below is prefixed with bourne-bulldogs/. Railway service setting:
-# Dockerfile path = bourne-bulldogs/Dockerfile.
+# Railway builds this folder on its own (root directory /bourne-bulldogs).
 
 FROM node:22-slim AS deps
 WORKDIR /app
-COPY bourne-bulldogs/package.json bourne-bulldogs/package-lock.json ./
+COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 
 FROM node:22-slim AS build
@@ -14,7 +12,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_SITE_URL=https://www.bournebulldogs.com
 ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 COPY --from=deps /app/node_modules ./node_modules
-COPY bourne-bulldogs/ ./
+COPY . .
 RUN npm run build && npm prune --omit=dev
 
 FROM node:22-slim
