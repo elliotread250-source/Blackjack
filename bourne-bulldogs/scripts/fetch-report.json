@@ -1,5 +1,5 @@
 {
-  "startedAt": "2026-10-24T08:39:48.102Z",
+  "startedAt": "2026-10-24T08:44:45.333Z",
   "downloaded": [
     {
       "name": "logo-main.png",
@@ -7,24 +7,9 @@
       "bytes": 814166
     },
     {
-      "name": "logo-alt.png",
-      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/cfe1905b-8037-4dca-b1f8-24b897b366ca/Bulldog+logo.png",
-      "bytes": 814166
-    },
-    {
       "name": "logo-white.jpg",
       "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/fd3b0f16-a3ae-4279-9d20-eaccee0d4066/Bulldog+logowhite.jpg",
       "bytes": 280530
-    },
-    {
-      "name": "logo-footer.png",
-      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/195c09cb-f235-4413-9417-17f156f8b74e/Bulldog+logo.png",
-      "bytes": 814166
-    },
-    {
-      "name": "logo-merch.png",
-      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/f6b8e2c8-69d5-488b-ba1e-54fbcb767178/Bulldog+logo.png",
-      "bytes": 814166
     },
     {
       "name": "og-logo.png",
@@ -167,71 +152,88 @@
       "bytes": 27542
     },
     {
-      "name": "extra-23ba8c01-9da3-4797-a775-0dc0fa170c88-4-5005-c-ce3610.jpg",
+      "name": "basketball-england-badge.jpg",
       "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/ce361099-84be-4ab7-bd1a-2e01cc37b05e/23BA8C01-9DA3-4797-A775-0DC0FA170C88_4_5005_c.jpeg",
       "bytes": 14056
+    }
+  ],
+  "failed": [],
+  "duplicates": [
+    {
+      "name": "logo-alt.png",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/cfe1905b-8037-4dca-b1f8-24b897b366ca/Bulldog+logo.png",
+      "duplicateOf": "logo-main.png"
+    },
+    {
+      "name": "logo-footer.png",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/195c09cb-f235-4413-9417-17f156f8b74e/Bulldog+logo.png",
+      "duplicateOf": "logo-main.png"
+    },
+    {
+      "name": "logo-merch.png",
+      "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/f6b8e2c8-69d5-488b-ba1e-54fbcb767178/Bulldog+logo.png",
+      "duplicateOf": "logo-main.png"
     },
     {
       "name": "extra-unsplash-image-zdmbf9hxafe-172944.jpg",
       "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443244601-1PU4CM4AFPF0FB9TKM06/unsplash-image-ZDmbF9hxaFE.jpg",
-      "bytes": 609376
+      "duplicateOf": "bg-court-texture.jpg"
     },
     {
       "name": "extra-unsplash-image-zdmbf9hxafe-172944.jpg",
       "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443939216-4JXKM0PH2GTZ9KXLLKBF/unsplash-image-ZDmbF9hxaFE.jpg",
-      "bytes": 609376
+      "duplicateOf": "bg-court-texture.jpg"
     },
     {
       "name": "extra-unsplash-image-zdmbf9hxafe-172944.jpg",
       "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443430572-9MRR9BX6VRPBPWQ4W9RZ/unsplash-image-ZDmbF9hxaFE.jpg",
-      "bytes": 609376
+      "duplicateOf": "bg-court-texture.jpg"
     },
     {
       "name": "extra-unsplash-image-zdmbf9hxafe-172944.jpg",
       "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443515511-UYCX02A12U16SILEGF4J/unsplash-image-ZDmbF9hxaFE.jpg",
-      "bytes": 609376
+      "duplicateOf": "bg-court-texture.jpg"
     }
   ],
-  "failed": [],
   "extras": [
     {
       "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/ce361099-84be-4ab7-bd1a-2e01cc37b05e/23BA8C01-9DA3-4797-A775-0DC0FA170C88_4_5005_c.jpeg",
       "page": "/",
-      "name": "extra-23ba8c01-9da3-4797-a775-0dc0fa170c88-4-5005-c-ce3610.jpg",
-      "ok": true
+      "name": "basketball-england-badge.jpg",
+      "ok": true,
+      "duplicate": false
     },
     {
       "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443244601-1PU4CM4AFPF0FB9TKM06/unsplash-image-ZDmbF9hxaFE.jpg",
       "page": "/about",
       "name": "extra-unsplash-image-zdmbf9hxafe-172944.jpg",
-      "ok": true
+      "ok": false,
+      "duplicate": true
     },
     {
       "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443939216-4JXKM0PH2GTZ9KXLLKBF/unsplash-image-ZDmbF9hxaFE.jpg",
       "page": "/cluboverview",
       "name": "extra-unsplash-image-zdmbf9hxafe-172944.jpg",
-      "ok": true
+      "ok": false,
+      "duplicate": true
     },
     {
       "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443430572-9MRR9BX6VRPBPWQ4W9RZ/unsplash-image-ZDmbF9hxaFE.jpg",
       "page": "/merch",
       "name": "extra-unsplash-image-zdmbf9hxafe-172944.jpg",
-      "ok": true
+      "ok": false,
+      "duplicate": true
     },
     {
       "url": "https://images.squarespace-cdn.com/content/v1/66f91049ef03385d7b026846/1729443515511-UYCX02A12U16SILEGF4J/unsplash-image-ZDmbF9hxaFE.jpg",
       "page": "/contact",
       "name": "extra-unsplash-image-zdmbf9hxafe-172944.jpg",
-      "ok": true
+      "ok": false,
+      "duplicate": true
     }
   ],
   "logos": {
     "logo-main.png": {
-      "border": "#b44146",
-      "transparentBorder": 0.99,
-      "whiteBackground": false
-    },
-    "logo-alt.png": {
       "border": "#b44146",
       "transparentBorder": 0.99,
       "whiteBackground": false
@@ -242,16 +244,6 @@
       "whiteBackground": true,
       "transparentVersion": "logo-white-transparent.png",
       "removedRatio": 0.414
-    },
-    "logo-footer.png": {
-      "border": "#b44146",
-      "transparentBorder": 0.99,
-      "whiteBackground": false
-    },
-    "logo-merch.png": {
-      "border": "#b44146",
-      "transparentBorder": 0.99,
-      "whiteBackground": false
     },
     "og-logo.png": {
       "border": "#bf6165",
@@ -291,5 +283,5 @@
       "images": 5
     }
   },
-  "finishedAt": "2026-10-24T08:40:31.953Z"
+  "finishedAt": "2026-10-24T08:44:54.558Z"
 }
