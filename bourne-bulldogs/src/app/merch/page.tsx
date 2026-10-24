@@ -36,7 +36,7 @@ export default function MerchPage() {
         </div>
       </section>
 
-      <section id="order" aria-labelledby="order-heading" className="scroll-mt-24 border-t border-bone/10 bg-[#121114] py-24 md:py-32">
+      <section id="order" aria-labelledby="order-heading" className="scroll-mt-24 border-t border-bone/10 bg-coal py-24 md:py-32">
         <div className="container-x">
           <div className="mb-12 grid gap-8 lg:grid-cols-12 lg:items-end">
             <div className="lg:col-span-7">

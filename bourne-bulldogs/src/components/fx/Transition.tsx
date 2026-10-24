@@ -94,7 +94,7 @@ export function TransitionProvider({ children, logoSrc }: { children: React.Reac
       <div
         ref={scope}
         aria-hidden
-        className="pointer-events-none invisible fixed inset-0 z-[95] grid translate-x-full place-items-center bg-orange will-change-transform"
+        className="pointer-events-none invisible fixed inset-0 z-[95] grid translate-x-full place-items-center bg-orange-deep will-change-transform"
       >
         <div data-wipe-logo className="relative h-28 w-28 md:h-36 md:w-36">
           <Image src={logoSrc} alt="" fill sizes="144px" className="object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,.35)]" />

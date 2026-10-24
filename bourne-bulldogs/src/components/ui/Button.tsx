@@ -5,9 +5,9 @@ import { cn } from "@/lib/cn";
 type Variant = "primary" | "secondary" | "dark" | "ghost";
 
 const styles: Record<Variant, string> = {
-  primary: "bg-orange text-ink hover:bg-bone",
+  primary: "bg-bone text-ink hover:bg-orange-deep hover:text-black",
   secondary: "border border-bone/40 text-bone hover:border-orange hover:text-orange",
-  dark: "bg-ink text-bone hover:bg-orange hover:text-ink",
+  dark: "bg-ink text-bone hover:bg-orange-deep hover:text-black",
   ghost: "text-bone underline decoration-orange decoration-2 underline-offset-8 hover:text-orange px-0",
 };
 

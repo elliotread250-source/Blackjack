@@ -43,7 +43,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section aria-labelledby="mission-heading" className="relative overflow-hidden border-y border-bone/10 bg-[#121114] py-24 md:py-32">
+      <section aria-labelledby="mission-heading" className="relative overflow-hidden border-y border-bone/10 bg-coal py-24 md:py-32">
         <CourtLines variant="circle" className="absolute -left-40 -top-20 w-[36rem] text-orange/15" strokeWidth={1.5} />
         <div className="container-x relative">
           <SectionMarker n="02" label="What we're here to do" />
@@ -85,7 +85,7 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <SafetyBlock id="safety" heading={safety.heading} sub={safety.intro} n="05" full />
+      <SafetyBlock id="safety" heading={safety.heading} sub={safety.intro} n="05" full dark />
 
       <section className="py-20 md:py-28">
         <p className="container-x mx-auto max-w-4xl text-center text-2xl leading-snug md:text-3xl">{about.closing}</p>

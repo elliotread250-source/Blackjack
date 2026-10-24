@@ -7,10 +7,10 @@ import { img } from "@/content/images";
 export function FinalCta({ heading, body, button }: { heading: string; body: string; button: string }) {
   const bg = img("courtTexture");
   return (
-    <section aria-labelledby="cta-heading" className="relative isolate overflow-hidden py-28 md:py-44">
+    <section aria-labelledby="cta-heading" className="theme-dark relative isolate overflow-hidden bg-ink py-28 md:py-44">
       <Image src={bg.src} alt="" fill sizes="100vw" placeholder={bg.blurDataURL ? "blur" : "empty"} blurDataURL={bg.blurDataURL} className="-z-20 object-cover" />
       <div aria-hidden className="absolute inset-0 -z-10 bg-ink/80" />
-      <div aria-hidden className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,transparent_20%,var(--color-ink)_85%)]" />
+      <div aria-hidden className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_center,transparent_20%,var(--c-ink)_85%)]" />
       <div className="container-x text-center">
         <SplitHeading id="cta-heading" text={heading} className="mx-auto max-w-6xl text-[15vw] leading-[0.85] md:text-[9rem] lg:text-[11rem]" />
         <p className="mx-auto mt-8 max-w-xl text-lg text-bone/90">{body}</p>

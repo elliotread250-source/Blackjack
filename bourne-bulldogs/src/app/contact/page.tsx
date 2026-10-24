@@ -73,7 +73,7 @@ export default function ContactPage() {
                 src={club.venue.mapEmbed}
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"
-                className="map-dark block h-80 w-full border-0"
+                className="block h-80 w-full border-0"
               />
               <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-muted">{club.venue.full}</p>

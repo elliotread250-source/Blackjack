@@ -113,7 +113,7 @@ export function OrderForm() {
               name="supporter"
               checked={v.supporter}
               onChange={(e) => update({ supporter: e.target.checked, ...(e.target.checked ? { surname: "", number: "" } : {}) })}
-              className="mt-1 h-5 w-5 shrink-0 accent-[var(--color-orange)]"
+              className="mt-1 h-5 w-5 shrink-0 accent-[var(--c-orange)]"
             />
             <span>
               <span className="font-bold">I&apos;m a supporter (no name or number)</span>
@@ -162,7 +162,7 @@ export function OrderForm() {
       </div>
 
       <aside aria-label={merch.form.previewHeading} className="order-1 lg:order-2 lg:col-span-5">
-        <div className="rounded-[12px] border-2 border-bone/10 bg-[radial-gradient(circle_at_50%_30%,#2a282d,#121114)] p-6 lg:sticky lg:top-28">
+        <div className="theme-dark rounded-[12px] border-2 border-bone/10 bg-[radial-gradient(circle_at_50%_30%,#262626,#0a0a0a)] p-6 lg:sticky lg:top-28">
           <div className="flex items-baseline justify-between">
             <p className="eyebrow text-orange">{merch.form.previewHeading}</p>
             <p className="display text-3xl text-orange" aria-live="polite">

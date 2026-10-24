@@ -53,7 +53,7 @@ export function IntroScrub({ lead, body, photos }: { lead: string; body: string[
           </h2>
           <p data-lead className="display mt-10 text-[9.5vw] leading-[0.98] sm:text-6xl lg:text-[4.6rem]">
             {words.map((w, i) => (
-              <span key={i} data-word className="opacity-40">
+              <span key={i} data-word className="opacity-50">
                 {w}{" "}
               </span>
             ))}
@@ -69,7 +69,7 @@ export function IntroScrub({ lead, body, photos }: { lead: string; body: string[
             <div
               key={p.src}
               data-fan
-              className="grade absolute inset-0 overflow-hidden rounded-[var(--radius-card)] border-4 border-bone bg-graphite shadow-[0_30px_60px_-20px_rgba(0,0,0,.7)] will-change-transform"
+              className="grade absolute inset-0 overflow-hidden rounded-[var(--radius-card)] border-4 border-white bg-graphite shadow-[0_30px_60px_-20px_rgba(0,0,0,.7)] will-change-transform"
               style={{ zIndex: i === 1 ? 3 : i + 1 }}
             >
               <Image src={p.src} alt={p.alt} fill sizes="(min-width: 1024px) 26vw, 60vw" placeholder={p.blurDataURL ? "blur" : "empty"} blurDataURL={p.blurDataURL} className="object-cover" />

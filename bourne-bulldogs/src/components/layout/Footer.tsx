@@ -7,7 +7,7 @@ export function Footer() {
   const logo = img("logo");
   const be = img("basketballEngland");
   return (
-    <footer className="relative overflow-hidden border-t border-bone/10 bg-coal pt-16 md:pt-24">
+    <footer className="theme-dark relative overflow-hidden border-t border-bone/10 bg-coal pt-16 md:pt-24">
       <div className="container-x grid gap-12 pb-16 md:grid-cols-12 md:gap-8">
         <div className="md:col-span-4">
           <Image src={logo.src} alt={logo.alt} width={120} height={120} className="h-24 w-24 md:h-28 md:w-28" />

@@ -25,7 +25,7 @@ export function ProductCard({ product, front, back, chart, index }: { product: P
       viewport={{ once: true, margin: "0px 0px -10% 0px" }}
       transition={{ duration: 0.8, delay: (index % 2) * 0.12, ease: [0.16, 1, 0.3, 1] }}
     >
-      <FlipCard front={front} back={back} label={product.name} sizes="(min-width: 1024px) 40vw, (min-width: 640px) 46vw, 92vw" badge={<span className="eyebrow absolute left-3 top-3 z-10 rounded-full bg-ink px-3 py-1.5 text-[0.68rem] text-bone">{product.audience === "kids" ? "Kids" : "Adults"}</span>} />
+      <FlipCard front={front} back={back} label={product.name} sizes="(min-width: 1024px) 40vw, (min-width: 640px) 46vw, 92vw" badge={<span className="theme-dark eyebrow absolute left-3 top-3 z-10 rounded-full bg-ink px-3 py-1.5 text-[0.68rem] text-bone">{product.audience === "kids" ? "Kids" : "Adults"}</span>} />
       <div className="mt-5 flex items-start justify-between gap-4">
         <h3 className="display text-3xl leading-[0.95] md:text-4xl xl:text-[1.9rem]">{product.name}</h3>
         <p className="display led shrink-0 text-5xl leading-none">£{product.price}</p>
@@ -56,16 +56,16 @@ export function ProductCard({ product, front, back, chart, index }: { product: P
       <dialog
         ref={dialog}
         aria-label={`${product.name} size guide`}
-        className="m-auto w-[min(92vw,900px)] rounded-[12px] bg-bone p-0 text-ink"
+        className="m-auto w-[min(92vw,900px)] rounded-[12px] bg-ink p-0 text-bone"
         onClose={() => {
           lockScroll(false);
           trigger.current?.focus();
         }}
         onClick={(e) => e.target === e.currentTarget && dialog.current?.close()}
       >
-        <div className="flex items-center justify-between border-b border-ink/10 px-5 py-4">
+        <div className="flex items-center justify-between border-b border-bone/10 px-5 py-4">
           <h4 className="display text-2xl">{product.short} size guide</h4>
-          <button type="button" onClick={() => dialog.current?.close()} className="grid h-11 w-11 place-items-center rounded-[8px] border border-ink/20 hover:border-orange-ink" aria-label="Close size guide" autoFocus>
+          <button type="button" onClick={() => dialog.current?.close()} className="grid h-11 w-11 place-items-center rounded-[8px] border border-bone/20 hover:border-orange" aria-label="Close size guide" autoFocus>
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden>
               <path d="M5 5l14 14M19 5L5 19" stroke="currentColor" strokeWidth="2.4" />
             </svg>
@@ -74,7 +74,7 @@ export function ProductCard({ product, front, back, chart, index }: { product: P
         <div className="bg-white p-4">
           <Image src={chart.src} alt={chart.alt} width={chart.width} height={chart.height} sizes="(min-width: 960px) 900px, 92vw" className="h-auto w-full" />
         </div>
-        {product.id === "adult-hoody" && <p className="px-5 py-4 text-sm text-muted-ink">{product.sizeNote}</p>}
+        {product.id === "adult-hoody" && <p className="px-5 py-4 text-sm text-muted">{product.sizeNote}</p>}
       </dialog>
     </m.article>
   );

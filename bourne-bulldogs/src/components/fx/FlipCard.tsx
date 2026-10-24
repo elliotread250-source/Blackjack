@@ -26,7 +26,7 @@ export function FlipCard({ front, back, label, sizes, className, badge }: { fron
         type="button"
         onClick={() => setFlipped((f) => !f)}
         aria-pressed={flipped}
-        className="absolute bottom-3 right-3 z-10 inline-flex min-h-10 items-center gap-2 rounded-full bg-ink/85 px-4 text-xs font-bold uppercase tracking-[0.14em] text-bone backdrop-blur hover:bg-orange hover:text-ink"
+        className="theme-dark absolute bottom-3 right-3 z-10 inline-flex min-h-10 items-center gap-2 rounded-full bg-ink/85 px-4 text-xs font-bold uppercase tracking-[0.14em] text-bone backdrop-blur hover:bg-orange hover:text-ink"
       >
         <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden>
           <path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4" fill="none" stroke="currentColor" strokeWidth="2" />

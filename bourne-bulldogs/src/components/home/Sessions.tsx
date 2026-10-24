@@ -48,7 +48,7 @@ export function Sessions() {
             <SplitHeading id="training-heading" text={home.sessionsHeading} letters className="mt-6 text-[22vw] leading-[0.82] md:text-[11rem] lg:text-[13rem]" />
           </div>
           {/* The ball lands here. Back layer under the ball, front layer over it. */}
-          <div data-ball-hoop className="relative mx-auto aspect-[200/220] w-[52vw] max-w-[260px] md:mx-0 md:mr-[4vw] md:w-[22vw]">
+          <div data-ball-hoop className="relative mx-auto text-bone aspect-[200/220] w-[52vw] max-w-[260px] md:mx-0 md:mr-[4vw] md:w-[22vw]">
             <HoopBack className="absolute inset-0 z-10 h-full w-full" />
             <HoopFront className="absolute inset-0 z-30 h-full w-full" netClassName="net-group" />
           </div>

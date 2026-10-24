@@ -1,25 +1,56 @@
 @import "tailwindcss";
 
 /*
- * Brand palette, pulled from the club badge (scripts/brand-colours.json):
- *   logo black #070507, ball orange #d35933, lettering red #cd232a,
- *   fur tan #ad9272, highlight white #f9faf9 / #ddd3c7.
- * UI orange is a touch brighter than the badge so it holds AA on black.
+ * Colour scheme: the old Squarespace site's, kept on purpose. White pages,
+ * near-black text, black buttons, black bands for contrast, and colour only
+ * from the club badge (ball orange #d35933, lettering red #cd232a).
+ * Exact values recorded in scripts/scraped/old-site/colours.json.
+ *
+ * Tokens are contextual: they hold the light values by default and switch to
+ * the dark values inside any `.theme-dark` band, so `bg-ink` always means
+ * "this surface" and `text-bone` always means "foreground on it".
  */
+:root {
+  --c-ink: #ffffff;
+  --c-coal: #f5f5f5;
+  --c-graphite: #e8e8e8;
+  --c-line: #dcdcdc;
+  --c-bone: #1c1c1c;
+  --c-bone-dim: #2b2b2b;
+  --c-muted: #555555;
+  /* Badge orange darkened just enough for AA text on white (5.4:1). */
+  --c-orange: #b5471d;
+  --c-red-bright: #cd232a;
+}
+.theme-dark {
+  --c-ink: #000000;
+  --c-coal: #141414;
+  --c-graphite: #222222;
+  --c-line: #333333;
+  --c-bone: #fafafa;
+  --c-bone-dim: #e7e7e7;
+  --c-muted: #a3a3a3;
+  --c-orange: #e8673c;
+  --c-red-bright: #e5484f;
+  color: var(--c-bone);
+}
+
+@theme inline {
+  --color-ink: var(--c-ink);
+  --color-coal: var(--c-coal);
+  --color-graphite: var(--c-graphite);
+  --color-line: var(--c-line);
+  --color-bone: var(--c-bone);
+  --color-bone-dim: var(--c-bone-dim);
+  --color-muted: var(--c-muted);
+  --color-orange: var(--c-orange);
+  --color-red-bright: var(--c-red-bright);
+}
+
 @theme {
-  --color-ink: #0e0d0f;
-  --color-coal: #161518;
-  --color-graphite: #222025;
-  --color-line: #33303a;
-  --color-orange: #e8673c;
+  /* Fixed brand colours that never change with the theme. */
   --color-orange-deep: #d35933;
-  --color-orange-ink: #a6401f;
   --color-red: #cd232a;
-  --color-red-bright: #e5484f;
-  --color-bone: #f2ece1;
-  --color-bone-dim: #e6dece;
-  --color-muted: #a39e97;
-  --color-muted-ink: #5c574f;
   --color-tan: #ad9272;
 
   --font-display: var(--font-anton), "Arial Narrow", Impact, sans-serif;
@@ -38,13 +69,13 @@
     overflow-x: clip;
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
-    background: var(--color-ink);
-    color-scheme: dark;
+    background: var(--c-ink);
+    color-scheme: light;
   }
 
   body {
-    background: var(--color-ink);
-    color: var(--color-bone);
+    background: var(--c-ink);
+    color: var(--c-bone);
     font-family: var(--font-sans);
     font-size: 1.0625rem; /* 17px */
     line-height: 1.65;
@@ -60,12 +91,12 @@
   }
 
   ::selection {
-    background: var(--color-orange);
-    color: var(--color-ink);
+    background: var(--color-orange-deep);
+    color: #000;
   }
 
   :focus-visible {
-    outline: 3px solid var(--color-orange);
+    outline: 3px solid var(--c-orange);
     outline-offset: 3px;
     border-radius: 4px;
   }
@@ -140,15 +171,21 @@ html.lenis body {
   /* Scoreboard LED dot screen laid over numbers. */
   .led {
     position: relative;
-    color: var(--color-orange);
+    color: var(--c-orange);
+  }
+  .theme-dark .led {
     text-shadow: 0 0 18px rgb(232 103 60 / 0.45);
   }
   .led::after {
+    display: none;
+  }
+  .theme-dark .led::after {
+    display: block;
     content: "";
     position: absolute;
     inset: -2px;
     pointer-events: none;
-    background-image: radial-gradient(circle, transparent 0.9px, var(--color-coal) 1.3px);
+    background-image: radial-gradient(circle, transparent 0.9px, var(--c-coal) 1.3px);
     background-size: 4px 4px;
     opacity: 0.55;
   }
@@ -164,13 +201,14 @@ html.lenis body {
   }
 }
 
-/* Whole-site grain so flat colour feels printed. */
+/* Whole-site grain so flat colour feels printed (inverted: dark specks on white). */
 .grain {
   position: fixed;
   inset: 0;
   z-index: 70;
   pointer-events: none;
-  opacity: 0.06;
+  opacity: 0.045;
+  filter: invert(1);
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
@@ -236,7 +274,7 @@ html[data-intro] .intro {
   inset: 0;
   z-index: 100;
   place-items: center;
-  background: var(--color-ink);
+  background: var(--c-ink);
   animation: intro-out 0.45s var(--ease-out-expo) 1.35s forwards;
   cursor: pointer;
 }
@@ -290,7 +328,7 @@ html[data-intro].intro-skip {
   left: 0;
   right: 0;
   text-align: center;
-  color: var(--color-muted);
+  color: var(--c-muted);
 }
 
 /* Three bounces, each lower, with squash on contact and stretch in flight. */
@@ -395,14 +433,20 @@ html.has-cursor iframe {
   cursor: auto !important;
 }
 
-/* Map iframe in the dark theme. */
-.map-dark {
-  filter: invert(0.92) hue-rotate(180deg) saturate(0.6) contrast(0.95);
+/* Badge: the original black-lettered logo on light, the bone-lettered one in dark bands. */
+.logo-for-dark {
+  display: none;
+}
+.theme-dark .logo-for-dark {
+  display: block;
+}
+.theme-dark .logo-for-light {
+  display: none;
 }
 
 /* Native dialog backdrop. */
 dialog::backdrop {
-  background: rgb(8 8 9 / 0.92);
+  background: rgb(0 0 0 / 0.88);
 }
 dialog {
   color: inherit;

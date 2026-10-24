@@ -45,7 +45,7 @@ export function Marquee({ items }: { items: readonly string[] }) {
   );
 
   return (
-    <div ref={box} className="relative z-10 -rotate-[1.5deg] overflow-hidden border-y-2 border-ink bg-orange-deep py-4 text-ink md:py-5">
+    <div ref={box} className="theme-dark relative z-10 -rotate-[1.5deg] overflow-hidden border-y-2 border-ink bg-orange-deep py-4 text-ink md:py-5">
       <p className="sr-only">{items.join(". ")}</p>
       <m.div aria-hidden className="display flex w-max whitespace-nowrap text-3xl leading-none md:text-5xl" style={{ x }}>
         {row}

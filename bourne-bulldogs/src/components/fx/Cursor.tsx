@@ -87,8 +87,8 @@ export function Cursor() {
         className="-ml-[6px] -mt-[6px] h-3 w-3 rounded-full transition-[transform,background-color,border-color] duration-300 ease-[cubic-bezier(.16,1,.3,1)]"
         style={{
           transform: `scale(${pressed ? scale * 0.8 : scale})`,
-          background: mode === "dot" ? "var(--color-orange)" : "transparent",
-          border: mode === "link" ? "1px solid var(--color-orange)" : "0 solid transparent",
+          background: mode === "dot" ? "var(--c-orange)" : "transparent",
+          border: mode === "link" ? "1px solid var(--c-orange)" : "0 solid transparent",
         }}
       >
         {mode === "image" && (

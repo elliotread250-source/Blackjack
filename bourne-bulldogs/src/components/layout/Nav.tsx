@@ -15,7 +15,7 @@ import { cn } from "@/lib/cn";
  * Transparent over the hero, solid ink with blur once you scroll. Hides on
  * the way down, comes back on the way up. Full-screen menu on mobile.
  */
-export function Nav({ logo }: { logo: SiteImage }) {
+export function Nav({ logo, logoLight }: { logo: SiteImage; logoLight: SiteImage }) {
   const pathname = usePathname();
   const [solid, setSolid] = useState(false);
   const [hidden, setHidden] = useState(false);
@@ -42,14 +42,17 @@ export function Nav({ logo }: { logo: SiteImage }) {
     <>
       <header
         className={cn(
-          "fixed inset-x-0 top-0 z-[60] transition-[transform,background-color,border-color] duration-500 ease-[cubic-bezier(.16,1,.3,1)]",
-          solid && !open ? "border-b border-bone/10 bg-ink/80 backdrop-blur-md" : "border-b border-transparent",
+          "fixed inset-x-0 top-0 z-[60] text-bone transition-[transform,background-color,border-color] duration-500 ease-[cubic-bezier(.16,1,.3,1)]",
+          // Over the dark hero it's a dark band; once solid it sits on the white pages.
+          !solid && !open && "theme-dark",
+          solid && !open ? "border-b border-bone/10 bg-ink/85 backdrop-blur-md" : "border-b border-transparent",
           hidden && !open ? "-translate-y-full" : "translate-y-0"
         )}
       >
         <nav aria-label="Main" className="container-x flex h-[72px] items-center justify-between gap-6 md:h-20">
           <TLink href="/" className="relative z-[2] flex items-center gap-3" aria-label={`${club.shortName} home`}>
-            <Image src={logo.src} alt="" width={56} height={56} loading="eager" className="h-12 w-12 md:h-14 md:w-14" />
+            <Image src={logo.src} alt="" width={56} height={56} loading="eager" className="logo-for-dark h-12 w-12 md:h-14 md:w-14" />
+            <Image src={logoLight.src} alt="" width={56} height={56} loading="eager" className="logo-for-light h-12 w-12 md:h-14 md:w-14" />
             <span className="display hidden text-xl leading-none tracking-wide sm:block">
               Bourne <span className="text-orange">Bulldogs</span>
             </span>
@@ -86,7 +89,7 @@ export function Nav({ logo }: { logo: SiteImage }) {
             <Magnetic className="hidden sm:inline-block">
               <TLink
                 href="/join"
-                className="inline-flex min-h-11 items-center rounded-[8px] bg-orange px-5 text-[0.82rem] font-bold uppercase tracking-[0.14em] text-ink transition-colors hover:bg-bone"
+                className="inline-flex min-h-11 items-center rounded-[8px] bg-bone px-5 text-[0.82rem] font-bold uppercase tracking-[0.14em] text-ink transition-colors hover:bg-orange-deep hover:text-black"
               >
                 Join
               </TLink>

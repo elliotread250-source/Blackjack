@@ -9,7 +9,7 @@ export function PageHero({ title, intro, image, eyebrow, position = "center", co
   let n = 0;
   const words = title.toUpperCase().split(" ").map((w) => w.split("").map((ch) => ({ ch, i: n++ })));
   return (
-    <section className={cn("relative isolate flex items-end overflow-hidden pb-14 pt-32 md:pb-20", compact ? "min-h-[60svh] md:min-h-[64svh]" : "min-h-[78svh] md:min-h-[86svh]")}>
+    <section className={cn("theme-dark relative isolate flex items-end overflow-hidden pb-14 pt-32 md:pb-20", compact ? "min-h-[60svh] md:min-h-[64svh]" : "min-h-[78svh] md:min-h-[86svh]")}>
       <Image
         src={image.src}
         alt={image.alt}

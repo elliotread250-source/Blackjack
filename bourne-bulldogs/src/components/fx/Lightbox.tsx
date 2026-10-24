@@ -57,7 +57,7 @@ export function LightboxProvider({ children }: { children: React.ReactNode }) {
       <dialog
         ref={dialog}
         aria-label="Photo viewer"
-        className="m-0 h-[100dvh] max-h-none w-screen max-w-none bg-transparent p-0"
+        className="theme-dark m-0 h-[100dvh] max-h-none w-screen max-w-none bg-transparent p-0"
         onClick={(e) => {
           if (e.target === e.currentTarget) close();
         }}

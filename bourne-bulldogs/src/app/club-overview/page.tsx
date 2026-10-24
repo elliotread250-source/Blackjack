@@ -52,7 +52,7 @@ export default function ClubOverviewPage() {
         </div>
       </section>
 
-      <section aria-labelledby="skills-heading" className="relative overflow-hidden border-y border-bone/10 bg-[#121114] py-24 md:py-32">
+      <section aria-labelledby="skills-heading" className="relative overflow-hidden border-y border-bone/10 bg-coal py-24 md:py-32">
         <CourtLines variant="arc" className="absolute -right-32 bottom-0 w-[44rem] text-orange/15" strokeWidth={1.5} />
         <div className="container-x relative">
           <SectionMarker n="02" label="On and off the court" />
@@ -65,26 +65,26 @@ export default function ClubOverviewPage() {
         </div>
       </section>
 
-      <section aria-labelledby="coaching-heading" className="relative bg-bone py-24 text-ink md:py-32">
+      <section aria-labelledby="coaching-heading" className="theme-dark relative bg-ink py-24 text-bone md:py-32">
         <div className="container-x grid items-center gap-12 lg:grid-cols-12">
           <div className="lg:col-span-6">
-            <SectionMarker n="03" label="Safety first" tone="light" />
+            <SectionMarker n="03" label="Safety first" />
             <SplitHeading id="coaching-heading" text={overview.coachingHeading} className="mt-6 text-[12vw] leading-[0.88] sm:text-7xl lg:text-[5.5rem]" />
-            <div className="mt-8 space-y-5 text-lg text-muted-ink">
+            <div className="mt-8 space-y-5 text-lg text-muted">
               {overview.coachingBody.map((p) => (
                 <p key={p.slice(0, 16)}>{p}</p>
               ))}
             </div>
             <ul className="mt-8 grid gap-3 sm:grid-cols-2">
               {safety.badges.slice(0, 4).map((b, i) => (
-                <li key={b.title} className="flex items-center gap-3 rounded-[10px] border-2 border-ink/10 p-3">
-                  <DrawIcon name={b.icon} className="h-9 w-9 shrink-0 text-orange-ink" delay={i * 0.1} />
+                <li key={b.title} className="flex items-center gap-3 rounded-[10px] border-2 border-bone/15 p-3">
+                  <DrawIcon name={b.icon} className="h-9 w-9 shrink-0 text-orange" delay={i * 0.1} />
                   <span className="font-bold leading-tight">{b.title}</span>
                 </li>
               ))}
             </ul>
             <div className="mt-8">
-              <Button href="/about#safety" variant="dark" magnetic={false}>
+              <Button href="/about#safety" magnetic={false}>
                 Safety & standards
               </Button>
             </div>

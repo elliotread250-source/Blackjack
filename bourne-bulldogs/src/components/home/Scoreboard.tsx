@@ -33,7 +33,7 @@ export function Scoreboard({ stats }: { stats: Stat[] }) {
         <h2 id="stats-heading" className="sr-only">
           Bourne Bulldogs by the numbers
         </h2>
-        <div ref={ref} className="mt-10 overflow-hidden rounded-[12px] border-2 border-graphite bg-coal shadow-[inset_0_0_80px_rgba(0,0,0,.6)]">
+        <div ref={ref} className="theme-dark mt-10 overflow-hidden rounded-[12px] border-2 border-graphite bg-coal shadow-[inset_0_0_80px_rgba(0,0,0,.6)]">
           <div className="flex items-center justify-between border-b-2 border-graphite px-5 py-3 md:px-8">
             <span className="eyebrow text-muted">Home</span>
             <span className="display text-lg tracking-[0.2em] text-bone md:text-2xl">Bulldogs</span>

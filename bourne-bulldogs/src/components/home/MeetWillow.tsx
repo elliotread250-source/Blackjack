@@ -26,11 +26,11 @@ export function MeetWillow() {
       <div className="container-x grid items-center gap-12 md:grid-cols-2">
         <div className="wobble-on-hover relative mx-auto w-[72vw] max-w-[26rem]">
           <TLink href="/about#team" className="block rounded-full" aria-label="Meet Willow and the rest of the team">
-            <div className="wobble-target relative aspect-square overflow-hidden rounded-full border-[6px] border-orange shadow-[0_0_0_10px_var(--color-coal),0_0_0_12px_rgb(232_103_60/.35)]">
+            <div className="wobble-target relative aspect-square overflow-hidden rounded-full border-[6px] border-orange shadow-[0_0_0_10px_var(--c-coal),0_0_0_12px_rgb(232_103_60/.35)]">
               <Image src={w.src} alt={w.alt} fill sizes="(min-width: 768px) 26rem, 72vw" placeholder={w.blurDataURL ? "blur" : "empty"} blurDataURL={w.blurDataURL} className="object-cover" />
             </div>
           </TLink>
-          <span aria-hidden className="display absolute -right-2 top-4 rotate-12 rounded-[6px] bg-red px-3 py-1 text-2xl text-bone shadow-lg md:-right-6">
+          <span aria-hidden className="display absolute -right-2 top-4 rotate-12 rounded-[6px] bg-red px-3 py-1 text-2xl text-white shadow-lg md:-right-6">
             Mascot
           </span>
           <Paw className="absolute -bottom-4 left-2 h-10 w-10 -rotate-12 text-orange/60" />

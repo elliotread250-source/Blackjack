@@ -34,7 +34,7 @@ export function Hero({ desktop, mobile }: { desktop: SiteImage; mobile: SiteImag
   let i = 0;
 
   return (
-    <section ref={root} aria-labelledby="hero-title" className="relative isolate flex min-h-[100svh] flex-col justify-end overflow-hidden pb-24 pt-28 md:pb-20">
+    <section ref={root} aria-labelledby="hero-title" className="theme-dark relative isolate flex min-h-[100svh] flex-col justify-end overflow-hidden pb-24 pt-28 md:pb-20">
       <div data-hero-bg className="absolute inset-x-0 -top-[8%] -z-20 h-[116%] will-change-transform">
         <picture>
           <source media="(min-width: 768px)" srcSet={d.srcSet} sizes="100vw" />
@@ -42,7 +42,7 @@ export function Hero({ desktop, mobile }: { desktop: SiteImage; mobile: SiteImag
           <img {...mo} alt={mobile.alt} className="h-full w-full object-cover object-[50%_30%] saturate-[.82] md:object-center" />
         </picture>
       </div>
-      <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(to_top,var(--color-ink)_4%,rgb(14_13_15/.72)_45%,rgb(14_13_15/.35)_100%)]" />
+      <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(to_top,var(--c-ink)_4%,rgb(0_0_0/.72)_45%,rgb(0_0_0/.35)_100%)]" />
       <div aria-hidden className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_80%_20%,rgb(232_103_60/.22),transparent_55%)]" />
       <CourtLines variant="half" className="absolute -bottom-10 left-1/2 -z-10 w-[140vw] max-w-none -translate-x-1/2 text-orange/40 md:w-[110vw]" strokeWidth={1.5} delay={0.6} />
 

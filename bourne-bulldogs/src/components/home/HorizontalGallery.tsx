@@ -46,7 +46,7 @@ export function HorizontalGallery({ images, heading, n }: { images: SiteImage[];
   );
 
   return (
-    <section ref={root} aria-labelledby="gallery-heading" className="relative overflow-hidden bg-coal py-20 md:flex md:h-[100svh] md:flex-col md:justify-center md:py-0">
+    <section ref={root} aria-labelledby="gallery-heading" className="theme-dark relative overflow-hidden bg-coal py-20 md:flex md:h-[100svh] md:flex-col md:justify-center md:py-0">
       <div className="container-x mb-8 flex items-end justify-between gap-6 md:mb-10">
         <div>
           <SectionMarker n={n} label="Saturdays at Bourne Leisure Centre" />

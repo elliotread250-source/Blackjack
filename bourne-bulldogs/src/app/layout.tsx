@@ -47,8 +47,8 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0e0d0f",
-  colorScheme: "dark",
+  themeColor: "#000000",
+  colorScheme: "light",
   width: "device-width",
   initialScale: 1,
 };
@@ -108,7 +108,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           Skip to content
         </a>
 
-        <div id="intro" className="intro" aria-hidden>
+        <div id="intro" className="theme-dark intro" aria-hidden>
           <div className="intro-stage">
             <div className="intro-floor" />
             <div className="intro-ball">
@@ -123,7 +123,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
         <MotionProvider>
           <TransitionProvider logoSrc={logo.src}>
-            <Nav logo={logo} />
+            <Nav logo={logo} logoLight={img("logoOriginal")} />
             <LightboxProvider>
               <main id="main" tabIndex={-1} className="outline-none">
                 {children}
