@@ -4,6 +4,7 @@
  *
  * Anything marked TODO is a placeholder waiting on the club to confirm.
  */
+import type { ImageKey } from "./images";
 
 export const club = {
   name: "Bourne Bulldogs Basketball Club",
@@ -165,7 +166,7 @@ export type TeamMember = {
   name: string;
   role: string;
   bio: string;
-  image?: "teamMartin" | "teamElliot" | "teamWillow";
+  image?: ImageKey;
   initials: string;
   photoTodo?: string;
 };
@@ -186,8 +187,8 @@ export const team: { heading: string; intro: string; members: TeamMember[] } = {
       role: "Safeguarding Officer & Club Manager",
       bio: "Keeps the club running smoothly and makes the wellbeing of every child a priority. Nicola is integral to keeping the environment safe, inclusive and fun for everyone involved.",
       initials: "NR",
-      // TODO(photo): no photo of Nicola on the old site. Add public/images/team-nicola.jpg,
-      // register it in src/content/images.ts as "teamNicola", then set image: "teamNicola" here.
+      // TODO(photo): no photo of Nicola on the old site. Upload public/images/team-nicola.jpg,
+      // add teamNicola to src/content/images.ts, then add image: "teamNicola" here.
       photoTodo: "Photo coming soon",
     },
     {
