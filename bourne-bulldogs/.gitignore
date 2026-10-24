@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+assets-original/
+*.tsbuildinfo
+next-env.d.ts
+.env
+.env*.local
+!.env.example
+npm-debug.log*
+.DS_Store
+/lighthouse/
+/screenshots/

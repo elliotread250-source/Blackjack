@@ -1,0 +1,55 @@
+name: Bourne Bulldogs assets
+
+# Downloads every image off the old Squarespace site and commits optimised
+# copies into bourne-bulldogs/public/images. It runs here because Actions
+# runners have open internet; the dev container can't reach Squarespace.
+# Run it again any time with "Run workflow" (it's idempotent).
+
+on:
+  push:
+    branches: ['claude/**']
+    paths: ['bourne-bulldogs/scripts/fetch-assets.mjs', '.github/workflows/bourne-bulldogs-assets.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: bourne-bulldogs-assets-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: bourne-bulldogs
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install sharp only
+        run: |
+          mkdir -p "$RUNNER_TEMP/tools" && cd "$RUNNER_TEMP/tools"
+          npm init -y >/dev/null && npm install --no-audit --no-fund sharp@0.34.5
+      - name: Fetch, optimise, report
+        run: |
+          ln -sfn "$RUNNER_TEMP/tools/node_modules" node_modules
+          node scripts/fetch-assets.mjs
+          rm node_modules
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/images public/*.png src/app/favicon.ico src/content/image-manifest.json scripts/fetch-report.json scripts/brand-colours.json scripts/scraped
+          if git diff --cached --quiet; then echo "Nothing changed"; exit 0; fi
+          git commit -m "Bourne Bulldogs: self-host images pulled from Squarespace"
+          for i in 1 2 3 4; do
+            git pull --rebase origin "${GITHUB_REF_NAME}" && git push origin "HEAD:${GITHUB_REF_NAME}" && exit 0
+            sleep $((2 ** i))
+          done
+          exit 1
