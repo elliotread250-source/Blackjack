@@ -4,8 +4,8 @@ import { SectionMarker } from "@/components/ui/SectionMarker";
 import { SplitHeading } from "@/components/fx/SplitHeading";
 import { ProductCard } from "@/components/merch/ProductCard";
 import { OrderForm } from "@/components/forms/OrderForm";
-import { merch, seo } from "@/content/site";
-import { img } from "@/content/images";
+import { merch, seo, type ProductId } from "@/content/site";
+import { img, type SiteImage } from "@/content/images";
 
 export const metadata: Metadata = {
   title: seo.merch.title,
@@ -54,7 +54,7 @@ export default function MerchPage() {
               </p>
             </div>
           </div>
-          <OrderForm />
+          <OrderForm blanks={Object.fromEntries(merch.products.map((p) => [p.id, img(p.images.blank)])) as Record<ProductId, SiteImage>} />
         </div>
       </section>
     </>

@@ -77,15 +77,19 @@ const entries = {
 
   merchKidsTeeFront: { file: "merch-kids-tee-front.jpg", alt: "Front of the kids' personalised T-shirt in charcoal with the Bourne Bulldogs badge and the number 14" },
   merchKidsTeeBack: { file: "merch-kids-tee-back.jpg", alt: "Back of the kids' personalised T-shirt printed with READ and the number 14" },
+  merchKidsTeeBlank: { file: "merch-kids-tee-back-blank.jpg", alt: "Back of the kids' personalised T-shirt, ready for your surname and number" },
   sizeKidsTee: { file: "size-kids-tee.png", alt: "Size guide for the kids' T-shirt: length and width in centimetres for sizes 3-4 to 12-13" },
   merchAdultTeeFront: { file: "merch-adult-tee-front.jpg", alt: "Front of the adult personalised T-shirt in dark charcoal with the Bourne Bulldogs badge and the number 14" },
   merchAdultTeeBack: { file: "merch-adult-tee-back.jpg", alt: "Back of the adult personalised T-shirt printed with READ and the number 14" },
+  merchAdultTeeBlank: { file: "merch-adult-tee-back-blank.jpg", alt: "Back of the adult personalised T-shirt, ready for your surname and number" },
   sizeAdultTee: { file: "size-adult-tee.png", alt: "Size guide for the adult T-shirt: chest measurements in centimetres for sizes S to 2XL" },
   merchKidsHoodyFront: { file: "merch-kids-hoody-front.jpg", alt: "Front of the kids' personalised hoody in ash grey with the Bourne Bulldogs badge" },
   merchKidsHoodyBack: { file: "merch-kids-hoody-back.jpg", alt: "Back of the kids' personalised hoody printed with READ and the number 14" },
+  merchKidsHoodyBlank: { file: "merch-kids-hoody-back-blank.jpg", alt: "Back of the kids' personalised hoody, ready for your surname and number" },
   sizeKidsHoody: { file: "size-kids-hoody.png", alt: "Size guide for the kids' hoody: length and width in centimetres for sizes 3-4 to 12-13" },
   merchAdultHoodyFront: { file: "merch-adult-hoody-front.jpg", alt: "Front of the adult personalised hoody in ash grey with the Bourne Bulldogs badge" },
   merchAdultHoodyBack: { file: "merch-adult-hoody-back.jpg", alt: "Back of the adult personalised hoody printed with READ and the number 14" },
+  merchAdultHoodyBlank: { file: "merch-adult-hoody-back-blank.jpg", alt: "Back of the adult personalised hoody, ready for your surname and number" },
   sizeAdultHoody: { file: "size-adult-hoody.png", alt: "Size guide for the adult hoody with chest measurements for each size" },
 } satisfies Record<string, Entry>;
 

@@ -59,6 +59,11 @@
     "height": 2388,
     "blurDataURL": "data:image/webp;base64,UklGRp4AAABXRUJQVlA4IJIAAABwAgCdASoQABAAA4BaJbACdAdwLdzZi5TM+5LMAP7yjUg9PKntXGqDGMhU4wdZGvslzntFKMp7X+QOTziWc1MPgstefN1hcuu/A9TJjB3+Q8r1l6H3qoSesfN9xVrjK9I+Ubq6yz5FFnY+IKHpSi1np7dyGUxg1xAxAB9MRLHdrQGU1cE6DvckczLsqj93kAAAAA=="
   },
+  "merch-adult-hoody-back-blank.jpg": {
+    "width": 700,
+    "height": 700,
+    "blurDataURL": "data:image/webp;base64,UklGRk4AAABXRUJQVlA4IEIAAACwAQCdASoQABAAA4BaJaQAAhWY3DnwAP738WTbez8ixfX054puGW8/AoSXSAg2D4msKh0eEw1W5pF7HaqfrwmgAAA="
+  },
   "merch-adult-hoody-back.jpg": {
     "width": 700,
     "height": 700,
@@ -68,6 +73,11 @@
     "width": 700,
     "height": 700,
     "blurDataURL": "data:image/webp;base64,UklGRmYAAABXRUJQVlA4IFoAAAAQAgCdASoQABAAA4BaJZQAAn/7EL3b8uQAAP738CF+mPa32zKC/eePdPPdPHvdax+isXHjsLCnpQEQY0mH52pSur7fXxx3/8wT3AvnI8wRf4l1gC20BShoAAA="
+  },
+  "merch-adult-tee-back-blank.jpg": {
+    "width": 700,
+    "height": 700,
+    "blurDataURL": "data:image/webp;base64,UklGRngAAABXRUJQVlA4IGwAAABwAgCdASoQABAAA4BaJYwBTABA7mpy6KEPURgAAP71XxDQw03IRApR02Abup8XH45zV1MRgiwsBLLMkIlLxnrXgbDC9Sof5QkicW+hn6sBcK3n5137iyvgyyQ6Ww5WmAAv6BvdkUN3MgAAAAA="
   },
   "merch-adult-tee-back.jpg": {
     "width": 700,
@@ -79,6 +89,11 @@
     "height": 700,
     "blurDataURL": "data:image/webp;base64,UklGRpAAAABXRUJQVlA4IIQAAACwAgCdASoQABAAA4BaJQBOj+AhwNn3F6D3Ht+2sUAA/vVfJnZdXLLfe3RUAtdENCp4bK/w92OXaLyVcxxnrp5x5kbLsIjWZUO+Dz/uP+KoNikJnO46CvSxmL4KXUd516Hax3l3WdUj0937H/mCw4ouxEJ8Z2SDYKIVKsx+lZYIdzsgAAA="
   },
+  "merch-kids-hoody-back-blank.jpg": {
+    "width": 700,
+    "height": 700,
+    "blurDataURL": "data:image/webp;base64,UklGRlgAAABXRUJQVlA4IEwAAADQAQCdASoQABAAA4BaJaQAApPD5gpeAAD+9/FXJ2FXvFngcW3uqOElPrwblxFqDsUaygyYHi646c39DTnOTebPWv6Qrv0YyRi3gAAA"
+  },
   "merch-kids-hoody-back.jpg": {
     "width": 700,
     "height": 700,
@@ -88,6 +103,11 @@
     "width": 700,
     "height": 700,
     "blurDataURL": "data:image/webp;base64,UklGRmAAAABXRUJQVlA4IFQAAAAQAgCdASoQABAAA4BaJZQAAscEUtScufAAAP74GWtZ8q89D7xoisgAvU983n2b8VaEtNp6OO70ihyNdQOBGroJGEXo3pJKVLGydrwkPCz1aAo5AAA="
+  },
+  "merch-kids-tee-back-blank.jpg": {
+    "width": 700,
+    "height": 700,
+    "blurDataURL": "data:image/webp;base64,UklGRmgAAABXRUJQVlA4IFwAAAAwAgCdASoQABAAA4BaJZQC7AEfmrDcko+AAAD+9AyLpzigflhBYXOfCo6GbkLv06YxpTrdsZ72I+EBk0WG1SJmOPev6uIiFVzoohwcOwMzcVCdM7w3kBWSgH8AAA=="
   },
   "merch-kids-tee-back.jpg": {
     "width": 700,

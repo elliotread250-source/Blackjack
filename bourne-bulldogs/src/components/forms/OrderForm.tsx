@@ -2,15 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { Honeypot, SelectField, TextArea, TextField } from "./Field";
-import { JerseyPreview } from "./JerseyPreview";
+import { ShirtPreview } from "./ShirtPreview";
 import { SwishSuccess } from "./SwishSuccess";
 import { Button } from "@/components/ui/Button";
 import { club, merch, type ProductId } from "@/content/site";
+import type { SiteImage } from "@/content/images";
 import { fieldErrors, orderSchema } from "@/lib/schemas";
 
 const blank = { parentName: "", email: "", phone: "", size: "", quantity: "1", surname: "", number: "", notes: "", company: "" };
 
-export function OrderForm() {
+export function OrderForm({ blanks }: { blanks: Record<ProductId, SiteImage> }) {
   const [v, setV] = useState({ ...blank, product: "kids-tee" as ProductId, supporter: false });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
@@ -169,8 +170,8 @@ export function OrderForm() {
               £{product.price * Math.max(1, Number(v.quantity) || 1)}
             </p>
           </div>
-          <div className="mx-auto mt-4 max-w-sm" aria-live="polite">
-            <JerseyPreview product={product} surname={v.surname} number={v.number} supporter={v.supporter} />
+          <div className="mx-auto mt-4 max-w-md" aria-live="polite">
+            <ShirtPreview product={product} image={blanks[product.id]} surname={v.surname} number={v.number} supporter={v.supporter} />
           </div>
           <p className="mt-4 text-center text-sm text-muted">{v.supporter ? "Supporter tops have a plain back." : merch.form.previewHint}</p>
         </div>

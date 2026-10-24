@@ -269,15 +269,20 @@ export type Product = {
   details: string[];
   sizes: string[];
   sizeNote?: string;
-  images: { front: ImageKeyRef; back: ImageKeyRef; sizeChart: ImageKeyRef };
-  colour: string; // garment colour for the live preview
+  images: { front: ImageKeyRef; back: ImageKeyRef; blank: ImageKeyRef; sizeChart: ImageKeyRef };
+  /**
+   * Where the club's sample print (READ / 14) sits on the back photo, as
+   * fractions of the image, measured by hand. The order form prints the
+   * customer's surname and number in the same place on the blank photo.
+   */
+  print: { x: number; name: [number, number]; number: [number, number]; nameMaxWidth: number };
 };
 
 type ImageKeyRef =
-  | "merchKidsTeeFront" | "merchKidsTeeBack" | "sizeKidsTee"
-  | "merchAdultTeeFront" | "merchAdultTeeBack" | "sizeAdultTee"
-  | "merchKidsHoodyFront" | "merchKidsHoodyBack" | "sizeKidsHoody"
-  | "merchAdultHoodyFront" | "merchAdultHoodyBack" | "sizeAdultHoody";
+  | "merchKidsTeeFront" | "merchKidsTeeBack" | "merchKidsTeeBlank" | "sizeKidsTee"
+  | "merchAdultTeeFront" | "merchAdultTeeBack" | "merchAdultTeeBlank" | "sizeAdultTee"
+  | "merchKidsHoodyFront" | "merchKidsHoodyBack" | "merchKidsHoodyBlank" | "sizeKidsHoody"
+  | "merchAdultHoodyFront" | "merchAdultHoodyBack" | "merchAdultHoodyBlank" | "sizeAdultHoody";
 
 export const merch = {
   heading: "Club merch",
@@ -299,8 +304,8 @@ export const merch = {
       details: ["100% Polyester", "140gsm", "Moisture-wicking Neoteric fabric"],
       sizes: ["3-4", "5-6", "7-8", "9-11", "12-13"],
       sizeNote: "Kids sizes 3-4 up to 12-13",
-      images: { front: "merchKidsTeeFront", back: "merchKidsTeeBack", sizeChart: "sizeKidsTee" },
-      colour: "#5a5551",
+      images: { front: "merchKidsTeeFront", back: "merchKidsTeeBack", blank: "merchKidsTeeBlank", sizeChart: "sizeKidsTee" },
+      print: { x: 0.49, name: [0.21, 0.3], number: [0.4, 0.73], nameMaxWidth: 0.44 },
     },
     {
       id: "adult-tee",
@@ -311,8 +316,8 @@ export const merch = {
       details: ["100% Cotton", "180gsm", "TRS225"],
       sizes: ["S", "M", "L", "XL", "2XL"],
       sizeNote: "Adult sizes S to 2XL",
-      images: { front: "merchAdultTeeFront", back: "merchAdultTeeBack", sizeChart: "sizeAdultTee" },
-      colour: "#424045",
+      images: { front: "merchAdultTeeFront", back: "merchAdultTeeBack", blank: "merchAdultTeeBlank", sizeChart: "sizeAdultTee" },
+      print: { x: 0.5, name: [0.2, 0.29], number: [0.39, 0.75], nameMaxWidth: 0.44 },
     },
     {
       id: "kids-hoody",
@@ -330,8 +335,8 @@ export const merch = {
       ],
       sizes: ["3-4", "5-6", "7-8", "9-11", "12-13"],
       sizeNote: "Kids sizes 3-4, 5-6, 7-8, 9-11, 12-13",
-      images: { front: "merchKidsHoodyFront", back: "merchKidsHoodyBack", sizeChart: "sizeKidsHoody" },
-      colour: "#d3d2d1",
+      images: { front: "merchKidsHoodyFront", back: "merchKidsHoodyBack", blank: "merchKidsHoodyBlank", sizeChart: "sizeKidsHoody" },
+      print: { x: 0.52, name: [0.36, 0.44], number: [0.53, 0.82], nameMaxWidth: 0.36 },
     },
     {
       id: "adult-hoody",
@@ -348,8 +353,8 @@ export const merch = {
       ],
       sizes: ["XS", "S", "M", "L", "XL", "2XL"],
       sizeNote: 'To fit chest: XS 34", S 36", M 40", L 44", XL 48", 2XL 52"',
-      images: { front: "merchAdultHoodyFront", back: "merchAdultHoodyBack", sizeChart: "sizeAdultHoody" },
-      colour: "#d6d5d4",
+      images: { front: "merchAdultHoodyFront", back: "merchAdultHoodyBack", blank: "merchAdultHoodyBlank", sizeChart: "sizeAdultHoody" },
+      print: { x: 0.51, name: [0.29, 0.37], number: [0.45, 0.73], nameMaxWidth: 0.34 },
     },
   ] satisfies Product[] as Product[],
   form: {
