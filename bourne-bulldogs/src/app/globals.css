@@ -1,0 +1,426 @@
+@import "tailwindcss";
+
+/*
+ * Brand palette, pulled from the club badge (scripts/brand-colours.json):
+ *   logo black #070507, ball orange #d35933, lettering red #cd232a,
+ *   fur tan #ad9272, highlight white #f9faf9 / #ddd3c7.
+ * UI orange is a touch brighter than the badge so it holds AA on black.
+ */
+@theme {
+  --color-ink: #0e0d0f;
+  --color-coal: #161518;
+  --color-graphite: #222025;
+  --color-line: #33303a;
+  --color-orange: #e8673c;
+  --color-orange-deep: #d35933;
+  --color-orange-ink: #a6401f;
+  --color-red: #cd232a;
+  --color-red-bright: #e5484f;
+  --color-bone: #f2ece1;
+  --color-bone-dim: #e6dece;
+  --color-muted: #a39e97;
+  --color-muted-ink: #5c574f;
+  --color-tan: #ad9272;
+
+  --font-display: var(--font-anton), "Arial Narrow", Impact, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --radius-card: 10px;
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  --animate-marquee: marquee var(--marquee-duration, 30s) linear infinite;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    background: var(--color-ink);
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--color-ink);
+    color: var(--color-bone);
+    font-family: var(--font-sans);
+    font-size: 1.0625rem; /* 17px */
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overflow-x: clip;
+  }
+
+  @media (min-width: 768px) {
+    body {
+      font-size: 1.125rem; /* 18px */
+    }
+  }
+
+  ::selection {
+    background: var(--color-orange);
+    color: var(--color-ink);
+  }
+
+  :focus-visible {
+    outline: 3px solid var(--color-orange);
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  h1, h2, h3, h4 {
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  img {
+    -webkit-user-drag: none;
+  }
+}
+
+/* Lenis */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
+}
+
+@layer components {
+  .display {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    line-height: 0.86;
+    letter-spacing: 0.005em;
+    font-weight: 400;
+  }
+
+  .eyebrow {
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  /* Outlined jersey numerals for section markers. */
+  .jersey-outline {
+    font-family: var(--font-display);
+    color: transparent;
+    -webkit-text-stroke: 1.5px currentColor;
+    paint-order: stroke fill;
+  }
+
+  .container-x {
+    width: 100%;
+    margin-inline: auto;
+    max-width: 1440px;
+    padding-inline: 1rem;
+  }
+  @media (min-width: 640px) {
+    .container-x {
+      padding-inline: 1.5rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .container-x {
+      padding-inline: 2.5rem;
+    }
+  }
+
+  /* Scoreboard LED dot screen laid over numbers. */
+  .led {
+    position: relative;
+    color: var(--color-orange);
+    text-shadow: 0 0 18px rgb(232 103 60 / 0.45);
+  }
+  .led::after {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    pointer-events: none;
+    background-image: radial-gradient(circle, transparent 0.9px, var(--color-coal) 1.3px);
+    background-size: 4px 4px;
+    opacity: 0.55;
+  }
+
+  /* Photos: a slightly graded look at rest, full colour on hover. */
+  .grade img {
+    filter: saturate(0.78) contrast(1.06);
+    transition: filter 0.6s var(--ease-out-expo), transform 0.9s var(--ease-out-expo);
+  }
+  .grade:hover img,
+  .grade:focus-within img {
+    filter: none;
+  }
+}
+
+/* Whole-site grain so flat colour feels printed. */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  pointer-events: none;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@keyframes marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+/* ------------------------------------------------------------------
+ * Hero headline: CSS-only so it starts before hydration.
+ * When the intro loader is showing, the reveal waits for it.
+ * ------------------------------------------------------------------ */
+@keyframes rise {
+  from {
+    transform: translate3d(0, 105%, 0);
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+  }
+}
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 24px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+.hero-letter {
+  display: inline-block;
+  transform: translate3d(0, 105%, 0);
+  animation: rise 0.9s var(--ease-out-expo) forwards;
+  animation-delay: calc(var(--intro-delay, 0s) + 0.15s + var(--i) * 0.045s);
+}
+.hero-fade {
+  opacity: 0;
+  animation: fade-up 0.8s var(--ease-out-expo) forwards;
+  animation-delay: calc(var(--intro-delay, 0s) + var(--d, 0.7s));
+}
+html[data-intro] {
+  --intro-delay: 1.55s;
+}
+
+/* ------------------------------------------------------------------
+ * Intro loader. Server-rendered, shown only when an inline script in
+ * <head> marks a first visit this session. Pure CSS so it never waits
+ * on JavaScript, and it hides itself even if JS never runs.
+ * ------------------------------------------------------------------ */
+.intro {
+  display: none;
+}
+html[data-intro] .intro {
+  display: grid;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  place-items: center;
+  background: var(--color-ink);
+  animation: intro-out 0.45s var(--ease-out-expo) 1.35s forwards;
+  cursor: pointer;
+}
+html[data-intro].intro-skip .intro {
+  animation: intro-out 0.3s var(--ease-out-expo) forwards;
+}
+html[data-intro].intro-skip {
+  --intro-delay: 0s;
+}
+.intro-stage {
+  position: relative;
+  width: 160px;
+  height: 260px;
+}
+.intro-floor {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 140px;
+  height: 10px;
+  margin-left: -70px;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 0.6);
+  filter: blur(4px);
+  animation: intro-shadow 1.05s ease-in-out forwards;
+}
+.intro-ball {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  width: 84px;
+  height: 84px;
+  margin-left: -42px;
+  transform-origin: 50% 100%;
+  animation: intro-bounce 1.05s forwards;
+}
+.intro-logo {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 160px;
+  height: 160px;
+  margin-left: -80px;
+  opacity: 0;
+  transform: scale(0.5);
+  animation: intro-logo 0.4s var(--ease-out-back) 1s forwards;
+}
+.intro-skip-hint {
+  position: absolute;
+  bottom: 2rem;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: var(--color-muted);
+}
+
+/* Three bounces, each lower, with squash on contact and stretch in flight. */
+@keyframes intro-bounce {
+  0% { transform: translateY(-170px) scale(0.95, 1.06); animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45); }
+  22% { transform: translateY(0) scale(1.22, 0.78); animation-timing-function: cubic-bezier(0, 0.55, 0.45, 1); }
+  25% { transform: translateY(-6px) scale(0.94, 1.08); animation-timing-function: cubic-bezier(0, 0.55, 0.45, 1); }
+  42% { transform: translateY(-110px) scale(1, 1); animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45); }
+  58% { transform: translateY(0) scale(1.18, 0.82); animation-timing-function: cubic-bezier(0, 0.55, 0.45, 1); }
+  61% { transform: translateY(-4px) scale(0.96, 1.05); animation-timing-function: cubic-bezier(0, 0.55, 0.45, 1); }
+  73% { transform: translateY(-55px) scale(1, 1); animation-timing-function: cubic-bezier(0.55, 0, 1, 0.45); }
+  85% { transform: translateY(0) scale(1.12, 0.88); animation-timing-function: cubic-bezier(0, 0.55, 0.45, 1); }
+  92% { transform: translateY(-38px) scale(1.25, 1.25); opacity: 1; }
+  100% { transform: translateY(-38px) scale(1.9, 1.9); opacity: 0; }
+}
+@keyframes intro-shadow {
+  0%, 42%, 73% { transform: scaleX(0.4); opacity: 0.3; }
+  22%, 58%, 85% { transform: scaleX(1); opacity: 0.9; }
+  100% { transform: scaleX(0.6); opacity: 0; }
+}
+@keyframes intro-logo {
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes intro-out {
+  to {
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-4%);
+  }
+}
+
+/* Gentle float for the hero basketball. */
+@keyframes float {
+  0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+  50% { transform: translate3d(0, -14px, 0) rotate(14deg); }
+}
+.float {
+  animation: float 5s ease-in-out infinite;
+}
+
+/* Scroll cue: a small bouncing ball. */
+@keyframes cue {
+  0%, 100% { transform: translateY(0) scale(1, 1); animation-timing-function: cubic-bezier(0.33, 0, 0.66, 0); }
+  45% { transform: translateY(18px) scale(1, 1); animation-timing-function: cubic-bezier(0.33, 1, 0.66, 1); }
+  50% { transform: translateY(18px) scale(1.2, 0.8); }
+  55% { transform: translateY(16px) scale(0.95, 1.05); animation-timing-function: cubic-bezier(0.33, 1, 0.66, 1); }
+}
+.cue {
+  animation: cue 1.4s infinite;
+  transform-origin: 50% 100%;
+}
+
+/* Willow wobble. */
+@keyframes wobble {
+  0%, 100% { transform: rotate(0deg) scale(1.03); }
+  20% { transform: rotate(-6deg) scale(1.05); }
+  40% { transform: rotate(5deg) scale(1.05); }
+  60% { transform: rotate(-3deg) scale(1.04); }
+  80% { transform: rotate(2deg) scale(1.03); }
+}
+.wobble-on-hover:hover .wobble-target,
+.wobble-on-hover:focus-within .wobble-target {
+  animation: wobble 0.8s var(--ease-out-expo);
+}
+
+/* 3D flip cards (merch, skills). */
+.flip {
+  perspective: 1400px;
+}
+.flip-inner {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.8s var(--ease-out-expo);
+}
+.flip-face {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.flip-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+}
+.flip[data-flipped="true"] .flip-inner {
+  transform: rotateY(180deg);
+}
+@media (hover: hover) and (pointer: fine) {
+  .flip[data-hover-flip]:hover .flip-inner {
+    transform: rotateY(180deg);
+  }
+}
+
+/* Custom cursor hides the system pointer, except where you type. */
+html.has-cursor,
+html.has-cursor * {
+  cursor: none !important;
+}
+html.has-cursor input,
+html.has-cursor textarea,
+html.has-cursor select,
+html.has-cursor iframe {
+  cursor: auto !important;
+}
+
+/* Map iframe in the dark theme. */
+.map-dark {
+  filter: invert(0.92) hue-rotate(180deg) saturate(0.6) contrast(0.95);
+}
+
+/* Native dialog backdrop. */
+dialog::backdrop {
+  background: rgb(8 8 9 / 0.92);
+}
+dialog {
+  color: inherit;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .hero-letter,
+  .hero-fade {
+    transform: none;
+    opacity: 1;
+    animation: none;
+  }
+  .float,
+  .cue {
+    animation: none;
+  }
+}
