@@ -49,7 +49,7 @@ export function Nav({ logo }: { logo: SiteImage }) {
       >
         <nav aria-label="Main" className="container-x flex h-[72px] items-center justify-between gap-6 md:h-20">
           <TLink href="/" className="relative z-[2] flex items-center gap-3" aria-label={`${club.shortName} home`}>
-            <Image src={logo.src} alt="" width={56} height={56} priority className="h-12 w-12 md:h-14 md:w-14" />
+            <Image src={logo.src} alt="" width={56} height={56} loading="eager" className="h-12 w-12 md:h-14 md:w-14" />
             <span className="display hidden text-xl leading-none tracking-wide sm:block">
               Bourne <span className="text-orange">Bulldogs</span>
             </span>
@@ -123,17 +123,15 @@ function MobileMenu({ pathname, onClose }: { pathname: string; onClose: () => vo
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       if (e.key !== "Tab" || !ref.current) return;
-      // Trap focus across the menu links and the toggle button in the header.
+      // Trap focus in the menu plus the close toggle, in tab order (toggle
+      // sits in the header, before the menu in the DOM).
       const toggle = document.querySelector<HTMLElement>("[aria-controls='mobile-menu']");
-      const items = [...ref.current.querySelectorAll<HTMLElement>("a, button"), ...(toggle ? [toggle] : [])];
+      const items = [...(toggle ? [toggle] : []), ...ref.current.querySelectorAll<HTMLElement>("a, button")];
+      if (!items.length) return;
       const i = items.indexOf(document.activeElement as HTMLElement);
-      if (e.shiftKey && (i <= 0)) {
-        e.preventDefault();
-        items[items.length - 1].focus();
-      } else if (!e.shiftKey && i === items.length - 1) {
-        e.preventDefault();
-        items[0].focus();
-      }
+      e.preventDefault();
+      const next = i === -1 ? 0 : (i + (e.shiftKey ? -1 : 1) + items.length) % items.length;
+      items[next].focus();
     };
     document.addEventListener("keydown", onKey);
     return () => {

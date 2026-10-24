@@ -7,7 +7,7 @@ import { HoopBack, HoopFront } from "@/components/fx/Hoop";
 import { CourtLines } from "@/components/fx/CourtLines";
 import { Button } from "@/components/ui/Button";
 import { club, home, sessions, training } from "@/content/site";
-import { gsap, useGSAP } from "@/lib/gsap";
+import { gsap, useIdleGSAP } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion-pref";
 
 /**
@@ -17,7 +17,7 @@ import { prefersReducedMotion } from "@/lib/motion-pref";
 export function Sessions() {
   const root = useRef<HTMLElement>(null);
 
-  useGSAP(
+  useIdleGSAP(
     () => {
       if (prefersReducedMotion()) return;
       const mm = gsap.matchMedia();
@@ -36,11 +36,11 @@ export function Sessions() {
       });
       return () => mm.revert();
     },
-    { scope: root }
+    root
   );
 
   return (
-    <section ref={root} id="training" aria-labelledby="training-heading" className="relative scroll-mt-24 pb-24 pt-20 md:pb-32 md:pt-28">
+    <section ref={root} id="training" aria-labelledby="training-heading" className="relative scroll-mt-24 overflow-x-clip pb-24 pt-20 md:pb-32 md:pt-28">
       <div className="container-x">
         <div className="relative flex flex-col-reverse gap-6 md:flex-row md:items-end md:justify-between">
           <div>

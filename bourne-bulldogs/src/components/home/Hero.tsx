@@ -7,14 +7,14 @@ import { CourtLines } from "@/components/fx/CourtLines";
 import { Basketball } from "@/components/fx/Basketball";
 import { club, home } from "@/content/site";
 import type { SiteImage } from "@/content/images";
-import { gsap, useGSAP } from "@/lib/gsap";
+import { gsap, useIdleGSAP } from "@/lib/gsap";
 import { scrollToId } from "@/lib/lenis-store";
 import { prefersReducedMotion } from "@/lib/motion-pref";
 
 export function Hero({ desktop, mobile }: { desktop: SiteImage; mobile: SiteImage }) {
   const root = useRef<HTMLElement>(null);
 
-  useGSAP(
+  useIdleGSAP(
     () => {
       if (prefersReducedMotion()) return;
       const st = { trigger: root.current, start: "top top", end: "bottom top", scrub: true };
@@ -22,7 +22,7 @@ export function Hero({ desktop, mobile }: { desktop: SiteImage; mobile: SiteImag
       gsap.to("[data-hero-title]", { scale: 0.86, opacity: 0.25, yPercent: -12, ease: "none", transformOrigin: "0% 100%", scrollTrigger: st });
       gsap.to("[data-hero-copy]", { opacity: 0, y: -40, ease: "none", scrollTrigger: { ...st, end: "60% top" } });
     },
-    { scope: root }
+    root
   );
 
   // Art direction: the wide gym shot on desktop, the tip-off on phones.

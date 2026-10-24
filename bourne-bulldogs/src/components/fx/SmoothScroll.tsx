@@ -3,14 +3,15 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { getLenis, setLenis } from "@/lib/lenis-store";
-import { prefersReducedMotion } from "@/lib/motion-pref";
+import { isFinePointer, prefersReducedMotion } from "@/lib/motion-pref";
 
-/** Lenis smooth scrolling, off entirely for reduced motion. */
+/** Lenis smooth scrolling on desktop; off for touch devices and reduced motion. */
 export function SmoothScroll() {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (prefersReducedMotion()) return;
+    // Touch scrolling is already smooth, and Lenis leaves it native anyway.
+    if (prefersReducedMotion() || !isFinePointer()) return;
     let cancelled = false;
     let destroy: (() => void) | undefined;
     import("lenis").then(({ default: Lenis }) => {

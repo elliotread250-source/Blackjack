@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRef } from "react";
 import { SectionMarker } from "@/components/ui/SectionMarker";
 import type { SiteImage } from "@/content/images";
-import { gsap, useGSAP } from "@/lib/gsap";
+import { gsap, useIdleGSAP } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion-pref";
 
 /**
@@ -15,7 +15,7 @@ export function IntroScrub({ lead, body, photos }: { lead: string; body: string[
   const root = useRef<HTMLElement>(null);
   const words = lead.split(" ");
 
-  useGSAP(
+  useIdleGSAP(
     () => {
       if (prefersReducedMotion()) {
         gsap.set("[data-word]", { opacity: 1 });
@@ -40,7 +40,7 @@ export function IntroScrub({ lead, body, photos }: { lead: string; body: string[
         );
       });
     },
-    { scope: root }
+    root
   );
 
   return (
@@ -53,7 +53,7 @@ export function IntroScrub({ lead, body, photos }: { lead: string; body: string[
           </h2>
           <p data-lead className="display mt-10 text-[9.5vw] leading-[0.98] sm:text-6xl lg:text-[4.6rem]">
             {words.map((w, i) => (
-              <span key={i} data-word className="opacity-[0.18]">
+              <span key={i} data-word className="opacity-40">
                 {w}{" "}
               </span>
             ))}

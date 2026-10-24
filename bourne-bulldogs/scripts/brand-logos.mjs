@@ -57,7 +57,7 @@ async function square(input, size, background, padding) {
   const fitted = await sharp(input).resize(inner, inner, { fit: "contain", background: CLEAR }).png().toBuffer();
   return sharp({ create: { width: size, height: size, channels: 4, background } })
     .composite([{ input: fitted, gravity: "center" }])
-    .png({ compressionLevel: 9 })
+    .png({ compressionLevel: 9, palette: true, quality: 90, effort: 10 })
     .toBuffer();
 }
 

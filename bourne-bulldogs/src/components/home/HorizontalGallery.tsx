@@ -6,7 +6,7 @@ import { SectionMarker } from "@/components/ui/SectionMarker";
 import { SplitHeading } from "@/components/fx/SplitHeading";
 import { useLightbox } from "@/components/fx/Lightbox";
 import type { SiteImage } from "@/content/images";
-import { gsap, useGSAP } from "@/lib/gsap";
+import { gsap, useIdleGSAP } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion-pref";
 
 /**
@@ -19,7 +19,7 @@ export function HorizontalGallery({ images, heading, n }: { images: SiteImage[];
   const track = useRef<HTMLUListElement>(null);
   const open = useLightbox();
 
-  useGSAP(
+  useIdleGSAP(
     () => {
       if (prefersReducedMotion()) return;
       const mm = gsap.matchMedia();
@@ -42,7 +42,7 @@ export function HorizontalGallery({ images, heading, n }: { images: SiteImage[];
       });
       return () => mm.revert();
     },
-    { scope: root }
+    root
   );
 
   return (

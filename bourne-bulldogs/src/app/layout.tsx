@@ -17,7 +17,8 @@ import { Footer } from "@/components/layout/Footer";
 import { LightboxProvider } from "@/components/fx/Lightbox";
 
 const anton = Anton({ weight: "400", subsets: ["latin"], variable: "--font-anton", display: "swap" });
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
+// Anton is the LCP font (hero headline), so only it is preloaded; Inter swaps in.
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap", preload: false });
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

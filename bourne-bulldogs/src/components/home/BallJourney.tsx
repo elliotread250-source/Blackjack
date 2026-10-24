@@ -2,7 +2,7 @@
 
 import { useRef } from "react";
 import { Basketball } from "@/components/fx/Basketball";
-import { gsap, ScrollTrigger, useGSAP } from "@/lib/gsap";
+import { gsap, ScrollTrigger, useIdleGSAP } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion-pref";
 
 /**
@@ -20,7 +20,7 @@ export function BallJourney({ children }: { children: React.ReactNode }) {
   const root = useRef<HTMLDivElement>(null);
   const ball = useRef<HTMLDivElement>(null);
 
-  useGSAP(
+  useIdleGSAP(
     () => {
       const el = root.current!;
       const b = ball.current!;
@@ -125,13 +125,13 @@ export function BallJourney({ children }: { children: React.ReactNode }) {
         tl?.kill();
       };
     },
-    { scope: root }
+    root
   );
 
   return (
     <div ref={root} className="relative">
       {children}
-      <div ref={ball} aria-hidden className="pointer-events-none absolute left-0 top-0 z-20 h-20 w-20 will-change-transform" style={{ transformOrigin: "50% 50%" }}>
+      <div ref={ball} aria-hidden className="pointer-events-none absolute left-0 top-0 z-20 h-20 w-20 will-change-transform" style={{ transformOrigin: "50% 50%", opacity: 0 }}>
         <div className="float h-full w-full">
           <Basketball className="h-full w-full drop-shadow-[0_18px_30px_rgba(0,0,0,.45)]" id="hero-ball" />
         </div>

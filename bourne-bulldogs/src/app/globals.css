@@ -34,6 +34,8 @@
 
 @layer base {
   html {
+    /* Animations start some elements off-canvas; never let that become sideways scroll. */
+    overflow-x: clip;
     -webkit-text-size-adjust: 100%;
     text-rendering: optimizeLegibility;
     background: var(--color-ink);
@@ -187,7 +189,7 @@ html.lenis body {
  * ------------------------------------------------------------------ */
 @keyframes rise {
   from {
-    transform: translate3d(0, 105%, 0);
+    transform: translate3d(0, 45%, 0);
   }
   to {
     transform: translate3d(0, 0, 0);
@@ -203,9 +205,11 @@ html.lenis body {
     transform: translate3d(0, 0, 0);
   }
 }
+/* Letters start part-way up rather than fully hidden: the headline is the
+   page's LCP element, and Chrome only counts what's visible on first paint. */
 .hero-letter {
   display: inline-block;
-  transform: translate3d(0, 105%, 0);
+  transform: translate3d(0, 45%, 0);
   animation: rise 0.9s var(--ease-out-expo) forwards;
   animation-delay: calc(var(--intro-delay, 0s) + 0.15s + var(--i) * 0.045s);
 }

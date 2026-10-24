@@ -23,7 +23,7 @@ const piece: Variants = {
 
 /**
  * Words (or letters) slide up from behind a mask as the heading scrolls in.
- * Screen readers get the plain text via aria-label; the pieces are hidden.
+ * Screen readers get the plain text from a visually hidden copy; the pieces are hidden.
  */
 export function SplitHeading({ text, as = "h2", className, letters = false, delay = 0, once = true, id }: Props) {
   const words = text.split(" ");
@@ -33,14 +33,13 @@ export function SplitHeading({ text, as = "h2", className, letters = false, dela
     {
       id,
       className: cn("display", className),
-      "aria-label": text,
       initial: "hidden",
       whileInView: "show",
       viewport: { once, margin: "0px 0px -12% 0px" },
       variants: container,
       custom: delay,
     },
-    words.map((word, wi) => (
+    [<span key="sr" className="sr-only">{text}</span>, ...words.map((word, wi) => (
       <span key={wi} aria-hidden className="inline-block overflow-hidden pb-[0.06em] align-bottom">
         {letters ? (
           word.split("").map((ch, ci) => (
@@ -55,6 +54,6 @@ export function SplitHeading({ text, as = "h2", className, letters = false, dela
         )}
         {wi < words.length - 1 && <span className="inline-block">&nbsp;</span>}
       </span>
-    ))
+    ))]
   );
 }

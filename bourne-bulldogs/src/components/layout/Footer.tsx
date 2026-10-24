@@ -81,9 +81,12 @@ export function Footer() {
         <p>Bourne, Lincolnshire</p>
       </div>
 
-      <p aria-hidden className="display pointer-events-none select-none whitespace-nowrap px-2 text-center text-[24vw] leading-[0.75] text-bone/[0.04]">
-        Bulldogs
-      </p>
+      {/* Decorative wordmark. SVG text so contrast checkers don't treat it as body copy. */}
+      <svg aria-hidden focusable="false" viewBox="0 0 1000 190" className="pointer-events-none block w-full select-none px-2" preserveAspectRatio="xMidYMax meet">
+        <text x="500" y="182" textAnchor="middle" fontFamily="var(--font-anton), Impact, sans-serif" fontSize="232" letterSpacing="4" fill="rgb(242 236 225 / 0.045)">
+          BULLDOGS
+        </text>
+      </svg>
     </footer>
   );
 }

@@ -2,89 +2,104 @@
 
 import Link, { type LinkProps } from "next/link";
 import Image from "next/image";
-import { AnimatePresence, m } from "framer-motion";
+import { useAnimate } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
-import { createContext, forwardRef, useCallback, useContext, useEffect, useRef, useState } from "react";
+import { createContext, forwardRef, useCallback, useContext, useEffect, useRef } from "react";
 import { prefersReducedMotion } from "@/lib/motion-pref";
 
-type Phase = "idle" | "cover" | "reveal";
 const Ctx = createContext<{ navigate: (href: string) => boolean }>({ navigate: () => false });
 
 const EASE = [0.76, 0, 0.24, 1] as const;
-const COVER_S = 0.3;
-const REVEAL_S = 0.34;
+const COVER_S = 0.22;
+const REVEAL_S = 0.26;
+/** Start fetching/rendering the next route this far into the cover. */
+const PUSH_AT = 0.65;
 
 /**
- * Route changes play an orange panel wipe with the badge in the middle:
- * cover (300ms) -> swap page -> reveal (340ms). Under 700ms end to end.
- * Back/forward and reduced motion skip it.
+ * Route changes play an orange panel wipe with the badge in the middle.
+ * The panel is always mounted and driven imperatively, so it moves on the
+ * click itself rather than after a React render. The next route loads while
+ * it slides in; it lifts once it has fully covered AND the new page is in.
+ * About 220ms in, 260ms out. Back/forward and reduced motion skip it.
  */
 export function TransitionProvider({ children, logoSrc }: { children: React.ReactNode; logoSrc: string }) {
   const router = useRouter();
   const pathname = usePathname();
-  const [phase, setPhase] = useState<Phase>("idle");
-  const target = useRef<string | null>(null);
+  const [scope, animate] = useAnimate<HTMLDivElement>();
+  const busy = useRef(false);
   const fromPath = useRef(pathname);
-  const safety = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const covered = useRef(false);
+  const routeReady = useRef(false);
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const clearTimers = () => {
+    timers.current.forEach(clearTimeout);
+    timers.current = [];
+  };
+
+  const maybeReveal = useCallback(() => {
+    if (!busy.current || !covered.current || !routeReady.current) return;
+    covered.current = false;
+    clearTimers();
+    const el = scope.current;
+    animate(el, { x: "-100%" }, { duration: REVEAL_S, ease: EASE }).then(() => {
+      el.style.visibility = "hidden";
+      el.style.pointerEvents = "none";
+      busy.current = false;
+    });
+  }, [animate, scope]);
 
   const navigate = useCallback(
     (href: string) => {
-      if (prefersReducedMotion() || phase !== "idle") return false;
+      if (prefersReducedMotion() || busy.current || !scope.current) return false;
       const url = new URL(href, window.location.href);
       if (url.pathname === window.location.pathname) return false;
-      target.current = url.pathname + url.search + url.hash;
+      busy.current = true;
       fromPath.current = window.location.pathname;
-      setPhase("cover");
+      covered.current = false;
+      routeReady.current = false;
+      const el = scope.current;
+      el.style.visibility = "visible";
+      el.style.pointerEvents = "auto";
+      animate(el, { x: ["100%", "0%"] }, { duration: COVER_S, ease: EASE }).then(() => {
+        covered.current = true;
+        maybeReveal();
+      });
+      animate("[data-wipe-logo]", { scale: [0.6, 1], rotate: [-20, 0] }, { duration: 0.4, ease: [0.34, 1.56, 0.64, 1] });
+      timers.current.push(setTimeout(() => router.push(url.pathname + url.search + url.hash), COVER_S * PUSH_AT * 1000));
+      // If the route never changes (error, slow network), don't strand the panel.
+      timers.current.push(
+        setTimeout(() => {
+          routeReady.current = true;
+          maybeReveal();
+        }, 2000)
+      );
       return true;
     },
-    [phase]
+    [animate, scope, router, maybeReveal]
   );
 
-  // Once the new route has rendered, lift the panel.
   useEffect(() => {
-    if (phase === "cover" && target.current === null && pathname !== fromPath.current) {
-      clearTimeout(safety.current);
-      requestAnimationFrame(() => setPhase("reveal"));
+    if (busy.current && pathname !== fromPath.current) {
+      routeReady.current = true;
+      maybeReveal();
     }
-  }, [pathname, phase]);
+  }, [pathname, maybeReveal]);
 
-  const onCovered = () => {
-    if (phase !== "cover" || !target.current) return;
-    const href = target.current;
-    target.current = null;
-    router.push(href);
-    // If the route never changes (error, same page), don't strand the panel.
-    safety.current = setTimeout(() => setPhase("reveal"), 1500);
-  };
+  useEffect(() => clearTimers, []);
 
   return (
     <Ctx.Provider value={{ navigate }}>
       {children}
-      <AnimatePresence>
-        {phase !== "idle" && (
-          <m.div
-            key="wipe"
-            aria-hidden
-            className="pointer-events-auto fixed inset-0 z-[95] grid place-items-center bg-orange"
-            initial={{ x: "100%" }}
-            animate={phase === "cover" ? { x: "0%" } : { x: "-100%" }}
-            transition={{ duration: phase === "cover" ? COVER_S : REVEAL_S, ease: EASE }}
-            onAnimationComplete={() => {
-              if (phase === "cover") onCovered();
-              else setPhase("idle");
-            }}
-          >
-            <m.div
-              initial={{ scale: 0.6, rotate: -20 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ duration: 0.4, ease: [0.34, 1.56, 0.64, 1] }}
-              className="relative h-28 w-28 md:h-36 md:w-36"
-            >
-              <Image src={logoSrc} alt="" fill sizes="144px" className="object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,.35)]" />
-            </m.div>
-          </m.div>
-        )}
-      </AnimatePresence>
+      <div
+        ref={scope}
+        aria-hidden
+        className="pointer-events-none invisible fixed inset-0 z-[95] grid translate-x-full place-items-center bg-orange will-change-transform"
+      >
+        <div data-wipe-logo className="relative h-28 w-28 md:h-36 md:w-36">
+          <Image src={logoSrc} alt="" fill sizes="144px" className="object-contain drop-shadow-[0_8px_24px_rgba(0,0,0,.35)]" />
+        </div>
+      </div>
     </Ctx.Provider>
   );
 }

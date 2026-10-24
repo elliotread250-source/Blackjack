@@ -2,7 +2,7 @@
 
 import { m } from "framer-motion";
 import { useRef } from "react";
-import { gsap, useGSAP } from "@/lib/gsap";
+import { gsap, useIdleGSAP } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion-pref";
 
 type Step = { marker: string; title: string; body: string };
@@ -11,7 +11,7 @@ type Step = { marker: string; title: string; body: string };
 export function StoryTimeline({ steps }: { steps: Step[] }) {
   const root = useRef<HTMLOListElement>(null);
 
-  useGSAP(
+  useIdleGSAP(
     () => {
       if (prefersReducedMotion()) {
         gsap.set("[data-line]", { scaleY: 1 });
@@ -19,7 +19,7 @@ export function StoryTimeline({ steps }: { steps: Step[] }) {
       }
       gsap.fromTo("[data-line]", { scaleY: 0 }, { scaleY: 1, ease: "none", scrollTrigger: { trigger: root.current, start: "top 70%", end: "bottom 60%", scrub: 0.5 } });
     },
-    { scope: root }
+    root
   );
 
   return (
