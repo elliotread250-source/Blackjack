@@ -8,7 +8,6 @@ import { SITE_URL } from "@/lib/site-url";
 import { MotionProvider } from "@/components/fx/MotionProvider";
 import { SmoothScroll } from "@/components/fx/SmoothScroll";
 import { ScrollProgress } from "@/components/fx/ScrollProgress";
-import { Cursor } from "@/components/fx/Cursor";
 import { TransitionProvider } from "@/components/fx/Transition";
 import { IntroLoader, introScript } from "@/components/fx/IntroLoader";
 import { Basketball } from "@/components/fx/Basketball";
@@ -132,7 +131,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Footer />
           </TransitionProvider>
           <ScrollProgress />
-          <Cursor />
         </MotionProvider>
         <SmoothScroll />
         <IntroLoader />
