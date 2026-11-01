@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Image from "next/image";
-import { Anton, Inter } from "next/font/google";
+import { Anton, Graduate, Inter } from "next/font/google";
 import "./globals.css";
 import { club, seo, sessions } from "@/content/site";
 import { img } from "@/content/images";
@@ -15,8 +15,10 @@ import { Nav } from "@/components/layout/Nav";
 import { Footer } from "@/components/layout/Footer";
 import { LightboxProvider } from "@/components/fx/Lightbox";
 
-const anton = Anton({ weight: "400", subsets: ["latin"], variable: "--font-anton", display: "swap" });
-// Anton is the LCP font (hero headline), so only it is preloaded; Inter swaps in.
+// Graduate, the collegiate face from the club's shirt print, sets every title.
+// It's the LCP font (hero headline), so only it is preloaded; the rest swap in.
+const graduate = Graduate({ weight: "400", subsets: ["latin"], variable: "--font-graduate", display: "swap" });
+const anton = Anton({ weight: "400", subsets: ["latin"], variable: "--font-anton", display: "swap", preload: false });
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap", preload: false });
 
 export const metadata: Metadata = {
@@ -94,7 +96,7 @@ function JsonLd() {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const logo = img("logo");
   return (
-    <html lang="en-GB" className={`${anton.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang="en-GB" className={`${graduate.variable} ${anton.variable} ${inter.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: introScript }} />
         <JsonLd />
