@@ -421,18 +421,6 @@ html[data-intro].intro-skip {
   }
 }
 
-/* Custom cursor hides the system pointer, except where you type. */
-html.has-cursor,
-html.has-cursor * {
-  cursor: none !important;
-}
-html.has-cursor input,
-html.has-cursor textarea,
-html.has-cursor select,
-html.has-cursor iframe {
-  cursor: auto !important;
-}
-
 /* Badge: the original black-lettered logo on light, the bone-lettered one in dark bands. */
 .logo-for-dark {
   display: none;
