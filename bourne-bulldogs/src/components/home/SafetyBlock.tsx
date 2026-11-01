@@ -41,7 +41,7 @@ export function SafetyBlock({ heading, sub, n, full = false, id, dark = false }:
           {safety.badges.map((b, i) => (
             <li key={b.title} className="flex flex-col gap-4 bg-ink p-6 md:p-7">
               <DrawIcon name={b.icon} className="h-12 w-12 text-orange" delay={i * 0.12} />
-              <h3 className="display text-[1.7rem] leading-[0.95]">{b.title}</h3>
+              <h3 className="font-[family-name:var(--font-anton)] text-[1.7rem] uppercase leading-[0.95]">{b.title}</h3>
               <p className="text-[0.95rem] leading-relaxed text-muted">{b.body}</p>
             </li>
           ))}
