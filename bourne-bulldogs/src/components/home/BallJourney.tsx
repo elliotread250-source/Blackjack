@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { Basketball } from "@/components/fx/Basketball";
+import { swishNet } from "@/components/fx/net-swish";
 import { gsap, ScrollTrigger, useIdleGSAP } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/motion-pref";
 
@@ -12,7 +13,7 @@ import { prefersReducedMotion } from "@/lib/motion-pref";
  * Children mark the route with data attributes:
  *   [data-ball-start]  box in the hero where the ball sits at rest
  *   [data-ball-hoop]   the hoop graphic (rim sits 124/220 down its height)
- *   [data-net]         the net group, which kicks when the ball goes through
+ *   [data-net]         the net group, which swishes when the ball goes through
  * The ball lives in this wrapper's stacking context, between the hoop's back
  * and front layers, so it really passes through the rim.
  */
@@ -95,7 +96,7 @@ export function BallJourney({ children }: { children: React.ReactNode }) {
               if (!net) return;
               if (self.progress > 0.93 && self.direction > 0 && !swished) {
                 swished = true;
-                gsap.fromTo(net, { scaleY: 1, skewX: 0 }, { scaleY: 1.22, skewX: 4, duration: 0.16, yoyo: true, repeat: 1, ease: "power2.out" });
+                swishNet(net);
               }
               if (self.progress < 0.85) swished = false;
             },
