@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Graduate } from "next/font/google";
 import type { Product } from "@/content/site";
@@ -12,14 +12,15 @@ const graduate = Graduate({ weight: "400", subsets: ["latin"], display: "swap", 
 const CAP = 0.7;
 /** Average uppercase advance as a fraction of font size, for fitting long names. */
 const ADVANCE = 0.7;
-/** Average digit advance as a fraction of font size, for fitting the number. */
-const DIGIT = 0.58;
 /** Print sizes relative to the measured print areas: a full-size back print. */
 const NAME_SCALE = 1.25;
 const NAME_WIDTH = 1.15;
 const NUMBER_SCALE = 1.12;
 /** How far the middle of the name rises above its ends, per unit of its width. */
 const ARCH = 0.07;
+
+// Measuring must happen before paint, but useLayoutEffect can't run on the server.
+const useBeforePaint = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /** The two heat-press passes: a wide grey keyline, then the black letters on top. */
 const LAYERS = [
@@ -40,16 +41,13 @@ export function ShirtPreview({ product, image, surname, number, supporter }: { p
   const p = product.print;
   const name = supporter ? "" : surname.toUpperCase();
   const num = supporter ? "" : number;
-  const ghost = !supporter && !name && !num;
-  const showName = ghost ? "SURNAME" : name;
-  const showNum = ghost ? "00" : num;
 
   // viewBox is 0-100 on both axes, matching the square photo.
   const x = p.x * 100;
   const nameH = (p.name[1] - p.name[0]) * 100;
   let nameSize = (nameH / CAP) * NAME_SCALE;
   const maxW = p.nameMaxWidth * 100 * NAME_WIDTH;
-  const estimated = showName.length * nameSize * ADVANCE;
+  const estimated = name.length * nameSize * ADVANCE;
   if (estimated > maxW) nameSize *= maxW / estimated;
   const nameW = Math.min(estimated, maxW);
   const rise = nameW * ARCH;
@@ -60,27 +58,44 @@ export function ShirtPreview({ product, image, surname, number, supporter }: { p
   const peak = rise * (half / (nameW / 2 || 1)) ** 2;
   const arch = `M${x - half} ${nameBaseline}Q${x} ${nameBaseline - 2 * peak} ${x + half} ${nameBaseline}`;
 
-  let numSize = ((p.number[1] - p.number[0]) * 100 * NUMBER_SCALE) / CAP;
-  const numMaxW = maxW * 1.2;
-  const numW = showNum.length * numSize * DIGIT;
-  if (numW > numMaxW) numSize *= numMaxW / numW;
+  // The number may be no wider than the name's space across the shoulders, so
+  // it stays on the garment. Its real drawn width (outline included) is
+  // measured, and it shrinks just enough when a wide pair like 88 needs it.
+  const baseNumSize = ((p.number[1] - p.number[0]) * 100 * NUMBER_SCALE) / CAP;
+  const numMaxW = p.nameMaxWidth * 100;
+  const numRef = useRef<SVGTextElement>(null);
+  const [numFit, setNumFit] = useState(1);
+  const [fontsReady, setFontsReady] = useState(false);
+  useEffect(() => {
+    document.fonts?.ready.then(() => setFontsReady(true));
+  }, []);
+  useBeforePaint(() => {
+    const el = numRef.current;
+    if (!el) return;
+    const drawn = el.getBBox().width + Number(el.getAttribute("stroke-width"));
+    const next = Math.min(1, numMaxW / (drawn / numFit));
+    if (Math.abs(next - numFit) > 0.005) setNumFit(next);
+  }, [num, baseNumSize, numMaxW, numFit, fontsReady]);
+  const numSize = baseNumSize * numFit;
+  // A shrunk number stays centred in its print area rather than sinking.
+  const numBaseline = p.number[1] * 100 - ((baseNumSize - numSize) * CAP) / 2;
 
   const label = supporter
     ? `${product.short}, plain back (supporter)`
     : `${product.short} back printed with ${name || "no surname"} and ${num ? `number ${num}` : "no number"}`;
 
-  const print = (fill: string, extra: number) => (
+  const print = (fill: string, extra: number, measure = false) => (
     <g textAnchor="middle" fill={fill} stroke={fill} strokeLinejoin="round">
-      {showName && (
+      {name && (
         <text fontSize={nameSize} strokeWidth={nameSize * (0.07 + extra * 0.05)}>
           <textPath href={`#${id}-arch`} startOffset="50%">
-            {showName}
+            {name}
           </textPath>
         </text>
       )}
-      {showNum && (
-        <text x={x} y={p.number[1] * 100} fontSize={numSize} letterSpacing={-numSize * 0.02} strokeWidth={numSize * (0.055 + extra * 0.03)}>
-          {showNum}
+      {num && (
+        <text ref={measure ? numRef : undefined} x={x} y={numBaseline} fontSize={numSize} letterSpacing={-numSize * 0.02} strokeWidth={numSize * (0.055 + extra * 0.03)}>
+          {num}
         </text>
       )}
     </g>
@@ -100,9 +115,9 @@ export function ShirtPreview({ product, image, surname, number, supporter }: { p
           </filter>
           <mask id={`${id}-print`}>{print("#fff", LAYERS[0].extra)}</mask>
         </defs>
-        <g filter={`url(#${id}-ink)`} opacity={ghost ? 0.28 : 0.96} style={{ transition: "opacity .3s" }}>
-          {LAYERS.map((l) => (
-            <g key={l.fill}>{print(l.fill, l.extra)}</g>
+        <g filter={`url(#${id}-ink)`} opacity={0.96}>
+          {LAYERS.map((l, i) => (
+            <g key={l.fill}>{print(l.fill, l.extra, i === 0)}</g>
           ))}
           {/* The garment's shading over the print: folds darken it, highlights catch it. */}
           <image href={image.src} width="100" height="100" preserveAspectRatio="xMidYMid slice" mask={`url(#${id}-print)`} opacity="0.5" style={{ mixBlendMode: "soft-light" }} />
