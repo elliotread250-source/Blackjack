@@ -53,7 +53,7 @@
   --color-red: #cd232a;
   --color-tan: #ad9272;
 
-  --font-display: var(--font-anton), "Arial Narrow", Impact, sans-serif;
+  --font-display: var(--font-graduate), "Graduate", Rockwell, Georgia, serif;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 
   --radius-card: 10px;
@@ -131,8 +131,22 @@ html.lenis body {
     font-family: var(--font-display);
     text-transform: uppercase;
     line-height: 0.86;
-    letter-spacing: 0.005em;
+    letter-spacing: -0.01em;
     font-weight: 400;
+    /* Graduate is far wider than a condensed face, so size it by its capitals:
+       titles keep their height and their sizes still fit the layout. */
+    font-size-adjust: cap-height 0.6;
+  }
+
+  /* The box a heading's word or letter slides up out of. It reaches past the
+     tight line box (padding cancelled by margin, so spacing is unchanged), so
+     tall capitals and their outline are never clipped at the top or bottom. */
+  .reveal-mask {
+    display: inline-block;
+    overflow: hidden;
+    vertical-align: bottom;
+    padding: 0.18em 0.08em;
+    margin: -0.18em -0.08em;
   }
 
   .eyebrow {
@@ -459,4 +473,13 @@ dialog {
   .cue {
     animation: none;
   }
+}
+
+/* Titles look like the shirt print: black letters with a light grey keyline.
+   Unlayered on purpose so it wins over colour utilities; accent spans inside
+   a title keep their own colour. */
+:is(h1, h2, h3).display {
+  color: #121212;
+  -webkit-text-stroke: 0.07em #b5b5b5;
+  paint-order: stroke fill;
 }
