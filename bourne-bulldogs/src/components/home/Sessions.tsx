@@ -69,7 +69,7 @@ export function Sessions() {
                   0{i + 1}
                 </div>
                 <p className="eyebrow text-orange">{s.label}</p>
-                <p className="display mt-4 whitespace-nowrap text-4xl leading-[0.9] sm:text-6xl md:text-[4.2vw] 2xl:text-[4.25rem]">
+                <p className="display mt-4 whitespace-nowrap text-5xl leading-[0.9] sm:text-7xl md:text-[5.5vw] xl:text-8xl">
                   <span className="sr-only">
                     {s.startDisplay}pm to {s.endDisplay}
                   </span>
