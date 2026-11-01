@@ -29,7 +29,7 @@ export function Footer() {
 
         <div className="md:col-span-3">
           <h2 className="eyebrow mb-4 text-orange">Training</h2>
-          <p className="font-bold">Every Saturday</p>
+          <p className="font-bold">Every Saturday (term time)</p>
           <ul className="mt-2 space-y-1 text-muted">
             {sessions.map((s) => (
               <li key={s.id}>
@@ -77,8 +77,9 @@ export function Footer() {
         </nav>
       </div>
 
-      <div className="container-x flex flex-col gap-2 border-t border-bone/10 py-6 text-sm text-muted sm:flex-row sm:justify-between">
+      <div className="container-x flex flex-col gap-3 border-t border-bone/10 py-6 text-sm text-muted sm:flex-row sm:items-center sm:justify-between">
         <p>© {new Date().getFullYear()} {club.name}</p>
+        <p className="self-start rounded-[8px] border border-bone/15 px-3 py-1.5 sm:self-auto">Website design &amp; creation by Elliot Read</p>
         <p>Bourne, Lincolnshire</p>
       </div>
 
