@@ -55,7 +55,9 @@ export function Sessions() {
         </div>
 
         <div data-pin className="relative mt-12 md:mt-16">
-          <CourtLines variant="key" className="absolute -left-10 top-1/2 hidden h-[130%] -translate-y-1/2 text-orange/25 lg:block" strokeWidth={1.5} />
+          {/* Full court markings behind the cards: across on wider screens, upright on phones. */}
+          <CourtLines variant="court" className="absolute left-1/2 top-1/2 hidden h-[125%] max-w-[106%] -translate-x-1/2 -translate-y-1/2 text-orange/40 md:block" strokeWidth={5} />
+          <CourtLines variant="courtTall" className="absolute left-1/2 top-1/2 w-[108%] max-w-none -translate-x-1/2 -translate-y-1/2 text-orange/40 md:hidden" strokeWidth={4} />
           <div className="relative grid gap-5 md:grid-cols-2 md:gap-6">
             {sessions.map((s, i) => (
               <article
@@ -67,7 +69,7 @@ export function Sessions() {
                   0{i + 1}
                 </div>
                 <p className="eyebrow text-orange">{s.label}</p>
-                <p className="display mt-4 text-6xl leading-[0.9] sm:text-7xl md:text-[5.5vw] xl:text-8xl">
+                <p className="display mt-4 whitespace-nowrap text-4xl leading-[0.9] sm:text-6xl md:text-[4.2vw] 2xl:text-[4.25rem]">
                   <span className="sr-only">
                     {s.startDisplay}pm to {s.endDisplay}
                   </span>
