@@ -39,7 +39,7 @@ function SkillCard({ skill, index }: { skill: Skill; index: number }) {
             </span>
           </span>
           <span>
-            <span className="display block text-5xl">{skill.title}</span>
+            <span className="display block text-4xl sm:text-5xl">{skill.title}</span>
             <span className="mt-2 block text-muted">{skill.front}</span>
           </span>
         </span>
