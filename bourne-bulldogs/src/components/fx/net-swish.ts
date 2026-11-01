@@ -6,21 +6,24 @@ import { NET_RING_COUNT, netPaths, type NetRow } from "@/components/fx/Hoop";
 const running = new WeakMap<Element, gsap.core.Timeline>();
 
 /**
- * A swish through the net: a wave runs down it ring by ring. Each ring
- * pinches in and stretches down just after the one above, the lower rings
- * whip further and sway with the ball's spin, then all of it springs back.
+ * A swish through the net: a wave runs down it row by row. Each row pinches
+ * in and stretches down just after the one above, the lower rows whip
+ * further and sway with the ball's spin, then all of it springs back.
+ * Takes the [data-net] group; the net's back half lives in the HoopBack svg
+ * beside it, so both halves are found through their shared container.
  */
 export function swishNet(net: Element) {
-  const strands = net.querySelector("[data-net-strands]");
-  const rings = net.querySelector("[data-net-rings]");
-  if (!strands || !rings) return;
+  const box = net.closest("svg")?.parentElement;
+  const front = box?.querySelector("[data-net-front]");
+  const back = box?.querySelector("[data-net-back]");
+  if (!front || !back) return;
 
   running.get(net)?.kill();
   const state: NetRow[] = Array.from({ length: NET_RING_COUNT }, () => ({ p: 0, d: 0, s: 0 }));
   const draw = () => {
     const d = netPaths(state);
-    strands.setAttribute("d", d.strands);
-    rings.setAttribute("d", d.rings);
+    front.setAttribute("d", d.front);
+    back.setAttribute("d", d.back);
   };
 
   const tl = gsap.timeline({ onUpdate: draw, onComplete: draw });
