@@ -56,7 +56,7 @@ export function Hero({ desktop, mobile }: { desktop: SiteImage; mobile: SiteImag
               {lines.map((line) => (
                 <span key={line} aria-hidden className="block whitespace-nowrap">
                   {line.split("").map((ch) => (
-                    <span key={i} className="inline-block overflow-hidden pb-[0.04em] align-bottom">
+                    <span key={i} className="reveal-mask">
                       <span className="hero-letter" style={{ ["--i" as string]: i++ }}>
                         {ch.toUpperCase()}
                       </span>
