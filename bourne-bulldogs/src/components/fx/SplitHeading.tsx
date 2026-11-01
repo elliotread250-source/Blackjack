@@ -17,7 +17,7 @@ type Props = {
 
 const container: Variants = { hidden: {}, show: (delay: number) => ({ transition: { staggerChildren: 0.06, delayChildren: delay } }) };
 const piece: Variants = {
-  hidden: { y: "110%" },
+  hidden: { y: "135%" },
   show: { y: "0%", transition: { duration: 0.85, ease: [0.16, 1, 0.3, 1] } },
 };
 
@@ -40,7 +40,7 @@ export function SplitHeading({ text, as = "h2", className, letters = false, dela
       custom: delay,
     },
     [<span key="sr" className="sr-only">{text}</span>, ...words.map((word, wi) => (
-      <span key={wi} aria-hidden className="inline-block overflow-hidden pb-[0.06em] align-bottom">
+      <span key={wi} aria-hidden className="reveal-mask">
         {letters ? (
           word.split("").map((ch, ci) => (
             <m.span key={ci} variants={piece} className="inline-block will-change-transform">
