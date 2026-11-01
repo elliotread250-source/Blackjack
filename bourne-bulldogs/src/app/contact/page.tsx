@@ -27,14 +27,9 @@ export default function ContactPage() {
             <h2 id="details-heading" className="display text-5xl md:text-6xl">
               Find us
             </h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-              <Button href={club.phoneHref} variant="secondary" magnetic={false} icon={<Icon d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z" />}>
-                {club.phoneDisplay}
-              </Button>
-              <Button href={`mailto:${club.email}`} variant="secondary" magnetic={false} icon={<Icon d="M3 6h18v12H3zM3 7l9 7 9-7" />} className="normal-case tracking-normal">
-                Email us
-              </Button>
-            </div>
+            <Button href={club.phoneHref} variant="secondary" magnetic={false} icon={<Icon d="M5 3h4l2 5-2.5 1.5a11 11 0 0 0 6 6L16 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 5a2 2 0 0 1 2-2z" />}>
+              {club.phoneDisplay}
+            </Button>
             <AvailabilityNotice variant="compact" />
             <dl className="grid gap-6 rounded-[12px] border border-bone/10 bg-coal p-6 sm:grid-cols-2">
               <div>
