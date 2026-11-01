@@ -33,7 +33,7 @@ export function PageHero({ title, intro, image, eyebrow, position = "center", co
           {words.map((word, wi) => (
             <span key={wi} aria-hidden className="inline-block whitespace-nowrap">
               {word.map(({ ch, i }) => (
-                <span key={i} className="inline-block overflow-hidden align-bottom">
+                <span key={i} className="reveal-mask">
                   <span className="hero-letter" style={{ ["--i" as string]: i }}>
                     {ch}
                   </span>
