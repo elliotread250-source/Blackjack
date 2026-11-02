@@ -199,8 +199,8 @@ export const team: { heading: string; intro: string; members: TeamMember[] } = {
     },
     {
       name: "Elliot Read",
-      role: "Player & Coach-in-Training",
-      bio: "A keen player with huge enthusiasm, planning to gain his coaching licence as soon as he's old enough.",
+      role: "Player & Coach",
+      bio: "A keen player with huge enthusiasm who has now gained his coaching licence and helps coach at the club.",
       image: "teamElliot",
       initials: "ER",
     },
