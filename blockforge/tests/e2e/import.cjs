@@ -237,12 +237,18 @@ fs.writeFileSync(zipPath, zip(files));
     await openPacks(page);
     const cdp = await context.newCDPSession(page);
     const list = await page.evaluate(() => { const r = Array.from(document.querySelectorAll('.bf-list')).find((e) => e.offsetParent).getBoundingClientRect(); return { x: r.x + r.width / 2, top: r.top, bottom: r.bottom }; });
-    // swipe up (finger scroll) until the last row is fully inside the list
+    // swipe up (finger scroll) until the last row is fully inside the list. Move at finger speed
+    // and stop before lifting: an instant swipe is a fling, and Chromium 153+ swallows the next
+    // tap for about a second because it treats it as the tap that stops the fling.
     const rowRect = () => page.evaluate(() => { const r = document.querySelector('[data-pack="custom"]').getBoundingClientRect(); return { top: r.top, bottom: r.bottom, x: r.x + r.width / 2 }; });
     for (let swipe = 0; swipe < 4 && (await rowRect()).bottom > list.bottom; swipe++) {
       const y0 = list.bottom - 10, y1 = list.top + 10;
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: list.x, y: y0, id: 1 }] });
-      for (let i = 1; i <= 8; i++) await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: list.x, y: y0 + ((y1 - y0) * i) / 8, id: 1 }] });
+      for (let i = 1; i <= 8; i++) {
+        await cdp.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x: list.x, y: y0 + ((y1 - y0) * i) / 8, id: 1 }] });
+        await page.waitForTimeout(16);
+      }
+      await page.waitForTimeout(100);
       await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
       await page.waitForTimeout(300);
     }
