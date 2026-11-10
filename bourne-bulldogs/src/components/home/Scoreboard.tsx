@@ -7,12 +7,17 @@ import { prefersReducedMotion } from "@/lib/motion-pref";
 
 type Stat = { value: number; to?: number; from?: number; decimals?: number; label: string };
 
+/**
+ * The server sends the real number, so search engines and AI assistants (which read the page
+ * without running the animation) never see a row of zeros. Once the page is live in a browser,
+ * the number winds back to its start and counts up when the scoreboard scrolls into view.
+ */
 function Count({ to, from = 0, decimals = 0, run }: { to: number; from?: number; decimals?: number; run: boolean }) {
-  const [v, setV] = useState(from);
+  const [v, setV] = useState(to);
   useEffect(() => {
-    if (!run) return;
-    if (prefersReducedMotion()) {
-      setV(to);
+    if (prefersReducedMotion()) return;
+    if (!run) {
+      setV(from);
       return;
     }
     const c = animate(from, to, { duration: 1.6, ease: [0.16, 1, 0.3, 1], onUpdate: setV });
