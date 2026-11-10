@@ -32,5 +32,9 @@ export function IntroLoader() {
   return null;
 }
 
-/** Runs in <head> before paint: first visit this session, motion allowed, show the intro. */
-export const introScript = `try{if(!sessionStorage.getItem("bb-intro")&&!matchMedia("(prefers-reduced-motion: reduce)").matches){document.documentElement.dataset.intro="1";sessionStorage.setItem("bb-intro","1")}}catch(e){}`;
+/**
+ * Runs in <head> before paint. The intro plays when the homepage is the first page of the
+ * session and motion is allowed. Anyone who lands somewhere else (a shared /join link, say)
+ * goes straight to the content, and isn't shown the intro later in that session either.
+ */
+export const introScript = `try{if(!sessionStorage.getItem("bb-intro")){sessionStorage.setItem("bb-intro","1");if(location.pathname==="/"&&!matchMedia("(prefers-reduced-motion: reduce)").matches){document.documentElement.dataset.intro="1"}}}catch(e){}`;
