@@ -1,7 +1,7 @@
 "use client";
 
 import { getImageProps } from "next/image";
-import { useRef } from "react";
+import { Fragment, useRef } from "react";
 import { Button } from "@/components/ui/Button";
 import { CourtLines } from "@/components/fx/CourtLines";
 import { Basketball } from "@/components/fx/Basketball";
@@ -53,16 +53,21 @@ export function Hero({ desktop, mobile }: { desktop: SiteImage; mobile: SiteImag
               <span className="display inline-block -rotate-2 rounded-[6px] bg-orange px-3 py-1.5 text-2xl leading-none text-ink md:text-3xl">{club.tagline}</span>
             </p>
             <h1 id="hero-title" data-hero-title aria-label={club.shortName} className="display text-[22.5vw] leading-[0.8] sm:text-[19vw] lg:text-[15.2vw] 2xl:text-[14.5rem]">
-              {lines.map((line) => (
-                <span key={line} aria-hidden className="block whitespace-nowrap">
-                  {line.split("").map((ch) => (
-                    <span key={i} className="reveal-mask">
-                      <span className="hero-letter" style={{ ["--i" as string]: i++ }}>
-                        {ch.toUpperCase()}
+              {lines.map((line, li) => (
+                <Fragment key={line}>
+                  {/* A real space between the lines, so anything reading the page as text gets
+                      "Bourne Bulldogs", not one run-together word. It takes up no room on screen. */}
+                  {li > 0 ? " " : null}
+                  <span aria-hidden className="block whitespace-nowrap">
+                    {line.split("").map((ch) => (
+                      <span key={i} className="reveal-mask">
+                        <span className="hero-letter" style={{ ["--i" as string]: i++ }}>
+                          {ch.toUpperCase()}
+                        </span>
                       </span>
-                    </span>
-                  ))}
-                </span>
+                    ))}
+                  </span>
+                </Fragment>
               ))}
             </h1>
           </div>

@@ -7,6 +7,10 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "SAMEORIGIN" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), interest-cohort=()" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+  // The parts of a content security policy that can't break a page: no plugins, no framing by
+  // other sites, no <base> hijack, and forms only post back here. Scripts and styles are left
+  // alone because Next.js writes its own inline ones.
+  { key: "Content-Security-Policy", value: "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'" },
 ];
 
 /** @type {import("next").NextConfig} */
@@ -26,6 +30,9 @@ const nextConfig = {
   async redirects() {
     // Old Squarespace URLs, so Google results and shared links keep working.
     return [
+      // One address for the site: bournebulldogs.com sends everyone to www, which is the address
+      // the sitemap and canonical tags already give.
+      { source: "/:path*", has: [{ type: "host", value: "bournebulldogs.com" }], destination: "https://www.bournebulldogs.com/:path*", permanent: true },
       { source: "/cluboverview", destination: "/club-overview", statusCode: 301 },
       { source: "/cart", destination: "/merch", statusCode: 301 },
       { source: "/home", destination: "/", statusCode: 301 },
