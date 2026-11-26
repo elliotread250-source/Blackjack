@@ -20,6 +20,27 @@ export interface InteractHooks {
   onPlace(x: number, y: number, z: number, v: number): void;         // sound
   onSwing(): void;
   onUse(x: number, y: number, z: number, v: number): void;           // door/trapdoor toggled (sound)
+  /** Right-click on a block that does something of its own (bed, chest, crafting table). True = handled. */
+  onInteract?(x: number, y: number, z: number, v: number): boolean;
+}
+
+/**
+ * Survival rules, set on an Interaction to switch it from creative (instant breaking, endless
+ * blocks) to survival (timed mining, blocks come from the inventory).
+ */
+export interface SurvivalRules {
+  /** Seconds the held tool takes to break packed block v (Infinity = unbreakable). */
+  breakTime(v: number): number;
+  /** The player finished mining a block (tool wear, hunger). Drops come through onBreak. */
+  onMined(x: number, y: number, z: number, v: number): void;
+  /** Mining progress 0..1 on the targeted block, or null when not mining. */
+  onProgress(hit: RayHit | null, progress: number): void;
+  /** Block id in the selected slot (0 when it holds an item or nothing). */
+  heldBlock(): number;
+  /** A block from the selected slot was placed. */
+  consume(): void;
+  /** Right-click with a non-block item (food). True = handled. */
+  useItem(): boolean;
 }
 
 export interface Placement {
@@ -163,6 +184,12 @@ export function canSurvive(world: World, x: number, y: number, z: number, v: num
     }
     const a = world.get(x, y + 1, z);
     return (a & ID_MASK) === id && ((a >> 10) & 8) !== 0 && sturdyFace(world, x, y - 1, z, UP);
+  }
+  if (shape === S.bed) {
+    // each half needs the other one
+    const d = meta & 3, sgn = meta & 4 ? -1 : 1;
+    const o = world.get(x + H_DX[d] * sgn, y, z + H_DZ[d] * sgn);
+    return (o & ID_MASK) === id && ((o >> 10) & 3) === d && (((o >> 10) & 4) !== 0) !== ((meta & 4) !== 0);
   }
   if (shape === S.layer) {
     const b = world.get(x, y - 1, z) & ID_MASK;
@@ -308,6 +335,13 @@ export function placementFor(id: number, hit: RayHit, player: Player, world: Wor
       extra = { x, y: y + 1, z, v: pack(id, meta | 8) };
       break;
     }
+    case S.bed: {
+      const hx = x + H_DX[dir], hz = z + H_DZ[dir];
+      if (!canReplace(world.get(hx, y, hz), id, hit, false)) return null;
+      meta = dir;
+      extra = { x: hx, y, z: hz, v: pack(id, dir | 4) };
+      break;
+    }
     case S.trapdoor: {
       // Facing = the side the panel rests against when open: the clicked wall, or the far
       // side (look direction) when placed on a floor or ceiling.
@@ -325,7 +359,7 @@ export function placementFor(id: number, hit: RayHit, player: Player, world: Wor
       else if (ORIENT[id] === 2) meta = (dir + 2) & 3;   // the front faces the player
   }
   const v = pack(id, meta);
-  if (shape !== S.door && !canSurvive(world, x, y, z, v)) return null;
+  if (shape !== S.door && shape !== S.bed && !canSurvive(world, x, y, z, v)) return null;
   if (SOLID[id] && intersectsPlayer(world, player, x, y, z, v)) return null;
   if (extra && intersectsPlayer(world, player, extra.x, extra.y, extra.z, extra.v)) return null;
   return extra ? { x, y, z, v, extra } : { x, y, z, v };
@@ -339,6 +373,11 @@ export class Interaction {
   private hooks: InteractHooks;
   private breakDelay = 0;
   private useDelay = 0;
+  /** Set for survival worlds. */
+  rules: SurvivalRules | null = null;
+  private mineKey = '';
+  private mineT = 0;
+  private swingT = 0;
 
   constructor(world: World, player: Player, hotbar: Hotbar, hooks: InteractHooks) {
     this.world = world;
@@ -348,6 +387,7 @@ export class Interaction {
   }
 
   update(dt: number, input: Input, hit: RayHit | null): void {
+    if (this.rules) { this.updateSurvival(dt, input, hit); return; }
     // Middle click: pick block.
     if (input.actionPressed('pick') && hit) {
       const id = hit.block & ID_MASK;
@@ -381,6 +421,44 @@ export class Interaction {
     }
   }
 
+  /** Survival: hold to mine (time depends on the block and the tool), blocks come from the inventory. */
+  private updateSurvival(dt: number, input: Input, hit: RayHit | null) {
+    const r = this.rules!;
+    // Middle click: jump to the hotbar slot that already holds this block.
+    if (input.actionPressed('pick') && hit) {
+      const have = this.hotbar.slots.indexOf(hit.block & ID_MASK);
+      if (have >= 0) this.hotbar.select(have);
+    }
+    if (input.actionPressed('attack')) { this.hooks.onSwing(); this.swingT = 0.25; }
+    if (input.actionDown('attack') && hit) {
+      const key = hit.x + ',' + hit.y + ',' + hit.z + ',' + this.hotbar.selected;
+      if (key !== this.mineKey) { this.mineKey = key; this.mineT = 0; }
+      const need = r.breakTime(hit.block);
+      this.mineT += dt;
+      this.swingT -= dt;
+      if (this.swingT <= 0) { this.swingT = 0.25; this.hooks.onSwing(); }
+      if (need < Infinity && this.mineT >= need) {
+        const v = hit.block;
+        this.mineKey = ''; this.mineT = 0;
+        r.onProgress(null, 0);
+        this.breakBlock(hit.x, hit.y, hit.z);
+        r.onMined(hit.x, hit.y, hit.z, v);
+      } else r.onProgress(hit, need < Infinity ? this.mineT / need : 0);
+    } else {
+      if (this.mineKey) r.onProgress(null, 0);
+      this.mineKey = ''; this.mineT = 0;
+    }
+
+    if (this.useDelay > 0) this.useDelay -= dt;
+    if (input.actionPressed('use')) {
+      this.useDelay = USE_REPEAT;
+      this.use(hit);
+    } else if (input.actionDown('use') && this.useDelay <= 0) {
+      this.useDelay = Math.max(0, this.useDelay + USE_REPEAT);
+      this.use(hit);
+    }
+  }
+
   /** Remove a block (both halves of a door) and pop what depended on it. */
   breakBlock(x: number, y: number, z: number): void {
     const w = this.world;
@@ -398,19 +476,28 @@ export class Interaction {
         this.settle(x, oy, z);
       }
     }
+    if (SHAPE[id] === S.bed) {
+      const m = old >> 10, d = m & 3, sgn = m & 4 ? -1 : 1;
+      const ox = x + H_DX[d] * sgn, oz = z + H_DZ[d] * sgn;
+      const ov = w.get(ox, y, oz);
+      if ((ov & ID_MASK) === id) { w.set(ox, y, oz, 0); this.hooks.onBreak(ox, y, oz, ov); this.settle(ox, y, oz); }
+    }
     this.settle(x, y, z);
   }
 
   private use(hit: RayHit | null) {
     const p = this.player, w = this.world;
-    const held = this.hotbar.current();
+    const r = this.rules;
+    const held = r ? r.heldBlock() : this.hotbar.current();
     if (hit) {
       const v = hit.block, id = v & ID_MASK, shape = SHAPE[id];
+      if (!p.sneaking && this.hooks.onInteract?.(hit.x, hit.y, hit.z, v)) { this.useDelay = 0.4; return; }
       if ((shape === S.door || shape === S.trapdoor) && (!p.sneaking || !held)) {
         this.toggle(hit.x, hit.y, hit.z, v);
         return;
       }
     }
+    if (r && !held) { if (r.useItem()) this.useDelay = 0.45; return; }
     if (!held) return;
     let h = hit;
     if (held === LILY) {
@@ -424,6 +511,7 @@ export class Interaction {
     w.set(pl.x, pl.y, pl.z, pl.v);
     if (pl.extra) w.set(pl.extra.x, pl.extra.y, pl.extra.z, pl.extra.v);
     this.hooks.onPlace(pl.x, pl.y, pl.z, pl.v);
+    if (r) r.consume();
     this.hooks.onSwing();
     this.settle(pl.x, pl.y, pl.z);
     if (pl.extra) this.settle(pl.extra.x, pl.extra.y, pl.extra.z);

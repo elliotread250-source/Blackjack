@@ -9,6 +9,7 @@ import {
   COUNT, SHAPE, S, LAYER, L, TINT, TINTMASK, FACE_TEX, FLUID,
 } from '../blocks/registry';
 import { DEFAULT_TINT } from '../blocks/textures';
+import { ITEM_BASE, applyItemIcon, clearItemIcon } from '../game/items';
 
 export interface IconSheet { url: string; size: number; cols: number; apply(el: HTMLElement, id: number): void; }
 
@@ -224,6 +225,7 @@ function drawBlockIcon(cell: Cell, id: number, tiles: TileFn): void {
     case S.carpet: drawBox(cell, id, tiles, [0, 1, 0, P, 0, 1]); return;
     case S.trapdoor: drawBox(cell, id, tiles, [0, 1, 0, 3 * P, 0, 1], { north: FACE_TEX[id * 6 + 2], west: FACE_TEX[id * 6 + 2] }); return;
     case S.chest: drawBox(cell, id, tiles, [P, 15 * P, 0, 14 * P, P, 15 * P]); return;
+    case S.bed: drawBox(cell, id, tiles, [0, 1, 0, 9 * P, 0, 1]); return;
     case S.cactus: {
       // Sides are set back one pixel; the top covers the whole block (like the block model).
       const base = { alpha: Alpha.Cutout, tint: null, mask: false, minAlpha: 0 };
@@ -405,6 +407,8 @@ export function buildIcons(atlas: Pick<Atlas, 'tiles'>): IconSheet {
     size: ICON_SIZE,
     cols: COLS,
     apply(el: HTMLElement, id: number) {
+      if (id >= ITEM_BASE) { applyItemIcon(el, id); return; }
+      clearItemIcon(el);
       if (!(id > 0 && id < TOTAL)) {
         el.classList.remove('bf-icon');
         el.style.backgroundPosition = '';

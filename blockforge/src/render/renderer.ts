@@ -65,6 +65,8 @@ export class Renderer {
   private columns = new Map<number, Set<number>>();
   private mats: Materials;
   private sky: Sky;
+  /** Creatures, other players and mining cracks (see entities.ts). Not part of the shadow pass. */
+  readonly overlay = new Group();
   private particles: Particles;
   private hand: Hand;
   private highlight: Highlight;
@@ -144,6 +146,7 @@ export class Renderer {
       this.layerGroups.push(g);
       this.scene.add(g);
     }
+    this.scene.add(this.overlay);
     this.sky = new Sky(this.scene, this.mats.uniforms);
     this.particles = new Particles(this.mats.uniforms);
     this.scene.add(this.particles.mesh);
@@ -545,7 +548,7 @@ export class Renderer {
     u.uShadowBias.value = 0.03 / (sc.far - sc.near);
 
     // draw only opaque + cutout terrain with the depth materials
-    const hide: { visible: boolean }[] = [...this.sky.objects, this.particles.mesh, this.highlight.mesh,
+    const hide: { visible: boolean }[] = [...this.sky.objects, this.particles.mesh, this.highlight.mesh, this.overlay,
       this.layerGroups[2], this.layerGroups[3], this.layerGroups[4]];
     const was = hide.map((o) => o.visible);
     for (const o of hide) o.visible = false;

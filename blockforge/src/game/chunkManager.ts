@@ -49,6 +49,10 @@ export interface ChunkManagerOptions {
   remapPalette: string[] | null;
   meshOptions: MeshOptions;
   renderDistance: number;
+  /** Multiplayer: the world lives on the server, so nothing is written to this browser. */
+  noSave?: boolean;
+  /** Called for every generated column before it is lit (multiplayer applies the room's edits here). */
+  onColumn?: (g: GenChunk) => void;
 }
 
 export class ChunkManager {
@@ -119,6 +123,7 @@ export class ChunkManager {
 
   /** A block changed: (re)arm the debounced save. Cheap enough to call for every block. */
   private noteEdit() {
+    if (this.opts.noSave) return;
     const now = performance.now();
     this.lastEditAt = now;
     if (this.saveTimer !== null) return;
@@ -147,7 +152,7 @@ export class ChunkManager {
    * emergency store, then start the (small, immediately committed) IndexedDB writes.
    */
   flushOnExit(): Promise<void> {
-    if (this.disposed) return Promise.resolve();
+    if (this.disposed || this.opts.noSave) return Promise.resolve();
     if (this.saveTimer !== null) { clearTimeout(this.saveTimer); this.saveTimer = null; }
     storage.journalPending(this.opts.worldId);
     for (const c of this.world.chunks.values()) if (c.modified) storage.journalChunk(this.opts.worldId, c);
@@ -328,6 +333,7 @@ export class ChunkManager {
       if (this.world.chunks.has(key)) continue;
       if (!this.inLoadRange(g.cx, g.cz, 2)) continue;   // player moved away meanwhile
       const t = performance.now();
+      if (this.opts.onColumn) this.opts.onColumn(g);
       this.world.addChunk(new Chunk(g));
       this.stats.lightMs = performance.now() - t;
       n++;
@@ -460,6 +466,7 @@ export class ChunkManager {
   }
 
   private saveChunk(c: Chunk) {
+    if (this.opts.noSave) { c.modified = false; return; }
     const key = chunkKey(c.cx, c.cz);
     c.modified = false;
     this.opts.savedKeys.add(key);
@@ -471,6 +478,7 @@ export class ChunkManager {
 
   /** Save every modified loaded chunk. */
   async saveAll(): Promise<void> {
+    if (this.opts.noSave) return;
     const jobs: Promise<void>[] = [];
     for (const c of this.world.chunks.values()) {
       if (!c.modified) continue;
