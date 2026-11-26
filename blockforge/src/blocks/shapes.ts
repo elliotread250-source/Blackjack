@@ -3,7 +3,7 @@
 // orientation-aware cube texture lookup. Geometry follows the reference game's
 // block models closely (sizes in sixteenths of a block, "pixels").
 import {
-  SHAPE, S, OCCLUDES, FAMILY, FACE_TEX, ORIENT, SOLID, BLOCKS, COUNT, ID, LAYER, L,
+  SHAPE, S, OCCLUDES, FAMILY, FACE_TEX, BED_HEAD_TEX, ORIENT, SOLID, BLOCKS, COUNT, ID, LAYER, L,
 } from './registry';
 import type { Box } from '../types';
 import { H_DX, H_DZ, H_TO_FACE, FACE_TO_H } from '../world/constants';
@@ -425,6 +425,15 @@ export function buildModel(v: number, state: number, rot = 0): ModelBox[] {
       for (let f = 0; f < 6; f++) tex.push(cubeFaceTilePacked(v, f) & 0xffff);
       return [{ box: P(1, 0, 1, 15, 14, 15), tex }];
     }
+    case S.bed: {
+      // meta: bits 0-1 facing (foot -> head), bit 2 = this is the head half
+      const side = FACE_TEX[base + 4], top = m & 4 ? BED_HEAD_TEX[id] : FACE_TEX[base + 2];
+      return [
+        { box: P(0, 3, 0, 16, 9, 16), tex: [side, side, top, FACE_TEX[base + 3], side, side] },
+        { box: P(0, 0, 0, 3, 3, 3), tex: all6(FACE_TEX[base + 3]) }, { box: P(13, 0, 0, 16, 3, 3), tex: all6(FACE_TEX[base + 3]) },
+        { box: P(0, 0, 13, 3, 3, 16), tex: all6(FACE_TEX[base + 3]) }, { box: P(13, 0, 13, 16, 3, 16), tex: all6(FACE_TEX[base + 3]) },
+      ];
+    }
     case S.rod: {
       const axis = m & 3;
       const rotate: ModelBox['rotate'] = axis === 1 ? { axis: 'z', angle: -Math.PI / 2, origin: [0.5, 0.5, 0.5] }
@@ -526,6 +535,7 @@ function shapeBoxes(v: number, nb: NeighborFn, collision: boolean): Box[] {
       return [P(5, h, 5, 11, 7 + h, 11), P(6, 7 + h, 6, 10, 9 + h, 10)];
     }
     case S.chest: return [P(1, 0, 1, 15, 14, 15)];
+    case S.bed: return [P(0, 0, 0, 16, 9, 16)];
     case S.rod: {
       const a = m & 3;
       return [a === 1 ? P(0, 6, 6, 16, 10, 10) : a === 2 ? P(6, 6, 0, 10, 10, 16) : P(6, 0, 6, 10, 16, 10)];

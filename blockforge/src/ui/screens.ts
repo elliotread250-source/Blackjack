@@ -17,7 +17,9 @@ import { ID, COUNT } from '../blocks/registry';
 
 export interface MenuHandlers {
   listWorlds(): Promise<WorldMeta[]>;
-  createWorld(name: string, seed: string): Promise<void>;
+  createWorld(name: string, seed: string, mode?: 'creative' | 'survival'): Promise<void>;
+  /** Open the multiplayer menu (absent in the offline file). */
+  openMultiplayer?(): void;
   playWorld(id: string): Promise<void>;
   deleteWorld(id: string): Promise<void>;
   resume(): void;
@@ -737,6 +739,9 @@ export class Menus {
     cont.el.classList.add('bf-continue');
     cont.el.style.display = 'none';
     const single = button(s.gui, 'Singleplayer', 200, () => this.showWorlds(), 'Create a world or continue one you have played before.');
+    const multi = this.handlers.openMultiplayer
+      ? button(s.gui, 'Multiplayer', 200, () => this.handlers.openMultiplayer!(), 'Play in the same world as your friends. One of you hosts and shares the world code.')
+      : null;
     const dl = this.handlers.offlineDownloadUrl
       ? linkButton(s.gui, 'Download offline version', 200, this.handlers.offlineDownloadUrl)
       : null;
@@ -784,6 +789,7 @@ export class Menus {
       }
       at(single.el, l.cx - 100, y);
       y += 24;
+      if (multi) { at(multi.el, l.cx - 100, y); y += 24; }
       if (dl) { at(dl.el, l.cx - 100, y); y += 24; }
       y += 12;
       at(opts.el, l.cx - 100, y);
@@ -981,6 +987,8 @@ export class Menus {
 
   // ------------------------------------------------------------------ create
   private createUI!: { name: HTMLInputElement; seed: HTMLInputElement; go: Btn };
+  private createMode: 'creative' | 'survival' = 'survival';
+  private createModeRefresh: () => void = () => undefined;
 
   private showCreate() {
     this.createUI.name.value = 'New World';
@@ -1002,9 +1010,14 @@ export class Menus {
     seed.type = 'text'; seed.maxLength = 64; seed.spellcheck = false; seed.autocomplete = 'off';
     seed.placeholder = 'Leave blank for a random seed';
     const seedHint = div('bf-label', s.gui, 'Numbers and words both work.');
-    const mode = button(s.gui, 'Game Mode: Creative', 200, () => undefined, 'Unlimited blocks, flying and instant breaking. The only mode in BlockForge.');
-    mode.el.classList.add('bf-off');
+    const mode = button(s.gui, '', 200, () => { this.createMode = this.createMode === 'survival' ? 'creative' : 'survival'; setMode(); },
+      'Survival: gather, craft, eat and stay alive. Creative: unlimited blocks, flying and instant breaking.');
     const modeHint = div('bf-label', s.gui);
+    const setMode = () => {
+      mode.set(`Game Mode: ${this.createMode === 'survival' ? 'Survival' : 'Creative'}`);
+      modeHint.textContent = this.createMode === 'survival' ? 'Mine, craft, hunt and watch the nights.' : 'Every block, no limits, and you can fly.';
+    };
+    this.createModeRefresh = setMode;
     const go = button(s.gui, 'Create New World', 150, () => void this.doCreate());
     const cancel = button(s.gui, 'Cancel', 150, () => this.showWorlds());
     this.createUI = { name, seed, go };
@@ -1022,7 +1035,7 @@ export class Menus {
       at(seed, l.cx - 100, top + 44);
       at(seedHint, l.cx - 100, top + 67);
       at(mode.el, l.cx - 100, top + 84);
-      modeHint.textContent = '';
+      setMode();
       at(modeHint, l.cx - 100, top + 107);
       at(go.el, l.cx - 154, l.gh - 28);
       at(cancel.el, l.cx + 4, l.gh - 28);
@@ -1035,7 +1048,7 @@ export class Menus {
     this.createUI.go.enable(false);
     const name = this.createUI.name.value.trim() || 'New World';
     try {
-      await this.handlers.createWorld(name, this.createUI.seed.value);
+      await this.handlers.createWorld(name, this.createUI.seed.value, this.createMode);
     } catch (e) {
       console.warn('[menus] createWorld failed', e);
       this.showWorlds();

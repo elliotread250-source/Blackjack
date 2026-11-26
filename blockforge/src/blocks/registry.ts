@@ -8,7 +8,7 @@ export type Category =
 
 export type ShapeName =
   | 'cube' | 'slab' | 'stairs' | 'fence' | 'wall' | 'cross' | 'torch' | 'door' | 'trapdoor'
-  | 'pane' | 'fluid' | 'layer' | 'carpet' | 'cactus' | 'lantern' | 'chest' | 'rod' | 'lily';
+  | 'pane' | 'fluid' | 'layer' | 'carpet' | 'cactus' | 'lantern' | 'chest' | 'rod' | 'lily' | 'bed';
 
 export type LayerName = 'opaque' | 'cutout' | 'translucent' | 'water' | 'lava';
 export type TintName = 'none' | 'grass' | 'foliage' | 'water';
@@ -304,6 +304,10 @@ add({ name: 'seagrass', display: 'Seagrass', cat: 'decor', tex: 'seagrass', shap
 add({ name: 'water', display: 'Water', cat: 'fluids', tex: 'water', shape: 'fluid', layer: 'water', fluid: true, solid: false, opacity: 1, replaceable: true, cullSelf: true, tint: 'water', sound: 'liquid' });
 add({ name: 'lava', display: 'Lava', cat: 'fluids', tex: 'lava', shape: 'fluid', layer: 'lava', fluid: true, solid: false, light: 15, opacity: 0, replaceable: true, cullSelf: true, sound: 'liquid' });
 
+// ---------------------------------------------------------------- beds (added after the fluids so older ids stay put)
+// Two blocks long: the foot is placed where you click, the head one block further away.
+for (const c of DYES) add({ name: `${c}_bed`, display: `${title(c)} Bed`, cat: 'colored', tex: { top: `bed_${c}_foot`, bottom: 'oak_planks', side: `bed_${c}_side` }, shape: 'bed', sound: 'wool' });
+
 // ===========================================================================
 // Derived lookup tables used in the hot loops (mesher, lighting, physics).
 
@@ -312,7 +316,7 @@ export const COUNT = DEFS.length;
 export const ID: Record<string, number> = {};
 DEFS.forEach((d, i) => { ID[d.name] = i; });
 
-export const SHAPES: ShapeName[] = ['cube', 'slab', 'stairs', 'fence', 'wall', 'cross', 'torch', 'door', 'trapdoor', 'pane', 'fluid', 'layer', 'carpet', 'cactus', 'lantern', 'chest', 'rod', 'lily'];
+export const SHAPES: ShapeName[] = ['cube', 'slab', 'stairs', 'fence', 'wall', 'cross', 'torch', 'door', 'trapdoor', 'pane', 'fluid', 'layer', 'carpet', 'cactus', 'lantern', 'chest', 'rod', 'lily', 'bed'];
 export const S = Object.fromEntries(SHAPES.map((s, i) => [s, i])) as Record<ShapeName, number>;
 export const LAYERS: LayerName[] = ['opaque', 'cutout', 'translucent', 'water', 'lava'];
 export const L = Object.fromEntries(LAYERS.map((s, i) => [s, i])) as Record<LayerName, number>;
@@ -392,6 +396,9 @@ for (let i = 0; i < COUNT; i++) {
   }
   for (let k = 0; k < 6; k++) FACE_TEX[i * 6 + k] = textureId(f[k]);
 }
+/** Top texture of the head half of a bed (the pillow), by block id. */
+export const BED_HEAD_TEX = new Uint16Array(COUNT);
+for (let i = 0; i < COUNT; i++) if (DEFS[i].shape === 'bed') BED_HEAD_TEX[i] = textureId(`bed_${DEFS[i].name.replace(/_bed$/, '')}_head`);
 // Extra textures referenced directly by models / effects.
 export const EXTRA_TEX = {
   water_still: textureId('water'),

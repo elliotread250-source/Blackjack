@@ -1342,6 +1342,28 @@ export function generateTexture(name: string): Uint8ClampedArray {
       }
     }
   }
+  if ((m = name.match(/^bed_(.+)_(foot|head|side)$/))) {
+    const c = DYE_RGB[m[1] as Dye];
+    if (c) {
+      const t = wool(r, c);
+      if (m[2] === 'head') {
+        // a pillow in the middle of the head block, so it reads the same from every side
+        t.rect(2, 3, 13, 12, [236, 236, 232]);
+        t.rect(2, 12, 13, 12, [206, 206, 204]);
+        t.rect(3, 4, 12, 4, [250, 250, 248]);
+      } else if (m[2] === 'side') {
+        // the block is 9 pixels tall: blanket on top, a wooden frame and legs underneath
+        const wood: RGB = [150, 110, 62], dark: RGB = [104, 74, 40];
+        t.rect(0, 7, 15, 7, mul(c, 1.12));
+        t.rect(0, 10, 15, 12, wood);
+        t.rect(0, 12, 15, 12, dark);
+        t.rect(0, 13, 15, 15, dark);
+      } else {
+        t.rect(0, 0, 15, 0, mul(c, 0.8));
+      }
+      return t.d;
+    }
+  }
   if ((m = name.match(/^flower_(.+)$/))) return flower(r, m[1]).d;
   if ((m = name.match(/^(stripped_)?(.+?)_(log|log_top|planks|leaves|door_top|door_bottom|trapdoor|sapling)$/))) {
     const w = WOOD_PAL[m[2] as Wood];

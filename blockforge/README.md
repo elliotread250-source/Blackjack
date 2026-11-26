@@ -1,6 +1,6 @@
 # BlockForge
 
-A creative-mode voxel sandbox that runs entirely in the browser. Infinite seeded worlds, 400+ blocks, real shaders, and every texture painted by code at 16x16 so it keeps that chunky pixel look. No installs, no plugins, no downloads at runtime.
+A voxel sandbox that runs entirely in the browser, with creative and survival modes and online multiplayer. Infinite seeded worlds, 400+ blocks, real shaders, and every texture painted by code at 16x16 so it keeps that chunky pixel look. No installs, no plugins, no downloads at runtime.
 
 **Play:** https://blockforge-web-production.up.railway.app
 
@@ -19,7 +19,8 @@ A creative-mode voxel sandbox that runs entirely in the browser. Infinite seeded
 | Right click | Place a block, open doors and trapdoors |
 | Middle click | Pick the block you're looking at |
 | 1 to 9, scroll wheel | Choose a hotbar slot |
-| E | Creative inventory (search, tabs, drag or shift-click into the hotbar) |
+| E | Inventory. Creative: every block. Survival: your pack and the recipe book |
+| T | Chat (multiplayer) |
 | Esc | Pause menu |
 | F1 | Hide the HUD |
 | F2 | Screenshot (downloads a PNG) |
@@ -28,6 +29,22 @@ A creative-mode voxel sandbox that runs entirely in the browser. Infinite seeded
 Every key and mouse button above (except Esc) can be rebound under Options > Controls. Click a binding, press the new key or mouse button, and keys used twice show up in red. Reset Keys puts everything back.
 
 Ctrl+W closes a browser tab, and it sits right next to the sprint key. BlockForge asks before the tab closes and saves your world, but double-tap W or the "Fullscreen on play" option (which lets the game keep Ctrl+W) avoids the problem entirely.
+
+## Survival
+
+Pick Survival when you create a world. Blocks take time to break, and the right tool makes it faster: pickaxes for stone and ore, axes for wood, shovels for dirt and sand, in wood, stone, copper, iron and diamond. Ores need a good enough pickaxe or they drop nothing. E opens your inventory with a recipe book next to it: it lists what you can make from what you carry. Stand near a crafting table for tools, armour and building recipes, and near a furnace to smelt (smelting burns coal, charcoal, logs or planks from your pack).
+
+You have health, hunger and breath. Falls, lava, drowning and starving hurt. Eat apples, melon, stew and cooked meat to stay fed; a full stomach heals you. Hide, copper, iron and diamond armour go in the four slots at the top of the inventory.
+
+Woollies, Tuskers and Longhorns graze by day and drop wool, hide and meat. Shamblers, Skitters and Brutes come out at night and in dark caves, and sunlight wears them down. Left-click to fight; swords hit hardest. If you die you keep your things and wake up at your bed, or at the world spawn.
+
+Beds come in all 16 colours. Right-click one at night to sleep until morning and set your spawn. Chests and barrels hold 27 stacks: right-click to open, shift-click to move a stack across. Breaking a chest gives back what was in it.
+
+## Multiplayer
+
+Title screen > Multiplayer. One player hosts a world (survival or creative) and gets a 5-character world code; friends type the code to join, up to 12 players. Blocks, chests, creatures, the time of day and chat (T) are shared. The server keeps the seed and every changed block; your inventory and position are remembered in your own browser per world code.
+
+Rooms live in the server's memory, so a redeploy or restart ends them. Set `DATA_DIR` to a mounted volume (a Railway volume, for example) and rooms are written there and come back after a restart.
 
 ## Graphics presets and shader packs
 

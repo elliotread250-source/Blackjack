@@ -23,6 +23,10 @@ import { useKeybindSettings } from './game/keybinds';
 import { storage } from './world/storage';
 import { BLOCKS, ID } from './blocks/registry';
 import type { WorldMeta } from './types';
+import { Inventory } from './game/inventory';
+import { Entities } from './render/entities';
+import { Net, wsUrl } from './game/net';
+import { StatusBars, SurvivalScreen, HotbarCounts, DeathScreen, ChatBox, RoomBadge, MultiplayerMenu } from './ui/survivalUi';
 
 const VERSION = '1.0.0';
 
@@ -144,12 +148,20 @@ async function boot() {
     isFlying: () => !!gameRef?.player.flying,
     toggleFly: () => gameRef?.player.toggleFlight(),
   });
-  const game = new Game({ renderer, input, hud, inventory, hotbar, sounds, settings, touch });
+  const inv = new Inventory();
+  const bars = new StatusBars(uiRoot);
+  const counts = new HotbarCounts(uiRoot);
+  const screen = new SurvivalScreen(uiRoot, icons, inv, hotbar);
+  const death = new DeathScreen(uiRoot);
+  const chat = new ChatBox(uiRoot);
+  const badge = new RoomBadge(uiRoot);
+  const entities = new Entities(renderer.overlay);
+  const game = new Game({ renderer, input, hud, inventory, hotbar, sounds, settings, touch, inv, entities, bars, screen, counts, death, chat, badge });
   gameRef = game;
 
   const handlers: MenuHandlers = {
     listWorlds: () => storage.listWorlds(),
-    async createWorld(name: string, seedText: string) {
+    async createWorld(name: string, seedText: string, mode: 'creative' | 'survival' = 'creative') {
       sounds.unlock();
       const meta: WorldMeta = {
         id: newWorldId(),
@@ -165,6 +177,7 @@ async function boot() {
         timeMode: 'cycle',
         palette: BLOCKS.map((b) => b.name),
         version: 1,
+        mode,
       };
       hotbar.load(DEFAULT_HOTBAR, 0);
       await storage.saveWorld(meta);
@@ -204,6 +217,48 @@ async function boot() {
     }
     console.info(`[packs] ${pack} applied in ${Math.round(performance.now() - t0)} ms`);
   }
+
+  // ---- multiplayer: host a room or join one by its code
+  const startOnline = async (net: Net) => {
+    sounds.unlock();
+    let saved: { player?: WorldMeta['player']; survival?: WorldMeta['survival'] } = {};
+    try { saved = JSON.parse(localStorage.getItem('blockforge.mp.' + net.room.code) || '{}') ?? {}; } catch { saved = {}; }
+    const meta: WorldMeta = {
+      id: 'mp-' + net.room.code,
+      name: 'Online ' + net.room.code,
+      seed: net.room.seed,
+      created: Date.now(),
+      lastPlayed: Date.now(),
+      player: saved.player ?? null,
+      hotbar: DEFAULT_HOTBAR.slice(),
+      hotbarNames: DEFAULT_HOTBAR.map((id) => (id ? BLOCKS[id].name : '')),
+      selected: 0,
+      dayTime: net.room.time,
+      timeMode: 'cycle',
+      palette: BLOCKS.map((b) => b.name),
+      version: 1,
+      mode: net.room.mode,
+      survival: saved.survival,
+    };
+    if (net.room.mode !== 'survival') hotbar.load(DEFAULT_HOTBAR, 0);
+    mpMenu.hide();
+    await game.startWorld(meta, net);
+    hud.message(`World code: ${net.room.code}. Friends join with it from Multiplayer.`);
+    if (net.players.size) hud.message(`Playing with ${Array.from(net.players.values()).map((p) => p.name).join(', ')}`);
+    hud.message('Press T to chat.');
+  };
+  const mpMenu = new MultiplayerMenu(uiRoot, {
+    available: !!wsUrl(),
+    host: async (name, seedText, mode) => startOnline(await Net.connect({ t: 'host', name, seed: parseSeed(seedText), mode })),
+    join: async (name, code) => {
+      if (!/^[A-Z0-9]{5}$/.test(code)) throw new Error('A world code is 5 letters and numbers.');
+      await startOnline(await Net.connect({ t: 'join', name, code }));
+    },
+  });
+  if (wsUrl()) handlers.openMultiplayer = () => { menus.hide(); mpMenu.show(); };
+  mpMenu.onBack = () => menus.showTitle();
+  game.onDisconnected = (reason) => menus.notice(reason, 10);
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && mpMenu.isOpen) mpMenu.back(); });
 
   const menus = new Menus(uiRoot, handlers, settings);
   game.menus = menus;
@@ -306,7 +361,7 @@ async function boot() {
 
   // Handle for the e2e tests and for curious players poking at the console.
   (window as unknown as { blockforge: unknown }).blockforge = {
-    game, renderer, settings, storage, handlers, hud, inventory, menus, hotbar, touch, input, ID, BLOCKS, atlas, icons,
+    game, renderer, settings, storage, handlers, hud, inventory, menus, hotbar, touch, input, ID, BLOCKS, atlas, icons, inv, screen, mpMenu, Net,
     applyPreset(p: 'low' | 'medium' | 'high') { applyPreset(settings, p); handlers.settingsChanged(settings); },
     debug: {
       /** Enter play state without pointer lock (headless tests). */

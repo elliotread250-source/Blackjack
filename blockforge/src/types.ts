@@ -83,6 +83,12 @@ export interface WorldMeta {
   timeMode: TimeMode;
   palette: string[];       // block names by id at save time, used to remap saved chunks
   version: 1;
+  /** Game mode (worlds from before survival existed are creative). */
+  mode?: 'creative' | 'survival';
+  /** Survival: the player's inventory and health. */
+  survival?: { inv: unknown; stats: unknown };
+  /** Chest contents by "x,y,z". */
+  chests?: Record<string, unknown>;
 }
 
 export type TimeMode = 'cycle' | 'sunrise' | 'noon' | 'sunset' | 'midnight';

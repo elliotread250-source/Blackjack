@@ -134,6 +134,11 @@ export class Player {
   private nb = (dx: number, dy: number, dz: number): number => this.w!.get(this.qx + dx, this.qy + dy, this.qz + dz);
   private lcx = NaN; private lcz = NaN; private lres = false;
 
+  /** Survival: no flying. */
+  canFly = true;
+  /** Survival: too hungry to sprint. */
+  noSprint = false;
+
   /** Toggle creative flight on the next tick (the touch Fly button; same as a double-tap of Space). */
   toggleFlight(): void { this.flyToggle = true; }
 
@@ -264,6 +269,7 @@ export class Player {
     if (this.noJumpDelay > 0) this.noJumpDelay--;
 
     // Double-tap Space toggles creative flight (not while sneaking into a crawl gap).
+    if (!this.canFly) { this.flyToggle = false; this.flying = false; }
     if (this.flyToggle) {
       this.flyToggle = false;
       this.flying = !this.flying;

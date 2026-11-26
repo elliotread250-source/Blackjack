@@ -4,7 +4,9 @@
 // the selection changes, view bobbing and a little lag behind fast mouse turns.
 import {
   Scene, PerspectiveCamera, Group, Mesh, BufferGeometry, BufferAttribute, ShaderMaterial, Vector2, FrontSide,
+  PlaneGeometry, MeshBasicMaterial, DataTexture, NearestFilter, DoubleSide, RGBAFormat, UnsignedByteType,
 } from 'three';
+import { ITEM_BASE, itemPixels } from '../game/items';
 import type { WebGLRenderer, IUniform } from 'three';
 import type { SharedUniforms } from './materials';
 import { createHandMaterials, createLayerGeometry, LIGHT_FN_GLSL } from './materials';
@@ -106,6 +108,7 @@ export class Hand {
   private swingT = -1;            // < 0: not swinging
   private lagYaw = 0; private lagPitch = 0; private lagInit = false;
   private lightCur = new Vector2(1, 0);
+  private flat: MeshBasicMaterial | null = null;   // sprite material while an item (not a block) is held
 
   constructor(shared: SharedUniforms) {
     this.mats = createHandMaterials(shared);
@@ -128,7 +131,7 @@ export class Hand {
 
   /** v = packed block (0 = empty hand). The model swaps at the bottom of the equip dip. */
   setBlock(v: number): void {
-    const id = idOf(v);
+    const id = v >= ITEM_BASE ? v : idOf(v);
     if (this.current === -1) { this.apply(id); return; }
     if (id === this.current && !this.lowering) return;
     this.pending = id;
@@ -146,9 +149,24 @@ export class Hand {
       m.geometry.dispose();
       this.item.remove(m);
     }
+    if (this.flat) { this.flat.map?.dispose(); this.flat.dispose(); this.flat = null; }
     this.arm.visible = id === 0;
     this.item.visible = id !== 0;
     if (!id) return;
+    if (id >= ITEM_BASE) {
+      // A tool or other item: its flat sprite, held like a tool.
+      const src = itemPixels(id);
+      const px = new Uint8Array(16 * 16 * 4);
+      for (let y = 0; y < 16; y++) px.set(src.subarray((15 - y) * 64, (16 - y) * 64), y * 64);   // texture rows run bottom-up
+      const tex = new DataTexture(px, 16, 16, RGBAFormat, UnsignedByteType);
+      tex.magFilter = NearestFilter; tex.minFilter = NearestFilter;
+      tex.needsUpdate = true;
+      this.flat = new MeshBasicMaterial({ map: tex, alphaTest: 0.5, side: DoubleSide });
+      const m = new Mesh(new PlaneGeometry(1, 1), this.flat);
+      m.frustumCulled = false;
+      this.item.add(m);
+      return;
+    }
     let mesh: ReturnType<typeof meshBlockItem> | null = null;
     try { mesh = meshBlockItem(id); } catch (e) { console.warn('[hand] meshBlockItem failed', e); }
     if (!mesh) return;
@@ -213,8 +231,15 @@ export class Hand {
       p.position.set(0.5 - 0.4 * f1, -0.44 + down + 0.2 * Math.sin(sq * Math.PI * 2), -0.8 - 0.2 * Math.sin(sp * Math.PI));
       p.rotation.set(0.12 - f1 * 1.3, -f2 * 0.35, -f1 * 0.35, 'YXZ');
       this.item.position.set(0, 0, 0);
-      this.item.rotation.set(0, Math.PI / 4, 0);
-      this.item.scale.setScalar(0.3);
+      if (this.flat) {
+        this.item.rotation.set(0, -1.05, 0.2, 'YXZ');
+        this.item.scale.setScalar(0.52);
+        const b = 0.3 + 0.7 * Math.max(this.lightCur.x, this.lightCur.y);
+        this.flat.color.setScalar(b);
+      } else {
+        this.item.rotation.set(0, Math.PI / 4, 0);
+        this.item.scale.setScalar(0.3);
+      }
     } else {
       // empty hand: arm reaching in from the lower right, punching forward on swing
       p.position.set(0.5 - 0.3 * f1, -0.42 + down + 0.12 * Math.sin(sq * Math.PI * 2), -0.62 - 0.35 * Math.sin(sp * Math.PI));
